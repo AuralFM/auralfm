@@ -1,0 +1,7 @@
+node_modules/
+dist/
+out/
+data/stations.json
+data/*.raw.json
+.DS_Store
+.env
