@@ -85,12 +85,11 @@ killing ~47% of popular radio. A native shell has no such restriction.
 ### Data strategy: crawl once, ship static
 
 ```
-BUILD TIME (manual, ~quarterly)
-  scripts/crawl.mjs
-    → radio.garden places        (1 request)
-    → per-place channels         (12,296 requests, throttled ~4/sec, ~50 min)
-    → data/stations.json         (~38k channels + coords)
-    → data/stations.min.json     (trimmed, target < 5 MB, shipped in app)
+BUILD TIME (manual, ~quarterly)  —  scripts/crawl.mjs  ✅ BUILT
+  → radio.garden places        (1 request → 12,296 places, cached)
+  → per-place channels         (12,296 requests, 4/sec, ~50 min, resumable)
+  → data/stations.json         (full record, ~7.0 MB projected)
+  → data/stations.min.json     (shipped bundle, ~1.6 MB projected)
 
 RUN TIME
   Explore + search read the local bundle. Zero network.
@@ -138,8 +137,17 @@ today with zero new toolchain and plays `http://` streams. Tauri is the better e
 - **Done when:** it lives in your menu bar and you stop opening the HTML file.
 
 ### Phase 2 — Data, search, favorites
-- `scripts/crawl.mjs` — throttled, resumable.
-- Stream resolver with the 3-tier fallback.
+- ✅ `scripts/crawl.mjs` — throttled, resumable, validated against 65 places.
+  ```
+  node scripts/crawl.mjs              # resume or start full crawl, then build
+  node scripts/crawl.mjs --limit 25   # smoke test
+  node scripts/crawl.mjs --build      # rebuild bundles offline
+  node scripts/crawl.mjs --fresh      # discard progress, start over
+  ```
+  Backs off on 429/5xx, aborts cleanly after 8 consecutive 403s so a Cloudflare
+  block never turns into hammering. Ctrl-C safe; progress is append-only JSONL.
+- [ ] Run the full crawl (~50 min).
+- [ ] Stream resolver with the 3-tier fallback.
 - **Search:** one box matching country, city, or station name.
 - **Favorites:** save/unsave, reorder, `1`–`9` hotkeys in the popover.
 - **Done when:** you can find and play any of the 38k channels and keep the ones you like.
