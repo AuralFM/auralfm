@@ -12,3 +12,4 @@ data/stations.min.json
 
 # Electron
 assets/generated/
+data/crawl.log
