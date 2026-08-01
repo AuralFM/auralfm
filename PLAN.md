@@ -3,7 +3,7 @@
 A macOS menu bar radio player with geographic discovery — listen to any live
 station in the world from your taskbar.
 
-**Status:** Phase 0 complete and verified. Phase 1 not started.
+**Status:** Phases 0-2 complete. Full catalog crawled. Phase 3 (Explore) next.
 **Last updated:** 2026-08-01
 
 ---
@@ -172,7 +172,13 @@ npm run icons      # regenerate PNGs from assets/*.svg
   The cache is what keeps a station playable when both directories are down.
 - ✅ **Search** — one box, debounced, matches station, city, or country.
 - ✅ **Favorites** — star to save, `1`–`9` to play, persisted.
-- [ ] Run the full crawl (~50 min) to replace the partial catalog.
+- ✅ Full crawl complete: **12,231/12,231 places, 0 failures, 51 min**.
+  Bundle: **38,342 channels across 12,296 places**, 2.1 MB shipped / 7.8 MB full.
+  Matched the projection from radio.garden's own `size` field exactly.
+- **Known limit — genre search only works when the genre is in the station name.**
+  radio.garden gives us no tags, so "jazz new orleans" finds WWNO Jazz but misses
+  WWOZ, which is a jazz station without "jazz" in its title. Fix if it annoys:
+  pull tags from radio-browser at crawl time and fold them into the haystack.
 
 ### Phase 3 — Explore by area (two views, one toggle)
 
