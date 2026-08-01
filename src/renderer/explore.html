@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<title>Explore</title>
+<style>
+  :root{
+    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
+    --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
+    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55);
+    --accent:#30D158; --star:#FFD60A;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+      --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+      --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55);
+      --accent:#248A3D; --star:#A16207;
+    }
+  }
+  @media (prefers-reduced-transparency: reduce){ body{background:Canvas} .content{background:Canvas} }
+  @media (prefers-reduced-motion: reduce){ *{transition-duration:.01ms !important;animation-duration:.01ms !important} }
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{
+    background:transparent;color:var(--label);
+    font:13px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;user-select:none;cursor:default;
+    display:flex;flex-direction:column;
+  }
+
+  /* Toolbar sits under the traffic lights (titleBarStyle: hiddenInset). */
+  .toolbar{
+    flex:none;height:52px;display:flex;align-items:center;gap:10px;
+    padding:0 14px 0 84px;-webkit-app-region:drag;
+  }
+  .toolbar .seg, .toolbar input{-webkit-app-region:no-drag}
+  h1{font-size:13px;font-weight:590;letter-spacing:-.006em;margin:0}
+  .toolbar .sp{flex:1}
+
+  /* Segmented control — the switch between List and Globe. */
+  .seg{display:flex;background:var(--fill);border-radius:7px;padding:2px;gap:2px}
+  .seg button{
+    border:0;background:none;color:var(--label2);font:inherit;font-size:12px;
+    padding:3px 11px;border-radius:5px;cursor:default;
+    transition:background .14s ease-out,color .14s ease-out;
+  }
+  .seg button[aria-selected="true"]{background:var(--pane);color:var(--label);box-shadow:0 .5px 1.5px rgba(0,0,0,.18)}
+  .seg button:disabled{opacity:.4}
+
+  .cols{flex:1;display:flex;min-height:0}
+
+  /* Left: places. Darker material — AppKit uses heavier surfaces for structure. */
+  .places{
+    width:266px;flex:none;display:flex;flex-direction:column;min-height:0;
+    border-right:.5px solid var(--line);
+  }
+  .searchwrap{padding:0 12px 9px}
+  #q{
+    width:100%;height:24px;padding:0 9px;border:0;border-radius:6px;
+    background:var(--fill);color:var(--label);font:inherit;outline:none;
+    box-shadow:inset 0 0 0 .5px var(--line);
+    transition:box-shadow .15s ease-out,background .15s ease-out;
+  }
+  #q:focus{background:var(--fill-hi);box-shadow:inset 0 0 0 .5px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent)}
+  #q::placeholder{color:var(--label2)}
+  #q::-webkit-search-cancel-button{display:none}
+
+  .secthead{
+    padding:2px 15px 5px;font-size:11px;font-weight:590;letter-spacing:.005em;color:var(--label2);flex:none;
+  }
+
+  .scroll{flex:1;overflow-y:auto;padding:0 7px 10px}
+  .scroll::-webkit-scrollbar{width:0}
+
+  .place{
+    display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:6px;
+    transition:background .12s ease-out;
+  }
+  .place:hover{background:var(--fill)}
+  .place:active{background:var(--fill-hi);transform:scale(.99);transition:transform 90ms ease-out}
+  .place[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+  .place[aria-selected="true"] .pn{color:var(--accent);font-weight:590}
+  .pmeta{flex:1;min-width:0}
+  .pn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.002em}
+  .pc{font-size:11px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cnt{
+    flex:none;font-size:10px;color:var(--label3);font-variant-numeric:tabular-nums;
+    min-width:22px;text-align:right;
+  }
+
+  /* Right: stations in the selected place. */
+  .stations{flex:1;display:flex;flex-direction:column;min-height:0}
+  .placehead{flex:none;padding:0 18px 10px}
+  .placehead h2{margin:0;font-size:19px;font-weight:640;letter-spacing:-.018em;line-height:1.15}
+  .placehead p{margin:2px 0 0;font-size:12px;color:var(--label2)}
+
+  .st{
+    display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;
+    transition:background .12s ease-out;
+  }
+  .st:hover{background:var(--fill)}
+  .st:active{background:var(--fill-hi);transform:scale(.994);transition:transform 90ms ease-out}
+  .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
+  .st[aria-current="true"] .sn{color:var(--accent);font-weight:590}
+  .smeta{flex:1;min-width:0}
+  .sn{letter-spacing:-.002em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stags{font-size:11px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .star{
+    flex:none;background:none;border:0;color:var(--label3);font-size:13px;
+    padding:2px 4px;border-radius:4px;cursor:default;opacity:0;line-height:1;
+    transition:opacity .12s ease-out,color .12s ease-out,transform 90ms ease-out;
+  }
+  .st:hover .star{opacity:1}
+  .star.on{opacity:1;color:var(--star)}
+  .star:active{transform:scale(.85)}
+  .bars{flex:none;display:flex;gap:2px;align-items:flex-end;height:12px;width:8px;opacity:0}
+  .st[aria-current="true"] .bars{opacity:1}
+  .bars i{width:2px;background:var(--accent);border-radius:1px;height:3px}
+  body.playing .st[aria-current="true"] .bars i{animation:eq .9s ease-in-out infinite}
+  .bars i:nth-child(2){animation-delay:.15s}.bars i:nth-child(3){animation-delay:.3s}
+  @keyframes eq{0%,100%{height:3px}50%{height:12px}}
+
+  .empty{padding:56px 28px;text-align:center;color:var(--label3);font-size:13px;line-height:1.7}
+
+  /* Now-playing strip, mirroring the popover's transport bar. */
+  .now{
+    flex:none;display:flex;align-items:center;gap:9px;padding:9px 16px;
+    box-shadow:inset 0 .5px 0 var(--line);font-size:12px;
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .now b{font-weight:590}
+  .now span{color:var(--label2)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Explore</h1>
+  <span class="sp"></span>
+  <div class="seg" role="tablist">
+    <button id="tabList" role="tab" aria-selected="true">List</button>
+    <button id="tabGlobe" role="tab" aria-selected="false" disabled title="Coming in the next phase">Globe</button>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="places">
+    <div class="searchwrap">
+      <input id="q" type="search" placeholder="Search city or country" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="secthead" id="placehead">Places</div>
+    <div class="scroll" id="placelist"></div>
+  </div>
+
+  <div class="stations">
+    <div class="placehead" id="head" hidden><h2></h2><p></p></div>
+    <div class="scroll" id="stationlist">
+      <div class="empty">Pick a place to hear what's on air there.</div>
+    </div>
+  </div>
+</div>
+
+<div class="now" id="now" hidden>
+  <span class="dot" id="dot"></span>
+  <b id="nowName"></b>
+  <span id="nowStatus"></span>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const placeListEl=$("placelist"), stationListEl=$("stationlist"), qEl=$("q"),
+      placeHeadEl=$("placehead"), headEl=$("head");
+
+/**
+ * Selection lives here, above the view, not inside it. The Globe view in the
+ * next phase renders the same `selection` and calls the same selectPlace() —
+ * switching views must never lose your place.
+ */
+const selection = { placeIndex: null, place: null, channels: [] };
+let favorites = [];
+let playing = null;          // channel currently playing, per the popover
+let debounce = null, seq = 0;
+
+const isFav = (id) => favorites.some((f) => f.id === id);
+
+// ── places ───────────────────────────────────────────────────────────────────
+async function loadPlaces(query = "") {
+  const my = ++seq;
+  const { total, places } = await window.globefm.places(query, 400);
+  if (my !== seq) return;
+  placeHeadEl.textContent = query.trim()
+    ? `${total.toLocaleString()} place${total === 1 ? "" : "s"}`
+    : `${total.toLocaleString()} places · most stations first`;
+
+  placeListEl.innerHTML = "";
+  if (!places.length) {
+    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">No place matches that.</div>`;
+    return;
+  }
+  for (const p of places) {
+    const el = document.createElement("div");
+    el.className = "place";
+    el.setAttribute("aria-selected", p.i === selection.placeIndex);
+    el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>
+                    <span class="cnt"></span>`;
+    el.querySelector(".pn").textContent = p.title;
+    el.querySelector(".pc").textContent = p.country;
+    el.querySelector(".cnt").textContent = p.count;
+    el.onclick = () => selectPlace(p.i);
+    placeListEl.appendChild(el);
+  }
+}
+
+async function selectPlace(i) {
+  const { place, channels } = await window.globefm.placeChannels(i);
+  if (!place) return;
+  selection.placeIndex = i;
+  selection.place = place;
+  selection.channels = channels;
+  [...placeListEl.children].forEach((el, n) => {
+    const p = placeListEl.children[n];
+    p.setAttribute?.("aria-selected", false);
+  });
+  // Re-mark by matching the clicked row (cheap: only ~400 rendered).
+  for (const el of placeListEl.children) {
+    const title = el.querySelector?.(".pn")?.textContent;
+    const country = el.querySelector?.(".pc")?.textContent;
+    if (title === place.title && country === place.country) el.setAttribute("aria-selected", true);
+  }
+  renderStations();
+}
+
+// ── stations ─────────────────────────────────────────────────────────────────
+function renderStations() {
+  const { place, channels } = selection;
+  headEl.hidden = false;
+  headEl.querySelector("h2").textContent = place.title;
+  headEl.querySelector("p").textContent =
+    `${place.country} · ${channels.length} station${channels.length === 1 ? "" : "s"}`;
+
+  stationListEl.innerHTML = "";
+  if (!channels.length) {
+    stationListEl.innerHTML = `<div class="empty">Nothing on air here.</div>`;
+    return;
+  }
+  for (const ch of channels) {
+    const el = document.createElement("div");
+    el.className = "st";
+    el.dataset.id = ch.id;
+    el.setAttribute("aria-current", playing?.id === ch.id);
+    el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>
+                    <button class="star${isFav(ch.id) ? " on" : ""}">${isFav(ch.id) ? "★" : "☆"}</button>
+                    <span class="bars"><i></i><i></i><i></i></span>`;
+    el.querySelector(".sn").textContent = ch.title;
+    el.querySelector(".stags").textContent = ch.tags.length ? ch.tags.slice(0, 4).join(" · ") : "";
+    el.onclick = (e) => { if (!e.target.closest(".star")) window.globefm.tune(ch); };
+    el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
+    stationListEl.appendChild(el);
+  }
+}
+
+async function toggleFav(ch) {
+  const state = (await window.globefm.getState()) || {};
+  favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  const i = favorites.findIndex((f) => f.id === ch.id);
+  if (i >= 0) favorites.splice(i, 1);
+  else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
+  state.favorites = favorites;
+  await window.globefm.setState(state);
+  renderStations();
+}
+
+// ── playback (observed, never performed here) ────────────────────────────────
+window.globefm.onPlayerState((s) => {
+  playing = s.playing ? s.channel : null;
+  document.body.classList.toggle("playing", !!s.playing);
+  const bar = $("now");
+  if (!s.channel) { bar.hidden = true; }
+  else {
+    bar.hidden = false;
+    $("nowName").textContent = s.channel.title;
+    $("nowStatus").textContent = s.status || "";
+    $("dot").style.display = s.playing ? "" : "none";
+  }
+  for (const el of stationListEl.children) {
+    if (!el.dataset?.id) continue;
+    el.setAttribute("aria-current", playing?.id === el.dataset.id);
+  }
+});
+
+// ── input ────────────────────────────────────────────────────────────────────
+qEl.addEventListener("input", () => {
+  clearTimeout(debounce);
+  debounce = setTimeout(() => loadPlaces(qEl.value), 120);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.activeElement === qEl && qEl.value) {
+    qEl.value = ""; loadPlaces("");
+  }
+});
+
+// ── boot ─────────────────────────────────────────────────────────────────────
+(async () => {
+  const state = (await window.globefm.getState()) || {};
+  favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  await loadPlaces("");
+})();
+</script>
+</body>
+</html>

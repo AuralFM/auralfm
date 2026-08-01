@@ -167,6 +167,7 @@
   <img src="../../assets/icon.svg" alt="">
   <h1>GlobeFM</h1>
   <span class="sp"></span>
+  <button id="explore" title="Explore by place">⌖</button>
 </header>
 
 <div class="searchwrap">
@@ -198,7 +199,14 @@ let rows = [];          // what's currently rendered
 let current = null;     // the channel object playing
 let gen = 0, watchdog = null, searchSeq = 0, debounce = null;
 
-const setStatus=(m,c="")=>{ statusEl.textContent=m; statusEl.className=c; };
+function setStatus(m,c=""){ statusEl.textContent=m; statusEl.className=c; publish(); }
+function publish(){
+  window.globefm.publishState({
+    channel: current ? {id:current.id,title:current.title,place:current.place,country:current.country} : null,
+    status: statusEl.textContent,
+    playing: live,
+  });
+}
 const persist=()=> window.globefm.setState(state);
 const isFav=(id)=> state.favorites.some(f=>f.id===id);
 
@@ -289,6 +297,7 @@ async function tune(ch) {
   [...listEl.children].forEach((el,i)=> el.setAttribute?.("aria-current", rows[i]?.id === ch.id));
 
   const my = ++gen;
+  live = false;
   setStatus("Finding stream…");
   document.body.classList.remove("playing");
 
@@ -314,28 +323,26 @@ function start(url, my) {
 }
 
 function stop(){
-  clearTimeout(watchdog); gen++;
+  clearTimeout(watchdog); gen++; live = false;
   audio.pause(); audio.removeAttribute("src"); audio.load();
   toggle.textContent = "▶";
   document.body.classList.remove("playing");
   setStatus("Stopped");
-  window.globefm.setTrayTitle("");
 }
 
 function fail(msg){
-  clearTimeout(watchdog);
+  clearTimeout(watchdog); live = false;
   document.body.classList.remove("playing");
   toggle.textContent = "▶";
   setStatus(msg, "err");
-  window.globefm.setTrayTitle("");
 }
 
 audio.addEventListener("playing", () => {
   clearTimeout(watchdog);
+  live = true;
   toggle.textContent = "❚❚";
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
-  window.globefm.setTrayTitle(current?.title || "");
 });
 audio.addEventListener("waiting", () => { if (!audio.paused) setStatus("Buffering…"); });
 audio.addEventListener("error", () => {
@@ -348,6 +355,7 @@ toggle.onclick = () => {
   audio.paused ? tune(current) : stop();
 };
 vol.oninput = () => { audio.volume = vol.value; state.vol = +vol.value; persist(); };
+$("explore").onclick = () => window.globefm.openExplore();
 
 // ── keys ─────────────────────────────────────────────────────────────────────
 document.addEventListener("keydown", e => {
@@ -365,6 +373,9 @@ document.addEventListener("keydown", e => {
     if (f) tune(f);
   }
 });
+
+// Explore has no audio element of its own — it asks us to play.
+window.globefm.onTune((ch) => { tune(ch); });
 
 // Replay the entrance each time the popover is shown (the window is reused).
 window.globefm.onShown(() => {

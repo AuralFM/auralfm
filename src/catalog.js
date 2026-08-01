@@ -21,7 +21,9 @@ const BUNDLE = path.join(__dirname, "..", "data", "stations.min.json");
 
 let places = [];
 let channels = [];
-let haystack = [];      // lowercased "title ∙ place ∙ country" per channel
+let haystack = [];      // lowercased "title ∙ place ∙ country ∙ tags" per channel
+let byPlace = [];       // placeIndex -> [channelIndex] — built once, so Explore is O(1)
+let placeHay = [];      // lowercased "place ∙ country" per place
 let generated = null;
 
 function norm(s) {
@@ -42,6 +44,13 @@ function load() {
     const p = places[c[2]] || ["", ""];
     return norm(`${c[1]} ${p[0]} ${p[1]} ${c[4] || ""}`);
   });
+
+  // Explore browses by place constantly, so invert the relation once at load
+  // instead of scanning 38k channels on every click.
+  byPlace = places.map(() => []);
+  channels.forEach((c, i) => byPlace[c[2]]?.push(i));
+  placeHay = places.map((p) => norm(`${p[0]} ${p[1]}`));
+
   console.log(`catalog: ${channels.length} channels across ${places.length} places`);
   return true;
 }
@@ -116,17 +125,47 @@ function search(query, limit = 60) {
   return hits.slice(0, limit).map(([, , , i]) => hydrate(i));
 }
 
+const hydratePlace = (i) => ({
+  i,
+  title: places[i][0],
+  country: places[i][1],
+  lon: places[i][2],
+  lat: places[i][3],
+  count: byPlace[i].length,
+});
+
 /** Every channel broadcasting from one place — the Explore primitive. */
-function byPlace(placeTitle, country) {
-  const t = norm(placeTitle), c = country ? norm(country) : null;
-  const idx = places.findIndex((p) => norm(p[0]) === t && (!c || norm(p[1]) === c));
-  if (idx < 0) return { place: null, channels: [] };
-  const out = [];
-  for (let i = 0; i < channels.length; i++) if (channels[i][2] === idx) out.push(hydrate(i));
+function placeChannels(placeIndex) {
+  if (!places[placeIndex]) return { place: null, channels: [] };
   return {
-    place: { title: places[idx][0], country: places[idx][1], lon: places[idx][2], lat: places[idx][3] },
-    channels: out,
+    place: hydratePlace(placeIndex),
+    channels: byPlace[placeIndex].map(hydrate),
   };
+}
+
+/**
+ * Places for the Explore list, optionally filtered. Sorted by station count so
+ * the cities that actually have radio come first — an alphabetical list of
+ * 12,296 places buries every city you'd want.
+ */
+function placeSearch(query, limit = 400) {
+  const terms = norm(String(query || "").trim()).split(/\s+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < places.length; i++) {
+    if (!byPlace[i].length) continue;
+    if (terms.length && !terms.every((t) => placeHay[i].includes(t))) continue;
+    out.push(i);
+  }
+  if (terms.length) {
+    const first = terms[0];
+    // Prefix matches first ("berlin" before "new berlin"), then by station count.
+    out.sort((a, b) =>
+      (placeHay[a].startsWith(first) ? 0 : 1) - (placeHay[b].startsWith(first) ? 0 : 1) ||
+      byPlace[b].length - byPlace[a].length);
+  } else {
+    out.sort((a, b) => byPlace[b].length - byPlace[a].length);
+  }
+  return { total: out.length, places: out.slice(0, limit).map(hydratePlace) };
 }
 
 function byId(id) {
@@ -136,4 +175,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, byPlace, byId, stats };
+module.exports = { load, search, placeSearch, placeChannels, byId, stats };

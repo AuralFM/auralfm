@@ -15,8 +15,10 @@ const POPOVER = { width: 380, height: 560, min: 210 };   // height is the cap; t
 const STORE = path.join(app.getPath("userData"), "state.json");
 
 let tray = null;
-let win = null;
+let win = null;          // popover — also the one and only audio player
+let explore = null;
 let quitting = false;
+let playerState = { channel: null, status: "", playing: false };
 
 // ── tiny JSON store ───────────────────────────────────────────────────────────
 function load() {
@@ -93,6 +95,39 @@ function show() {
 function hide() { if (win?.isVisible()) win.hide(); }
 function toggle() { win.isVisible() ? hide() : show(); }
 
+// ── explore window ────────────────────────────────────────────────────────────
+function openExplore() {
+  if (explore && !explore.isDestroyed()) { explore.show(); explore.focus(); return; }
+
+  explore = new BrowserWindow({
+    width: 940, height: 640, minWidth: 760, minHeight: 460,
+    title: "Explore",
+    titleBarStyle: "hiddenInset",     // traffic lights over our own toolbar
+    vibrancy: "sidebar",
+    visualEffectState: "active",
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  explore.loadFile(path.join(__dirname, "renderer", "explore.html"));
+
+  // A menu bar app runs as an "accessory" with no Dock icon, which also means
+  // its windows can't take proper focus or own the menu bar. Become a regular
+  // app while Explore is open, then drop back to accessory when it closes.
+  app.dock?.show();
+  explore.on("closed", () => {
+    explore = null;
+    app.dock?.hide();
+  });
+
+  explore.webContents.on("did-finish-load", () => {
+    explore?.webContents.send("player:state", playerState);
+  });
+}
+
 // ── tray ──────────────────────────────────────────────────────────────────────
 function createTray() {
   const icon = nativeImage.createFromPath(
@@ -139,10 +174,27 @@ ipcMain.on("popover:height", (_e, h) => {
   if (Math.abs(b.height - height) < 2) return;
   win.setBounds({ ...b, height }, false);
 });
-ipcMain.on("tray:title", (_e, text) => {
-  // Station name next to the menu bar icon while playing. Truncated so it can't
-  // eat the whole menu bar.
-  tray?.setTitle(text ? ` ${text.slice(0, 22)}` : "");
+ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit));
+ipcMain.handle("catalog:placeChannels", (_e, i) => catalog.placeChannels(i));
+ipcMain.on("explore:open", openExplore);
+
+/**
+ * There is exactly one <audio> element in this app and it lives in the popover.
+ * Explore never plays anything itself — it asks, main forwards, the popover
+ * plays. Two windows with their own audio elements would mean two overlapping
+ * streams the moment you clicked a station in each.
+ */
+ipcMain.on("player:tune", (_e, channel) => {
+  win?.webContents.send("player:tune", channel);
+});
+
+/** The popover is the source of truth for playback; everyone else observes. */
+ipcMain.on("player:state", (_e, state) => {
+  playerState = state;
+  // Station name next to the menu bar icon. Truncated so it can't eat the bar.
+  const t = state.playing && state.channel?.title ? state.channel.title : "";
+  tray?.setTitle(t ? ` ${t.slice(0, 22)}` : "");
+  if (explore && !explore.isDestroyed()) explore.webContents.send("player:state", state);
 });
 
 // ── lifecycle ─────────────────────────────────────────────────────────────────
