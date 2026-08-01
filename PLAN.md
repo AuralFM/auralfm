@@ -199,6 +199,31 @@ before the globe rather than retrofitting.
 
 ---
 
+## 4b. Branding
+
+Globe icon by emilegraphics via the Noun Project. Two variants in `assets/`,
+credited in `assets/ATTRIBUTION.md`.
+
+| File | Bands | Use |
+|---|---|---|
+| `icon.svg` | filled | Menu bar, favicon, ≤32px |
+| `icon-line.svg` | outlined | App icon, About panel, ≥64px |
+
+Both use `fill="currentColor"`, so **one file covers light and dark** — no separate
+white version needed.
+
+**Tested at menu bar sizes.** The filled variant holds together down to 16px because
+its bands have mass; the outlined variant washes out below ~32px but is the more
+refined mark at 64px+. Hence the split above rather than one icon everywhere.
+
+Still to produce in Phase 1:
+- `iconTemplate.png` + `iconTemplate@2x.png` (16/32px, black + alpha) — the
+  `Template` suffix is what makes macOS auto-invert it for dark menu bars.
+- `.icns` from a 1024px master of `icon-line.svg` for the Dock and Finder.
+- About panel carrying the Noun Project credit.
+
+---
+
 ## 5. Open risks
 
 | Risk | Severity | Mitigation |
