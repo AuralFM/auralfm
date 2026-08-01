@@ -7,7 +7,11 @@
  *
  * Bundle shape (positional, to keep the file small):
  *   p: [ [placeTitle, country, lon, lat], ... ]
- *   c: [ [channelId, title, placeIndex, secure], ... ]
+ *   c: [ [channelId, title, placeIndex, secure, tags?], ... ]
+ *
+ * tags is a comma-joined string, present only on the ~34% of channels we could
+ * match to radio-browser (see scripts/tags.mjs). radio.garden has no genre data
+ * of its own, so this is the only thing making "jazz" a useful query.
  */
 
 const fs = require("node:fs");
@@ -36,7 +40,7 @@ function load() {
   channels = raw.c;
   haystack = channels.map((c) => {
     const p = places[c[2]] || ["", ""];
-    return norm(`${c[1]} ${p[0]} ${p[1]}`);
+    return norm(`${c[1]} ${p[0]} ${p[1]} ${c[4] || ""}`);
   });
   console.log(`catalog: ${channels.length} channels across ${places.length} places`);
   return true;
@@ -49,6 +53,7 @@ function hydrate(i) {
     id: c[0],
     title: c[1],
     secure: !!c[3],
+    tags: c[4] ? c[4].split(",") : [],
     place: p[0],
     country: p[1],
     lon: p[2],
@@ -77,7 +82,24 @@ function score(idx, terms) {
   if (norm(p[0]) === first || norm(p[1]) === first) return 2;      // exact place/country
   if (norm(p[0]).startsWith(first)) return 3;                      // place prefix
   if (new RegExp(`\\b${first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(title)) return 4;
-  return 5;                                                        // substring somewhere
+  // A station *named* "Jazz FM" outranks one merely tagged jazz, but a genre tag
+  // still beats an incidental substring hit.
+  if (c[4] && c[4].split(",").includes(first)) return 5;           // exact genre tag
+  return 6;                                                        // substring somewhere
+}
+
+/**
+ * Does any query term name this station's place or country?
+ * In a mixed query like "jazz new orleans", the geography behaves like a filter
+ * rather than another keyword — a Lyon station called "Jazz Radio New Orleans"
+ * should never outrank an actual New Orleans jazz station.
+ */
+function placeMatches(idx, terms) {
+  const p = places[channels[idx][2]] || ["", ""];
+  const pl = norm(p[0]), co = norm(p[1]);
+  const plTokens = pl.split(" "), coTokens = co.split(" ");
+  return terms.some((t) =>
+    pl === t || co === t || pl.startsWith(t) || plTokens.includes(t) || coTokens.includes(t));
 }
 
 function search(query, limit = 60) {
@@ -87,10 +109,11 @@ function search(query, limit = 60) {
   const hits = [];
   for (let i = 0; i < channels.length; i++) {
     const s = score(i, terms);
-    if (s >= 0) hits.push([s, channels[i][1].length, i]);
+    if (s >= 0) hits.push([placeMatches(i, terms) ? 0 : 1, s, channels[i][1].length, i]);
   }
-  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  return hits.slice(0, limit).map(([, , i]) => hydrate(i));
+  // Geography first, then how well the rest of the query matched, then brevity.
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+  return hits.slice(0, limit).map(([, , , i]) => hydrate(i));
 }
 
 /** Every channel broadcasting from one place — the Explore primitive. */

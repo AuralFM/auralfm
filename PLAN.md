@@ -175,10 +175,41 @@ npm run icons      # regenerate PNGs from assets/*.svg
 - ✅ Full crawl complete: **12,231/12,231 places, 0 failures, 51 min**.
   Bundle: **38,342 channels across 12,296 places**, 2.1 MB shipped / 7.8 MB full.
   Matched the projection from radio.garden's own `size` field exactly.
-- **Known limit — genre search only works when the genre is in the station name.**
-  radio.garden gives us no tags, so "jazz new orleans" finds WWNO Jazz but misses
-  WWOZ, which is a jazz station without "jazz" in its title. Fix if it annoys:
-  pull tags from radio-browser at crawl time and fold them into the haystack.
+- ✅ `scripts/tags.mjs` — joins radio-browser genre tags onto the catalog.
+  ```
+  node scripts/tags.mjs            # download, match, rewrite bundles
+  node scripts/tags.mjs --offline  # reuse the cached dump
+  ```
+  radio.garden has geography but no genres; radio-browser has 11.7k tags but
+  coordinates for only 22% of stations. So we take geography from one and genre
+  from the other. One bulk download (61,520 stations, 68 MB, ~10s) — not 38k
+  lookups.
+
+  **The join is the hard part: two directories, no shared identifier.** Tiers run
+  most- to least-trustworthy, first hit wins, and anything that could produce a
+  false positive needs corroboration:
+
+  | Tier | Matched | Why it's safe |
+  |---|---|---|
+  | exact name + country | 2,895 | needs no corroboration |
+  | domain, unique owner | 5,386 | one tagged station on that domain |
+  | domain + name prefix | 1,651 | same site *and* name overlap |
+  | domain + exact loose name | 1,384 | same site *and* same name |
+  | loose name + country | 1,108 | geography corroborates |
+  | domain, all tags agree | 373 | duplicate entries of one station |
+  | globally unique name | 325 | only one candidate worldwide |
+
+  **34.2% of channels tagged (13,122 / 38,342).** A naive domain-only join scores
+  38% but smears one station's genre across every station a broadcaster runs —
+  shared domains are gated on name agreement for exactly that reason.
+
+- **Ranking: geography acts as a filter, not a keyword.** In "jazz new orleans"
+  the city constrains and the genre ranks, so a Lyon station literally called
+  "Jazz Radio New Orleans" sorts *below* every actual New Orleans jazz station.
+- Search results show matched genres in place of the country — it explains why a
+  station matched, which the country never does.
+- **Remaining limit: 66% of channels still have no tags.** A genre query only
+  finds a station if radio-browser knew it *and* we could match it confidently.
 
 ### Phase 3 — Explore by area (two views, one toggle)
 

@@ -203,7 +203,7 @@ const persist=()=> window.globefm.setState(state);
 const isFav=(id)=> state.favorites.some(f=>f.id===id);
 
 // ── rendering ────────────────────────────────────────────────────────────────
-function render(items, {numbered=false, empty=""}={}) {
+function render(items, {numbered=false, empty="", showTags=false}={}) {
   rows = items;
   listEl.innerHTML = "";
   if (!items.length) {
@@ -222,7 +222,9 @@ function render(items, {numbered=false, empty=""}={}) {
       `<button class="star${isFav(ch.id)?" on":""}" title="Favorite">${isFav(ch.id)?"★":"☆"}</button>` +
       `<span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".nm").textContent = ch.title;
-    el.querySelector(".sub").textContent = [ch.place, ch.country].filter(Boolean).join(" · ");
+    const tags = showTags && ch.tags?.length ? ch.tags.slice(0, 2).join(", ") : null;
+    el.querySelector(".sub").textContent =
+      [ch.place, tags || ch.country].filter(Boolean).join(" · ");
     el.onclick = (e) => {
       if (e.target.closest(".star")) return;
       if (current?.id === ch.id && !audio.paused) stop(); else tune(ch);
@@ -273,7 +275,7 @@ qEl.addEventListener("input", () => {
     const results = await window.globefm.search(q, 60);
     if (seq !== searchSeq) return;              // a newer keystroke already won
     headEl.textContent = `${results.length} result${results.length===1?"":"s"}`;
-    render(results, { empty: "Nothing found.<br>Try a city or country name." });
+    render(results, { showTags: true, empty: "Nothing found.<br>Try a city, country, or genre." });
   }, 120);
 });
 
