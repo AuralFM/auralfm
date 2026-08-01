@@ -131,10 +131,26 @@ today with zero new toolchain and plays `http://` streams. Tauri is the better e
 - All 7 verified playing in-browser. Race condition on rapid switching found and fixed.
 - **Gate: use it for a week.** If you don't reach for it, stop here.
 
-### Phase 1 — Menu bar shell
-- Electron tray + popover, hide-on-blur, launch at login.
-- Port the Phase 0 player as-is. Still a hardcoded list.
-- **Done when:** it lives in your menu bar and you stop opening the HTML file.
+### Phase 1 — Menu bar shell ✅ COMPLETE
+```
+npm start          # run it
+npm run icons      # regenerate PNGs from assets/*.svg
+```
+- `src/main.js` — tray + popover, positioned under the tray icon and clamped to
+  the screen edge. Hidden on blur rather than destroyed, so **audio keeps playing
+  while the popover is closed**. Right-click the tray for Open at Login / Quit.
+- `src/preload.js` — context-isolated bridge; the renderer gets persistence plus
+  hide/tray-title and nothing else.
+- `src/renderer/popover.html` — Phase 0 player, restyled for a 380×560 popover,
+  light/dark aware. Station name shows next to the menu bar icon while playing.
+- State persists to `~/Library/Application Support/globefm/state.json`.
+- `scripts/make-icons.js` — rasterizes the SVGs via Electron so alpha survives.
+  Note: `capturePage` returns *device* pixels, so output is downscaled to the
+  requested size (a 16px icon captures at 32px on Retina and is resampled down).
+- Verified: tray icon appears and disappears with the process; popover renders
+  and positions correctly under the icon.
+- No Dock icon (`app.dock.hide()`) — menu bar only. One line to change if you
+  want it in the Dock too.
 
 ### Phase 2 — Data, search, favorites
 - ✅ `scripts/crawl.mjs` — throttled, resumable, validated against 65 places.

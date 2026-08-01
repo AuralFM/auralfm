@@ -9,3 +9,6 @@ data/places.json
 data/_channels.jsonl
 data/stations.json
 data/stations.min.json
+
+# Electron
+assets/generated/

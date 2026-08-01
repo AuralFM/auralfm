@@ -1,0 +1,16 @@
+{
+  "name": "globefm",
+  "version": "0.1.0",
+  "description": "Listen to any live radio station in the world from your menu bar",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "crawl": "node scripts/crawl.mjs",
+    "icons": "electron scripts/make-icons.js"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0"
+  }
+}
