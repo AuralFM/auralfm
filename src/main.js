@@ -8,8 +8,10 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
+const catalog = require("./catalog");
+const resolver = require("./resolver");
 
-const POPOVER = { width: 380, height: 560 };
+const POPOVER = { width: 380, height: 560, min: 210 };   // height is the cap; the panel sizes to content
 const STORE = path.join(app.getPath("userData"), "state.json");
 
 let tray = null;
@@ -37,8 +39,11 @@ function createWindow() {
     fullscreenable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    vibrancy: "under-window",
+    // "popover" is the AppKit material menu bar extras use — lighter and more
+    // translucent than under-window, and it keeps its look while unfocused.
+    vibrancy: "popover",
     visualEffectState: "active",
+    roundedCorners: true,
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -81,6 +86,9 @@ function show() {
   positionUnderTray();
   win.show();
   win.focus();
+  // Lets the renderer replay its entrance. The window is reused rather than
+  // recreated, so a CSS animation alone would only ever run once.
+  win.webContents.send("popover:shown");
 }
 function hide() { if (win?.isVisible()) win.hide(); }
 function toggle() { win.isVisible() ? hide() : show(); }
@@ -117,7 +125,20 @@ function createTray() {
 // ── ipc ───────────────────────────────────────────────────────────────────────
 ipcMain.handle("state:get", () => load());
 ipcMain.handle("state:set", (_e, state) => { save(state); return true; });
+ipcMain.handle("catalog:search", (_e, q, limit) => catalog.search(q, limit));
+ipcMain.handle("catalog:byPlace", (_e, place, country) => catalog.byPlace(place, country));
+ipcMain.handle("catalog:stats", () => catalog.stats());
+ipcMain.handle("stream:resolve", (_e, ch) => resolver.resolve(ch));
 ipcMain.on("popover:hide", hide);
+ipcMain.on("popover:height", (_e, h) => {
+  // AppKit popovers size to their content; a fixed-height panel with a pool of
+  // dead space under a short list is the giveaway that this isn't native.
+  if (!win || win.isDestroyed()) return;
+  const height = Math.round(Math.max(POPOVER.min, Math.min(POPOVER.height, h)));
+  const b = win.getBounds();
+  if (Math.abs(b.height - height) < 2) return;
+  win.setBounds({ ...b, height }, false);
+});
 ipcMain.on("tray:title", (_e, text) => {
   // Station name next to the menu bar icon while playing. Truncated so it can't
   // eat the whole menu bar.
@@ -133,6 +154,8 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     // Menu bar app: no Dock icon, no app switcher entry.
     app.dock?.hide();
+    catalog.load();
+    resolver.init(app.getPath("userData"));
     createWindow();
     createTray();
   });

@@ -162,11 +162,17 @@ npm run icons      # regenerate PNGs from assets/*.svg
   ```
   Backs off on 429/5xx, aborts cleanly after 8 consecutive 403s so a Cloudflare
   block never turns into hammering. Ctrl-C safe; progress is append-only JSONL.
-- [ ] Run the full crawl (~50 min).
-- [ ] Stream resolver with the 3-tier fallback.
-- **Search:** one box matching country, city, or station name.
-- **Favorites:** save/unsave, reorder, `1`–`9` hotkeys in the popover.
-- **Done when:** you can find and play any of the 38k channels and keep the ones you like.
+- ✅ `src/catalog.js` — loads the bundle, ranked search over station/city/country.
+  Runs in main so the renderer never holds 38k rows. ~5ms per query, 54ms load.
+  Ranking puts **place matches above title-word matches** on purpose: typing
+  "paris" should surface stations *in* Paris, not one called "In Paris".
+  Accents are folded, so "bogota" matches "Bogotá".
+- ✅ `src/resolver.js` — 3-tier stream resolution, all three tiers verified:
+  radio.garden 302 → radio-browser by name+country → last-known-good disk cache.
+  The cache is what keeps a station playable when both directories are down.
+- ✅ **Search** — one box, debounced, matches station, city, or country.
+- ✅ **Favorites** — star to save, `1`–`9` to play, persisted.
+- [ ] Run the full crawl (~50 min) to replace the partial catalog.
 
 ### Phase 3 — Explore by area (two views, one toggle)
 
@@ -212,6 +218,48 @@ before the globe rather than retrofitting.
 ### Phase 5 — Optional
 - Tauri re-shell for bundle size.
 - Apple Shortcuts / Siri via URL scheme.
+
+---
+
+## 4a. Design language
+
+Target: it should read as something Apple shipped, not a web page in a frameless
+window. Applied from Apple's own interface guidance.
+
+**Material & depth.** The window uses the AppKit `popover` vibrancy material —
+the same one menu bar extras use — with `visualEffectState: "active"` so it keeps
+its look while unfocused. Content is transparent and lets the material through.
+
+**Sizes to its content.** Like a real `NSPopover`: 4 favorites → 328px, a long
+result list → capped at 560px. A fixed-height panel with dead space under a short
+list is the clearest tell that something isn't native.
+*Gotcha:* measure the sum of row heights, not `listEl.scrollHeight` — the list is
+flex-grown, and `scrollHeight` never reports less than the box itself, so it just
+echoes the current height back and the panel never shrinks.
+
+**Color.** AppKit's label hierarchy (primary/secondary/tertiary) and system
+palette rather than invented grays. Selection is **accent-tinted**, not neutral
+gray, which is what AppKit does and what stops it looking muddy over glass.
+
+**Typography.** System font first — it already ships optical sizing and tracking
+tables. Tracking is size-specific: negative on the title, ~0 on body, slightly
+positive on 11px secondary text. One `letter-spacing` for everything is wrong
+somewhere.
+
+**Motion.** Feedback on pointer-*down*, never on release: rows and buttons scale
+on `:active` in ~90ms. The panel materializes from the tray icon — scale + blur,
+`transform-origin: top center` — so it reads as coming *from* the icon. Replayed
+via a `popover:shown` IPC message because the window is reused, not recreated.
+
+**Edges, not rules.** The list fades into the transport bar with a mask instead
+of a 1px divider.
+
+**No close button.** Control Center and the Wi-Fi menu don't have one; click-away
+and `esc` already dismiss. Removing it is both more native and less clutter.
+
+**Accessibility.** `prefers-reduced-motion` drops the entrance and shortens every
+transition; `prefers-reduced-transparency` swaps the glass for a solid canvas;
+`prefers-contrast: more` switches to system colors with an outlined selection.
 
 ---
 
