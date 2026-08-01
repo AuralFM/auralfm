@@ -15,13 +15,15 @@ Two surfaces, one app:
 | Surface | Purpose | Used |
 |---|---|---|
 | **Menu bar popover** (~380×520) | Now playing, play/pause, volume, favorites, search | ~95% of the time |
-| **Explore window** (900×600, resizable) | Browse by place, see what's on air in an area | Discovery sessions |
+| **Explore window** (900×600, resizable) | Browse by place — list view or globe view, toggleable | Discovery sessions |
 
 The popover is the product. Explore is the reason you'll open it in the first place.
 
 ### Core features (confirmed)
 1. **Play any station** — the full ~38k channel catalog, live.
-2. **Explore by area** — pick a place, list the stations broadcasting there (Radio Garden style).
+2. **Explore by area** — pick a place, list the stations broadcasting there. Two views
+   over the same data: a fast searchable list (default) and a spinnable globe, with a
+   toggle between them.
 3. **Favorites** — save stations, pin them to the popover with number-key access (`1`–`9`).
 4. **Search** — one box, matches country, city, or station name.
 
@@ -142,10 +144,39 @@ today with zero new toolchain and plays `http://` streams. Tauri is the better e
 - **Favorites:** save/unsave, reorder, `1`–`9` hotkeys in the popover.
 - **Done when:** you can find and play any of the 38k channels and keep the ones you like.
 
-### Phase 3 — Explore by area
-- Explore window: pick a place → list every station on air there.
-- Entry points: search a city, browse by country, or "near me".
-- **Open question — see §6.** Whether this is a 3D globe or a fast list view.
+### Phase 3 — Explore by area (two views, one toggle)
+
+List view ships first and is the default. Globe is a switchable alternate view over
+the *same* data and the *same* selection state — not a separate feature.
+
+```
+         ┌──────────── shared state ────────────┐
+         │  places index · selected place       │
+         │  station list · favorites · search   │
+         └───────┬──────────────────┬───────────┘
+                 │                  │
+          ┌──────▼──────┐    ┌──────▼──────┐
+          │  LIST VIEW  │ ⇄  │ GLOBE VIEW  │   toggle, top-right
+          │  (default)  │    │  (opt-in)   │
+          └─────────────┘    └─────────────┘
+```
+
+**3a — List view (build first)**
+- Country → city → stations. Search box filters all three levels.
+- Entry points: search a city, browse by country, "near me".
+- Fully usable on its own. If we stopped here, the app is complete.
+
+**3b — Globe view (build second)**
+- `globe.gl` / three.js, 12,296 points from the static bundle, sized by station count.
+- Click a point → selects that place → the station list is already there.
+- **Lazy-loaded.** The globe bundle is only fetched on first switch, so it costs
+  nothing at startup and can't slow the popover down.
+- Toggle state persists. If WebGL is unavailable, the toggle hides and list still works.
+
+Selecting a place in either view selects it in the other — switch views and you keep
+your place. This is why the shared-state box above exists, and why it's worth doing
+before the globe rather than retrofitting.
+
 - **Done when:** you've lost an hour to it.
 
 ### Phase 4 — Polish
@@ -175,10 +206,9 @@ today with zero new toolchain and plays `http://` streams. Tauri is the better e
 
 ## 6. Open questions
 
-1. **Is Explore a 3D globe or a list?** You originally picked "full globe/map browsing,"
-   then described it as "just list the stations that are in that area." Those are very
-   different builds — the globe is the single most expensive item in this plan.
-   A searchable place list gets the same *function* in a fraction of the time.
+1. ~~Is Explore a globe or a list?~~ **Resolved:** both. List first and default,
+   globe as a lazy-loaded alternate view, toggle between them over shared selection
+   state. See Phase 3.
 2. Repo visibility — public or private?
 3. Apple Developer account for Phase 4 signing?
 
