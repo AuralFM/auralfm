@@ -89,6 +89,15 @@
   .pal .nm{display:block;font-size:11px;font-weight:530;letter-spacing:-.002em}
   .pal .tag{display:block;font-size:10px;color:var(--label2);margin-top:1px}
 
+  .row .name b{display:block;font-weight:530}
+  .row .name .sub{display:block;font-size:11px;color:var(--label2);margin-top:1px}
+  .row .rm{
+    appearance:none;border:0;border-radius:6px;background:var(--fill);color:var(--label2);
+    font:inherit;font-size:11px;padding:4px 9px;cursor:default;flex:none;
+  }
+  .row .rm:hover{background:#FF453A;color:#fff}
+  .row .rm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{
@@ -220,6 +229,12 @@
     <p class="hint" data-i18n="set.dotSizeHint">Larger dots are easier to see and easier to hit, at the cost of some crowding in dense regions.</p>
   </section>
 
+  <section id="minesec" hidden>
+    <h2 data-i18n="set.mine">Your stations</h2>
+    <div class="card" id="minelist"></div>
+    <p class="hint" data-i18n="set.mineHint">Stations you added yourself. They live only on this Mac and are never sent anywhere. Add one from the list for a place on the globe.</p>
+  </section>
+
   <section>
     <h2 data-i18n="set.language">Language</h2>
     <div class="card">
@@ -333,6 +348,39 @@ $("#contrast").addEventListener("click", () =>
 
 $("#language").addEventListener("change", (e) => set({ language: e.target.value }));
 
+/**
+ * Everything you have added, in one place.
+ *
+ * Adding stays on the globe, where you are looking at the place it belongs to.
+ * Managing belongs here, because until now the only way to remove one was to
+ * navigate back to its place and find it — fine for one station, useless for
+ * twenty. Creation is contextual; management is central.
+ *
+ * The section hides itself when empty rather than showing an empty state: a
+ * heading for a feature you have not used yet is just clutter.
+ */
+async function paintMine() {
+  const list = await window.globefm.mineList();
+  const sec = $("#minesec"), box = $("#minelist");
+  sec.hidden = !list.length;
+  box.innerHTML = "";
+  for (const st of list) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span class="name"><b></b><span class="sub"></span></span>
+                     <button class="rm"></button>`;
+    row.querySelector("b").textContent = st.title;
+    row.querySelector(".sub").textContent = st.place
+      ? `${st.place}${st.country ? " · " + st.country : ""}`
+      : (T["set.mineNoPlace"] || "no place");
+    const rm = row.querySelector(".rm");
+    rm.textContent = T["set.remove"] || "Remove";
+    rm.onclick = async () => { await window.globefm.mineRemove(st.id); paintMine(); };
+    box.append(row);
+  }
+}
+window.globefm.onMineChanged(() => paintMine());
+
 async function paintPalettes() {
   const list = await window.globefm.palettes();
   const box = $("#palettes");
@@ -369,6 +417,7 @@ $("#terms").addEventListener("click", () => window.globefm.openDoc("TERMS.md"));
   ]);
   P = prefs; T = strings; PALS = pals;
   await paintPalettes();
+  await paintMine();
 
   const sel = $("#language");
   const sys = document.createElement("option");

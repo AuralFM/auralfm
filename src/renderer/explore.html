@@ -228,12 +228,24 @@
   /* Read-outs sit on chrome above the globe, not over it. White text on bright
      cloud was illegible — which is what the screenshot showed. */
   .globebar[hidden]{display:none}   /* display:flex below would otherwise win */
+  /**
+   * Lives inside .globecol, not beside it. As a sibling of .cols it spanned the
+   * whole window and ran underneath the station rail, which is what the
+   * overflow looked like — the text was not too long, the box was too wide.
+   *
+   * min-width:0 is the part that actually makes the ellipsis work: a flex child
+   * defaults to min-width:auto, which refuses to shrink below its content, so
+   * `overflow:hidden` had nothing to clip against.
+   */
   .globebar{
-    flex:none;display:flex;align-items:center;gap:0;
+    flex:none;display:flex;align-items:center;gap:0;min-width:0;max-width:100%;
     padding:0 16px 7px;font-size:11px;color:var(--label2);
-    letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    letter-spacing:.005em;white-space:nowrap;overflow:hidden;
     font-variant-numeric:tabular-nums;
   }
+  /* Each read-out shrinks in turn and the last one to fit is the one that gets
+     truncated, rather than the whole line vanishing at once. */
+  .globebar > span{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
   .globebar b{font-weight:590;color:var(--label)}
   .globebar > span:not(:empty) ~ span:not(:empty)::before{
     content:"·"; margin:0 10px; color:var(--label3);
@@ -432,11 +444,10 @@
          autocomplete="off" spellcheck="false">
 </div>
 
-<div class="globebar" id="globehint" hidden data-i18n="app.loadingGlobe">Loading globe…</div>
-
 <div class="cols">
 
   <div class="globecol">
+    <div class="globebar" id="globehint" hidden data-i18n="app.loadingGlobe">Loading globe…</div>
     <div class="globewrap" id="globewrap">
       <div id="globe"></div>
       <aside class="newspanel" id="newspanel" hidden>
