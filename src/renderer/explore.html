@@ -1430,15 +1430,18 @@ async function initGlobe() {
     .pointLabel((d) => d.label)
     // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
     // read as noise rather than geography.
-    .pointAltitude(0.002)
     // Size comes from dotRadius() so the Settings toggle can change it. Smaller
     // than they were: at full zoom 12,296 dots merge into a haze and
     // picking one is a fight; the fix is fewer, tighter dots plus level-of-detail
     // below, not a bigger hit target — "Large" is there for people who need it.
+    // The selected place has to be findable in a field of a thousand dots, so it
+    // is drawn much larger than anything around it rather than merely paler.
     .pointRadius((d) => {
-      if (d.kind === "sdr") return (sdrSel && sdrSel.host === d.host) ? 0.6 : 0.28;
-      return d.i === selection.placeIndex ? 0.55 : dotRadius(d);
+      if (d.kind === "sdr") return (sdrSel && sdrSel.host === d.host) ? 0.7 : 0.28;
+      return d.i === selection.placeIndex ? 0.8 : dotRadius(d);
     })
+    .pointAltitude((d) =>
+      (d.i === selection.placeIndex || (sdrSel && sdrSel.host === d.host)) ? 0.012 : 0.002)
     // Merged into one geometry: unmerged, 12,296 points cost 12,298 draw calls
     // per frame. Merged it is ~3. The tradeoff is that changing a point's colour
     // means rebuilding the layer, which only happens on selection.
@@ -1578,20 +1581,99 @@ const LOD_TIERS = [
 ];
 let lodTier = -1;
 
+let lodCentre = null;
+
+/**
+ * Which dots to draw.
+ *
+ * Two rules, and the second one is new because the first alone made the globe
+ * unreadable up close. Zoomed into California the old filter still drew every
+ * place in the hemisphere with at least one station — several thousand dots in a
+ * uniform speckle, covering the terrain, with a one-station town rendered at
+ * almost the same weight as Los Angeles. You could not tell where you were.
+ *
+ *  1. By size, as before: far out, only the major broadcast cities.
+ *  2. By where you are actually looking. Anything beyond the visible cap is
+ *     dropped outright — it was being drawn on the far side of the planet where
+ *     nobody could see it, and it was crowding the near side through the limb.
+ *
+ * Recomputed when the tier changes or the centre moves appreciably, not every
+ * frame: the points are merged into one geometry, so each rebuild is real work.
+ */
 function applyLod(force = false) {
   if (!globe || !globePts) return;
-  const alt = globe.pointOfView().altitude;
+  const pov = globe.pointOfView();
+  const alt = pov.altitude;
   const idx = LOD_TIERS.findIndex((t) => alt >= t.minAltitude);
   const tier = idx < 0 ? LOD_TIERS.length - 1 : idx;
-  if (tier === lodTier && !force) return;
+
+  const rad = Math.PI / 180;
+  const angFrom = (lat, lng, lat0, lng0) =>
+    Math.acos(Math.max(-1, Math.min(1,
+      Math.sin(lat * rad) * Math.sin(lat0 * rad) +
+      Math.cos(lat * rad) * Math.cos(lat0 * rad) * Math.cos((lng - lng0) * rad)))) / rad;
+
+  // The true horizon half-angle for this camera height, plus a small margin so
+  // dots do not pop in at the edge of the disc. Guessed at first, which drew
+  // most of North America while you were looking at California.
+  const cap = Math.min(92, (Math.acos(1 / (1 + alt)) / rad) + 6);
+
+  const moved = !lodCentre || angFrom(pov.lat, pov.lng, lodCentre.lat, lodCentre.lng) > 4;
+  if (tier === lodTier && !moved && !force) return;
   lodTier = tier;
-  const min = LOD_TIERS[tier].minCount;
-  const shown = layers.stations
-    ? globePts.filter((p) => p.count >= min || p.i === selection.placeIndex)
-    : [];
+  lodCentre = { lat: pov.lat, lng: pov.lng };
+
+  /**
+   * A fixed budget of dots on screen, rather than a fixed station-count
+   * threshold.
+   *
+   * The threshold approach could not win: tuned for the whole globe it hid
+   * everything local, and tuned for a city it drew 3,594 dots across a
+   * hemisphere in an unreadable speckle. A budget is self-tuning — zoomed out
+   * you get the world's major broadcast cities, zoomed into California you get
+   * the biggest places *in California*, because those are the only candidates
+   * left in view. Same number of dots either way, always legible.
+   */
+  const BUDGET = 700;
+  let shown = [];
+  if (layers.stations) {
+    const inView = [];
+    for (const p of globePts) {
+      if (p.i === selection.placeIndex) continue;                 // added below regardless
+      if (p.count < LOD_TIERS[tier].minCount) continue;
+      if (angFrom(p.lat, p.lng, pov.lat, pov.lng) > cap) continue;
+      inView.push(p);
+    }
+    // Biggest first, so what survives the cut is what a map would have labelled.
+    if (inView.length > BUDGET) {
+      inView.sort((a, b) => b.count - a.count);
+      inView.length = BUDGET;
+    }
+    shown = inView;
+    const sel = globePts.find((p) => p.i === selection.placeIndex);
+    if (sel) shown.push(sel);
+  }
   // Receivers are sparse enough that thinning them by zoom would just make them
   // vanish. All 838, or none.
-  if (layers.shortwave && sdrPts) shown.push(...sdrPts);
+  // Receivers get their own, smaller budget. They are a different kind of thing
+  // and there should never be so many amber dots that they compete with the
+  // terrain — 405 of them at global zoom was its own kind of speckle. Nearest to
+  // what you are looking at wins, so zooming into a region surfaces its local
+  // antennas rather than a thinned-out world.
+  const RX_BUDGET = 200;
+  if (layers.shortwave && sdrPts) {
+    const near = [];
+    for (const r of sdrPts) {
+      const d = angFrom(r.lat, r.lng, pov.lat, pov.lng);
+      if (d <= cap) near.push({ r, d });
+    }
+    if (near.length > RX_BUDGET) {
+      near.sort((a, b) => a.d - b.d);
+      near.length = RX_BUDGET;
+    }
+    for (const n of near) shown.push(n.r);
+    if (sdrSel && !shown.includes(sdrSel)) shown.push(sdrSel);
+  }
   globe.pointsData(shown);
   // No place-count read-out: it told you nothing you could act on, and it was
   // the longest thing in the status bar.
