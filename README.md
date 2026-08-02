@@ -266,6 +266,7 @@ phase0/index.html      the original single-file prototype
 | [`docs/PRODUCT.md`](docs/PRODUCT.md) | Positioning as a standalone app; what remains |
 | [`docs/PRIVACY.md`](docs/PRIVACY.md) | Everything stored locally, everything any third party sees |
 | [`docs/TERMS.md`](docs/TERMS.md) | Plain-language terms |
+| [`docs/SPONSORSHIP.md`](docs/SPONSORSHIP.md) | The sequence for funding this, and what it is and isn't worth |
 
 ## Scripts
 
