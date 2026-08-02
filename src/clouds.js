@@ -17,53 +17,83 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const LAYER = "VIIRS_SNPP_CorrectedReflectance_TrueColor";
 const BASE = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
-const MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
-let file = null;
+/**
+ * Two tiers, composited in the renderer:
+ *
+ *  base  VIIRS true colour — one global pass a day. Complete coverage, ~24h old.
+ *  live  GOES-East / GOES-West GeoColor — refreshed every 10 minutes, but
+ *        geostationary, so each only sees its own hemisphere.
+ *
+ * GIBS carries no Himawari or Meteosat GeoColor, so geostationary alone would
+ * leave Europe, Africa and Asia blank. Hence the hybrid: current where it can
+ * be, complete everywhere.
+ */
+const LAYERS = {
+  base:  { layer: "VIIRS_SNPP_CorrectedReflectance_TrueColor", fmt: "jpeg", ttl: 12 * 3600e3, dated: true },
+  goesE: { layer: "GOES-East_ABI_GeoColor", fmt: "png", ttl: 10 * 60e3, dated: false },
+  goesW: { layer: "GOES-West_ABI_GeoColor", fmt: "png", ttl: 10 * 60e3, dated: false },
+};
 
-function init(userDataPath) {
-  file = path.join(userDataPath, "clouds.jpg");
-}
+let dir = null;
 
-const fresh = () => {
-  try { return Date.now() - fs.statSync(file).mtimeMs < MAX_AGE_MS; }
+function init(userDataPath) { dir = userDataPath; }
+
+const pathFor = (k) => path.join(dir, `sky-${k}.${LAYERS[k].fmt}`);
+const fresh = (k) => {
+  try { return Date.now() - fs.statSync(pathFor(k)).mtimeMs < LAYERS[k].ttl; }
   catch { return false; }
 };
 
-/**
- * @returns {Promise<string|null>} path to a global equirectangular JPEG
- */
-async function get() {
-  if (!file) return null;
-  if (fresh()) return file;
-
-  // Yesterday UTC: today's pass is often still incomplete, which means more
-  // black gores than it's worth.
-  const d = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+async function fetchLayer(key) {
+  const spec = LAYERS[key];
   const q = new URLSearchParams({
     SERVICE: "WMS", REQUEST: "GetMap", VERSION: "1.3.0",
-    LAYERS: LAYER, CRS: "EPSG:4326",
+    LAYERS: spec.layer, CRS: "EPSG:4326",
     BBOX: "-90,-180,90,180", WIDTH: "2048", HEIGHT: "1024",
-    FORMAT: "image/jpeg", TIME: d,
+    FORMAT: `image/${spec.fmt}`,
   });
+  if (spec.fmt === "png") q.set("TRANSPARENT", "TRUE");
+  // Dated layers need an explicit day; for the geostationary ones, omitting TIME
+  // returns the newest frame. (TIME=current returns a blank image — it is not
+  // the alias it looks like.)
+  if (spec.dated) q.set("TIME", new Date(Date.now() - 864e5).toISOString().slice(0, 10));
 
-  try {
-    const res = await fetch(`${BASE}?${q}`, {
-      headers: { "User-Agent": "GlobeFM/0.1" },
-      signal: AbortSignal.timeout(45000),
-    });
-    if (!res.ok) throw new Error(`GIBS HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length < 50_000) throw new Error("GIBS returned an empty image");
-    fs.writeFileSync(file, buf);
-    console.log(`clouds: ${d} imagery cached (${(buf.length / 1024).toFixed(0)} KB)`);
-    return file;
-  } catch (err) {
-    console.warn(`clouds: unavailable (${err.message}) — staying on Blue Marble`);
-    return fresh() ? file : null;
+  const res = await fetch(`${BASE}?${q}`, {
+    headers: { "User-Agent": "GlobeFM/0.1" },
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length < 50_000) throw new Error("empty image");
+  fs.writeFileSync(pathFor(key), buf);
+  return buf.length;
+}
+
+/**
+ * @returns {Promise<{base:string|null, goesE:string|null, goesW:string|null, at:number}>}
+ */
+async function get() {
+  if (!dir) return { base: null, goesE: null, goesW: null, at: 0 };
+
+  await Promise.all(Object.keys(LAYERS).map(async (k) => {
+    if (fresh(k)) return;
+    try {
+      const n = await fetchLayer(k);
+      console.log(`sky: ${k} refreshed (${(n / 1024).toFixed(0)} KB)`);
+    } catch (err) {
+      // Individually optional — a missing geostationary tile just means that
+      // hemisphere falls back to the daily pass.
+      console.warn(`sky: ${k} unavailable (${err.message})`);
+    }
+  }));
+
+  const out = { at: Date.now() };
+  for (const k of Object.keys(LAYERS)) {
+    out[k] = fs.existsSync(pathFor(k)) ? pathFor(k) : null;
   }
+  return out;
 }
 
 module.exports = { init, get };

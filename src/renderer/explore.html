@@ -830,18 +830,55 @@ async function applyDayNight() {
   mat.needsUpdate = true;
 }
 
-/** Fetch today's satellite pass in the background and fade it in when ready. */
+const loadImage = (src) => new Promise((res, rej) => {
+  const i = new Image();
+  i.onload = () => res(i);
+  i.onerror = () => rej(new Error("image failed"));
+  i.src = src;
+});
+
+/**
+ * Build one sky texture from the daily global pass plus whatever geostationary
+ * frames exist, composited on a canvas.
+ *
+ * Order matters: VIIRS underneath for complete coverage, GOES on top where it
+ * exists because it is ten minutes old rather than a day. Painting them the
+ * other way round would bury the current data under yesterday's.
+ */
 async function loadLiveImagery(TexClass, like) {
   try {
-    const p = await window.globefm.clouds();
-    if (!p) return;
-    const tex = await loadTexture("file://" + p, TexClass, like);
+    const sky = await window.globefm.clouds();
+    if (!sky?.base && !sky?.goesE && !sky?.goesW) return;
+
+    const cv = document.createElement("canvas");
+    cv.width = 2048; cv.height = 1024;
+    const ctx = cv.getContext("2d");
+
+    let liveCount = 0;
+    for (const key of ["base", "goesE", "goesW"]) {
+      if (!sky[key]) continue;
+      try {
+        const img = await loadImage("file://" + sky[key]);
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        if (key !== "base") liveCount++;
+      } catch { /* skip this layer */ }
+    }
+
+    const tex = new TexClass(cv);
+    if (like) { tex.wrapS = like.wrapS; tex.wrapT = like.wrapT; tex.colorSpace = like.colorSpace; tex.flipY = like.flipY; }
+    tex.needsUpdate = true;
+
     const sh = globe?.globeMaterial()?.userData?.shader;
     if (!sh) return;
     sh.uniforms.liveMap.value = tex;
     sh.uniforms.hasLive.value = 1;
+
     const el = $("liveflag");
-    if (el) el.textContent = " · live cloud cover";
+    if (el) {
+      el.textContent = liveCount
+        ? ` · live cloud cover (${liveCount === 2 ? "GOES E+W" : "GOES"} 10 min · rest daily)`
+        : " · cloud cover (daily pass)";
+    }
   } catch { /* Blue Marble is a perfectly good fallback */ }
 }
 
