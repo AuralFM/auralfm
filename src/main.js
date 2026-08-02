@@ -536,6 +536,7 @@ if (!app.requestSingleInstanceLock()) {
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
     clouds.init(app.getPath("userData"));
+    satellites.init(app.getPath("userData"));
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();

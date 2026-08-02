@@ -8,14 +8,22 @@
  * Best-effort like everything else live here: a failure just means no marker.
  */
 
+const { cooldown } = require("./backoff");
+
 const PRIMARY = "https://api.wheretheiss.at/v1/satellites/25544";
 const FALLBACK = "http://api.open-notify.org/iss-now.json";
 const MIN_GAP_MS = 3000;          // the API asks for roughly this; no faster
 
 let last = { at: 0, data: null };
 
+// last.at only advanced on success, so MIN_GAP_MS throttled the happy path and
+// nothing else: while the API was down this retried on every 4-second tick,
+// paying two 6-second timeouts each time. 30s, doubling to 10 minutes.
+const cool = cooldown({ min: 30_000, max: 10 * 60_000, label: "iss" });
+
 async function get() {
   if (Date.now() - last.at < MIN_GAP_MS) return last.data;
+  if (cool.blocked) return last.data;
 
   try {
     const res = await fetch(PRIMARY, {
@@ -36,6 +44,7 @@ async function get() {
         sunlit: j.visibility === "daylight",
       },
     };
+    cool.ok();
     return last.data;
   } catch {
     try {
@@ -49,9 +58,13 @@ async function get() {
           altKm: 420, kph: 27600, sunlit: null,
         },
       };
+      cool.ok();
       return last.data;
-    } catch {
-      return last.data;           // keep the last known position rather than blink out
+    } catch (err) {
+      // Both sources down. Keep the last known position rather than blink out,
+      // and stop asking for a while.
+      cool.fail(err);
+      return last.data;
     }
   }
 }

@@ -16,6 +16,8 @@
  * in the catalog; anything unmapped falls back to world news in English.
  */
 
+const { cooldown } = require("./backoff");
+
 const TTL_MS = 15 * 60 * 1000;
 const cache = new Map();          // country -> { at, items }
 
@@ -51,6 +53,9 @@ const LOCALES = {
   "Denmark": ["DK", "da"],               "Finland": ["FI", "fi"],
   "Bulgaria": ["BG", "bg"],              "Slovakia": ["SK", "sk"],
 };
+
+// This endpoint is undocumented, so treat an outage as a reason to stop asking.
+const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "news" });
 
 const decode = (s) => s
   .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
@@ -98,6 +103,7 @@ async function get(country, limit = 12) {
   const key = country || "world";
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.items;
+  if (cool.blocked) return hit?.items || [];
 
   // No country means world news, not "whatever the US is reading" — this app is
   // about the whole globe, and the default should say so.
@@ -114,11 +120,13 @@ async function get(country, limit = 12) {
       redirect: "follow",            // the topic feed 302s to a signed URL
       signal: AbortSignal.timeout(9000),
     });
-    if (!res.ok) return [];
+    if (!res.ok) { cool.fail(`HTTP ${res.status}`); return []; }
     const items = parseItems(await res.text(), limit);
     cache.set(key, { at: Date.now(), items });
+    cool.ok();
     return items;
-  } catch {
+  } catch (err) {
+    cool.fail(err);
     return [];
   }
 }

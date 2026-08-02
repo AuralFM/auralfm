@@ -13,6 +13,8 @@
  * clicked, out of a fixed public list — never the user's own location.
  */
 
+const { cooldown } = require("./backoff");
+
 const API = "https://api.open-meteo.com/v1/forecast";
 const TTL_MS = 10 * 60 * 1000;        // conditions don't meaningfully move faster
 const cache = new Map();              // placeIndex -> { at, data }
@@ -35,9 +37,14 @@ const CODES = {
 
 const describe = (code) => CODES[code] || ["—", ""];
 
+// Failures were never cached, so clicking around the globe during an outage
+// meant one request per click.
+const cool = cooldown({ min: 60_000, max: 15 * 60_000, label: "weather" });
+
 async function get(placeIndex, lat, lon) {
   const hit = cache.get(placeIndex);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
+  if (cool.blocked) return null;
 
   const q = new URLSearchParams({
     latitude: String(lat),
@@ -51,10 +58,10 @@ async function get(placeIndex, lat, lon) {
       headers: { "User-Agent": "GlobeFM/0.1" },
       signal: AbortSignal.timeout(7000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) { cool.fail(`HTTP ${res.status}`); return null; }
     const j = await res.json();
     const c = j.current;
-    if (!c) return null;
+    if (!c) { cool.fail("no current conditions"); return null; }
 
     const [text, symbol] = describe(c.weather_code);
     const data = {
@@ -71,8 +78,10 @@ async function get(placeIndex, lat, lon) {
       utcOffsetSeconds: j.utc_offset_seconds,
     };
     cache.set(placeIndex, { at: Date.now(), data });
+    cool.ok();
     return data;
-  } catch {
+  } catch (err) {
+    cool.fail(err);
     return null;                       // best-effort, never surfaced as an error
   }
 }

@@ -22,6 +22,8 @@ const SYMBOL = { bitcoin: "BTC", ethereum: "ETH", solana: "SOL" };
 const STOCK_KEY = process.env.GLOBEFM_STOCK_KEY || null;
 const STOCKS = ["SPY", "QQQ", "DIA"];
 
+const { cooldown } = require("./backoff");
+
 const TTL_MS = 90 * 1000;
 const STOCK_TTL_MS = 15 * 60 * 1000;
 let cache = { at: 0, items: [] };
@@ -70,16 +72,23 @@ async function stocks() {
 /**
  * @returns {Promise<{items: Array<{symbol,price,changePct}>, hasStocks: boolean}>}
  */
+// cache.at only advanced when items came back, so a failing provider was
+// re-asked every 90 seconds indefinitely.
+const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "markets" });
+
 async function get() {
   if (Date.now() - cache.at < TTL_MS && cache.items.length) {
     return { items: cache.items, hasStocks: !!STOCK_KEY };
   }
+  if (cool.blocked) return { items: cache.items, hasStocks: !!STOCK_KEY };
   try {
     const [c, s] = await Promise.all([crypto(), stocks()]);
     const items = [...s, ...c];
-    if (items.length) cache = { at: Date.now(), items };
+    if (items.length) { cache = { at: Date.now(), items }; cool.ok(); }
+    else cool.fail("no quotes returned");
     return { items, hasStocks: !!STOCK_KEY };
-  } catch {
+  } catch (err) {
+    cool.fail(err);
     return { items: cache.items, hasStocks: !!STOCK_KEY };
   }
 }

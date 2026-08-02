@@ -65,6 +65,12 @@
   :root[data-contrast="more"] .card{outline:1px solid var(--line)}
   :root[data-contrast="more"] .seg button[aria-checked="true"]{outline:2px solid var(--accent)}
 
+  /* An explicit `display` in any rule below beats the [hidden] attribute, so
+     hidden elements render anyway. This has been the root cause of four
+     separate "the close button does nothing" bugs in this app. One global rule
+     ends the category. */
+  [hidden]{display:none !important}
+
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{
