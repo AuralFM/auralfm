@@ -450,6 +450,7 @@
   <span class="markets" id="markets"></span>
 </div>
 
+<script src="astro.js"></script>
 <script src="kiwi.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -597,18 +598,21 @@ function renderRailTabs(nearby) {
   mk("shortwave", `${t("rail.shortwave", "Shortwave")} ${nearby.length}`);
 }
 
+/** Great-circle distance in kilometres, rounded. */
+function greatCircleKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(a))));
+}
+
 /** Receivers within a day's drive of the selected place, nearest first. */
 function nearbyReceivers() {
   if (!selection.place || !sdrPts) return [];
   const { lat, lon } = selection.place;
-  const R = 6371, rad = Math.PI / 180;
   return sdrPts
-    .map((r) => {
-      const dLat = (r.lat - lat) * rad, dLng = (r.lng - lon) * rad;
-      const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLng / 2) ** 2;
-      return { ...r, km: Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(a)))) };
-    })
+    .map((r) => ({ ...r, km: greatCircleKm(lat, lon, r.lat, r.lng) }))
     .filter((r) => r.km <= 1500)
     .sort((a, b) => a.km - b.km)
     .slice(0, 12);
@@ -623,6 +627,20 @@ function renderStations() {
     `${place.country} · ` + (shown === total
       ? `${total} station${total === 1 ? "" : "s"}`
       : `${shown} of ${total} stations`);
+
+  // Where this place actually is, and how far it is from what you are hearing.
+  // Formatted like the sun read-out so the two agree on what a coordinate looks
+  // like in this app.
+  const coord = (v, pos, neg) => `${Math.abs(v).toFixed(1)}°${v >= 0 ? pos : neg}`;
+  let sub = headEl.querySelector("p").textContent;
+  sub += ` · ${coord(place.lat, "N", "S")} ${coord(place.lon, "E", "W")}`;
+  if (playing && playing.lat != null && playing.lon != null) {
+    const km = greatCircleKm(place.lat, place.lon, playing.lat, playing.lon);
+    // Under 20km is the same town by another name; saying "3 km from what's
+    // playing" is noise, not information.
+    if (km > 20) sub += ` · ${km.toLocaleString()} km from ${playing.title}`;
+  }
+  headEl.querySelector("p").textContent = sub;
 
   const nearby = nearbyReceivers();
   if (!nearby.length) railMode = "stations";
@@ -1914,6 +1932,43 @@ async function drawSky() {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  /**
+   * The planets, on top of the stars because that is where they are — wandering
+   * across a fixed background. Drawn with their own colour and a soft halo so
+   * they read as a different kind of object rather than just a brighter star,
+   * which is exactly how they look to the eye.
+   *
+   * Positions are computed for right now, so the sky redraws them as they move.
+   */
+  for (const pl of Astro.planets()) {
+    const x = X(pl.ra), y = Y(pl.dec);
+    const b = Math.max(0.15, Math.min(1, (2.5 - pl.mag) / 7));
+    const r = 2.2 + b * 4.4;
+
+    const halo = ctx.createRadialGradient(x, y, 0, x, y, r * 3.6);
+    halo.addColorStop(0, pl.colour);
+    halo.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3.6, 0, 6.2832);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = pl.colour;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 6.2832);
+    ctx.fill();
+
+    // A name, because an unlabelled bright dot is just a brighter star.
+    ctx.font = "600 21px -apple-system, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.62)";
+    ctx.textAlign = "center";
+    ctx.fillText(pl.name, x, y - r - 11);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = "left";
 
   globe.backgroundImageUrl(cv.toDataURL("image/jpeg", 0.86));
 }

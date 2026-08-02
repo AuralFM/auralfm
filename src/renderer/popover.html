@@ -299,7 +299,8 @@ function publish(){
   // and the tray need no special case for it.
   const ch = sdrRx
     ? { id: "sdr:" + sdrRx.host, title: sdrRx.label, place: sdrRx.loc, country: "", sdr: true }
-    : current ? {id:current.id,title:current.title,place:current.place,country:current.country} : null;
+    : current ? {id:current.id, title:current.title, place:current.place,
+                 country:current.country, lat:current.lat, lon:current.lon} : null;
   window.globefm.publishState({
     channel: ch,
     status: statusEl.textContent,
