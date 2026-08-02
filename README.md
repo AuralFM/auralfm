@@ -3,9 +3,15 @@
 **A window onto the world you can listen to.**
 
 Open it and the Earth is there — real weather moving across it, the day/night line
-where it truly is, the ISS overhead, stars behind. Click anywhere and hear what
-that place is listening to right now. **38,342 live radio stations across 12,296
-places.**
+where it truly is, the ISS overhead, the actual planets behind. Click anywhere and
+hear what that place is listening to right now.
+
+**38,342 radio stations across 12,296 places in 227 countries — and 837 shortwave
+receivers you can borrow.**
+
+The stations are streams. The shortwave receivers are somebody's actual antenna,
+in somebody's actual garden, and the signal reaches it off the ionosphere with no
+company anywhere in the middle. That is the one part of this that is not a CDN.
 
 **Offline-first. No backend of our own. Collects nothing.** The station catalogue
 lives on your machine; search, browse and the globe all work with the network
@@ -37,25 +43,87 @@ down radio support in Shortcuts and Apple Music — and grown well past it.
 └──────────────────────────────┘
 ```
 
+---
+
+## Why this exists
+
+I have been fascinated by radio communication for as long as I can remember —
+shortwave, CB, all of it. I have a vivid memory of my great-grandmother and
+grandfather listening to police scanners. For years my alarm for school was not
+an alarm at all; it was the radio coming on, and what came out of it was the Tom
+Joyner Show. That is the first thing I heard most mornings of my childhood.
+
+Somewhere along the way radio stopped being the thing everyone shared and became
+something closer to underground. Meanwhile the platforms that replaced it got
+worse at the one job they took over: discovery. And the feeds got louder, more
+political, more exhausting — a wall of propaganda and tension with no obvious way
+through it.
+
+Radio is a strange refuge from that. It is harder to fake. A station is a real
+transmitter in a real place, playing for people who are actually there, and you
+can hear the difference. The curation is human. The energy is honest. You can
+tell what a place sounds like at 3am.
+
+[radio.garden](https://radio.garden) showed me what that could feel like. From
+Texas I could listen to what was on in Tokyo, or Iraq, or India. The connection
+only ran one way — nobody on the other end knew I was there — and it still meant
+something to me.
+
+At the same time I was watching what Block and Jack Dorsey have been building
+toward for years, and what is happening around Nostr and decentralized systems
+generally. I think where society is heading, applications like these are going to
+matter more, not less.
+
+So this is the simple thing nobody thinks about, because it has always been
+there. Radio is overlooked precisely because it never left. GlobeFM is an attempt
+to make it visible again: see the globe, see how enormous society is, see the
+thousands of stations and hundreds of shortwave receivers scattered across it —
+and then just listen. Connection by audio, with nothing in the middle that has to
+know who you are.
+
+*— Melton Bell*
+
+---
+
 ## What it does
 
-- **Plays any station in the world** — 38,342 channels, 12,296 places, 242 countries.
+### Listening
+
+- **Any station in the world** — 38,342 channels across 12,296 places in 227 countries.
+- **837 shortwave receivers.** Click an amber dot and you are listening to a real
+  antenna in Trondheim, or Christoval, or a Cold War coastal fortress in Sweden.
+  Bands are ordered by whether that path is likely open right now, because
+  shortwave propagation depends on whether the path is in daylight — and the globe
+  already knows where the terminator is.
+- **Aviation on HF.** Out over an ocean an aircraft is beyond VHF range and talks
+  to the ground on shortwave. Tune *Shannon VOLMET* from Iceland and you hear the
+  weather being read for transatlantic flights.
+- **Add a station GlobeFM doesn't have.** The catalogue is a snapshot; your local
+  station might not be in it. Add it, and it lives on your machine.
 - **Search** by station, city, country, or genre. "jazz new orleans" works.
-- **Favorites** with `1`–`9` hotkeys.
+- **Favorites** with `1`–`9` hotkeys, and **Lock** to browse the world without
+  changing what you're hearing.
+
+### The globe
+
+- **A real Earth in real space** — actual satellite imagery, a day/night
+  terminator computed from the sun's true position, and a starfield of 5,044
+  catalogued stars with 89 constellation figures.
+- **The five naked-eye planets**, where they actually are tonight.
+- **Live cloud cover** — GOES geostationary imagery refreshed every 10 minutes over
+  a daily global pass, so the weather on the globe is the weather that is up there.
+- **The ISS and the Chinese space station**, live, named, with their ground tracks.
+- **Aircraft near where you are looking** — optional, capped, and off by default.
+- **Live local conditions** — pick a place and see its weather and local time, so
+  you know it is 53°F and overcast at 12:45 AM where the station is.
+
+### The app
+
 - **The globe is the app** — a standalone window, with a menu bar companion that
-  keeps playback going when the window is closed.
-- **A globe sitting in space** — real Earth, starfield, and a day/night
-  terminator computed from the sun's actual position right now.
-- **Live cloud cover** — GOES geostationary imagery refreshed every 10 minutes,
-  composited over a daily global pass, so the weather on the globe is the weather
-  that's actually up there.
-- **The ISS**, live, with the track it just flew.
-- **A real sky** — 5,044 catalogued stars and 89 constellation figures.
-- **Lock a station** and browse the world without changing what you're hearing.
-- **Live local conditions** — pick a place and see its current weather and local
-  time, so you know it's 53°F and overcast at 12:45 AM where the station is.
-- **Now playing in the menu bar** — the station name sits next to the icon.
-- **Keeps playing when the popover closes.** It hides, it doesn't stop.
+  keeps playing when the window is closed. It hides, it doesn't stop.
+- **Six colour schemes**, five interface languages, an appearance override, an
+  increased-contrast mode and adjustable dot sizes.
+- **Now playing in the menu bar**, with media key support.
 
 ## Requirements
 
@@ -65,7 +133,7 @@ down radio support in Shortcuts and Apple Music — and grown well past it.
 ## Getting started
 
 ```bash
-git clone git@github.com:YOUR_USERNAME/globefm.git
+git clone git@github.com:meltonbell3/globefm.git
 cd globefm
 npm install
 ```
@@ -109,12 +177,20 @@ BUILD TIME
   radio-browser ──── genres ──────┘
    61,520 stations, 11,777 tags
 
+  rx.kiwisdr.com ── receivers ────────> data/sdr.min.json      (98 KB)
+   837 shortwave sites, all with GPS
+
 RUN TIME
-  Search + Explore read the local bundle.        (no network)
-  Press play -> resolve the stream URL:
+  Search + Explore read the local bundles.       (no network)
+
+  Press play on a station -> resolve the stream URL:
     1. radio.garden listen endpoint (302 -> real stream)
     2. radio-browser, matched on name + country
     3. last-known-good URL cached on disk
+    0. a station you added yourself skips all of it — you gave us the URL
+
+  Press play on a shortwave band -> connect straight to that receiver:
+    ws://host/kiwi/<ts>/SND, IMA-ADPCM, decoded in the browser
 ```
 
 Neither directory is queried while you browse, and playback survives both being
@@ -136,6 +212,15 @@ for. It is the one live thing in an otherwise offline-first app, so it is
 strictly best-effort: cached for 10 minutes, and silent on failure. Only the
 selected city's coordinates are sent, never the user's location.
 
+**Being a good guest.** Every live service here is free and most are run by
+volunteers. Each one gets a contactable `User-Agent`, a cache, and an exponential
+backoff on failure. That discipline is not decorative — GlobeFM once retried a
+failed Celestrak fetch every 30 seconds and got its IP blocked for a day, which
+is why `src/backoff.js` exists and why `npm run audit` checks that every polled
+service has a cooldown. The 837 shortwave receivers get stricter rules again:
+never auto-connect, one session at a time, never retry a refusal, never enumerate
+them.
+
 **Why a native app instead of a web page?** 47% of the most-played radio streams
 are served over plain `http://`. A page served over HTTPS cannot play them —
 mixed-content blocking kills them silently. A native shell has no such limit.
@@ -149,20 +234,38 @@ src/
   catalog.js           bundle loading + ranked search        (main process)
   resolver.js          3-tier stream URL resolution          (main process)
   weather.js           current conditions via Open-Meteo      (main process)
+  sdr.js               shortwave receiver list                (main process)
+  flights.js           aircraft near the view, capped         (main process)
+  mystations.js        stations you added yourself            (main process)
+  palettes.js          colour schemes
+  i18n.js              interface strings, 5 languages
+  backoff.js           shared failure cooldown
   renderer/
-    popover.html       menu bar player
-    explore.html       browse-by-place window
+    popover.html       menu bar player — the only thing that makes sound
+    explore.html       the globe
+    settings.html      appearance, colour, language, your stations
+    kiwi.js            KiwiSDR protocol + IMA-ADPCM decoder
+    astro.js           planetary positions (JPL elements)
 scripts/
   crawl.mjs            radio.garden -> station bundle (resumable)
+  crawl-sdr.mjs        kiwisdr -> receiver bundle
   tags.mjs             radio-browser genre tags -> bundle
+  audit.mjs            pre-flight checks (npm run audit)
   make-icons.js        SVG -> PNG via Electron (keeps alpha)
 assets/                source icons + attribution
 data/                  generated bundle (gitignored)
 phase0/index.html      the original single-file prototype
 ```
 
-`PLAN.md` carries the full design record: what was measured, what was decided,
-and why.
+### Documents
+
+| | |
+|---|---|
+| [`PLAN.md`](PLAN.md) | The full design record — what was measured, what was decided, why |
+| [`docs/DECENTRALIZATION.md`](docs/DECENTRALIZATION.md) | What "offline-first, no backend, collects nothing" can honestly carry, and what it cannot |
+| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Positioning as a standalone app; what remains |
+| [`docs/PRIVACY.md`](docs/PRIVACY.md) | Everything stored locally, everything any third party sees |
+| [`docs/TERMS.md`](docs/TERMS.md) | Plain-language terms |
 
 ## Scripts
 
@@ -173,22 +276,31 @@ and why.
 | `npm run crawl -- --build` | Rebuild bundles from existing progress, no network |
 | `npm run tags` | Join radio-browser genre tags onto the catalog |
 | `npm run icons` | Regenerate PNGs from `assets/*.svg` |
+| `npm run crawl:sdr` | Refresh the shortwave receiver list |
+| `npm run audit` | Pre-flight checks for the traps this codebase has fallen into |
+| `npm run check` | Report how stale the station catalogue is |
 
 ## Status
 
-| Phase | State |
+| | State |
 |---|---|
-| 0 — Player prototype | ✅ |
-| 1 — Menu bar shell | ✅ |
-| 2 — Catalog, search, favorites | ✅ |
-| 3a — Explore: list view | ✅ |
-| 3b — Explore: globe view | ✅ |
-| 4 — Dead-stream auto-skip, media keys, signing | Planned |
+| Player, menu bar shell, catalogue, search, favourites | ✅ |
+| Explore — list and globe | ✅ |
+| Day/night, live clouds, real sky, planets, ISS | ✅ |
+| Shortwave receivers, aviation HF | ✅ |
+| Settings — appearance, contrast, dot size, language, palettes | ✅ |
+| User-added stations | ✅ |
+| Aircraft layer | ✅ |
+| Code signing and notarisation | Needs an Apple Developer account |
+| Downloadable release | Blocked on signing |
+| Presence between listeners | Designed, needs hosting — deliberately unbuilt |
 
 ## Known limits
 
-- **Moonlight isn't modelled.** The terminator follows the real sun; the moon is
-  not yet computed (issue #9).
+- **Moonlight isn't modelled.** The terminator follows the real sun. The moon's
+  position and phase are computed and shown, but the Earth is not lit by it —
+  real moonlight is ~400,000× dimmer than sunlight and would be invisible next to
+  the night-lights texture.
 - **66% of stations have no genre tags.** A genre query only finds a station if
   radio-browser knew it *and* the two directories could be matched confidently.
   Aggressive matching would raise coverage by putting wrong genres on real
@@ -198,11 +310,22 @@ and why.
   streams to be dead or blocked at any given time.
 - **The catalog is a snapshot, not a subscription.** Stations come and go; re-run
   `npm run crawl` every few months.
-- **Unsigned.** Gatekeeper will complain until the app is signed and notarized.
+- **Unsigned.** Gatekeeper will complain until the app is signed and notarised.
+- **Shortwave receivers are volunteers' machines.** GlobeFM connects only when you
+  click one, one at a time, never retries a refusal, and never scans them. If a
+  receiver is busy, that is a person's hardware being used by somebody else.
+- **Stocks are dormant.** There is no keyless real-time equity source — Yahoo,
+  Stooq and CNBC were all re-probed and all refuse. Crypto is genuinely live over
+  Coinbase's keyless feed; equities light up only if you set `GLOBEFM_STOCK_KEY`.
 
 ## Credits
 
 - Station geography: [radio.garden](https://radio.garden)
+- Shortwave receivers: the [KiwiSDR](http://kiwisdr.com) community, and the
+  operators who pay for the bandwidth
+- Orbital elements: [CelesTrak](https://celestrak.org) and [SatNOGS](https://db.satnogs.org)
+- Aircraft positions: [adsb.lol](https://adsb.lol)
+- Crypto prices: [Coinbase](https://www.coinbase.com)
 - Satellite imagery: [NASA GIBS](https://nasa-gibs.github.io/gibs-api-docs/) (VIIRS true colour)
 - Station genres and fallback streams: [radio-browser.info](https://www.radio-browser.info)
 - Globe icon by **emilegraphics** via [the Noun Project](https://thenounproject.com) —
