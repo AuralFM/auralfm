@@ -30,6 +30,8 @@ down the radio station support in Shortcuts and Apple Music.
 - **Favorites** with `1`–`9` hotkeys.
 - **Explore** — browse by place, as a list or on a real 3-D globe with a live
   day/night terminator computed from the sun's actual position.
+- **Live local conditions** — pick a place and see its current weather and local
+  time, so you know it's 53°F and overcast at 12:45 AM where the station is.
 - **Now playing in the menu bar** — the station name sits next to the icon.
 - **Keeps playing when the popover closes.** It hides, it doesn't stop.
 
@@ -104,6 +106,12 @@ play so their popularity ranking stays meaningful, so GlobeFM calls
 affect playback). It sends a descriptive `User-Agent`, and discovers mirrors via
 `/json/servers` rather than pinning one host.
 
+**Weather** comes from [Open-Meteo](https://open-meteo.com) — chosen because it
+needs no API key, so a fresh clone has working weather with nothing to sign up
+for. It is the one live thing in an otherwise offline-first app, so it is
+strictly best-effort: cached for 10 minutes, and silent on failure. Only the
+selected city's coordinates are sent, never the user's location.
+
 **Why a native app instead of a web page?** 47% of the most-played radio streams
 are served over plain `http://`. A page served over HTTPS cannot play them —
 mixed-content blocking kills them silently. A native shell has no such limit.
@@ -116,6 +124,7 @@ src/
   preload.js           the entire renderer API surface (context-isolated)
   catalog.js           bundle loading + ranked search        (main process)
   resolver.js          3-tier stream URL resolution          (main process)
+  weather.js           current conditions via Open-Meteo      (main process)
   renderer/
     popover.html       menu bar player
     explore.html       browse-by-place window

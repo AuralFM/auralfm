@@ -110,6 +110,14 @@
   .placehead{flex:none;padding:0 18px 10px}
   .placehead h2{margin:0;font-size:19px;font-weight:640;letter-spacing:-.018em;line-height:1.15}
   .placehead p{margin:2px 0 0;font-size:12px;color:var(--label2)}
+  .wx{
+    margin:7px 0 0;font-size:12px;color:var(--label2);
+    display:flex;align-items:center;gap:7px;min-height:16px;
+    opacity:0;transition:opacity .25s ease-out;
+  }
+  .wx.on{opacity:1}
+  .wx .sym{font-size:13px;color:var(--label)}
+  .wx .t{color:var(--label);font-weight:510;font-variant-numeric:tabular-nums}
 
   .st{
     display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;
@@ -176,7 +184,7 @@
   </div>
 
   <div class="stations">
-    <div class="placehead" id="head" hidden><h2></h2><p></p></div>
+    <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div></div>
     <div class="scroll" id="stationlist">
       <div class="empty">Pick a place to hear what's on air there.</div>
     </div>
@@ -261,6 +269,7 @@ async function selectPlace(i) {
   selection.channels = channels;
   markPlaceSelection({ scroll: true });
   renderStations();
+  loadWeather(place);
   refreshGlobeSelection();
 }
 
@@ -321,6 +330,38 @@ window.globefm.onPlayerState((s) => {
     el.setAttribute("aria-current", playing?.id === el.dataset.id);
   }
 });
+
+// ── weather ──────────────────────────────────────────────────────────────────
+// Imperial for US locales, metric everywhere else — the app is used by whoever
+// clones it, and 87°F/30°C is the kind of detail that reads as wrong instantly.
+const US = /^en-US|^en$/.test(navigator.language || "");
+const temp = (c) => (US ? `${Math.round(c * 9 / 5 + 32)}°F` : `${Math.round(c)}°C`);
+
+async function loadWeather(place) {
+  const el = $("wx");
+  el.classList.remove("on");
+  el.textContent = "";
+  const asked = place.i;
+
+  const w = await window.globefm.weather(place.i, place.lat, place.lon);
+  // The user may have clicked elsewhere while this was in flight.
+  if (!w || selection.placeIndex !== asked) return;
+
+  const hhmm = (w.localTime || "").slice(11, 16);
+  const local = hhmm
+    ? new Date(`2000-01-01T${hhmm}:00`).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+    : null;
+
+  el.innerHTML = `<span class="sym"></span><span class="t"></span><span class="d"></span>`;
+  el.querySelector(".sym").textContent = w.symbol;
+  el.querySelector(".t").textContent = temp(w.tempC);
+  el.querySelector(".d").textContent =
+    `· ${w.text}` + (local ? ` · ${local} local` : "");
+  el.title =
+    `Feels like ${temp(w.feelsC)} · humidity ${w.humidity}% · wind ${Math.round(w.windKph)} km/h`
+    + (w.tz ? ` · ${w.tz}` : "");
+  el.classList.add("on");
+}
 
 // ── globe view ───────────────────────────────────────────────────────────────
 let globe = null, globeLoading = null, globePts = null, sunTimer = null;

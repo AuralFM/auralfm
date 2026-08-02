@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("globefm", {
   places: (q, limit) => ipcRenderer.invoke("catalog:places", q, limit),
   placeChannels: (i) => ipcRenderer.invoke("catalog:placeChannels", i),
   globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
+  weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),
 
