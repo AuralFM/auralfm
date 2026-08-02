@@ -1,10 +1,19 @@
 # GlobeFM
 
-A macOS menu bar radio player. Listen to any of **38,342 live radio stations across
-12,296 places worldwide** — from the menu bar, without opening a browser tab.
+**A window onto the world you can listen to.**
 
-Inspired by [radio.garden](https://radio.garden), built because Apple is winding
-down the radio station support in Shortcuts and Apple Music.
+Open it and the Earth is there — real weather moving across it, the day/night line
+where it truly is, the ISS overhead, stars behind. Click anywhere and hear what
+that place is listening to right now. **38,342 live radio stations across 12,296
+places.**
+
+**Offline-first. Serverless. Collects nothing.** The station catalogue lives on
+your machine; search, browse and the globe all work with the network unplugged.
+There is no backend, no account, and nothing about what you listen to leaves your
+computer.
+
+Inspired by [radio.garden](https://radio.garden), started because Apple is winding
+down radio support in Shortcuts and Apple Music — and grown well past it.
 
 ```
 ┌──────────────────────────────┐
@@ -28,10 +37,15 @@ down the radio station support in Shortcuts and Apple Music.
 - **Plays any station in the world** — 38,342 channels, 12,296 places, 242 countries.
 - **Search** by station, city, country, or genre. "jazz new orleans" works.
 - **Favorites** with `1`–`9` hotkeys.
+- **The globe is the app** — a standalone window, with a menu bar companion that
+  keeps playback going when the window is closed.
 - **A globe sitting in space** — real Earth, starfield, and a day/night
   terminator computed from the sun's actual position right now.
-- **Live cloud cover** — near-real-time VIIRS satellite imagery from NASA GIBS,
-  so the weather on the globe is the weather that's actually up there.
+- **Live cloud cover** — GOES geostationary imagery refreshed every 10 minutes,
+  composited over a daily global pass, so the weather on the globe is the weather
+  that's actually up there.
+- **The ISS**, live, with the track it just flew.
+- **A real sky** — 5,044 catalogued stars and 89 constellation figures.
 - **Lock a station** and browse the world without changing what you're hearing.
 - **Live local conditions** — pick a place and see its current weather and local
   time, so you know it's 53°F and overcast at 12:45 AM where the station is.
@@ -61,7 +75,9 @@ npm run icons     # rasterize assets/*.svg into the PNGs macOS needs
 npm start         # run it
 ```
 
-Look for the globe in your menu bar. Right-click it for **Open at Login** and **Quit**.
+The globe opens on launch. Close it and GlobeFM keeps playing from the menu bar —
+right-click the tray icon for **Open the Globe**, **About**, **Open at Login** and
+**Quit**.
 
 ### Just trying it out?
 

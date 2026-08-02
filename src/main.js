@@ -132,15 +132,36 @@ function openExplore() {
   // A menu bar app runs as an "accessory" with no Dock icon, which also means
   // its windows can't take proper focus or own the menu bar. Become a regular
   // app while Explore is open, then drop back to accessory when it closes.
-  app.dock?.show();
-  explore.on("closed", () => {
-    explore = null;
-    app.dock?.hide();
-  });
+  explore.on("closed", () => { explore = null; });
 
   explore.webContents.on("did-finish-load", () => {
     explore?.webContents.send("player:state", playerState);
   });
+}
+
+/**
+ * About panel.
+ *
+ * Required rather than decorative: the globe icon is Noun Project CC BY, so the
+ * credit has to appear wherever the app is distributed. It is also the right
+ * place to state the privacy position plainly, because "collects nothing" is
+ * only worth anything if it is said out loud where people can check it.
+ */
+function showAbout() {
+  app.setAboutPanelOptions({
+    applicationName: "GlobeFM",
+    applicationVersion: app.getVersion(),
+    copyright:
+      "Offline-first · no account · no telemetry\n" +
+      "The station catalogue lives on your machine. Nothing about what you\n" +
+      "listen to leaves it.\n\n" +
+      "Stations: radio.garden · radio-browser.info\n" +
+      "Imagery: NASA GIBS (VIIRS, GOES) · Blue Marble\n" +
+      "Sky: Yale Bright Star Catalog via d3-celestial\n" +
+      "Weather: Open-Meteo · ISS: wheretheiss.at\n\n" +
+      "Globe icon by emilegraphics, the Noun Project (CC BY).",
+  });
+  app.showAboutPanel();
 }
 
 // ── tray ──────────────────────────────────────────────────────────────────────
@@ -159,6 +180,9 @@ function createTray() {
   tray.on("right-click", () => {
     tray.popUpContextMenu(Menu.buildFromTemplate([
       { label: "GlobeFM", enabled: false },
+      { type: "separator" },
+      { label: "Open the Globe", click: openExplore },
+      { label: "About GlobeFM", click: showAbout },
       { type: "separator" },
       {
         label: "Open at Login",
@@ -311,12 +335,14 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on("second-instance", (_e, argv) => {
     const link = argv.find((a) => a.startsWith("globefm://"));
-    if (link) handleDeepLink(link); else show();
+    if (link) handleDeepLink(link); else openExplore();
   });
 
   app.whenReady().then(() => {
-    // Menu bar app: no Dock icon, no app switcher entry.
-    app.dock?.hide();
+    // Standalone app with a menu bar companion: the globe is what people came
+    // for, so it opens on launch rather than hiding behind an unlabelled tray
+    // icon. The menu bar keeps every behaviour it had — it is now the thing that
+    // keeps playback going once the window is closed.
     catalog.load();
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
@@ -325,8 +351,15 @@ if (!app.requestSingleInstanceLock()) {
     if (presence.enabled()) console.log("presence: enabled");
     createWindow();
     createTray();
+    openExplore();                 // the globe is the app
+
+    // Clicking the Dock icon with no window open reopens the globe, which is
+    // what every native macOS app does.
+    app.on("activate", () => openExplore());
   });
 
+  // Closing the globe leaves the app alive in the menu bar, still playing. That
+  // is the whole point of keeping the companion.
   app.on("window-all-closed", () => { /* stay alive in the tray */ });
   app.on("before-quit", () => { quitting = true; globalShortcut.unregisterAll(); });
 }
