@@ -28,7 +28,8 @@ down the radio station support in Shortcuts and Apple Music.
 - **Plays any station in the world** — 38,342 channels, 12,296 places, 242 countries.
 - **Search** by station, city, country, or genre. "jazz new orleans" works.
 - **Favorites** with `1`–`9` hotkeys.
-- **Explore** — browse by place in a separate window; a globe view is coming.
+- **Explore** — browse by place, as a list or on a real 3-D globe with a live
+  day/night terminator computed from the sun's actual position.
 - **Now playing in the menu bar** — the station name sits next to the icon.
 - **Keeps playing when the popover closes.** It hides, it doesn't stop.
 
@@ -97,6 +98,12 @@ unreachable once a station has played at least once.
 data at all. radio-browser has 11,777 genre tags but coordinates for only 22% of
 its stations. Neither is sufficient alone.
 
+**Being a good API citizen.** radio-browser's docs ask clients to report each
+play so their popularity ranking stays meaningful, so GlobeFM calls
+`/json/url/{uuid}` whenever a station starts (fire-and-forget — it can never
+affect playback). It sends a descriptive `User-Agent`, and discovers mirrors via
+`/json/servers` rather than pinning one host.
+
 **Why a native app instead of a web page?** 47% of the most-played radio streams
 are served over plain `http://`. A page served over HTTPS cannot play them —
 mixed-content blocking kills them silently. A native shell has no such limit.
@@ -142,11 +149,13 @@ and why.
 | 1 — Menu bar shell | ✅ |
 | 2 — Catalog, search, favorites | ✅ |
 | 3a — Explore: list view | ✅ |
-| 3b — Explore: globe view | Next |
+| 3b — Explore: globe view | ✅ |
 | 4 — Dead-stream auto-skip, media keys, signing | Planned |
 
 ## Known limits
 
+- **Moonlight isn't modelled.** The terminator follows the real sun; the moon is
+  not yet computed (issue #9).
 - **66% of stations have no genre tags.** A genre query only finds a station if
   radio-browser knew it *and* the two directories could be matched confidently.
   Aggressive matching would raise coverage by putting wrong genres on real

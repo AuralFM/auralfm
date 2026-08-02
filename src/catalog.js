@@ -7,7 +7,7 @@
  *
  * Bundle shape (positional, to keep the file small):
  *   p: [ [placeTitle, country, lon, lat], ... ]
- *   c: [ [channelId, title, placeIndex, secure, tags?], ... ]
+ *   c: [ [channelId, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk] ]
  *
  * tags is a comma-joined string, present only on the ~34% of channels we could
  * match to radio-browser (see scripts/tags.mjs). radio.garden has no genre data
@@ -63,6 +63,8 @@ function hydrate(i) {
     title: c[1],
     secure: !!c[3],
     tags: c[4] ? c[4].split(",") : [],
+    rbuuid: c[5] || null,          // radio-browser id, for click reporting
+    ok: c[6] === 0 ? false : c[6] === 1 ? true : null,
     place: p[0],
     country: p[1],
     lon: p[2],

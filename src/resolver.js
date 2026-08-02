@@ -18,7 +18,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const RG = "https://radio.garden/api/ara/content/listen";
-const RB = "https://de1.api.radio-browser.info/json/stations/search";
+// Discovered at runtime from the mirror pool; de1 is only the bootstrap.
+let RB_HOST = "https://de1.api.radio-browser.info";
+const UA = "GlobeFM/0.1";
 
 const RG_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -33,6 +35,40 @@ let cache = {};
 function init(userDataPath) {
   cacheFile = path.join(userDataPath, "streams.json");
   try { cache = JSON.parse(fs.readFileSync(cacheFile, "utf8")); } catch { cache = {}; }
+  pickMirror();
+}
+
+/**
+ * radio-browser runs a pool of mirrors and asks clients to spread load across
+ * them rather than hammering one host. Failing to reach the pool is harmless —
+ * we just keep the bootstrap host.
+ */
+async function pickMirror() {
+  try {
+    const res = await fetch(`${RB_HOST}/json/servers`, {
+      headers: { "User-Agent": UA },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return;
+    const names = [...new Set((await res.json()).map((s) => s.name).filter(Boolean))];
+    if (!names.length) return;
+    RB_HOST = `https://${names[Math.floor(Math.random() * names.length)]}`;
+    console.log(`radio-browser mirror: ${RB_HOST}`);
+  } catch { /* keep the bootstrap host */ }
+}
+
+/**
+ * radio-browser's docs ask that this be called every time a user starts playing
+ * a stream — it is how their popularity ranking stays meaningful, and we lean on
+ * their data heavily. Repeat calls from one IP for one station count once a day,
+ * so this is cheap. Fire-and-forget: a failure must never affect playback.
+ */
+function reportClick(uuid) {
+  if (!uuid) return;
+  fetch(`${RB_HOST}/json/url/${uuid}`, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => {});
 }
 
 function remember(id, url) {
@@ -61,8 +97,8 @@ async function viaRadioBrowser(title, country) {
     order: "votes",
     reverse: "true",
   });
-  const res = await fetch(`${RB}?${q}`, {
-    headers: { "User-Agent": "GlobeFM/0.1" },
+  const res = await fetch(`${RB_HOST}/json/stations/search?${q}`, {
+    headers: { "User-Agent": UA },
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) return null;
@@ -80,8 +116,9 @@ async function viaRadioBrowser(title, country) {
 /**
  * @returns {Promise<{url:string, via:string}|null>}
  */
-async function resolve({ id, title, country }) {
+async function resolve({ id, title, country, rbuuid }) {
   const attempts = [];
+  reportClick(rbuuid);        // credit the station with the play, per their docs
 
   if (id) {
     try {
@@ -105,4 +142,4 @@ async function resolve({ id, title, country }) {
   return null;
 }
 
-module.exports = { init, resolve };
+module.exports = { init, resolve, reportClick };
