@@ -443,8 +443,9 @@ const waitFor = (fn, ms = 8000) => new Promise((res, rej) => {
  *
  * Injected into the existing MeshPhongMaterial rather than built as a fresh
  * ShaderMaterial, because globe.gl bundles three privately and never exposes the
- * constructors. UVs are derived from the object-space normal instead of a
- * varying, so this doesn't break when three renames vUv to vMapUv.
+ * constructors. Texture lookups use the geometry's own uv attribute, forwarded
+ * through our own varying — that can't drift from the texture, and doesn't
+ * depend on three's internal varying names.
  *
  * Injected at <opaque_fragment>, not at the end of the shader: everything after
  * it (tone mapping, colour-space encoding) still has to run on our blended
@@ -473,18 +474,19 @@ async function applyDayNight() {
     shader.uniforms.nightMap = { value: nightTex };
     shader.uniforms.sunDirection = { value: sunVector() };
 
-    shader.vertexShader = "varying vec3 vObjNormal;\n" + shader.vertexShader
-      .replace("void main() {", "void main() {\n  vObjNormal = normalize(position);");
+    // Pass the geometry's own UVs through a varying we control. Deriving UVs
+    // from the normal looks right on paper but silently rotates the map: three's
+    // SphereGeometry puts u=0 at -X and u=0.25 at +Z, not u=0.5 at +Z, so the
+    // Americas ended up showing Europe and Africa.
+    shader.vertexShader = "varying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" + shader.vertexShader
+      .replace("void main() {", "void main() {\n  vObjNormal = normalize(position);\n  vGlobeUv = uv;");
 
     shader.fragmentShader =
-      "uniform sampler2D nightMap;\nuniform vec3 sunDirection;\nvarying vec3 vObjNormal;\n" +
+      "uniform sampler2D nightMap;\nuniform vec3 sunDirection;\nvarying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" +
       shader.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>
         vec3 n = normalize(vObjNormal);
-        float uu = atan(n.x, n.z) / 6.2831853 + 0.5;
-        float vv = asin(clamp(n.y, -1.0, 1.0)) / 3.14159265 + 0.5;
-        vec2 eq = vec2(uu, vv);
-        vec3 dayC   = texture2D(map, eq).rgb;
-        vec3 nightC = texture2D(nightMap, eq).rgb;
+        vec3 dayC   = texture2D(map, vGlobeUv).rgb;
+        vec3 nightC = texture2D(nightMap, vGlobeUv).rgb;
         float cosSun = dot(n, normalize(sunDirection));
         // ~10 degrees of softness: civil twilight, not a hard line
         float t = smoothstep(-0.09, 0.09, cosSun);
