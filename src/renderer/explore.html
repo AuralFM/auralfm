@@ -76,7 +76,7 @@
   .seg button[aria-selected="true"]{background:var(--pane);color:var(--label);box-shadow:0 .5px 1.5px rgba(0,0,0,.18)}
   .seg button:disabled{opacity:.4}
 
-  .cols{flex:1;display:flex;min-height:0;position:relative}
+  .cols{flex:1;display:flex;min-height:0}
 
   /* Left: places. Darker material — AppKit uses heavier surfaces for structure. */
   .places{
@@ -154,27 +154,18 @@
   #globe canvas{display:block}
   /* Slides over the globe rather than taking a column from it — the globe is the
      product, and news should not permanently shrink it. */
-  /* Below this the window cannot fit a panel, a rail and a usable globe at once,
-     so the panel floats over the globe instead of crushing it. Above it, the
-     panel gets its own column and the globe is never covered. */
+  /* Always hovers over the map, never a column. A panel that takes layout width
+     squeezes the globe — which is the one thing this app is for. */
   .newspanel{
     position:absolute;left:0;top:0;bottom:0;z-index:5;
-    width:min(340px, 60%);
-    display:flex;flex-direction:column;
-    background:color-mix(in srgb, Canvas 97%, transparent);
+    width:clamp(300px, 34%, 460px);
+    display:flex;flex-direction:column;overflow:hidden;
+    background:color-mix(in srgb, Canvas 96%, transparent);
     backdrop-filter:blur(30px) saturate(150%);
     border-right:.5px solid var(--line);
-    overflow:hidden;
-    box-shadow:2px 0 18px rgba(0,0,0,.18);
+    box-shadow:2px 0 22px rgba(0,0,0,.20);
     animation:newsin .22s cubic-bezier(.32,.72,0,1);
   }
-  @media (min-width: 1400px){
-    .newspanel{
-      position:static;width:clamp(300px, 20vw, 420px);
-      background:none;backdrop-filter:none;
-    }
-  }
-  .globecol{min-width:260px}
   @keyframes newsin{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion: reduce){ .newspanel{animation:none} }
   .newshead{
@@ -337,18 +328,19 @@
 <div class="globebar" id="globehint">Loading globe…</div>
 
 <div class="cols">
-  <aside class="newspanel" id="newspanel" hidden>
-    <div class="newshead">
-      <b id="newsplace">Headlines</b>
-      <button id="newsSrc" title="Follow the playing station instead">◎</button>
-      <button id="newsClose" title="Close">×</button>
-    </div>
-    <div class="newslist" id="newslist"></div>
-  </aside>
 
   <div class="globecol">
     <div class="globewrap" id="globewrap">
       <div id="globe"></div>
+      <aside class="newspanel" id="newspanel" hidden>
+        <div class="newshead">
+          <b id="newsplace">Headlines</b>
+          <button id="newsSrc" title="Change source">◎</button>
+          <button id="newsClose" title="Close">×</button>
+        </div>
+        <div class="newslist" id="newslist"></div>
+      </aside>
+    </div>
   </div>
 
   <div class="stations">
@@ -648,9 +640,15 @@ $("favBtn").onclick = () => {
  * is fragile and a licensing problem. Clicking hands off to the browser.
  */
 let newsOpen = false;
-// Which place the headlines follow. "place" tracks what you're looking at;
-// "playing" pins to wherever the current station broadcasts from.
-let newsSource = "place";
+/**
+ * Headline source, cycled from the panel header.
+ *   world   international edition — the default, because this app is about the
+ *           whole globe rather than one country
+ *   place   wherever you're looking on the map
+ *   playing the country of the station currently on air
+ */
+const NEWS_SOURCES = ["world", "place", "playing"];
+let newsSource = "world";
 
 function relTime(ms) {
   if (!ms) return "";
@@ -668,23 +666,27 @@ async function renderNewsPanel() {
   $("newsBtn").setAttribute("aria-pressed", newsOpen);
   if (!newsOpen) return;
 
-  const country = newsSource === "playing"
-    ? (tickCountry || selection.place?.country)
-    : (selection.place?.country || tickCountry);
-  $("newsSrc").setAttribute("aria-pressed", newsSource === "playing");
-  $("newsSrc").title = newsSource === "playing"
-    ? "Following the station you're listening to — click to follow the globe"
-    : "Following the globe — click to follow the station you're listening to";
-  $("newsplace").textContent = country
-    ? `${country}${newsSource === "playing" ? " · on air" : ""}`
-    : "Headlines";
+  const country =
+    newsSource === "world"   ? null
+    : newsSource === "playing" ? (tickCountry || null)
+    : (selection.place?.country || null);
+
+  const labels = { world: "World", place: "This place", playing: "Now playing" };
+  $("newsSrc").setAttribute("aria-pressed", newsSource !== "world");
+  $("newsSrc").title = `Source: ${labels[newsSource]} — click to change`;
+  $("newsplace").textContent =
+    newsSource === "world" ? "World headlines"
+    : country ? country
+    : `${labels[newsSource]} · nothing selected`;
   const list = $("newslist");
   list.innerHTML = `<div class="empty" style="padding:22px 12px">Loading…</div>`;
 
   const items = await window.globefm.news(country);
   if (!newsOpen) return;
   if (!items?.length) {
-    list.innerHTML = `<div class="empty" style="padding:22px 12px">No headlines for here.</div>`;
+    list.innerHTML = `<div class="empty" style="padding:22px 12px">`
+      + (country ? "No headlines for here." : "Headlines unavailable right now.")
+      + `</div>`;
     return;
   }
   list.innerHTML = "";
@@ -702,7 +704,7 @@ async function renderNewsPanel() {
 $("newsBtn").onclick = () => { newsOpen = !newsOpen; renderNewsPanel(); };
 $("newsClose").onclick = () => { newsOpen = false; renderNewsPanel(); };
 $("newsSrc").onclick = () => {
-  newsSource = newsSource === "place" ? "playing" : "place";
+  newsSource = NEWS_SOURCES[(NEWS_SOURCES.indexOf(newsSource) + 1) % NEWS_SOURCES.length];
   renderNewsPanel();
 };
 

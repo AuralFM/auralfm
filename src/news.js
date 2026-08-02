@@ -91,18 +91,28 @@ function parseItems(xml, limit) {
 
 const parseTitles = (xml, limit) => parseItems(xml, limit).map((i) => i.title);
 
+/**
+ * @param {string|null} country  null or "world" for the international edition
+ */
 async function get(country, limit = 12) {
   const key = country || "world";
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.items;
 
-  const [gl, hl] = LOCALES[country] || ["US", "en-US"];
-  const url = `https://news.google.com/rss?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
+  // No country means world news, not "whatever the US is reading" — this app is
+  // about the whole globe, and the default should say so.
+  const url = key === "world"
+    ? "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en"
+    : (() => {
+        const [gl, hl] = LOCALES[country] || ["US", "en-US"];
+        return `https://news.google.com/rss?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
+      })();
 
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "GlobeFM/0.1" },
-      signal: AbortSignal.timeout(8000),
+      redirect: "follow",            // the topic feed 302s to a signed URL
+      signal: AbortSignal.timeout(9000),
     });
     if (!res.ok) return [];
     const items = parseItems(await res.text(), limit);
