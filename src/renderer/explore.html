@@ -1685,6 +1685,7 @@ async function initGlobe() {
   watchGlobeSize();
   updateSun();
   layers = (await window.globefm.layers()) || layers;
+  syncFlightTimer();
   drawSky();
   tickISS();
   tickSatellites();
@@ -1952,16 +1953,10 @@ function applyLayers(next) {
 
   globe.controls().autoRotate = layers.drift && !flying;
 
-  if (layers.flights !== prev.flights) {
-    clearInterval(flightTimer);
-    if (layers.flights) {
-      tickFlights();
-      flightTimer = setInterval(tickFlights, 12000);
-    } else {
-      flightData = [];
-      paintOrbits();
-    }
-  }
+  // Not `!== prev.flights`: the poll has to start when the layer is already on
+  // at launch, too. Keying it on the transition meant quitting with aircraft
+  // switched on came back to a checked menu item and an empty sky.
+  syncFlightTimer();
 
   if (layers.constellations !== prev.constellations) drawSky();
 }
@@ -2184,6 +2179,31 @@ let flightData = [], flightTimer = null, flightBusy = false;
  * interesting — the traffic over an airport reads as arrivals and departures
  * rather than a swarm.
  */
+/** Start or stop the poll to match the layer, idempotently. */
+function syncFlightTimer() {
+  const wanted = !!layers.flights;
+  const running = !!flightTimer;
+  if (wanted === running) return;
+  clearInterval(flightTimer);
+  flightTimer = null;
+  if (wanted) {
+    tickFlights();
+    flightTimer = setInterval(tickFlights, 12000);
+  } else {
+    flightData = [];
+    paintOrbits();
+  }
+}
+
+/**
+ * A hidden window must not poll, but it must also not stay empty once it comes
+ * back — so returning to the front asks immediately rather than waiting out the
+ * remaining interval.
+ */
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && layers.flights) tickFlights();
+});
+
 async function tickFlights() {
   if (!layers.flights || !globe) { paintFlights([]); return; }
   if (document.hidden || flightBusy) return;
@@ -2192,8 +2212,15 @@ async function tickFlights() {
     const pov = globe.pointOfView();
     // Roughly the angular radius of what is on screen, which is what the module
     // turns into a request radius.
-    const span = Math.min(12, Math.max(1.5, (Math.acos(1 / (1 + pov.altitude)) * 180 / Math.PI) * 0.6));
-    flightData = (await window.globefm.flights(pov.lat, pov.lng, span)) || [];
+    // The horizon half-angle is what is actually on screen. It used to be
+    // inflated and then capped at 12 degrees, which meant every zoom asked for
+    // the same 250nm circle regardless of how much of the world was visible.
+    const span = Math.max(1.5, Math.acos(1 / (1 + pov.altitude)) * 180 / Math.PI);
+    // The endpoint will not serve beyond 250nm, and over a city the visible area
+    // is far wider than that — so close in, the honest move is to fill the circle
+    // we are allowed to ask for rather than thin it out.
+    const want = pov.altitude <= 0.55 ? 320 : pov.altitude <= 1.2 ? 200 : 120;
+    flightData = (await window.globefm.flights(pov.lat, pov.lng, span, want)) || [];
     paintFlights(flightData);
   } catch { /* best-effort, like everything else live here */ }
   finally { flightBusy = false; }

@@ -538,7 +538,7 @@ ipcMain.handle("sdr:points", () => sdr.points());
 ipcMain.handle("sdr:get", (_e, i) => sdr.get(i));
 ipcMain.handle("sdr:stats", () => sdr.stats());
 ipcMain.handle("sdr:nearest", (_e, lat, lng, n) => sdr.nearest(lat, lng, n));
-ipcMain.handle("flights:get", (_e, lat, lng, span) => flights.get(lat, lng, span));
+ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng, span, want));
 /**
  * Explore asks, the popover plays — same rule as stations, so there is still
  * exactly one thing in this app that makes sound.

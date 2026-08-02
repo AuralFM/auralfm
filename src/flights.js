@@ -31,7 +31,28 @@ const UA = "GlobeFM/0.1 (+https://github.com/meltonbell3/globefm)";
 
 const MIN_GAP_MS = 12_000;      // aircraft move; a globe does not need faster
 const MAX_NM = 250;             // the endpoint's own ceiling
-const BUDGET = 120;             // on screen at once, closest first
+
+/**
+ * How many to keep, by how far out you are.
+ *
+ * A flat cap of 120 looked sparse zoomed in and that was not a bug in the cap —
+ * it was the geometry. The endpoint will not serve beyond 250 nautical miles,
+ * and over a city the visible area is far wider than that, so the aircraft
+ * filled a circle in the middle of the screen with emptiness around it. Showing
+ * only 120 of the ~800 inside that circle made the one populated part look thin
+ * as well.
+ *
+ * Zoomed in, the same aircraft are spread over far more screen, so more of them
+ * is legible rather than noisy. Zoomed out they collapse into one spot, and a
+ * smaller number is the honest picture.
+ *
+ * The caller decides, because only the caller knows the zoom. An earlier version
+ * inferred it from the requested span and got it backwards: the span here is the
+ * horizon half-angle, which is 18 to 73 degrees across every usable zoom, so a
+ * "near" test of 8 degrees never once fired.
+ */
+const BUDGET_MAX = 320;
+const BUDGET_DEFAULT = 120;
 
 const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "flights" });
 let last = { at: 0, key: "", items: [] };
@@ -42,13 +63,15 @@ const nm = (deg) => deg * 60;   // degrees of great circle to nautical miles
  * @param {number} lat  view centre
  * @param {number} lng
  * @param {number} spanDeg  angular radius of what is visible
+ * @param {number} [want]    how many to keep; the caller knows the zoom
  */
-async function get(lat, lng, spanDeg = 6) {
+async function get(lat, lng, spanDeg = 6, want = BUDGET_DEFAULT) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
 
   const dist = Math.max(25, Math.min(MAX_NM, Math.round(nm(spanDeg))));
+  const budget = Math.max(20, Math.min(BUDGET_MAX, Math.round(want) || BUDGET_DEFAULT));
   // Round the key so small camera drift does not defeat the cache.
-  const key = `${lat.toFixed(1)},${lng.toFixed(1)},${dist}`;
+  const key = `${lat.toFixed(1)},${lng.toFixed(1)},${dist},${budget}`;
 
   if (key === last.key && Date.now() - last.at < MIN_GAP_MS) return last.items;
   if (cool.blocked) return key === last.key ? last.items : [];
@@ -85,7 +108,7 @@ async function get(lat, lng, spanDeg = 6) {
 
     // Closest to the centre wins the budget, so zooming in reveals local traffic
     // rather than thinning out whatever arrived first.
-    if (out.length > BUDGET) {
+    if (out.length > budget) {
       const rad = Math.PI / 180;
       for (const f of out) {
         const dLat = (f.lat - lat) * rad, dLng = (f.lng - lng) * rad;
@@ -93,7 +116,7 @@ async function get(lat, lng, spanDeg = 6) {
           Math.cos(lat * rad) * Math.cos(f.lat * rad) * Math.sin(dLng / 2) ** 2;
       }
       out.sort((a, b) => a._d - b._d);
-      out.length = BUDGET;
+      out.length = budget;
       for (const f of out) delete f._d;
     }
 
@@ -106,4 +129,4 @@ async function get(lat, lng, spanDeg = 6) {
   }
 }
 
-module.exports = { get, BUDGET };
+module.exports = { get, BUDGET_MAX, BUDGET_DEFAULT };
