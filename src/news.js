@@ -58,20 +58,38 @@ const decode = (s) => s
   .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
   .trim();
 
-/** Minimal RSS title extraction — no XML parser needed for <item><title>. */
-function parseTitles(xml, limit) {
+const pick = (item, tag) => {
+  const m = item.match(new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`));
+  return m ? decode(m[1]) : "";
+};
+
+/**
+ * Minimal RSS extraction — no XML parser needed for the handful of fields a
+ * reading list uses.
+ *
+ * Deliberately headline, link, publisher and time only. Rendering article *text*
+ * would mean scraping publisher sites, which is both fragile and a licensing
+ * problem: this hands off to the browser instead of pretending to be a reader.
+ */
+function parseItems(xml, limit) {
   const out = [];
-  const items = xml.split("<item>").slice(1);
-  for (const item of items) {
-    const m = item.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
-    if (!m) continue;
-    // Google appends " - Outlet"; keep it, attribution matters and it is short.
-    const t = decode(m[1]);
-    if (t) out.push(t);
+  for (const item of xml.split("<item>").slice(1)) {
+    const title = pick(item, "title");
+    if (!title) continue;
+    // Google formats titles as "Headline - Publisher".
+    const split = title.lastIndexOf(" - ");
+    out.push({
+      title: split > 20 ? title.slice(0, split) : title,
+      source: pick(item, "source") || (split > 20 ? title.slice(split + 3) : ""),
+      link: pick(item, "link"),
+      at: Date.parse(pick(item, "pubDate")) || null,
+    });
     if (out.length >= limit) break;
   }
   return out;
 }
+
+const parseTitles = (xml, limit) => parseItems(xml, limit).map((i) => i.title);
 
 async function get(country, limit = 12) {
   const key = country || "world";
@@ -87,7 +105,7 @@ async function get(country, limit = 12) {
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return [];
-    const items = parseTitles(await res.text(), limit);
+    const items = parseItems(await res.text(), limit);
     cache.set(key, { at: Date.now(), items });
     return items;
   } catch {

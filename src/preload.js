@@ -18,8 +18,11 @@ contextBridge.exposeInMainWorld("globefm", {
   iss: () => ipcRenderer.invoke("iss:get"),
   satellites: () => ipcRenderer.invoke("sats:get"),
   sky: () => ipcRenderer.invoke("sky:get"),
+  layers: () => ipcRenderer.invoke("globe:layers"),
+  onLayers: (fn) => ipcRenderer.on("globe:layers", (_e, l) => fn(l)),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),
+  openLink: (url) => ipcRenderer.send("open:external", url),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),
 

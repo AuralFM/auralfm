@@ -20,6 +20,10 @@ const satellites = require("./satellites");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
+// Without this the app menu reads "Electron" when running from source; the
+// packaged build gets it from productName.
+app.setName("GlobeFM");
+
 const POPOVER = { width: 392, height: 560, min: 200 };
 const STORE = path.join(app.getPath("userData"), "state.json");
 
@@ -137,6 +141,7 @@ function openExplore() {
 
   explore.webContents.on("did-finish-load", () => {
     explore?.webContents.send("player:state", playerState);
+    explore?.webContents.send("globe:layers", layerState());
   });
 }
 
@@ -163,6 +168,82 @@ function showAbout() {
       "Globe icon by emilegraphics, the Noun Project (CC BY).",
   });
   app.showAboutPanel();
+}
+
+/**
+ * Application menu.
+ *
+ * Standalone apps need one — without it there is no View menu, which is how
+ * people leave full screen when a window has no title bar. It is also the right
+ * home for the globe layer toggles: they are view options, not settings.
+ */
+const LAYERS = [
+  { id: "clouds",         label: "Live Cloud Cover",     default: true },
+  { id: "dayNight",       label: "Day / Night",          default: true },
+  { id: "stations",       label: "Station Dots",         default: true },
+  { id: "iss",            label: "ISS and Orbits",       default: true },
+  { id: "constellations", label: "Constellations",       default: true },
+  { id: "drift",          label: "Slow Rotation",        default: true },
+];
+
+function layerState() {
+  const saved = load().layers || {};
+  const out = {};
+  for (const l of LAYERS) out[l.id] = saved[l.id] ?? l.default;
+  return out;
+}
+
+function setLayer(id, on) {
+  const st = load();
+  st.layers = { ...(st.layers || {}), [id]: on };
+  save(st);
+  explore?.webContents.send("globe:layers", layerState());
+}
+
+function buildMenu() {
+  const layers = layerState();
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {
+      label: app.name,
+      submenu: [
+        { label: "About GlobeFM", click: showAbout },
+        { type: "separator" },
+        { label: "Open at Login",
+          type: "checkbox",
+          checked: app.getLoginItemSettings().openAtLogin,
+          click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
+        { type: "separator" },
+        { role: "hide" }, { role: "hideOthers" }, { type: "separator" },
+        { label: "Quit GlobeFM", accelerator: "Command+Q",
+          click: () => { quitting = true; app.quit(); } },
+      ],
+    },
+    { label: "Edit", submenu: [
+      { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" },
+    ]},
+    {
+      label: "View",
+      submenu: [
+        { label: "Open the Globe", accelerator: "Command+G", click: openExplore },
+        { type: "separator" },
+        // The reason this menu exists at all: a hidden-title-bar window gives
+        // people no obvious way back out of full screen.
+        { role: "togglefullscreen" },
+        { type: "separator" },
+        ...LAYERS.map((l) => ({
+          label: l.label,
+          type: "checkbox",
+          checked: layers[l.id],
+          click: (item) => setLayer(l.id, item.checked),
+        })),
+        { type: "separator" },
+        { role: "reload" }, { role: "toggleDevTools" },
+      ],
+    },
+    { label: "Window", submenu: [
+      { role: "minimize" }, { role: "zoom" }, { role: "close" },
+    ]},
+  ]));
 }
 
 // ── tray ──────────────────────────────────────────────────────────────────────
@@ -259,12 +340,18 @@ ipcMain.handle("iss:get", () => iss.get());
 ipcMain.handle("sats:get", () => satellites.get());
 // The renderer has no filesystem access by design, so the star catalogue comes
 // over IPC rather than a fetch the CSP would block anyway.
+ipcMain.handle("globe:layers", () => layerState());
 ipcMain.handle("sky:get", () => {
   try { return JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "sky.json"), "utf8")); }
   catch { return null; }
 });
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));
+// Headlines open in the real browser. GlobeFM is not a reader and should not
+// pretend to be one — see the note in src/news.js.
+ipcMain.on("open:external", (_e, url) => {
+  if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+});
 ipcMain.on("explore:open", openExplore);
 
 /**
@@ -351,6 +438,7 @@ if (!app.requestSingleInstanceLock()) {
     clouds.init(app.getPath("userData"));
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     if (presence.enabled()) console.log("presence: enabled");
+    buildMenu();
     createWindow();
     createTray();
     openExplore();                 // the globe is the app

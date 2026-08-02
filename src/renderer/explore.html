@@ -39,6 +39,13 @@
   }
   .toolbar input{-webkit-app-region:no-drag}
   .toolbar .sp{flex:1}
+  .toolbar #newsBtn{
+    -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
+    font-size:14px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
+    transition:background .12s ease-out,color .12s ease-out;
+  }
+  .toolbar #newsBtn:hover{background:var(--fill);color:var(--label)}
+  .toolbar #newsBtn[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
   .toolbar #favBtn{
     -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
     font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
@@ -101,6 +108,9 @@
       display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
       grid-auto-rows:max-content; gap:0 6px; align-content:start;
     }
+    /* display:grid beats the [hidden] attribute, so both lists were rendering
+       at once on wide windows — places and stations stacked in the same rail. */
+    #stationlist[hidden], #placelist[hidden]{display:none}
     #stationlist .empty, #placelist .empty{grid-column:1/-1}
     .sublabel{grid-column:1/-1}
   }
@@ -128,8 +138,39 @@
   .globewrap{flex:1;position:relative;min-width:0;border-right:.5px solid var(--line)}
   #globe{position:absolute;inset:0}
   #globe canvas{display:block}
+  /* Slides over the globe rather than taking a column from it — the globe is the
+     product, and news should not permanently shrink it. */
+  .newspanel{
+    position:absolute;left:0;top:0;bottom:0;width:min(380px,42%);
+    display:flex;flex-direction:column;
+    background:color-mix(in srgb, Canvas 78%, transparent);
+    backdrop-filter:blur(28px) saturate(150%);
+    border-right:.5px solid var(--line);
+    animation:newsin .22s cubic-bezier(.32,.72,0,1);
+  }
+  @keyframes newsin{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .newspanel{animation:none} }
+  .newshead{
+    flex:none;display:flex;align-items:center;gap:8px;padding:12px 14px 8px;
+    font-size:12px;letter-spacing:-.002em;
+  }
+  .newshead b{flex:1;font-weight:590;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #newsClose{
+    background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
+    padding:1px 5px;border-radius:5px;cursor:default;
+  }
+  #newsClose:hover{background:var(--fill);color:var(--label)}
+  .newslist{flex:1;overflow-y:auto;padding:0 8px 12px}
+  body.news-open .globehint{left:min(380px,42%)}
+  .newslist::-webkit-scrollbar{width:0}
+  .story{padding:8px 8px;border-radius:7px;transition:background .12s ease-out}
+  .story:hover{background:var(--fill)}
+  .story:active{background:var(--fill-hi)}
+  .story .h{font-size:12.5px;line-height:1.35;letter-spacing:-.002em}
+  .story .m{font-size:11px;color:var(--label2);margin-top:3px}
   .globehint{
     position:absolute;left:0;right:0;bottom:12px;text-align:center;
+    transition:left .2s ease-out;
     font-size:11px;color:var(--label3);pointer-events:none;
   }
 
@@ -259,6 +300,7 @@
 
 <div class="toolbar">
   <span class="sp"></span>
+  <button id="newsBtn" title="Local headlines">▤</button>
   <button id="favBtn" title="Favorites">☆</button>
   <input id="q" type="search" placeholder="Search a city, country, or station"
          autocomplete="off" spellcheck="false">
@@ -267,6 +309,10 @@
 <div class="cols">
   <div class="globewrap" id="globewrap">
     <div id="globe"></div>
+    <aside class="newspanel" id="newspanel" hidden>
+      <div class="newshead"><b id="newsplace">Headlines</b><button id="newsClose" title="Close">×</button></div>
+      <div class="newslist" id="newslist"></div>
+    </aside>
     <div class="globehint" id="globehint">Loading globe…</div>
   </div>
 
@@ -370,6 +416,7 @@ async function selectPlace(i, { keepFilter = false } = {}) {
   renderStations();
   renderChips();
   loadWeather(place);
+  if (newsOpen) renderNewsPanel();
   refreshGlobeSelection();
 }
 
@@ -558,6 +605,58 @@ $("favBtn").onclick = () => {
   else showFavorites();
 };
 
+// ── headline panel ───────────────────────────────────────────────────────────
+/**
+ * A reading list, not a reader. RSS carries headline, publisher and time but not
+ * article text; rendering the article would mean scraping publisher sites, which
+ * is fragile and a licensing problem. Clicking hands off to the browser.
+ */
+let newsOpen = false;
+
+function relTime(ms) {
+  if (!ms) return "";
+  const m = Math.round((Date.now() - ms) / 60000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+}
+
+async function renderNewsPanel() {
+  const panel = $("newspanel");
+  panel.hidden = !newsOpen;
+  document.body.classList.toggle("news-open", newsOpen);
+  $("newsBtn").setAttribute("aria-pressed", newsOpen);
+  if (!newsOpen) return;
+
+  // Follows the place you're looking at, which is more useful while browsing
+  // than pinning to whatever happens to be playing.
+  const country = selection.place?.country || tickCountry;
+  $("newsplace").textContent = country ? `Headlines · ${country}` : "Headlines";
+  const list = $("newslist");
+  list.innerHTML = `<div class="empty" style="padding:22px 12px">Loading…</div>`;
+
+  const items = await window.globefm.news(country);
+  if (!newsOpen) return;
+  if (!items?.length) {
+    list.innerHTML = `<div class="empty" style="padding:22px 12px">No headlines for here.</div>`;
+    return;
+  }
+  list.innerHTML = "";
+  for (const it of items) {
+    const el = document.createElement("div");
+    el.className = "story";
+    el.innerHTML = `<div class="h"></div><div class="m"></div>`;
+    el.querySelector(".h").textContent = it.title;
+    el.querySelector(".m").textContent = [it.source, relTime(it.at)].filter(Boolean).join(" · ");
+    if (it.link) el.onclick = () => window.globefm.openLink(it.link);
+    list.appendChild(el);
+  }
+}
+
+$("newsBtn").onclick = () => { newsOpen = !newsOpen; renderNewsPanel(); };
+$("newsClose").onclick = () => { newsOpen = false; renderNewsPanel(); };
+
 // ── local headlines ──────────────────────────────────────────────────────────
 let tickItems = [], tickIdx = 0, tickTimer = null, tickCountry = null;
 
@@ -583,7 +682,7 @@ function showHeadline() {
   if (!tickItems.length) return;
   el.classList.remove("on");
   setTimeout(() => {
-    el.textContent = tickItems[tickIdx % tickItems.length];
+    el.textContent = tickItems[tickIdx % tickItems.length]?.title || "";
     el.title = el.textContent;
     tickIdx++;
     el.classList.add("on");
@@ -624,6 +723,7 @@ async function loadWeather(place) {
 
 // ── globe view ───────────────────────────────────────────────────────────────
 let globe = null, globeLoading = null, globePts = null, sunTimer = null;
+let liveTexReady = false;
 
 /** Load the 1.7 MB globe bundle only when someone actually asks for the globe. */
 function loadGlobeLib() {
@@ -799,6 +899,7 @@ async function applyDayNight() {
     shader.uniforms.nightMap = { value: nightTex };
     shader.uniforms.liveMap = { value: nightTex };   // placeholder until imagery lands
     shader.uniforms.hasLive = { value: 0 };
+    shader.uniforms.dayNightOn = { value: 1 };
     shader.uniforms.sunDirection = { value: sunVector() };
 
     // Pass the geometry's own UVs through a varying we control. Deriving UVs
@@ -809,7 +910,7 @@ async function applyDayNight() {
       .replace("void main() {", "void main() {\n  vObjNormal = normalize(position);\n  vGlobeUv = uv;");
 
     shader.fragmentShader =
-      "uniform sampler2D nightMap;\nuniform sampler2D liveMap;\nuniform float hasLive;\n" +
+      "uniform sampler2D nightMap;\nuniform sampler2D liveMap;\nuniform float hasLive;\nuniform float dayNightOn;\n" +
       "uniform vec3 sunDirection;\nvarying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" +
       shader.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>
         vec3 n = normalize(vObjNormal);
@@ -828,10 +929,10 @@ async function applyDayNight() {
         nightC = mix(nightC, nightC + vec3(0.10), cloud);
         float cosSun = dot(n, normalize(sunDirection));
         // ~10 degrees of softness: civil twilight, not a hard line
-        float t = smoothstep(-0.09, 0.09, cosSun);
+        float t = mix(1.0, smoothstep(-0.09, 0.09, cosSun), dayNightOn);
         vec3 col = mix(nightC * 1.6, dayC, t);
         // A restrained warm band either side of the terminator — sunrise, not sunset filter.
-        col += vec3(0.075, 0.032, 0.0) * max(0.0, 1.0 - abs(cosSun) * 22.0);
+        col += vec3(0.075, 0.032, 0.0) * max(0.0, 1.0 - abs(cosSun) * 22.0) * dayNightOn;
         gl_FragColor = vec4(col, gl_FragColor.a);`);
 
     mat.userData.shader = shader;   // handle for the per-minute sun update
@@ -909,7 +1010,8 @@ async function loadLiveImagery(TexClass, like) {
     const sh = globe?.globeMaterial()?.userData?.shader;
     if (!sh) return;
     sh.uniforms.liveMap.value = tex;
-    sh.uniforms.hasLive.value = 1;
+    liveTexReady = true;
+    sh.uniforms.hasLive.value = layers.clouds ? 1 : 0;
 
     const el = $("liveflag");
     if (el) {
@@ -994,6 +1096,7 @@ async function initGlobe() {
   sizeGlobe();
   watchGlobeSize();
   updateSun();
+  layers = (await window.globefm.layers()) || layers;
   drawSky();
   tickISS();
   tickSatellites();
@@ -1092,6 +1195,40 @@ function nearestPlace(lat, lng) {
   return { i: best.i, dist: Math.acos(Math.min(1, Math.max(-1, bestCos))) / rad };
 }
 
+// ── layer toggles ────────────────────────────────────────────────────────────
+/**
+ * Which globe layers are on, driven from View in the menu bar. These are view
+ * options rather than settings, so they live in the menu and take effect at once
+ * — no dialog, no apply button.
+ */
+let layers = { clouds: true, dayNight: true, stations: true, iss: true, constellations: true, drift: true };
+
+function applyLayers(next) {
+  const prev = layers;
+  layers = { ...layers, ...next };
+  if (!globe) return;
+
+  const sh = globe.globeMaterial()?.userData?.shader;
+  if (sh) {
+    sh.uniforms.hasLive.value = (layers.clouds && liveTexReady) ? 1 : 0;
+    // Sun fully overhead everywhere reads as permanent daylight, which is what
+    // "day/night off" should mean.
+    sh.uniforms.dayNightOn.value = layers.dayNight ? 1 : 0;
+  }
+
+  if (!layers.stations) globe.pointsData([]);
+  else if (!prev.stations) applyLod(true);
+
+  if (!layers.iss) { globe.pathsData([]).labelsData([]).ringsData([]); }
+  else paintOrbits();
+
+  globe.controls().autoRotate = layers.drift && !flying;
+
+  if (layers.constellations !== prev.constellations) drawSky();
+}
+
+window.globefm.onLayers((l) => applyLayers(l));
+
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**
  * Draw the actual sky — 5,044 stars to magnitude 6 and 89 constellation figures
@@ -1105,6 +1242,10 @@ function nearestPlace(lat, lng) {
  * payoff justifies right now.
  */
 async function drawSky() {
+  if (!layers.constellations) {
+    globe.backgroundImageUrl("vendor/night-sky.png");   // plain stars, no figures
+    return;
+  }
   const sky = await window.globefm.sky();
   if (!sky?.stars?.length) return;   // keep the vendored texture
 
@@ -1167,7 +1308,7 @@ let issTrail = [], issTimer = null, sats = [], satTimer = null;
  * is pure maths and the renderer has no node modules.
  */
 async function tickSatellites() {
-  if (!globe) return;
+  if (!globe || !layers.iss) return;
   const list = await window.globefm.satellites();
   if (Array.isArray(list) && list.length) sats = list;
   paintOrbits();
@@ -1214,7 +1355,7 @@ function splitTrail(trail) {
 }
 
 async function tickISS() {
-  if (!globe) return;
+  if (!globe || !layers.iss) return;
   const p = await window.globefm.iss();
   if (!p) return;
 
