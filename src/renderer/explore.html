@@ -40,8 +40,14 @@
   .toolbar input{-webkit-app-region:no-drag}
   .toolbar .mark{width:15px;height:15px;opacity:.9}
   h1{font-size:13px;font-weight:640;letter-spacing:-.01em;margin:0}
-  .toolbar .sub{font-size:13px;color:var(--label3);letter-spacing:-.006em}
   .toolbar .sp{flex:1}
+  .toolbar #favBtn{
+    -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
+    font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
+    transition:background .12s ease-out,color .12s ease-out;
+  }
+  .toolbar #favBtn:hover{background:var(--fill);color:var(--label)}
+  .toolbar #favBtn[aria-pressed="true"]{color:var(--star);background:var(--fill)}
   .toolbar #q{
     width:270px;height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
@@ -191,8 +197,8 @@
 <div class="toolbar">
   <img class="mark" src="../../assets/icon.svg" alt="">
   <h1>GlobeFM</h1>
-  <span class="sub">Explore</span>
   <span class="sp"></span>
+  <button id="favBtn" title="Favorites">☆</button>
   <input id="q" type="search" placeholder="Search a city, country, or station"
          autocomplete="off" spellcheck="false">
 </div>
@@ -356,6 +362,35 @@ window.globefm.onPlayerState((s) => {
     el.setAttribute("aria-current", playing?.id === el.dataset.id);
   }
 });
+
+// ── favourites ───────────────────────────────────────────────────────────────
+let showingFavorites = false;
+
+async function showFavorites() {
+  const state = (await window.globefm.getState()) || {};
+  favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  showingFavorites = true;
+  $("favBtn").setAttribute("aria-pressed", "true");
+  qEl.value = "";
+  headEl.hidden = true;
+  stationListEl.hidden = true;
+  placeListEl.hidden = false;
+  placeHeadEl.textContent = favorites.length
+    ? `${favorites.length} favorite${favorites.length === 1 ? "" : "s"}`
+    : "Favorites";
+  placeListEl.innerHTML = "";
+  if (!favorites.length) {
+    placeListEl.innerHTML =
+      `<div class="empty" style="padding:30px 16px">No favorites yet.<br>Tap ☆ beside a station to save it.</div>`;
+    return;
+  }
+  for (const f of favorites) placeListEl.appendChild(stationResultRow(f));
+}
+
+$("favBtn").onclick = () => {
+  if (showingFavorites) { showingFavorites = false; $("favBtn").setAttribute("aria-pressed","false"); loadPlaces(""); }
+  else showFavorites();
+};
 
 // ── local headlines ──────────────────────────────────────────────────────────
 let tickItems = [], tickIdx = 0, tickTimer = null, tickCountry = null;
@@ -606,7 +641,7 @@ async function initGlobe() {
     // means rebuilding the layer, which only happens on selection.
     .pointsMerge(true)
     .pointLabel((d) => `${d.count} station${d.count === 1 ? "" : "s"}`)
-    .onPointClick((d) => { selectPlace(d.i); flyTo(d.lat, d.lng); });
+    .onPointClick((d) => goToPlace(d.i, { play: true }));
 
   await applyDayNight();
   globe.controls().autoRotate = true;
@@ -664,10 +699,45 @@ function applyLod(force = false) {
   }
 }
 
-let lodPending = null;
+let lodPending = null, followPending = null;
 function onCameraChange() {
   clearTimeout(lodPending);
   lodPending = setTimeout(() => applyLod(), 160);
+  clearTimeout(followPending);
+  followPending = setTimeout(followCentre, 420);   // only once the drag settles
+}
+
+/**
+ * Whatever is under the middle of the globe becomes the selection, so spinning
+ * the map browses the world instead of just moving pixels. Deliberately does
+ * *not* start playing — auto-playing on every drag would be chaos. Clicking a
+ * dot is the gesture that makes sound.
+ */
+function followCentre() {
+  if (!globe || !globePts || showingFavorites) return;
+  const pov = globe.pointOfView();
+  const near = nearestPlace(pov.lat, pov.lng);
+  if (!near || near.i === selection.placeIndex) return;
+  // Only follow what's plausibly on screen; at global zoom the nearest dot to
+  // centre can be thousands of km away and switching to it feels random.
+  const maxDeg = 6 + pov.altitude * 26;
+  if (near.dist > maxDeg) return;
+  goToPlace(near.i, { fly: false });
+}
+
+/** Great-circle nearest place, in degrees. A linear scan over 12k is sub-ms. */
+function nearestPlace(lat, lng) {
+  const rad = Math.PI / 180;
+  const la = lat * rad, lo = lng * rad;
+  let best = null, bestCos = -2;
+  for (const p of globePts) {
+    const pla = p.lat * rad, plo = p.lng * rad;
+    const c = Math.sin(la) * Math.sin(pla)
+            + Math.cos(la) * Math.cos(pla) * Math.cos(plo - lo);
+    if (c > bestCos) { bestCos = c; best = p; }
+  }
+  if (!best) return null;
+  return { i: best.i, dist: Math.acos(Math.min(1, Math.max(-1, bestCos))) / rad };
 }
 
 function sizeGlobe() {
@@ -708,6 +778,7 @@ qEl.addEventListener("input", () => {
 async function runSearch(query) {
   const q = query.trim();
   const my = ++seq;
+  if (q) { showingFavorites = false; $("favBtn").setAttribute("aria-pressed", "false"); }
   if (!q) { await loadPlaces(""); return; }
 
   const [places, stations] = await Promise.all([
@@ -769,13 +840,20 @@ function stationResultRow(ch) {
 }
 
 /** Select a place and take the globe there — the two always happen together. */
-async function goToPlace(i) {
+async function goToPlace(i, { play = false, fly = true } = {}) {
   qEl.value = "";
+  showingFavorites = false;
+  $("favBtn").setAttribute("aria-pressed", "false");
   placeListEl.hidden = true;
   stationListEl.hidden = false;
   placeHeadEl.textContent = "";      // the search summary no longer applies
   await selectPlace(i);
-  if (selection.place) flyTo(selection.place.lat, selection.place.lon);
+  if (fly && selection.place) flyTo(selection.place.lat, selection.place.lon);
+  // Prefer a station the directory believes is alive.
+  if (play && selection.channels.length) {
+    const pick = selection.channels.find((c) => c.ok !== false) || selection.channels[0];
+    window.globefm.tune(pick);
+  }
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.activeElement === qEl && qEl.value) {

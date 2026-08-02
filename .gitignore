@@ -15,3 +15,5 @@ assets/generated/
 data/crawl.log
 data/_radiobrowser.json
 src/renderer/vendor/
+dist/
+build/icon.iconset/

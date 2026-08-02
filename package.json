@@ -11,10 +11,12 @@
     "icons": "electron scripts/make-icons.js",
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
     "vendor": "node scripts/vendor.mjs",
-    "postinstall": "node scripts/vendor.mjs"
+    "postinstall": "node scripts/vendor.mjs",
+    "dist": "npm run vendor && npm run icons && electron-builder --mac"
   },
   "devDependencies": {
-    "electron": "^38.0.0"
+    "electron": "^38.0.0",
+    "electron-builder": "^26.15.3"
   },
   "repository": {
     "type": "git"
@@ -22,5 +24,41 @@
   "homepage": "https://github.com/YOUR_USERNAME/globefm",
   "dependencies": {
     "globe.gl": "^2.46.1"
+  },
+  "build": {
+    "appId": "com.meltonbell.globefm",
+    "productName": "GlobeFM",
+    "copyright": "Copyright \u00a9 2026 Melton Bell",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/generated/**/*",
+      "assets/*.svg",
+      "assets/ATTRIBUTION.md",
+      "package.json",
+      "data/stations.min.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "dmg": {
+      "title": "GlobeFM ${version}"
+    }
   }
 }
