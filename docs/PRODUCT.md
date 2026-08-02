@@ -1,7 +1,7 @@
 # GlobeFM — repositioning to a standalone app
 
-**Status:** planning. Nothing here is built yet.
-**Written:** 2026-08-02
+**Status:** the window model in §3 is **built**. Identity and assets (§5, §6) are not.
+**Written:** 2026-08-02 · **Revised:** 2026-08-02
 
 ---
 
@@ -64,7 +64,14 @@ launch. That was right for a radio utility. It is wrong for this.
 menu bar behaviour that exists — it is genuinely good — but stop hiding the thing
 people came for behind an unlabelled icon.
 
-This is the one call that needs making before branding work means anything.
+**Done.** `LSUIElement` was never set in the build config, the Dock icon is
+present, `openExplore()` runs at launch — the comment in `main.js` reads *"the
+globe is the app"* — `activate` reopens it, and `window-all-closed` deliberately
+keeps the process alive so the menu bar companion goes on playing. The table
+above now describes the app as it ships.
+
+What remains from this section is nothing. What remains from §5 and §6 is
+everything.
 
 ## 4. Name
 
@@ -114,12 +121,17 @@ than one mark.
 
 ## 7. Sequence
 
-1. **Decide the window model** (§3). Everything else depends on it.
-2. Flip `LSUIElement`, add a proper main-window lifecycle, keep the menu bar as companion.
-3. About panel — smallest piece, unblocks the licence question.
-4. Icon work, including the Noun Project licence decision.
+1. ~~**Decide the window model** (§3).~~ Done — see above.
+2. ~~Flip `LSUIElement`, add a proper main-window lifecycle, keep the menu bar as companion.~~ Done.
+3. ~~About panel — smallest piece, unblocks the licence question.~~ Done: it carries
+   the version, the full attribution list including the Noun Project CC BY
+   credit, and the offline/no-account/no-telemetry promise. Settings repeats the
+   promise and links the privacy policy and terms.
+4. **Icon work, including the Noun Project licence decision.** ← next, and it is
+   the only thing genuinely blocking a public release that isn't code signing.
 5. Screenshots and copy.
-6. Sign and notarise (#4), then ship the DMG (#14).
+6. Sign and notarise (#4), then ship the DMG (#14). Both need a paid Apple
+   Developer account; nothing in the repo can move them forward without one.
 
 ## 8. What this does not change
 

@@ -172,7 +172,9 @@ function showAbout() {
       "Stations: radio.garden · radio-browser.info\n" +
       "Imagery: NASA GIBS (VIIRS, GOES) · Blue Marble\n" +
       "Sky: Yale Bright Star Catalog via d3-celestial\n" +
-      "Weather: Open-Meteo · ISS: wheretheiss.at\n\n" +
+      "Weather: Open-Meteo · ISS: wheretheiss.at\n" +
+      "Orbits: Celestrak (TLEs) · Headlines: Google News\n" +
+      "Markets: CoinGecko\n\n" +
       "Globe icon by emilegraphics, the Noun Project (CC BY).",
   });
   app.showAboutPanel();
