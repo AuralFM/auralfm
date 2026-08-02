@@ -16,6 +16,7 @@ const failures = require("./failures");
 const presence = require("./presence");
 const clouds = require("./clouds");
 const iss = require("./iss");
+const satellites = require("./satellites");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -255,6 +256,7 @@ ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), 
 ipcMain.handle("catalog:globePoints", () => catalog.globePoints());
 ipcMain.handle("clouds:get", () => clouds.get());
 ipcMain.handle("iss:get", () => iss.get());
+ipcMain.handle("sats:get", () => satellites.get());
 // The renderer has no filesystem access by design, so the star catalogue comes
 // over IPC rather than a fetch the CSP would block anyway.
 ipcMain.handle("sky:get", () => {

@@ -996,8 +996,11 @@ async function initGlobe() {
   updateSun();
   drawSky();
   tickISS();
+  tickSatellites();
   clearInterval(issTimer);
-  issTimer = setInterval(tickISS, 4000);   // it moves 7.6 km/s; 4s is visible motion
+  clearInterval(satTimer);
+  issTimer = setInterval(tickISS, 4000);        // 7.6 km/s; 4s is visible motion
+  satTimer = setInterval(tickSatellites, 30000); // orbits move slowly on screen
   // The terminator moves ~0.25° a minute; once a minute is imperceptibly smooth
   // and costs nothing.
   clearInterval(sunTimer);
@@ -1154,7 +1157,61 @@ async function drawSky() {
  * than an orbit we propagated. Less impressive, but it is true, and it needs no
  * SGP4 propagator.
  */
-let issTrail = [], issTimer = null;
+let issTrail = [], issTimer = null, sats = [], satTimer = null;
+
+/**
+ * Orbits, propagated rather than recorded.
+ *
+ * The ISS trail below is where it has *been*; these are where each spacecraft is
+ * *going* — a full revolution of real SGP4 track. Propagated in main, because it
+ * is pure maths and the renderer has no node modules.
+ */
+async function tickSatellites() {
+  if (!globe) return;
+  const list = await window.globefm.satellites();
+  if (Array.isArray(list) && list.length) sats = list;
+  paintOrbits();
+}
+
+function paintOrbits() {
+  if (!globe) return;
+  const orbitPaths = sats.flatMap((s) =>
+    s.path.map((seg) => ({ pts: seg, orbit: true })));
+  const issPaths = issTrail.length > 1 ? splitTrail(issTrail).map((seg) => ({ pts: seg })) : [];
+
+  globe
+    .pathsData([...orbitPaths, ...issPaths])
+    .pathPoints((d) => d.pts)
+    .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
+    .pathPointAlt(0.052)
+    .pathColor((d) => d.orbit
+      ? ["rgba(120,180,255,0.05)", "rgba(120,180,255,0.4)"]
+      : ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"])
+    .pathStroke((d) => (d.orbit ? 0.7 : 1.1))
+    .pathTransitionDuration(0);
+
+  globe
+    .labelsData(sats.map((s) => ({ lat: s.lat, lng: s.lng, name: s.name })))
+    .labelLat("lat").labelLng("lng").labelText("name")
+    .labelSize(0.9).labelDotRadius(0.28)
+    .labelColor(() => "rgba(190,215,255,0.85)")
+    .labelAltitude(0.055)
+    .labelResolution(2);
+}
+
+/** Break a lat/lng run wherever it crosses the antimeridian. */
+function splitTrail(trail) {
+  const segs = []; let run = [];
+  for (const [la, ln] of trail) {
+    if (run.length && Math.abs(ln - run[run.length - 1][1]) > 180) {
+      if (run.length > 1) segs.push(run);
+      run = [];
+    }
+    run.push([la, ln]);
+  }
+  if (run.length > 1) segs.push(run);
+  return segs;
+}
 
 async function tickISS() {
   if (!globe) return;
@@ -1173,25 +1230,7 @@ async function tickISS() {
     .ringAltitude(0.055)
     .ringColor(() => (t) => `rgba(255,255,255,${0.55 * (1 - t)})`);
 
-  // Break the trail at the antimeridian, or it draws a line straight across the
-  // map every time the station wraps from +180 to -180.
-  const segs = [];
-  let run = [];
-  for (let i = 0; i < issTrail.length; i++) {
-    const [la, ln] = issTrail[i];
-    if (run.length && Math.abs(ln - run[run.length - 1][1]) > 180) { segs.push(run); run = []; }
-    run.push([la, ln]);
-  }
-  if (run.length > 1) segs.push(run);
-
-  globe
-    .pathsData(segs.filter((s) => s.length > 1))
-    .pathPoints((d) => d)
-    .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
-    .pathPointAlt(0.052)
-    .pathColor(() => ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"])
-    .pathStroke(1.1)
-    .pathTransitionDuration(0);
+  paintOrbits();
 
   const el = $("issreadout");
   if (el) {
