@@ -233,6 +233,29 @@ function globePoints() {
   return out;
 }
 
+function placeIndexOf(title, country) {
+  const t = norm(title || ""), c = norm(country || "");
+  for (let i = 0; i < places.length; i++) {
+    if (norm(places[i][0]) === t && (!c || norm(places[i][1]) === c)) return i;
+  }
+  return -1;
+}
+
+/**
+ * The next station broadcasting from the same place, skipping anything already
+ * tried. This is what makes a dead stream a half-second hiccup instead of a
+ * dead end — roughly 5% of streams are down or blocked at any moment, so the
+ * app has to assume failure is normal rather than exceptional.
+ */
+function nextInPlace(channel, exclude = []) {
+  const i = placeIndexOf(channel.place, channel.country);
+  if (i < 0) return null;
+  const skip = new Set([channel.id, ...exclude]);
+  // Prefer stations radio-browser last saw alive.
+  const cands = byPlace[i].map(hydrate).filter((c) => !skip.has(c.id));
+  return cands.find((c) => c.ok !== false) || cands[0] || null;
+}
+
 function byId(id) {
   const i = channels.findIndex((c) => c[0] === id);
   return i < 0 ? null : hydrate(i);
@@ -240,4 +263,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, placeSearch, placeChannels, placeTags, placeBands, globePoints, byId, stats };
+module.exports = { load, search, placeSearch, placeChannels, placeTags, placeBands, globePoints, nextInPlace, byId, stats };

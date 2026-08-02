@@ -197,6 +197,10 @@ audio.preload = "none";
 let state = { favorites: [], vol: 0.8 };
 let rows = [];          // what's currently rendered
 let current = null;     // the channel object playing
+let live = false;       // true only once audio really starts — audio.paused is
+                        // false during connect too, so it can't stand in for this
+let tried = [];         // ids attempted in the current auto-skip chain
+let skipping = false;   // guards against re-entering the skip while one is running
 let gen = 0, watchdog = null, searchSeq = 0, debounce = null;
 
 function setStatus(m,c=""){ statusEl.textContent=m; statusEl.className=c; publish(); }
@@ -289,7 +293,8 @@ qEl.addEventListener("input", () => {
 
 // ── playback ─────────────────────────────────────────────────────────────────
 /** Always resolves and plays `ch`. Toggle logic lives at the call sites. */
-async function tune(ch) {
+async function tune(ch, { chained = false } = {}) {
+  if (!chained) tried = [];
   current = ch;
   nowName.textContent = ch.title;
   toggle.disabled = false;
@@ -335,11 +340,35 @@ function fail(msg){
   document.body.classList.remove("playing");
   toggle.textContent = "▶";
   setStatus(msg, "err");
+  autoSkip(msg);
+}
+
+/**
+ * Around 5% of streams are down or geo-blocked at any moment, so a dead stream
+ * has to be a hiccup rather than a dead end: fall through to the next station in
+ * the same city. Capped at 3 attempts — past that it is the city that's the
+ * problem, not the station, and silently cycling forever would be worse than
+ * showing the error.
+ */
+async function autoSkip(reason) {
+  if (!current || skipping || tried.length >= 3) return;
+  const dead = current;
+  window.globefm.reportFailed(dead.id);
+  tried.push(dead.id);
+  skipping = true;
+
+  const next = await window.globefm.nextStation(dead, tried);
+  if (!next) { skipping = false; setStatus(`${reason} — no alternative here`, "err"); return; }
+
+  setStatus(`${dead.title} unavailable · trying ${next.title}`, "err");
+  await tune(next, { chained: true });
 }
 
 audio.addEventListener("playing", () => {
   clearTimeout(watchdog);
   live = true;
+  skipping = false;
+  window.globefm.reportOk(current?.id);
   toggle.textContent = "❚❚";
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");

@@ -12,6 +12,7 @@ const catalog = require("./catalog");
 const resolver = require("./resolver");
 const weather = require("./weather");
 const news = require("./news");
+const failures = require("./failures");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -171,7 +172,16 @@ function createTray() {
 // ── ipc ───────────────────────────────────────────────────────────────────────
 ipcMain.handle("state:get", () => load());
 ipcMain.handle("state:set", (_e, state) => { save(state); return true; });
-ipcMain.handle("catalog:search", (_e, q, limit, filter) => catalog.search(q, limit, filter));
+ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
+  // Push known-bad streams down rather than hiding them — a station that failed
+  // last night may be fine now, and silently vanishing would be worse.
+  const hits = catalog.search(q, limit, filter);
+  return hits.sort((a, b) => failures.penalty(a.id) - failures.penalty(b.id));
+});
+ipcMain.on("player:failed", (_e, id) => failures.markFailed(id));
+ipcMain.on("player:ok", (_e, id) => failures.markPlayed(id));
+ipcMain.handle("player:next", (_e, ch, tried) =>
+  catalog.nextInPlace(ch, [...(tried || []), ...failures.recentlyFailed()]));
 ipcMain.handle("catalog:stats", () => catalog.stats());
 ipcMain.handle("stream:resolve", (_e, ch) => resolver.resolve(ch));
 ipcMain.on("popover:hide", hide);
@@ -222,6 +232,7 @@ if (!app.requestSingleInstanceLock()) {
     app.dock?.hide();
     catalog.load();
     resolver.init(app.getPath("userData"));
+    failures.init(app.getPath("userData"));
     createWindow();
     createTray();
   });
