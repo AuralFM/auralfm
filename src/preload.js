@@ -9,9 +9,10 @@ contextBridge.exposeInMainWorld("globefm", {
   setState: (state) => ipcRenderer.invoke("state:set", state),
 
   // catalog
-  search: (q, limit) => ipcRenderer.invoke("catalog:search", q, limit),
+  search: (q, limit, filter) => ipcRenderer.invoke("catalog:search", q, limit, filter),
   places: (q, limit) => ipcRenderer.invoke("catalog:places", q, limit),
-  placeChannels: (i) => ipcRenderer.invoke("catalog:placeChannels", i),
+  placeChannels: (i, filter) => ipcRenderer.invoke("catalog:placeChannels", i, filter),
+  placeFacets: (i) => ipcRenderer.invoke("catalog:placeFacets", i),
   globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),

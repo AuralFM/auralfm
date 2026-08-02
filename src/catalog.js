@@ -24,7 +24,22 @@ let channels = [];
 let haystack = [];      // lowercased "title ∙ place ∙ country ∙ tags" per channel
 let byPlace = [];       // placeIndex -> [channelIndex] — built once, so Explore is O(1)
 let placeHay = [];      // lowercased "place ∙ country" per place
+let bands = [];         // "am" | "fm" | null, derived from the title
 let generated = null;
+
+/**
+ * Broadcast band, inferred from the station name — the only signal there is.
+ * Case-sensitive on AM/FM so "Amsterdam" and "Firma" don't match. Roughly 46% of
+ * channels come back null, which is the truthful answer: they are internet-only
+ * or simply don't say. Those are excluded from band filters rather than guessed.
+ */
+function detectBand(title) {
+  const am = /\bAM\b|\bA\.M\.\b/.test(title);
+  const fm = /\bFM\b|\bF\.M\.\b/.test(title) || /\b\d{2,3}[.,]\d\b/.test(title);
+  if (am && !fm) return "am";
+  if (fm && !am) return "fm";
+  return null;                        // both, or neither — don't pretend to know
+}
 
 function norm(s) {
   // Fold accents so "Bogotá" matches "bogota" and "Köln" matches "koln".
@@ -50,6 +65,7 @@ function load() {
   byPlace = places.map(() => []);
   channels.forEach((c, i) => byPlace[c[2]]?.push(i));
   placeHay = places.map((p) => norm(`${p[0]} ${p[1]}`));
+  bands = channels.map((c) => detectBand(c[1]));
 
   console.log(`catalog: ${channels.length} channels across ${places.length} places`);
   return true;
@@ -63,6 +79,7 @@ function hydrate(i) {
     title: c[1],
     secure: !!c[3],
     tags: c[4] ? c[4].split(",") : [],
+    band: bands[i] || null,
     rbuuid: c[5] || null,          // radio-browser id, for click reporting
     ok: c[6] === 0 ? false : c[6] === 1 ? true : null,
     place: p[0],
@@ -113,12 +130,23 @@ function placeMatches(idx, terms) {
     pl === t || co === t || pl.startsWith(t) || plTokens.includes(t) || coTokens.includes(t));
 }
 
-function search(query, limit = 60) {
+/** Shared filter used by both search and place browsing. */
+function passes(i, { band, tag } = {}) {
+  if (band && bands[i] !== band) return false;
+  if (tag) {
+    const t = channels[i][4];
+    if (!t || !t.split(",").includes(tag)) return false;
+  }
+  return true;
+}
+
+function search(query, limit = 60, filter = {}) {
   const terms = norm(String(query || "").trim()).split(/\s+/).filter(Boolean);
   if (!terms.length) return [];
 
   const hits = [];
   for (let i = 0; i < channels.length; i++) {
+    if (!passes(i, filter)) continue;
     const s = score(i, terms);
     if (s >= 0) hits.push([placeMatches(i, terms) ? 0 : 1, s, channels[i][1].length, i]);
   }
@@ -137,12 +165,33 @@ const hydratePlace = (i) => ({
 });
 
 /** Every channel broadcasting from one place — the Explore primitive. */
-function placeChannels(placeIndex) {
-  if (!places[placeIndex]) return { place: null, channels: [] };
+function placeChannels(placeIndex, filter = {}) {
+  if (!places[placeIndex]) return { place: null, channels: [], total: 0 };
+  const all = byPlace[placeIndex];
+  const kept = all.filter((i) => passes(i, filter));
   return {
     place: hydratePlace(placeIndex),
-    channels: byPlace[placeIndex].map(hydrate),
+    channels: kept.map(hydrate),
+    total: all.length,
   };
+}
+
+/** Most common genres in a place, for the filter chips. */
+function placeTags(placeIndex, limit = 6) {
+  const counts = {};
+  for (const i of byPlace[placeIndex] || []) {
+    const t = channels[i][4];
+    if (!t) continue;
+    for (const tag of t.split(",")) counts[tag] = (counts[tag] || 0) + 1;
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([t, n]) => ({ tag: t, n }));
+}
+
+/** How many AM / FM stations a place has, so empty chips can be hidden. */
+function placeBands(placeIndex) {
+  const out = { am: 0, fm: 0 };
+  for (const i of byPlace[placeIndex] || []) if (bands[i]) out[bands[i]]++;
+  return out;
 }
 
 /**
@@ -191,4 +240,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, placeSearch, placeChannels, globePoints, byId, stats };
+module.exports = { load, search, placeSearch, placeChannels, placeTags, placeBands, globePoints, byId, stats };

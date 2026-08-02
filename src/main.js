@@ -171,7 +171,7 @@ function createTray() {
 // ── ipc ───────────────────────────────────────────────────────────────────────
 ipcMain.handle("state:get", () => load());
 ipcMain.handle("state:set", (_e, state) => { save(state); return true; });
-ipcMain.handle("catalog:search", (_e, q, limit) => catalog.search(q, limit));
+ipcMain.handle("catalog:search", (_e, q, limit, filter) => catalog.search(q, limit, filter));
 ipcMain.handle("catalog:stats", () => catalog.stats());
 ipcMain.handle("stream:resolve", (_e, ch) => resolver.resolve(ch));
 ipcMain.on("popover:hide", hide);
@@ -185,7 +185,8 @@ ipcMain.on("popover:height", (_e, h) => {
   win.setBounds({ ...b, height }, false);
 });
 ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit));
-ipcMain.handle("catalog:placeChannels", (_e, i) => catalog.placeChannels(i));
+ipcMain.handle("catalog:placeChannels", (_e, i, filter) => catalog.placeChannels(i, filter));
+ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), bands: catalog.placeBands(i) }));
 ipcMain.handle("catalog:globePoints", () => catalog.globePoints());
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));

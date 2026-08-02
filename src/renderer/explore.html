@@ -141,6 +141,20 @@
   .wx .sym{font-size:13px;color:var(--label)}
   .wx .t{color:var(--label);font-weight:510;font-variant-numeric:tabular-nums}
 
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 0}
+  .chips button{
+    border:0;background:var(--fill);color:var(--label2);font:inherit;font-size:11px;
+    padding:2.5px 8px;border-radius:999px;cursor:default;line-height:1.35;
+    box-shadow:inset 0 0 0 .5px var(--line);
+    transition:background .12s ease-out,color .12s ease-out,transform 90ms ease-out;
+  }
+  .chips button:hover{background:var(--fill-hi);color:var(--label)}
+  .chips button:active{transform:scale(.94)}
+  .chips button[aria-pressed="true"]{
+    background:color-mix(in srgb,var(--accent) 22%,transparent);
+    color:var(--label);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--accent) 45%,transparent);
+  }
+
   .st{
     display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;
     transition:background .12s ease-out;
@@ -210,7 +224,9 @@
   </div>
 
   <div class="stations">
-    <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div></div>
+    <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div>
+      <div class="chips" id="chips"></div>
+    </div>
     <div class="secthead" id="placehead"></div>
     <div class="scroll" id="placelist" hidden></div>
     <div class="scroll" id="stationlist">
@@ -289,16 +305,56 @@ function markPlaceSelection({ scroll = false } = {}) {
   return hit;
 }
 
-async function selectPlace(i) {
-  const { place, channels } = await window.globefm.placeChannels(i);
+async function selectPlace(i, { keepFilter = false } = {}) {
+  if (!keepFilter) filter = { band: null, tag: null };   // a new place starts unfiltered
+  const { place, channels, total } = await window.globefm.placeChannels(i, filter);
   if (!place) return;
   selection.placeIndex = i;
   selection.place = place;
   selection.channels = channels;
+  selection.total = total;
   markPlaceSelection({ scroll: true });
   renderStations();
+  renderChips();
   loadWeather(place);
   refreshGlobeSelection();
+}
+
+// ── filters ──────────────────────────────────────────────────────────────────
+// Band comes from the station name, the only signal available, so ~46% of
+// channels have no band at all. Those are excluded from AM/FM rather than
+// guessed at — which is why the counts never add up to the total, by design.
+let filter = { band: null, tag: null };
+
+async function renderChips() {
+  const el = $("chips");
+  el.innerHTML = "";
+  if (selection.placeIndex == null) return;
+  const facets = await window.globefm.placeFacets(selection.placeIndex);
+
+  const chip = (label, active, onClick) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.setAttribute("aria-pressed", active);
+    b.onclick = onClick;
+    el.appendChild(b);
+  };
+
+  const anyFilter = filter.band || filter.tag;
+  chip("All", !anyFilter, () => setFilter({ band: null, tag: null }));
+  if (facets.bands.fm) chip(`FM ${facets.bands.fm}`, filter.band === "fm",
+    () => setFilter({ band: filter.band === "fm" ? null : "fm", tag: filter.tag }));
+  if (facets.bands.am) chip(`AM ${facets.bands.am}`, filter.band === "am",
+    () => setFilter({ band: filter.band === "am" ? null : "am", tag: filter.tag }));
+  for (const { tag, n } of facets.tags) {
+    chip(`${tag} ${n}`, filter.tag === tag,
+      () => setFilter({ band: filter.band, tag: filter.tag === tag ? null : tag }));
+  }
+}
+
+async function setFilter(next) {
+  filter = next;
+  await selectPlace(selection.placeIndex, { keepFilter: true });
 }
 
 // ── stations ─────────────────────────────────────────────────────────────────
@@ -306,12 +362,17 @@ function renderStations() {
   const { place, channels } = selection;
   headEl.hidden = false;
   headEl.querySelector("h2").textContent = place.title;
+  const shown = channels.length, total = selection.total ?? shown;
   headEl.querySelector("p").textContent =
-    `${place.country} · ${channels.length} station${channels.length === 1 ? "" : "s"}`;
+    `${place.country} · ` + (shown === total
+      ? `${total} station${total === 1 ? "" : "s"}`
+      : `${shown} of ${total} stations`);
 
   stationListEl.innerHTML = "";
   if (!channels.length) {
-    stationListEl.innerHTML = `<div class="empty">Nothing on air here.</div>`;
+    stationListEl.innerHTML = (filter.band || filter.tag)
+      ? `<div class="empty">No stations match that filter here.</div>`
+      : `<div class="empty">Nothing on air here.</div>`;
     return;
   }
   for (const ch of channels) {
@@ -714,7 +775,7 @@ function onCameraChange() {
  * dot is the gesture that makes sound.
  */
 function followCentre() {
-  if (!globe || !globePts || showingFavorites) return;
+  if (!globe || !globePts || showingFavorites || flying) return;
   const pov = globe.pointOfView();
   const near = nearestPlace(pov.lat, pov.lng);
   if (!near || near.i === selection.placeIndex) return;
@@ -746,12 +807,20 @@ function sizeGlobe() {
   globe.width(w.clientWidth).height(w.clientHeight);
 }
 
+let flying = false;
 function flyTo(lat, lng, altitude = 0.62) {
   if (!globe) return;
   globe.controls().autoRotate = false;   // don't drift away from what you picked
+  // Suppress follow-the-centre for the duration: the fly emits change events the
+  // whole way, and following mid-flight snaps the selection to whatever city the
+  // camera happens to pass over. That is how picking Los Angeles landed on
+  // Brownsville TX.
+  flying = true;
   globe.pointOfView({ lat, lng, altitude }, 800);
-  setTimeout(() => applyLod(), 900);     // after the move, refresh detail
+  clearTimeout(flyDone);
+  flyDone = setTimeout(() => { flying = false; applyLod(); }, 1100);
 }
+let flyDone = null;
 
 /** Merged geometry means selection changes need the layer rebuilt, not just recoloured. */
 function refreshGlobeSelection() {
