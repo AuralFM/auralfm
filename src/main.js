@@ -13,7 +13,9 @@ const resolver = require("./resolver");
 const weather = require("./weather");
 const news = require("./news");
 
-const POPOVER = { width: 380, height: 560, min: 210 };   // height is the cap; the panel sizes to content
+// height is the cap, not the size — the panel grows to fit its content. The cap
+// is a share of the usable screen so it doesn't overflow a small display.
+const POPOVER = { width: 392, height: 560, min: 200 };
 const STORE = path.join(app.getPath("userData"), "state.json");
 
 let tray = null;
@@ -69,6 +71,13 @@ function createWindow() {
     shell.openExternal(url);
     return { action: "deny" };
   });
+}
+
+function maxPopoverHeight() {
+  const b = tray?.getBounds?.() ?? { x: 0, y: 0 };
+  const wa = screen.getDisplayNearestPoint({ x: b.x, y: b.y }).workArea;
+  // Leave a comfortable margin below; never taller than 78% of the usable height.
+  return Math.max(POPOVER.min, Math.min(Math.round(wa.height * 0.78), wa.height - 60));
 }
 
 function positionUnderTray() {
@@ -170,7 +179,7 @@ ipcMain.on("popover:height", (_e, h) => {
   // AppKit popovers size to their content; a fixed-height panel with a pool of
   // dead space under a short list is the giveaway that this isn't native.
   if (!win || win.isDestroyed()) return;
-  const height = Math.round(Math.max(POPOVER.min, Math.min(POPOVER.height, h)));
+  const height = Math.round(Math.max(POPOVER.min, Math.min(maxPopoverHeight(), h)));
   const b = win.getBounds();
   if (Math.abs(b.height - height) < 2) return;
   win.setBounds({ ...b, height }, false);
