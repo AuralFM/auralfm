@@ -447,7 +447,7 @@
 <div class="cols">
 
   <div class="globecol">
-    <div class="globebar" id="globehint" hidden data-i18n="app.loadingGlobe">Loading globe…</div>
+    <div class="globebar" id="globehint" hidden><span id="globestatus" data-i18n="app.loadingGlobe">Loading globe…</span></div>
     <div class="globewrap" id="globewrap">
       <div id="globe"></div>
       <aside class="newspanel" id="newspanel" hidden>
@@ -1424,7 +1424,7 @@ async function setupDayNight() {
     if (dayNightRetry) { document.removeEventListener("visibilitychange", dayNightRetry); dayNightRetry = null; }
     return true;
   } catch (err) {
-    const el = $("globehint");
+    const el = $("globestatus");
     if (el) el.textContent = `day/night unavailable — ${err.message}`;
     if (!dayNightRetry) {
       dayNightRetry = () => { if (!document.hidden) setupDayNight(); };
@@ -1587,6 +1587,10 @@ async function initGlobe() {
     // meant every click on the globe selected an arbitrary place.
     ;
 
+  // Before setupDayNight: the read-outs are global facts about the sun, the moon
+  // and the ISS, and none of them needs the Earth texture to have arrived.
+  mountReadouts();
+  updateSun();
   await setupDayNight();
   // A slow, permanent drift — the Earth is never truly still, and a dead-static
   // globe reads as a screenshot. Slow enough not to fight you while you aim.
@@ -1692,10 +1696,28 @@ async function initGlobe() {
   // and costs nothing.
   clearInterval(sunTimer);
   sunTimer = setInterval(updateSun, 60000);
-  $("globehint").innerHTML =
-    `<span id="sunreadout"></span><span id="issreadout"></span><span id="liveflag"></span>`;
   applyLod(true);
   updateSun();
+}
+
+/**
+ * Put the live read-outs in place.
+ *
+ * Called before the day/night work rather than after it. applyDayNight() waits
+ * on a texture with a 30-second budget, and everything after it used to wait
+ * too — so with the Status Readout switched on the bar sat on its placeholder
+ * "Loading globe…" for as long as that took. The read-outs do not depend on the
+ * texture, so they should not queue behind it.
+ */
+function mountReadouts() {
+  const bar = $("globehint");
+  if ($("sunreadout")) return;
+  // Replaces #globestatus, which carried the placeholder. That element is the
+  // only translatable thing in this bar — the read-outs are numbers, and a
+  // language change used to wipe them by writing over their parent.
+  
+  bar.innerHTML =
+    `<span id="sunreadout"></span><span id="issreadout"></span><span id="liveflag"></span>`;
 }
 
 /**
@@ -2513,8 +2535,8 @@ document.addEventListener("keydown", (e) => {
   } catch (err) {
     // Reveal the status bar for this: an init failure is the one time the read-out
     // has to be visible whether or not the user asked for it.
-    const el = $("globehint");
-    if (el) { el.textContent = err.message; el.hidden = false; }
+    const el = $("globestatus") || $("globehint");
+    if (el) { el.textContent = err.message; $("globehint").hidden = false; }
   }
 
   // Quietly flag a stale catalog rather than letting it rot invisibly.

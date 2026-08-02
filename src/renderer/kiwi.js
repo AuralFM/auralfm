@@ -120,6 +120,23 @@
     { id: "b19",   label: "19 m",        freq: 15400,  mode: "am",  when: "day",   hint: "international broadcast" },
     { id: "ham40", label: "40 m amateur", freq: 7100,  mode: "lsb", when: "night", hint: "voice, operators" },
     { id: "ham20", label: "20 m amateur", freq: 14200, mode: "usb", when: "day",   hint: "voice, operators" },
+
+    /**
+     * Aviation, on shortwave.
+     *
+     * Out over an ocean an aircraft is far beyond VHF range, so it talks to the
+     * ground on HF — the same ionospheric bounce everything else here uses. Tune
+     * one of these from a receiver under the North Atlantic tracks and you hear
+     * transatlantic flights reading their position back to Shannon or Gander,
+     * and the continuous weather broadcasts they are listening for.
+     *
+     * This is the honest version of "add flights to the globe": you cannot
+     * listen to a dot on a flight tracker, and you can listen to this.
+     */
+    { id: "natA",   label: "Atlantic air · 5.6",  freq: 5598,  mode: "usb", when: "night", hint: "oceanic air-ground" },
+    { id: "natB",   label: "Atlantic air · 8.9",  freq: 8906,  mode: "usb", when: "day",   hint: "oceanic air-ground" },
+    { id: "volmetS",label: "Shannon VOLMET",      freq: 8957,  mode: "usb", when: "day",   hint: "aviation weather, continuous" },
+    { id: "volmetN",label: "New York VOLMET",     freq: 6604,  mode: "usb", when: "night", hint: "aviation weather, continuous" },
   ];
 
   // ── session ────────────────────────────────────────────────────────────────

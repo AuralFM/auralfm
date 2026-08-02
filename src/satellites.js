@@ -16,6 +16,25 @@ const path = require("node:path");
 const satellite = require("satellite.js");
 
 const TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle";
+/**
+ * Second source, because the first one can and does say no.
+ *
+ * Celestrak rate-limits by IP and, once it has decided against you, stops
+ * answering entirely — during development every request from this machine timed
+ * out for a day, homepage included, and the satellite names simply vanished from
+ * the globe with no way to get them back.
+ *
+ * SatNOGS is a volunteer network of amateur ground stations that publishes the
+ * same elements keylessly. It fits this project better than the fallback role
+ * suggests: a few hundred people with antennas in their gardens, tracking
+ * spacecraft and giving the data away, which is the same shape as the shortwave
+ * receivers.
+ *
+ * It returns every satellite it knows about rather than a curated group, so the
+ * crewed stations and their visiting vehicles are picked out by name.
+ */
+const SATNOGS_URL = "https://db.satnogs.org/api/tle/?format=json";
+const STATIONS_RE = /^(ISS|CSS|PROGRESS|SOYUZ|CREW DRAGON|CARGO DRAGON|DRAGON|CYGNUS|TIANZHOU|SHENZHOU)\b/i;
 const TLE_TTL = 12 * 60 * 60 * 1000;      // elements decay; a day is the useful life
 const STALE_MAX = 7 * 24 * 60 * 60 * 1000; // past a week, SGP4 drifts too far to draw
 const MAX_OBJECTS = 8;                     // enough to feel inhabited, few enough to read
@@ -37,6 +56,7 @@ const MAX_OBJECTS = 8;                     // enough to feel inhabited, few enou
  *     ISS within a few kilometres of the truth, which is far finer than a dot
  *     on this globe. Silence is the worse answer.
  */
+const UA = "GlobeFM/0.1 (+https://github.com/meltonbell3/globefm)";
 const BACKOFF_MIN = 5 * 60 * 1000;
 const BACKOFF_MAX = 6 * 60 * 60 * 1000;
 
@@ -91,6 +111,20 @@ async function loadTLEs() {
     flush();
     console.log(`satellites: ${tles.length} objects tracked`);
   } catch (err) {
+    // Celestrak said no. Ask the volunteers.
+    try {
+      const alt = await fromSatnogs();
+      if (alt.length) {
+        tles = alt;
+        fetchedAt = Date.now();
+        backoff = BACKOFF_MIN;
+        nextTry = 0;
+        flush();
+        console.log(`satellites: ${tles.length} objects tracked (via SatNOGS)`);
+        return tles;
+      }
+    } catch { /* both sources down; fall through to the backoff below */ }
+
     nextTry = Date.now() + backoff;
     console.warn(
       `satellites: TLEs unavailable (${err.message}) — ` +
@@ -100,6 +134,31 @@ async function loadTLEs() {
     backoff = Math.min(backoff * 2, BACKOFF_MAX);
   }
   return Date.now() - fetchedAt < STALE_MAX ? tles : [];
+}
+
+/** SatNOGS publishes 3-line TLEs with the leading "0 " name marker still on. */
+async function fromSatnogs() {
+  const res = await fetch(SATNOGS_URL, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`SatNOGS HTTP ${res.status}`);
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error("SatNOGS: unexpected shape");
+
+  const out = [];
+  const seen = new Set();
+  for (const r of rows) {
+    const name = String(r.tle0 || "").replace(/^0\s+/, "").trim();
+    if (!name || !STATIONS_RE.test(name)) continue;
+    if (!String(r.tle1 || "").startsWith("1 ") || !String(r.tle2 || "").startsWith("2 ")) continue;
+    // Elements older than a week propagate too far off to draw.
+    if (r.updated && Date.now() - Date.parse(r.updated) > STALE_MAX) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    out.push({ name, l1: r.tle1, l2: r.tle2 });
+  }
+  return out.slice(0, MAX_OBJECTS);
 }
 
 const toDeg = (rad) => (rad * 180) / Math.PI;
