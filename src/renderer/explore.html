@@ -173,17 +173,17 @@
     font-size:12px;letter-spacing:-.002em;
   }
   .newshead b{flex:1;font-weight:590;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #newsSrc{
-    background:none;border:0;color:var(--label3);font-size:12px;line-height:1;
-    padding:2px 5px;border-radius:5px;cursor:default;
+  .newshead button{
+    flex:none;width:26px;height:26px;display:grid;place-items:center;
+    background:none;border:0;color:var(--label2);line-height:1;
+    border-radius:6px;cursor:default;
+    transition:background .12s ease-out,color .12s ease-out,transform 90ms ease-out;
   }
-  #newsSrc:hover{background:var(--fill);color:var(--label)}
-  #newsSrc[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
-  #newsClose{
-    background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
-    padding:1px 5px;border-radius:5px;cursor:default;
-  }
-  #newsClose:hover{background:var(--fill);color:var(--label)}
+  .newshead button:hover{background:var(--fill-hi);color:var(--label)}
+  .newshead button:active{transform:scale(.9)}
+  #newsSrc{font-size:12px}
+  #newsSrc[aria-pressed="true"]{color:var(--accent)}
+  #newsClose{font-size:16px}
   .newslist{flex:1;overflow-y:auto;padding:0 8px 12px}
   .newslist::-webkit-scrollbar{width:0}
   .story{padding:8px 8px;border-radius:7px;transition:background .12s ease-out}
@@ -1160,8 +1160,7 @@ async function initGlobe() {
   clearInterval(sunTimer);
   sunTimer = setInterval(updateSun, 60000);
   $("globehint").innerHTML =
-    `<span id="lodhint"></span><span id="sunreadout"></span>`
-    + `<span id="issreadout"></span><span id="liveflag"></span>`;
+    `<span id="sunreadout"></span><span id="issreadout"></span><span id="liveflag"></span>`;
   applyLod(true);
   updateSun();
 }
@@ -1191,12 +1190,8 @@ function applyLod(force = false) {
   const min = LOD_TIERS[tier].minCount;
   const shown = globePts.filter((p) => p.count >= min || p.i === selection.placeIndex);
   globe.pointsData(shown);
-  const hint = $("lodhint");
-  if (hint) {
-    hint.textContent = min > 1
-      ? `showing ${shown.length.toLocaleString()} of ${globePts.length.toLocaleString()} places · zoom in for more`
-      : `${globePts.length.toLocaleString()} places`;
-  }
+  // No place-count read-out: it told you nothing you could act on, and it was
+  // the longest thing in the status bar.
 }
 
 let driftTimer = null;
