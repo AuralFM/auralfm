@@ -121,11 +121,14 @@ function openExplore() {
 
   explore = new BrowserWindow({
     width: 940, height: 640, minWidth: 760, minHeight: 460,
-    title: "Explore",
+    title: "GlobeFM",
     titleBarStyle: "hiddenInset",     // traffic lights over our own toolbar
-    vibrancy: "sidebar",
-    visualEffectState: "active",
-    backgroundColor: "#00000000",
+    // No vibrancy or transparent backgroundColor here. On a packaged build this
+    // combination broke GPU compositing — the window laid out correctly (DOM,
+    // canvas and WebGL context all healthy) but never painted, so it showed as a
+    // blank grey rectangle. The popover still uses vibrancy; it is small,
+    // frameless, and does not host a WebGL canvas.
+    backgroundColor: "#1c1c1e",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
