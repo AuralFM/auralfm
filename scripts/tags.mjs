@@ -47,6 +47,26 @@ const domainOf = (u) => {
   catch { return null; }
 };
 
+/**
+ * The two directories name countries differently — radio.garden says "United
+ * States", radio-browser says "The United States Of America". Comparing them
+ * literally silently failed the country gate for the largest country in the
+ * catalog, and for the UK, Netherlands, Russia and others: roughly 9,900
+ * stations that could never pass tiers 1 or 5.
+ *
+ * Containment resolves 211 of 227: "united states of america" contains
+ * "united states", "russian federation" starts with "russia".
+ */
+const countryKey = (c) => (c || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().replace(/^the /, "");
+
+function sameCountryName(a, b) {
+  const x = countryKey(a), y = countryKey(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  return x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x));
+}
+
 const cleanTags = (t) => [...new Set(
   (t || "").split(",").map((x) => x.trim().toLowerCase()).filter((x) => x && x.length < 32)
 )];
@@ -103,57 +123,56 @@ function tokenPrefix(a, b) {
   return short.every((t, i) => long[i] === t);
 }
 
-function match(ch, country, ix) {
-  const sameCountry = (list) =>
-    list.find((s) => s.country && country && s.country.toLowerCase() === country.toLowerCase());
-  const one = (s, via) => ({ tags: cleanTags(s.tags), uuid: s.uuid, ok: s.ok, via });
+/**
+ * Ordered candidate sets, most trustworthy first. Returning a *list* per tier
+ * rather than one station matters: a tier can match an entry that happens to
+ * carry no tags, and short-circuiting there loses tags a later tier would have
+ * found. Fixing the country gate exposed exactly that — matching improved while
+ * tagging fell, because tier 1 started winning with untagged entries.
+ */
+function candidateTiers(ch, country, ix) {
+  const tiers = [];
+  const inCountry = (list) => list.filter((s) => sameCountryName(s.country, country));
 
-  // 1. Exact name in the same country — the only tier that needs no corroboration.
-  const exact = ix.byName.get(norm(ch.title));
-  if (exact) {
-    const s = sameCountry(exact);
-    if (s) return one(s, "name+country");
-  }
+  const exact = ix.byName.get(norm(ch.title)) || [];
+  if (exact.length) tiers.push(["name+country", inCountry(exact)]);
 
-  const dom = ix.byDomain.get(domainOf(ch.website));
-  if (dom) {
-    // 2. Domain owned by exactly one tagged station — unambiguous.
-    if (dom.length === 1) return one(dom[0], "domain(unique)");
-
+  const dom = ix.byDomain.get(domainOf(ch.website)) || [];
+  if (dom.length === 1) tiers.push(["domain(unique)", dom]);
+  else if (dom.length > 1) {
     const l = loose(ch.title);
-    // 3. Shared domain, exact loose-name agreement.
-    const byName = dom.find((s) => loose(s.name) === l);
-    if (byName) return one(byName, "domain+name");
-
-    // 3b. Shared domain where every candidate carries the same tags — that's
-    //     radio-browser holding duplicates of one station (different bitrates or
-    //     spellings), not a broadcaster with distinct genres.
+    tiers.push(["domain+name", dom.filter((s) => loose(s.name) === l)]);
     const sets = new Set(dom.map((s) => cleanTags(s.tags).sort().join("|")));
-    if (sets.size === 1) return one(dom[0], "domain(agreed)");
-
-    // 3c. Shared domain where the names overlap as a token prefix. This is the
-    //     WWOZ case: radio.garden says "WWOZ FM 90.7", radio-browser has
-    //     "WWOZ - New Orleans Public Radio" and "WWOZ 90.7 New Orleans, LA".
-    //     Same domain plus a name prefix is strong enough; union the tags,
-    //     since each entry describes the same station from a different angle.
-    const overlap = dom.filter((s) => tokenPrefix(l, loose(s.name)));
-    if (overlap.length) {
-      const tags = [...new Set(overlap.flatMap((s) => cleanTags(s.tags)))];
-      const best = overlap.find((s) => s.ok === 1) || overlap[0];
-      return { tags, uuid: best.uuid, ok: best.ok, via: "domain+prefix" };
-    }
+    if (sets.size === 1) tiers.push(["domain(agreed)", dom]);
+    tiers.push(["domain+prefix", dom.filter((s) => tokenPrefix(l, loose(s.name)))]);
   }
 
-  // 4. Globally unique exact name, country unknown or mismatched.
-  if (exact && exact.length === 1) return one(exact[0], "name(unique)");
+  if (exact.length === 1) tiers.push(["name(unique)", exact]);
 
-  // 5. Loosened name, but only within the same country.
-  const lo = ix.byLoose.get(loose(ch.title));
-  if (lo) {
-    const s = sameCountry(lo);
-    if (s) return one(s, "loose+country");
+  const lo = ix.byLoose.get(loose(ch.title)) || [];
+  if (lo.length) tiers.push(["loose+country", inCountry(lo)]);
+
+  return tiers.filter(([, list]) => list.length);
+}
+
+function match(ch, country, ix) {
+  const tiers = candidateTiers(ch, country, ix);
+  if (!tiers.length) return null;
+
+  // Identity (uuid + last check) comes from the most trustworthy match.
+  const [via, first] = tiers[0];
+  const idFrom = first.find((s) => s.ok === 1) || first[0];
+
+  // Tags come from the most trustworthy tier that actually has any. Union within
+  // the tier: two entries for one station often describe it from different
+  // angles (the WWOZ case — "jazz" on one, "blues, jazz, new orleans" on the other).
+  let tags = [], tagVia = via;
+  for (const [tv, list] of tiers) {
+    const union = [...new Set(list.flatMap((s) => cleanTags(s.tags)))];
+    if (union.length) { tags = union; tagVia = tv; break; }
   }
-  return null;
+
+  return { tags, uuid: idFrom.uuid, ok: idFrom.ok, via: tagVia };
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
