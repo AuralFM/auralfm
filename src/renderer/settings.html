@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
-<title>GlobeFM Settings</title>
+<title>AuralFM Settings</title>
 <style>
   /* Same AppKit-derived palette as the rest of the app. The difference here is
      that every appearance signal has to be overridable: this is the window where
@@ -243,7 +243,7 @@
         <select id="language" aria-labelledby="lang-lbl"></select>
       </div>
     </div>
-    <p class="hint" data-i18n="set.languageHint">Translates GlobeFM's own interface. Station names, places and headlines stay in their own language.</p>
+    <p class="hint" data-i18n="set.languageHint">Translates AuralFM's own interface. Station names, places and headlines stay in their own language.</p>
   </section>
 
   <section>
@@ -304,24 +304,24 @@ function translate() {
     const s = T[el.dataset.i18n];
     if (s) el.textContent = s;
   }
-  document.title = "GlobeFM — " + (T["set.title"] || "Settings");
+  document.title = "AuralFM — " + (T["set.title"] || "Settings");
 }
 
 async function set(patch) {
   Object.assign(P, patch);
   paint();
-  P = await window.globefm.setPrefs(patch);
+  P = await window.auralfm.setPrefs(patch);
   paint();
-  if ("language" in patch) { T = await window.globefm.strings(); translate(); }
+  if ("language" in patch) { T = await window.auralfm.strings(); translate(); }
 }
 
 // Preferences can also change from outside this window — a second Settings
 // window, or a menu item. Follow those rather than showing a stale state.
-window.globefm.onPrefs(async (next) => {
+window.auralfm.onPrefs(async (next) => {
   const langChanged = next.language !== P.language;
   P = next;
   paint();
-  if (langChanged) { T = await window.globefm.strings(); translate(); }
+  if (langChanged) { T = await window.auralfm.strings(); translate(); }
 });
 
 // Segmented controls: click, plus arrow keys for keyboard users, because a
@@ -360,7 +360,7 @@ $("#language").addEventListener("change", (e) => set({ language: e.target.value 
  * heading for a feature you have not used yet is just clutter.
  */
 async function paintMine() {
-  const list = await window.globefm.mineList();
+  const list = await window.auralfm.mineList();
   const sec = $("#minesec"), box = $("#minelist");
   sec.hidden = !list.length;
   box.innerHTML = "";
@@ -375,14 +375,14 @@ async function paintMine() {
       : (T["set.mineNoPlace"] || "no place");
     const rm = row.querySelector(".rm");
     rm.textContent = T["set.remove"] || "Remove";
-    rm.onclick = async () => { await window.globefm.mineRemove(st.id); paintMine(); };
+    rm.onclick = async () => { await window.auralfm.mineRemove(st.id); paintMine(); };
     box.append(row);
   }
 }
-window.globefm.onMineChanged(() => paintMine());
+window.auralfm.onMineChanged(() => paintMine());
 
 async function paintPalettes() {
-  const list = await window.globefm.palettes();
+  const list = await window.auralfm.palettes();
   const box = $("#palettes");
   box.innerHTML = "";
   for (const p of list) {
@@ -403,17 +403,17 @@ async function paintPalettes() {
   }
 }
 
-$("#mail").addEventListener("click", () => window.globefm.openMail());
-$("#privacy").addEventListener("click", () => window.globefm.openDoc("PRIVACY.md"));
-$("#terms").addEventListener("click", () => window.globefm.openDoc("TERMS.md"));
+$("#mail").addEventListener("click", () => window.auralfm.openMail());
+$("#privacy").addEventListener("click", () => window.auralfm.openDoc("PRIVACY.md"));
+$("#terms").addEventListener("click", () => window.auralfm.openDoc("TERMS.md"));
 
 (async () => {
   const [prefs, strings, langs, version, pals] = await Promise.all([
-    window.globefm.getPrefs(),
-    window.globefm.strings(),
-    window.globefm.languages(),
-    window.globefm.version(),
-    window.globefm.palettes(),
+    window.auralfm.getPrefs(),
+    window.auralfm.strings(),
+    window.auralfm.languages(),
+    window.auralfm.version(),
+    window.auralfm.palettes(),
   ]);
   P = prefs; T = strings; PALS = pals;
   await paintPalettes();
@@ -430,7 +430,7 @@ $("#terms").addEventListener("click", () => window.globefm.openDoc("TERMS.md"));
     sel.append(o);
   }
 
-  $("#ver").textContent = "GlobeFM " + version;
+  $("#ver").textContent = "AuralFM " + version;
   translate();
   paint();
 })();

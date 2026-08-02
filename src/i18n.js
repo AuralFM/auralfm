@@ -1,7 +1,7 @@
 /**
  * Interface language.
  *
- * Scope, stated plainly: this translates GlobeFM's own chrome — menus, buttons,
+ * Scope, stated plainly: this translates AuralFM's own chrome — menus, buttons,
  * labels, empty states. It does not translate station names, place names,
  * country names or headlines, because those are data, not interface, and they
  * belong in the language of the place they come from. A station in Kyoto should
@@ -18,7 +18,7 @@
 
 const en = {
   // app chrome
-  "app.name": "GlobeFM",
+  "app.name": "AuralFM",
   "app.nothingPlaying": "Nothing playing",
   "app.explore": "Explore the world",
   "app.favorites": "Favorites",
@@ -50,11 +50,11 @@ const en = {
   "ctl.localHeadlines": "Local headlines",
 
   // menus
-  "menu.about": "About GlobeFM",
+  "menu.about": "About AuralFM",
   "menu.settings": "Settings…",
   "menu.openGlobe": "Open the Globe",
   "menu.openAtLogin": "Open at Login",
-  "menu.quit": "Quit GlobeFM",
+  "menu.quit": "Quit AuralFM",
   "menu.edit": "Edit",
   "menu.view": "View",
   "menu.window": "Window",
@@ -109,7 +109,7 @@ const en = {
   "set.mineNoPlace": "no place",
   "set.languageLabel": "Interface language",
   "set.language.system": "System",
-  "set.languageHint": "Translates GlobeFM's own interface. Station names, places and headlines stay in their own language.",
+  "set.languageHint": "Translates AuralFM's own interface. Station names, places and headlines stay in their own language.",
   "set.about": "About",
   "set.contact": "Contact",
   "set.contactHint": "Questions, bugs, or a station that won't play — send a note.",
@@ -147,11 +147,11 @@ const es = {
   "ctl.lockStation": "Fijar esta emisora mientras exploras",
   "ctl.localHeadlines": "Titulares locales",
 
-  "menu.about": "Acerca de GlobeFM",
+  "menu.about": "Acerca de AuralFM",
   "menu.settings": "Ajustes…",
   "menu.openGlobe": "Abrir el globo",
   "menu.openAtLogin": "Abrir al iniciar sesión",
-  "menu.quit": "Salir de GlobeFM",
+  "menu.quit": "Salir de AuralFM",
   "menu.edit": "Edición",
   "menu.view": "Visualización",
   "menu.window": "Ventana",
@@ -204,7 +204,7 @@ const es = {
   "set.mineNoPlace": "sin lugar",
   "set.languageLabel": "Idioma de la interfaz",
   "set.language.system": "Sistema",
-  "set.languageHint": "Traduce la interfaz de GlobeFM. Los nombres de emisoras, lugares y titulares se mantienen en su idioma.",
+  "set.languageHint": "Traduce la interfaz de AuralFM. Los nombres de emisoras, lugares y titulares se mantienen en su idioma.",
   "set.about": "Acerca de",
   "set.contact": "Contacto",
   "set.contactHint": "Dudas, fallos o una emisora que no suena — escríbenos.",
@@ -242,11 +242,11 @@ const fr = {
   "ctl.lockStation": "Garder cette station pendant la navigation",
   "ctl.localHeadlines": "Actualités locales",
 
-  "menu.about": "À propos de GlobeFM",
+  "menu.about": "À propos de AuralFM",
   "menu.settings": "Réglages…",
   "menu.openGlobe": "Ouvrir le globe",
   "menu.openAtLogin": "Ouvrir à la connexion",
-  "menu.quit": "Quitter GlobeFM",
+  "menu.quit": "Quitter AuralFM",
   "menu.edit": "Édition",
   "menu.view": "Présentation",
   "menu.window": "Fenêtre",
@@ -299,7 +299,7 @@ const fr = {
   "set.mineNoPlace": "sans lieu",
   "set.languageLabel": "Langue de l'interface",
   "set.language.system": "Système",
-  "set.languageHint": "Traduit l'interface de GlobeFM. Les noms de stations, de lieux et les actualités restent dans leur langue.",
+  "set.languageHint": "Traduit l'interface de AuralFM. Les noms de stations, de lieux et les actualités restent dans leur langue.",
   "set.about": "À propos",
   "set.contact": "Contact",
   "set.contactHint": "Une question, un bug, une station qui ne passe pas — écrivez-nous.",
@@ -337,11 +337,11 @@ const de = {
   "ctl.lockStation": "Diesen Sender beim Stöbern beibehalten",
   "ctl.localHeadlines": "Lokale Schlagzeilen",
 
-  "menu.about": "Über GlobeFM",
+  "menu.about": "Über AuralFM",
   "menu.settings": "Einstellungen…",
   "menu.openGlobe": "Globus öffnen",
   "menu.openAtLogin": "Bei der Anmeldung öffnen",
-  "menu.quit": "GlobeFM beenden",
+  "menu.quit": "AuralFM beenden",
   "menu.edit": "Bearbeiten",
   "menu.view": "Darstellung",
   "menu.window": "Fenster",
@@ -394,7 +394,7 @@ const de = {
   "set.mineNoPlace": "kein Ort",
   "set.languageLabel": "Sprache der Oberfläche",
   "set.language.system": "System",
-  "set.languageHint": "Übersetzt die Oberfläche von GlobeFM. Sender-, Ortsnamen und Schlagzeilen bleiben in ihrer Sprache.",
+  "set.languageHint": "Übersetzt die Oberfläche von AuralFM. Sender-, Ortsnamen und Schlagzeilen bleiben in ihrer Sprache.",
   "set.about": "Über",
   "set.contact": "Kontakt",
   "set.contactHint": "Fragen, Fehler oder ein Sender, der nicht spielt — schreib uns.",
@@ -432,11 +432,11 @@ const pt = {
   "ctl.lockStation": "Manter esta estação enquanto você navega",
   "ctl.localHeadlines": "Manchetes locais",
 
-  "menu.about": "Sobre o GlobeFM",
+  "menu.about": "Sobre o AuralFM",
   "menu.settings": "Ajustes…",
   "menu.openGlobe": "Abrir o globo",
   "menu.openAtLogin": "Abrir ao iniciar sessão",
-  "menu.quit": "Encerrar o GlobeFM",
+  "menu.quit": "Encerrar o AuralFM",
   "menu.edit": "Editar",
   "menu.view": "Visualizar",
   "menu.window": "Janela",
@@ -489,7 +489,7 @@ const pt = {
   "set.mineNoPlace": "sem lugar",
   "set.languageLabel": "Idioma da interface",
   "set.language.system": "Sistema",
-  "set.languageHint": "Traduz a interface do GlobeFM. Nomes de estações, lugares e manchetes ficam no idioma original.",
+  "set.languageHint": "Traduz a interface do AuralFM. Nomes de estações, lugares e manchetes ficam no idioma original.",
   "set.about": "Sobre",
   "set.contact": "Contato",
   "set.contactHint": "Dúvidas, erros ou uma estação que não toca — mande uma mensagem.",

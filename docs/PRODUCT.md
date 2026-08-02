@@ -1,4 +1,4 @@
-# GlobeFM — repositioning to a standalone app
+# AuralFM — repositioning to a standalone app
 
 **Status:** the window model in §3 is **built**. Identity and assets (§5, §6) are not.
 **Written:** 2026-08-02 · **Revised:** 2026-08-02
@@ -7,7 +7,7 @@
 
 ## 1. What changed
 
-GlobeFM was scoped as a menu bar radio player. `PLAN.md` still says it plainly:
+AuralFM was scoped as a menu bar radio player. `PLAN.md` still says it plainly:
 
 > The popover is the product. Explore is the reason you'll open it in the first place.
 
@@ -78,7 +78,7 @@ everything.
 
 ## 4. Name
 
-**Keep GlobeFM.** It survives the repositioning better than most names would: the
+**Keep AuralFM.** It survives the repositioning better than most names would: the
 globe is now literally the centre of the app, and FM still says what you hear.
 Short, memorable, spellable, and the domain-style compound reads as a product
 rather than a project.
@@ -97,7 +97,7 @@ than one mark.
       Current `.icns` is the bare glyph on transparency, which reads as an
       unfinished port next to native apps.
 - [ ] **Consider commissioning or buying out the icon.** Noun Project free tier is
-      CC BY; a paid licence removes the attribution requirement. If GlobeFM is
+      CC BY; a paid licence removes the attribution requirement. If AuralFM is
       distributed, do this properly rather than leaning on an About-panel credit.
 - [ ] **Colour.** Currently systemGreen, inherited from "on air". Worth asking
       whether the identity should be the deep blue of the night Earth instead —

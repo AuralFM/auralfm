@@ -11,7 +11,7 @@
  * this: Yahoo's public chart endpoint returns 429 on both query1 and query2,
  * and Stooq's CSV endpoint 404s. Every remaining provider (Alpha Vantage,
  * Finnhub, Twelve Data) requires an API key. So equities are wired but dormant:
- * set GLOBEFM_STOCK_KEY and they light up, and until then the ticker is honest
+ * set AURALFM_STOCK_KEY and they light up, and until then the ticker is honest
  * about showing crypto only rather than faking an index.
  *
  * Best-effort like everything else live here: cached, silent on failure.
@@ -25,7 +25,7 @@ const CB_WS = "wss://ws-feed.exchange.coinbase.com";
 const CB_PRODUCTS = ["BTC-USD", "ETH-USD", "SOL-USD"];
 
 // Alpha Vantage: free tier, 25 calls/day — fine for a ticker refreshed hourly.
-const STOCK_KEY = process.env.GLOBEFM_STOCK_KEY || null;
+const STOCK_KEY = process.env.AURALFM_STOCK_KEY || null;
 const STOCKS = ["SPY", "QQQ", "DIA"];
 
 const { cooldown } = require("./backoff");
@@ -42,7 +42,7 @@ async function crypto() {
     include_24hr_change: "true",
   });
   const res = await fetch(`${CG}?${q}`, {
-    headers: { "User-Agent": "GlobeFM/0.1" },
+    headers: { "User-Agent": "AuralFM/0.1" },
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);

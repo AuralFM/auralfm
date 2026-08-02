@@ -61,7 +61,7 @@ async function fetchLayer(key) {
   if (spec.dated) q.set("TIME", new Date(Date.now() - 864e5).toISOString().slice(0, 10));
 
   const res = await fetch(`${BASE}?${q}`, {
-    headers: { "User-Agent": "GlobeFM/0.1" },
+    headers: { "User-Agent": "AuralFM/0.1" },
     signal: AbortSignal.timeout(60000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);

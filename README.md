@@ -1,6 +1,8 @@
-# GlobeFM
+# AuralFM
 
 **A window onto the world you can listen to.**
+
+*Aural* — of or relating to the ear, and the sense of hearing.
 
 Open it and the Earth is there — real weather moving across it, the day/night line
 where it truly is, the ISS overhead, the actual planets behind. Click anywhere and
@@ -28,7 +30,7 @@ down radio support in Shortcuts and Apple Music — and grown well past it.
 
 ```
 ┌──────────────────────────────┐
-│  ◍  GlobeFM                  │
+│  ◍  AuralFM                  │
 │  ┌────────────────────────┐  │
 │  │ Search 38,342 stations │  │
 │  └────────────────────────┘  │
@@ -75,11 +77,27 @@ generally. I think where society is heading, applications like these are going t
 matter more, not less.
 
 So this is the simple thing nobody thinks about, because it has always been
-there. Radio is overlooked precisely because it never left. GlobeFM is an attempt
+there. Radio is overlooked precisely because it never left. AuralFM is an attempt
 to make it visible again: see the globe, see how enormous society is, see the
 thousands of stations and hundreds of shortwave receivers scattered across it —
 and then just listen. Connection by audio, with nothing in the middle that has to
 know who you are.
+
+### The name
+
+**Aural** — *of or relating to the ear, or the sense of hearing.* From the Latin
+*auris*, ear.
+
+I have been circling this idea for years under that word. An earlier version was
+going to be a live conversation app, built around the same frustration: the audio
+platforms that got big were shaped by what kept people on them, not by what was
+worth hearing, and the people making the thing got the least out of it.
+
+That app isn't this one. This one has no hosts, no rooms, no feed and nobody to
+monetise. But the thesis survived the change of form intact — **audio as
+connection, with no algorithm deciding what reaches you and no platform standing
+between you and the person transmitting.** Radio already worked that way before
+anyone built a platform. It still does.
 
 *— Melton Bell*
 
@@ -98,7 +116,7 @@ know who you are.
 - **Aviation on HF.** Out over an ocean an aircraft is beyond VHF range and talks
   to the ground on shortwave. Tune *Shannon VOLMET* from Iceland and you hear the
   weather being read for transatlantic flights.
-- **Add a station GlobeFM doesn't have.** The catalogue is a snapshot; your local
+- **Add a station AuralFM doesn't have.** The catalogue is a snapshot; your local
   station might not be in it. Add it, and it lives on your machine.
 - **Search** by station, city, country, or genre. "jazz new orleans" works.
 - **Favorites** with `1`–`9` hotkeys, and **Lock** to browse the world without
@@ -133,8 +151,8 @@ know who you are.
 ## Getting started
 
 ```bash
-git clone git@github.com:meltonbell3/globefm.git
-cd globefm
+git clone git@github.com:meltonbell3/auralfm.git
+cd auralfm
 npm install
 ```
 
@@ -148,7 +166,7 @@ npm run icons     # rasterize assets/*.svg into the PNGs macOS needs
 npm start         # run it
 ```
 
-The globe opens on launch. Close it and GlobeFM keeps playing from the menu bar —
+The globe opens on launch. Close it and AuralFM keeps playing from the menu bar —
 right-click the tray icon for **Open the Globe**, **About**, **Open at Login** and
 **Quit**.
 
@@ -201,7 +219,7 @@ data at all. radio-browser has 11,777 genre tags but coordinates for only 22% of
 its stations. Neither is sufficient alone.
 
 **Being a good API citizen.** radio-browser's docs ask clients to report each
-play so their popularity ranking stays meaningful, so GlobeFM calls
+play so their popularity ranking stays meaningful, so AuralFM calls
 `/json/url/{uuid}` whenever a station starts (fire-and-forget — it can never
 affect playback). It sends a descriptive `User-Agent`, and discovers mirrors via
 `/json/servers` rather than pinning one host.
@@ -214,7 +232,7 @@ selected city's coordinates are sent, never the user's location.
 
 **Being a good guest.** Every live service here is free and most are run by
 volunteers. Each one gets a contactable `User-Agent`, a cache, and an exponential
-backoff on failure. That discipline is not decorative — GlobeFM once retried a
+backoff on failure. That discipline is not decorative — AuralFM once retried a
 failed Celestrak fetch every 30 seconds and got its IP blocked for a day, which
 is why `src/backoff.js` exists and why `npm run audit` checks that every polled
 service has a cooldown. The 837 shortwave receivers get stricter rules again:
@@ -312,12 +330,12 @@ phase0/index.html      the original single-file prototype
 - **The catalog is a snapshot, not a subscription.** Stations come and go; re-run
   `npm run crawl` every few months.
 - **Unsigned.** Gatekeeper will complain until the app is signed and notarised.
-- **Shortwave receivers are volunteers' machines.** GlobeFM connects only when you
+- **Shortwave receivers are volunteers' machines.** AuralFM connects only when you
   click one, one at a time, never retries a refusal, and never scans them. If a
   receiver is busy, that is a person's hardware being used by somebody else.
 - **Stocks are dormant.** There is no keyless real-time equity source — Yahoo,
   Stooq and CNBC were all re-probed and all refuse. Crypto is genuinely live over
-  Coinbase's keyless feed; equities light up only if you set `GLOBEFM_STOCK_KEY`.
+  Coinbase's keyless feed; equities light up only if you set `AURALFM_STOCK_KEY`.
 
 ## Credits
 
@@ -336,16 +354,16 @@ Personal project, not affiliated with or endorsed by any of the above.
 
 ## Siri and Shortcuts
 
-GlobeFM registers a `globefm://` URL scheme, so any Shortcut that opens a URL can
+AuralFM registers an `auralfm://` URL scheme, so any Shortcut that opens a URL can
 drive it — which is how you get "Hey Siri, play KEXP" back.
 
 | URL | Does |
 |---|---|
-| `globefm://play?station=KEXP` | Play the best match for a station name |
-| `globefm://play?place=Reykjavik` | Play the top station in a place |
-| `globefm://pause` | Pause / resume |
-| `globefm://next` | Next favorite |
-| `globefm://open` | Open the popover |
+| `auralfm://play?station=KEXP` | Play the best match for a station name |
+| `auralfm://play?place=Reykjavik` | Play the top station in a place |
+| `auralfm://pause` | Pause / resume |
+| `auralfm://next` | Next favorite |
+| `auralfm://open` | Open the popover |
 
 **Making a Shortcut:** Shortcuts → new shortcut → *Open URLs* → paste one of the
 above → name it "Play KEXP". Saying that name to Siri now runs it.

@@ -12,7 +12,7 @@
  * menu does not meet. Borrowing the *aesthetic* costs nothing and owes nobody.
  *
  * There is also a product reason. A terminal theme recolours text on a
- * background, and a terminal is almost entirely those two things. GlobeFM is a
+ * background, and a terminal is almost entirely those two things. AuralFM is a
  * photoreal Earth: the dominant surface is real satellite imagery, and
  * recolouring it would destroy the exact property the app is built on. So a
  * palette here touches the things around the planet, not the planet.
@@ -26,7 +26,7 @@ const PALETTES = [
     id: "onair",
     name: "On Air",
     free: true,
-    accent: "#30D158",      // systemGreen — where GlobeFM started
+    accent: "#30D158",      // systemGreen — where AuralFM started
     accentLight: "#248A3D",
     dot: "#5ef08a",
     rx: "#ffb340",
@@ -103,7 +103,7 @@ const byId = (id) => PALETTES.find((p) => p.id === id) || PALETTES[0];
  *
  * Locked palettes are still listed — hiding them would make the picker look
  * complete when it is not — but they cannot be selected until #15 decides
- * whether GlobeFM is monetised at all. Until then `unlocked` is simply true for
+ * whether AuralFM is monetised at all. Until then `unlocked` is simply true for
  * everything, so nothing is taken away from anyone while the question is open.
  */
 function list(entitled = true) {

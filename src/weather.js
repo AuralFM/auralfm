@@ -55,7 +55,7 @@ async function get(placeIndex, lat, lon) {
 
   try {
     const res = await fetch(`${API}?${q}`, {
-      headers: { "User-Agent": "GlobeFM/0.1" },
+      headers: { "User-Agent": "AuralFM/0.1" },
       signal: AbortSignal.timeout(7000),
     });
     if (!res.ok) { cool.fail(`HTTP ${res.status}`); return null; }

@@ -8,7 +8,7 @@
  *
  * That distinction is the whole discipline here. A KiwiSDR is one person's
  * BeagleBone on one person's bandwidth, and there are 838 of them. Enumerating
- * them to check who is free would be 838 requests from every copy of GlobeFM on
+ * them to check who is free would be 838 requests from every copy of AuralFM on
  * earth. We got IP-blocked by Celestrak for far less. So: the aggregate list is
  * the only thing polled, and an individual receiver is contacted only when
  * someone clicks it.
@@ -21,7 +21,7 @@ const path = require("node:path");
 const { cooldown } = require("./backoff");
 
 const SRC = "http://rx.linkfanel.net/kiwisdr_com.js";
-const UA = "GlobeFM/0.1 (+https://github.com/meltonbell3/globefm)";
+const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
 const REFRESH_MS = 12 * 60 * 60 * 1000;
 const BUNDLE = path.join(__dirname, "..", "data", "sdr.min.json");
 

@@ -1,4 +1,4 @@
-# GlobeFM
+# AuralFM
 
 A macOS menu bar radio player with geographic discovery — listen to any live
 station in the world from your taskbar.
@@ -143,7 +143,7 @@ npm run icons      # regenerate PNGs from assets/*.svg
   hide/tray-title and nothing else.
 - `src/renderer/popover.html` — Phase 0 player, restyled for a 380×560 popover,
   light/dark aware. Station name shows next to the menu bar icon while playing.
-- State persists to `~/Library/Application Support/globefm/state.json`.
+- State persists to `~/Library/Application Support/auralfm/state.json`.
 - `scripts/make-icons.js` — rasterizes the SVGs via Electron so alpha survives.
   Note: `capturePage` returns *device* pixels, so output is downscaled to the
   requested size (a 16px icon captures at 32px on Retina and is resampled down).

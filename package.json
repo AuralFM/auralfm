@@ -1,5 +1,5 @@
 {
-  "name": "globefm",
+  "name": "auralfm",
   "version": "0.1.0",
   "description": "Listen to any live radio station in the world from your menu bar",
   "main": "src/main.js",
@@ -25,14 +25,14 @@
   "repository": {
     "type": "git"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/globefm",
+  "homepage": "https://github.com/YOUR_USERNAME/auralfm",
   "dependencies": {
     "globe.gl": "^2.46.1",
     "satellite.js": "^7.1.0"
   },
   "build": {
-    "appId": "com.meltonbell.globefm",
-    "productName": "GlobeFM",
+    "appId": "com.meltonbell.auralfm",
+    "productName": "AuralFM",
     "copyright": "Copyright \u00a9 2026 Melton Bell",
     "directories": {
       "output": "dist",
@@ -65,16 +65,16 @@
       "extendInfo": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "com.meltonbell.globefm",
+            "CFBundleURLName": "com.meltonbell.auralfm",
             "CFBundleURLSchemes": [
-              "globefm"
+              "auralfm"
             ]
           }
         ]
       }
     },
     "dmg": {
-      "title": "GlobeFM ${version}"
+      "title": "AuralFM ${version}"
     }
   }
 }

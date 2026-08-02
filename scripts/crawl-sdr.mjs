@@ -7,7 +7,7 @@
  * Source is rx.linkfanel.net's machine-readable mirror of rx.kiwisdr.com, which
  * is regenerated hourly for exactly this purpose. One request to one aggregator,
  * never to the 849 receivers themselves — those are private machines on private
- * bandwidth and nothing in GlobeFM may enumerate them.
+ * bandwidth and nothing in AuralFM may enumerate them.
  *
  * The result ships with the app so the receivers are on the globe with the
  * network unplugged, same as the stations. It goes stale in the same way and for
@@ -24,7 +24,7 @@ const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "data", "sdr.min.json");
 const SRC = "http://rx.linkfanel.net/kiwisdr_com.js";
-const UA = "GlobeFM/0.1 (+https://github.com/meltonbell3/globefm)";
+const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
 
 /**
  * The file is a JS assignment, not JSON, and it carries a trailing comma the

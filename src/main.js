@@ -1,5 +1,5 @@
 /**
- * GlobeFM — main process.
+ * AuralFM — main process.
  *
  * Owns the tray icon and the popover window. The popover is created once and
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
@@ -29,7 +29,49 @@ const flights = require("./flights");
 // is a share of the usable screen so it doesn't overflow a small display.
 // Without this the app menu reads "Electron" when running from source; the
 // packaged build gets it from productName.
-app.setName("GlobeFM");
+app.setName("AuralFM");
+
+/**
+ * Carry data over from the GlobeFM name.
+ *
+ * Electron derives userData from the app name, so renaming moved the whole
+ * folder and orphaned everything in it — favourites, the last station, the
+ * stations you added yourself, the cached stream URLs that make a dead directory
+ * survivable. Losing someone's data to a rename is not an acceptable cost of
+ * changing our minds about a name.
+ *
+ * Copies only our own files, never Electron's caches or cookies, and only when
+ * the new location is genuinely empty, so it can never overwrite newer state.
+ */
+(function migrateFromGlobeFM() {
+  const OURS = ["state.json", "streams.json", "failures.json", "tles.json",
+                "sdr.json", "stations.user.json"];
+  try {
+    const next = app.getPath("userData");
+    if (fs.existsSync(path.join(next, "state.json"))) return;   // already ours
+    const prev = path.join(path.dirname(next), "GlobeFM");
+    if (!fs.existsSync(prev)) return;
+
+    fs.mkdirSync(next, { recursive: true });
+    const moved = [];
+    for (const name of OURS) {
+      const from = path.join(prev, name);
+      if (!fs.existsSync(from)) continue;
+      fs.copyFileSync(from, path.join(next, name));
+      moved.push(name);
+    }
+    // Cached satellite imagery too — it is large and re-downloading is rude.
+    for (const f of fs.readdirSync(prev)) {
+      if (!/^sky-.*\.(jpe?g|png)$/i.test(f)) continue;
+      fs.copyFileSync(path.join(prev, f), path.join(next, f));
+      moved.push(f);
+    }
+    if (moved.length) console.log(`migrated from GlobeFM: ${moved.join(", ")}`);
+  } catch (err) {
+    // A failed migration must never stop the app starting.
+    console.warn("migration skipped:", err.message);
+  }
+})();
 
 const POPOVER = { width: 392, height: 560, min: 200 };
 const STORE = path.join(app.getPath("userData"), "state.json");
@@ -129,7 +171,7 @@ function openExplore() {
 
   explore = new BrowserWindow({
     width: 940, height: 640, minWidth: 760, minHeight: 460,
-    title: "GlobeFM",
+    title: "AuralFM",
     titleBarStyle: "hiddenInset",     // traffic lights over our own toolbar
     // No vibrancy or transparent backgroundColor here. On a packaged build this
     // combination broke GPU compositing — the window laid out correctly (DOM,
@@ -167,7 +209,7 @@ function openExplore() {
  */
 function showAbout() {
   app.setAboutPanelOptions({
-    applicationName: "GlobeFM",
+    applicationName: "AuralFM",
     applicationVersion: app.getVersion(),
     copyright:
       "Offline-first · no account · no telemetry · no backend of ours\n" +
@@ -294,7 +336,7 @@ function openSettings() {
   settingsWin = new BrowserWindow({
     width: 460, height: 560,
     resizable: false, minimizable: false, maximizable: false,
-    title: "GlobeFM Settings",
+    title: "AuralFM Settings",
     titleBarStyle: "hiddenInset",
     backgroundColor: "#1c1c1e",
     webPreferences: {
@@ -321,7 +363,7 @@ function openDoc(name) {
   if (existing && !existing.isDestroyed()) { existing.show(); existing.focus(); return; }
   const w = new BrowserWindow({
     width: 720, height: 720,
-    title: "GlobeFM",
+    title: "AuralFM",
     titleBarStyle: "hiddenInset",
     backgroundColor: "#1c1c1e",
     webPreferences: {
@@ -350,14 +392,14 @@ function createTray() {
   icon.setTemplateImage(true);
 
   tray = new Tray(icon);
-  tray.setToolTip("GlobeFM");
+  tray.setToolTip("AuralFM");
   tray.on("click", toggle);
 
   tray.on("right-click", () => {
     // Built on demand so it always reflects the current language.
     const t = getStrings();
     tray.popUpContextMenu(Menu.buildFromTemplate([
-      { label: "GlobeFM", enabled: false },
+      { label: "AuralFM", enabled: false },
       { type: "separator" },
       { label: t["menu.openGlobe"], click: openExplore },
       { label: t["menu.settings"], click: openSettings },
@@ -411,11 +453,11 @@ ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
   return [...mine.search(q).map(hydrateMine), ...hits];
 });
 /**
- * Hardware media keys, held only while GlobeFM is actually playing.
+ * Hardware media keys, held only while AuralFM is actually playing.
  *
  * globalShortcut is exclusive: whoever registers a key owns it system-wide. So
  * holding these permanently would steal F7/F8/F9 from Music and Spotify even
- * when GlobeFM is silent. Registering on play and releasing on stop keeps the
+ * when AuralFM is silent. Registering on play and releasing on stop keeps the
  * keys with whatever is making sound.
  */
 let mediaKeysHeld = false;
@@ -521,7 +563,7 @@ ipcMain.on("settings:open", openSettings);
 ipcMain.on("doc:open", (_e, name) => {
   if (["PRIVACY.md", "TERMS.md"].includes(name)) openDoc(name);
 });
-ipcMain.on("mail:open", () => shell.openExternal("mailto:meltonbell@icloud.com?subject=GlobeFM"));
+ipcMain.on("mail:open", () => shell.openExternal("mailto:meltonbell@icloud.com?subject=AuralFM"));
 ipcMain.handle("doc:text", (_e, name) =>
   ["PRIVACY.md", "TERMS.md"].includes(name) ? docText(name) : "");
 ipcMain.handle("i18n:strings", () => getStrings());
@@ -547,7 +589,7 @@ ipcMain.on("sdr:tune", (_e, rx) => {
   win?.webContents.send("sdr:tune", rx);
   if (!win?.isVisible()) show();
 });
-// Headlines open in the real browser. GlobeFM is not a reader and should not
+// Headlines open in the real browser. AuralFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
 ipcMain.on("open:external", (_e, url) => {
   if (/^https?:\/\//i.test(url)) shell.openExternal(url);
@@ -578,17 +620,17 @@ ipcMain.on("player:state", (_e, state) => {
 
 // ── deep links ────────────────────────────────────────────────────────────────
 /**
- * globefm://play?station=KEXP        play the best match for a station name
- * globefm://play?place=New%20Orleans play the top station in a place
- * globefm://pause  ·  globefm://stop  ·  globefm://next  ·  globefm://open
+ * auralfm://play?station=KEXP        play the best match for a station name
+ * auralfm://play?place=New%20Orleans play the top station in a place
+ * auralfm://pause  ·  auralfm://stop  ·  auralfm://next  ·  auralfm://open
  *
- * This is what makes GlobeFM callable from Shortcuts and therefore from Siri —
+ * This is what makes AuralFM callable from Shortcuts and therefore from Siri —
  * the thing Apple's own radio support used to do. A Shortcut just opens a URL.
  */
 async function handleDeepLink(raw) {
   let u;
   try { u = new URL(raw); } catch { return; }
-  if (u.protocol !== "globefm:") return;
+  if (u.protocol !== "auralfm:") return;
 
   const action = (u.hostname || u.pathname.replace(/\//g, "") || "open").toLowerCase();
   const q = u.searchParams;
@@ -615,7 +657,7 @@ async function handleDeepLink(raw) {
   else console.warn(`deep link: nothing matched ${raw}`);
 }
 
-app.setAsDefaultProtocolClient("globefm");
+app.setAsDefaultProtocolClient("auralfm");
 app.on("open-url", (e, url) => { e.preventDefault(); handleDeepLink(url); });
 
 // ── lifecycle ─────────────────────────────────────────────────────────────────
@@ -623,7 +665,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", (_e, argv) => {
-    const link = argv.find((a) => a.startsWith("globefm://"));
+    const link = argv.find((a) => a.startsWith("auralfm://"));
     if (link) handleDeepLink(link); else openExplore();
   });
 

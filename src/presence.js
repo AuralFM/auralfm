@@ -1,8 +1,8 @@
 /**
  * Presence client — disabled unless a server is configured.
  *
- * GlobeFM ships with no presence endpoint set, so out of the box it contacts
- * nothing and behaves exactly as before. Point GLOBEFM_PRESENCE_URL at a
+ * AuralFM ships with no presence endpoint set, so out of the box it contacts
+ * nothing and behaves exactly as before. Point AURALFM_PRESENCE_URL at a
  * deployment of server/presence.mjs to switch it on.
  *
  * Opt-in by construction: an app that quietly starts reporting what you listen
@@ -11,7 +11,7 @@
 
 const crypto = require("node:crypto");
 
-const BASE = process.env.GLOBEFM_PRESENCE_URL || null;
+const BASE = process.env.AURALFM_PRESENCE_URL || null;
 const BEAT_MS = 30_000;
 
 // Random per-process id. Not tied to the machine or the user, and it changes

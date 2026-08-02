@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fold radio-browser genre tags into the GlobeFM catalog.
+ * Fold radio-browser genre tags into the AuralFM catalog.
  *
  *   node scripts/tags.mjs            # download, match, rebuild bundle with tags
  *   node scripts/tags.mjs --offline  # reuse a previously downloaded dump
@@ -81,7 +81,7 @@ async function getDump() {
     throw new Error("--offline but no cached dump at data/_radiobrowser.json");
   }
   console.log("radio-browser: downloading full station list…");
-  const res = await fetch(RB, { headers: { "User-Agent": "GlobeFM/0.1" } });
+  const res = await fetch(RB, { headers: { "User-Agent": "AuralFM/0.1" } });
   if (!res.ok) throw new Error(`radio-browser HTTP ${res.status}`);
   const all = await res.json();
   // Keep only what we need — the raw dump is ~68 MB and we want none of it on disk.

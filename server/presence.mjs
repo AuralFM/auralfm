@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * GlobeFM presence — the cheapest credible version.
+ * AuralFM presence — the cheapest credible version.
  *
  *   node server/presence.mjs          # listens on :8787
  *   PORT=9000 node server/presence.mjs

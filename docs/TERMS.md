@@ -1,18 +1,18 @@
-# GlobeFM — Terms of Service
+# AuralFM — Terms of Service
 
 **Last updated: 2 August 2026**
 
-By using GlobeFM you agree to these terms. They are deliberately short.
+By using AuralFM you agree to these terms. They are deliberately short.
 
-## What GlobeFM is
+## What AuralFM is
 
-GlobeFM is a desktop application that helps you find and play publicly available
+AuralFM is a desktop application that helps you find and play publicly available
 internet radio streams, and shows public information about the world alongside
 them.
 
-**GlobeFM does not host, own, operate, or control any radio station**, and does
+**AuralFM does not host, own, operate, or control any radio station**, and does
 not host, store, or transmit any audio. When you press play, your computer
-connects directly to that station's own server. GlobeFM is a directory and a
+connects directly to that station's own server. AuralFM is a directory and a
 player, in the same sense that a web browser is not the websites it visits.
 
 ## The content is not ours
@@ -27,7 +27,7 @@ any stream is subject to that station's own terms and to the laws where you are.
 
 ## No warranty
 
-GlobeFM is provided **"as is", without warranty of any kind**. In particular:
+AuralFM is provided **"as is", without warranty of any kind**. In particular:
 
 - Stations go off air, change URLs, block listeners by region, or disappear. At
   any given time a meaningful share of the catalogue is unreachable.
@@ -40,12 +40,12 @@ GlobeFM is provided **"as is", without warranty of any kind**. In particular:
 ## Limitation of liability
 
 To the maximum extent permitted by law, the author is not liable for any damages
-arising from your use of GlobeFM, including loss of data, lost profits, or any
+arising from your use of AuralFM, including loss of data, lost profits, or any
 indirect or consequential loss.
 
 ## Acceptable use
 
-Do not use GlobeFM to infringe copyright, to redistribute or rebroadcast streams
+Do not use AuralFM to infringe copyright, to redistribute or rebroadcast streams
 you have no right to, or to break the law where you are.
 
 ## Licence
@@ -57,7 +57,7 @@ covered by that licence — see `assets/ATTRIBUTION.md`.
 ## Changes
 
 These terms may change; the date at the top will change with them. Continuing to
-use GlobeFM after a change means you accept it.
+use AuralFM after a change means you accept it.
 
 ## Contact
 

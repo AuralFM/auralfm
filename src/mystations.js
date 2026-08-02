@@ -4,7 +4,7 @@
  * The catalogue is a build-time snapshot of 38,342 stations. It is very good and
  * it is always slightly out of date: stations launch, move, and change stream
  * URLs, and the crawl only runs when someone runs it. Before this, a station
- * GlobeFM did not know about was simply unreachable — there was no way to say
+ * AuralFM did not know about was simply unreachable — there was no way to say
  * "this one exists, here it is."
  *
  * Kept in its own file rather than merged into the shipped bundle, for the same

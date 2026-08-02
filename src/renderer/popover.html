@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; media-src *; connect-src ws: wss:;">
-<title>GlobeFM</title>
+<title>AuralFM</title>
 <style>
   /* Colors follow AppKit's label/fill hierarchy and system palette so the panel
      reads as part of macOS rather than a web page pretending to be one. */
@@ -271,7 +271,7 @@ let gen = 0, watchdog = null, searchSeq = 0, debounce = null;
 
 /**
  * Shortwave lives in this window for the same reason everything else audible
- * does: there is exactly one thing in GlobeFM that makes sound, so play/pause,
+ * does: there is exactly one thing in AuralFM that makes sound, so play/pause,
  * volume, the media keys and Now Playing all work without knowing which kind of
  * radio is playing. Explore asks; this window plays.
  */
@@ -301,14 +301,14 @@ function publish(){
     ? { id: "sdr:" + sdrRx.host, title: sdrRx.label, place: sdrRx.loc, country: "", sdr: true }
     : current ? {id:current.id, title:current.title, place:current.place,
                  country:current.country, lat:current.lat, lon:current.lon} : null;
-  window.globefm.publishState({
+  window.auralfm.publishState({
     channel: ch,
     status: statusEl.textContent,
     playing: live,
     volume: audio.volume,
   });
 }
-const persist=()=> window.globefm.setState(state);
+const persist=()=> window.auralfm.setState(state);
 const isFav=(id)=> state.favorites.some(f=>f.id===id);
 
 // ── rendering ────────────────────────────────────────────────────────────────
@@ -355,7 +355,7 @@ function fitHeight() {
   // echo the current window height back and the panel would never shrink.
   let content = 0;
   for (const el of listEl.children) content += el.offsetHeight;
-  window.globefm.setHeight(chrome + content + 12);
+  window.auralfm.setHeight(chrome + content + 12);
 }
 
 function showFavorites() {
@@ -381,7 +381,7 @@ qEl.addEventListener("input", () => {
   if (!q) { showFavorites(); return; }
   debounce = setTimeout(async () => {
     const seq = ++searchSeq;
-    const results = await window.globefm.search(q, 60);
+    const results = await window.auralfm.search(q, 60);
     if (seq !== searchSeq) return;              // a newer keystroke already won
     headEl.textContent = `${results.length} result${results.length===1?"":"s"}`;
     render(results, { showTags: true, empty: "Nothing found.<br>Try a city, country, or genre." });
@@ -407,7 +407,7 @@ async function tune(ch, { chained = false } = {}) {
   setStatus("Finding stream…");
   document.body.classList.remove("playing");
 
-  const res = await window.globefm.resolve(ch);
+  const res = await window.auralfm.resolve(ch);
   if (my !== gen) return;
   if (!res) { fail("No stream available"); return; }
   start(res.url, my);
@@ -446,7 +446,7 @@ function togglePlay() {
 function stop(){
   clearTimeout(watchdog); gen++; live = false;
   clearMediaSession();
-  window.globefm.mediaKeys(false);
+  window.auralfm.mediaKeys(false);
   sdrStop();
   audio.pause(); audio.removeAttribute("src"); audio.load();
   toggle.textContent = "▶";
@@ -472,11 +472,11 @@ function fail(msg){
 async function autoSkip(reason) {
   if (!current || skipping || tried.length >= 3) return;
   const dead = current;
-  window.globefm.reportFailed(dead.id);
+  window.auralfm.reportFailed(dead.id);
   tried.push(dead.id);
   skipping = true;
 
-  const next = await window.globefm.nextStation(dead, tried);
+  const next = await window.auralfm.nextStation(dead, tried);
   if (!next) { skipping = false; setStatus(`${reason} — no alternative here`, "err"); return; }
 
   setStatus(`${dead.title} unavailable · trying ${next.title}`, "err");
@@ -487,9 +487,9 @@ audio.addEventListener("playing", () => {
   clearTimeout(watchdog);
   live = true;
   skipping = false;
-  window.globefm.reportOk(current?.id);
+  window.auralfm.reportOk(current?.id);
   updateMediaSession();
-  window.globefm.mediaKeys(true);
+  window.auralfm.mediaKeys(true);
   toggle.textContent = "❚❚";
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
@@ -518,14 +518,14 @@ $("mute").onclick = () => {
   if (audio.volume > 0) { preMute = audio.volume; applyVolume(0); }
   else applyVolume(preMute || 0.8);
 };
-$("explore").onclick = () => window.globefm.openExplore();
+$("explore").onclick = () => window.auralfm.openExplore();
 
 // ── keys ─────────────────────────────────────────────────────────────────────
 document.addEventListener("keydown", e => {
   const typing = e.target === qEl;
   if (e.key === "Escape") {
     if (typing && qEl.value) { qEl.value=""; showFavorites(); qEl.blur(); }
-    else window.globefm.hide();
+    else window.auralfm.hide();
     return;
   }
   if (e.key === "Enter" && typing && rows.length) { tune(rows[0]); return; }
@@ -542,7 +542,7 @@ document.addEventListener("keydown", e => {
  *
  * Chromium wires MediaSession into the system Now Playing widget and the
  * hardware media keys, so this covers both without a native module. Handlers are
- * only meaningful while something is playing, which is also what stops GlobeFM
+ * only meaningful while something is playing, which is also what stops AuralFM
  * hijacking F8 from Music or Spotify when it is idle — see clearMediaSession().
  */
 function updateMediaSession() {
@@ -552,7 +552,7 @@ function updateMediaSession() {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: current.title,
     artist: [current.place, current.country].filter(Boolean).join(" · "),
-    album: "GlobeFM",
+    album: "AuralFM",
     artwork: [
       { src: "../../assets/generated/favicon.png", sizes: "64x64", type: "image/png" },
       { src: "../../assets/generated/app-512.png", sizes: "512x512", type: "image/png" },
@@ -586,7 +586,7 @@ function stepFavorite(delta) {
 }
 
 // Explore has no audio element of its own — it asks us to play.
-window.globefm.onTune((ch) => { tune(ch); });
+window.auralfm.onTune((ch) => { tune(ch); });
 
 /**
  * Tune a shortwave receiver.
@@ -598,7 +598,7 @@ window.globefm.onTune((ch) => { tune(ch); });
  * on failure is how 838 hobbyists become 838 people who block you. A refusal is
  * an answer — Explore offers a different receiver instead.
  */
-window.globefm.onTuneSdr((rx) => {
+window.auralfm.onTuneSdr((rx) => {
   stop();                                   // one source of sound, always
   audioCtx = audioCtx || new AudioContext();
   audioCtx.resume?.();
@@ -618,7 +618,7 @@ window.globefm.onTuneSdr((rx) => {
           live = true;
           document.body.classList.add("playing");
           toggle.textContent = "⏸";
-          window.globefm.mediaKeys(true);
+          window.auralfm.mediaKeys(true);
         }
         const sig = s.rssi == null ? "" : ` · ${Math.round(s.rssi)} dBm`;
         setStatus(`${rx.freq >= 1000 ? (rx.freq/1000).toFixed(3) + " MHz" : rx.freq + " kHz"} ${rx.mode.toUpperCase()}${sig}`);
@@ -644,19 +644,19 @@ window.globefm.onTuneSdr((rx) => {
 
 // Hardware media keys, forwarded from main.
 // Listener count, when a presence server is configured. Silent otherwise.
-window.globefm.onListeners((n) => {
+window.auralfm.onListeners((n) => {
   const el = $("status");
   if (!n || !live) return;
   el.textContent = `${el.textContent} · ${n} listening`;
 });
 
 // Explore's transport talks to this player; there is still only one <audio>.
-window.globefm.onTransport(({ action, value }) => {
+window.auralfm.onTransport(({ action, value }) => {
   if (action === "toggle") togglePlay();
   else if (action === "volume") applyVolume(Math.max(0, Math.min(1, value)));
 });
 
-window.globefm.onMediaKey((action) => {
+window.auralfm.onMediaKey((action) => {
   if (action === "playpause") togglePlay();
   else if (action === "next") stepFavorite(1);
   else if (action === "prev") stepFavorite(-1);
@@ -671,7 +671,7 @@ window.globefm.onMediaKey((action) => {
  */
 /** The popover only needs the accent — it has no globe to colour. */
 async function applyPalette() {
-  const pal = await window.globefm.palette();
+  const pal = await window.auralfm.palette();
   if (!pal) return;
   const r = document.documentElement;
   const light = r.getAttribute("data-theme") === "light" ||
@@ -691,7 +691,7 @@ let T = {};
 const t = (key, fallback) => T[key] || fallback;
 
 async function applyStrings() {
-  T = (await window.globefm.strings()) || {};
+  T = (await window.auralfm.strings()) || {};
   for (const el of document.querySelectorAll("[data-i18n]")) {
     const v = T[el.dataset.i18n];
     if (v) el.textContent = v;
@@ -706,7 +706,7 @@ async function applyStrings() {
   }
 }
 
-window.globefm.onPrefs(async (p) => {
+window.auralfm.onPrefs(async (p) => {
   applyPrefs(p);
   await applyPalette();
   await applyStrings();
@@ -714,7 +714,7 @@ window.globefm.onPrefs(async (p) => {
   if (!qEl.value.trim()) showFavorites();
 });
 
-window.globefm.onShown(() => {
+window.auralfm.onShown(() => {
   document.body.classList.remove("entering");
   void document.body.offsetWidth;          // force reflow so the animation restarts
   document.body.classList.add("entering");
@@ -723,11 +723,11 @@ window.globefm.onShown(() => {
 
 // ── boot ─────────────────────────────────────────────────────────────────────
 (async () => {
-  applyPrefs((await window.globefm.getPrefs()) || {});
+  applyPrefs((await window.auralfm.getPrefs()) || {});
   await applyPalette();
   await applyStrings();
 
-  const saved = await window.globefm.getState();
+  const saved = await window.auralfm.getState();
   state = { favorites: [], vol: 0.8, ...(saved || {}) };
   if (!Array.isArray(state.favorites)) state.favorites = [];
   applyVolume(state.vol ?? 0.8);
@@ -740,7 +740,7 @@ window.globefm.onShown(() => {
   }
   showFavorites();
 
-  const s = await window.globefm.stats();
+  const s = await window.auralfm.stats();
   if (!s.channels) {
     headEl.textContent = t("app.noCatalog", "No catalog");
     render([], { empty: "No station data yet.<br>Run <b>npm run crawl</b> to build it." });

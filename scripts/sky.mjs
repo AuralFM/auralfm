@@ -19,7 +19,7 @@ const OUT = path.join(ROOT, "assets", "sky.json");
 const SRC = "https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data";
 
 const grab = async (f) => {
-  const res = await fetch(`${SRC}/${f}`, { headers: { "User-Agent": "GlobeFM/0.1" } });
+  const res = await fetch(`${SRC}/${f}`, { headers: { "User-Agent": "AuralFM/0.1" } });
   if (!res.ok) throw new Error(`${f}: HTTP ${res.status}`);
   return res.json();
 };

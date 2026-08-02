@@ -116,7 +116,7 @@ async function get(country, limit = 12) {
 
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "GlobeFM/0.1" },
+      headers: { "User-Agent": "AuralFM/0.1" },
       redirect: "follow",            // the topic feed 302s to a signed URL
       signal: AbortSignal.timeout(9000),
     });

@@ -1,4 +1,4 @@
-# Getting GlobeFM sponsored
+# Getting AuralFM sponsored
 
 A sequence, not a wish. Everything here was checked against GitHub's own docs on
 2026-08-02.
@@ -17,7 +17,7 @@ Be clear-eyed about the size of this. GitHub Sponsors for a solo desktop app is
 1. **Evidence that people want it.** Ten sponsors at $3 is a stronger signal than
    a thousand stars.
 2. **A way to cover costs.** The Apple Developer Program is $99/year, and that is
-   the only hard cost GlobeFM has. Sponsorship covering that alone is a win.
+   the only hard cost AuralFM has. Sponsorship covering that alone is a win.
 3. **A reason to keep the promises.** An app with sponsors has a reason to stay
    ad-free that is more durable than a preference.
 
@@ -33,7 +33,7 @@ sustainability and signal.
 - [ ] **A payout region GitHub supports.** The US is supported.
 - [ ] **A bank account whose region matches your residence.** GitHub pays through
       **Stripe Connect**, and a mismatch will fail verification.
-- [ ] **Decide: personal account or fiscal host.** For GlobeFM, personal. The
+- [ ] **Decide: personal account or fiscal host.** For AuralFM, personal. The
       fiscal-host option can *only* be chosen at signup — switching later means
       contacting GitHub Support — so it is worth knowing you are choosing.
 
@@ -50,14 +50,14 @@ sustainability and signal.
 
 Eligibility is broad: contributions counted include "bug reports, issue triage,
 code, documentation, leadership, business development, project management,
-mentorship, and design." GlobeFM alone clears this.
+mentorship, and design." AuralFM alone clears this.
 
 ## 3. Set up the profile and tiers
 
 **Tiers are price-locked once published.** You can unpublish and make a new one,
 but you cannot edit the price of a published tier. Decide before you click.
 
-Suggested for GlobeFM — four tiers, monthly, deliberately small:
+Suggested for AuralFM — four tiers, monthly, deliberately small:
 
 | Tier | Price | What it says |
 |---|---|---|
@@ -74,7 +74,7 @@ Two things worth saying plainly in the tier descriptions:
 - **Say what the money is for.** "$99/year Apple Developer Program, and nothing
   else — there is no server to pay for" is unusually concrete and it is true.
 
-Then: short bio, feature up to six repositories (GlobeFM first), opt into the
+Then: short bio, feature up to six repositories (AuralFM first), opt into the
 featured listing.
 
 ## 4. Wire it into the repo
@@ -97,7 +97,7 @@ In this order, because the order matters:
 
 ## 6. Where to actually post it
 
-Ranked by fit, not by size. Each of these is a place where GlobeFM's specifics
+Ranked by fit, not by size. Each of these is a place where AuralFM's specifics
 land, rather than a general firehose:
 
 | Where | Why it fits |
@@ -118,7 +118,7 @@ and let each thread finish.
 |---|---|---|
 | **GitHub Sponsors** | **0%** from personal accounts, up to 6% from orgs | Start here. Zero fee, and it sits where the code is. |
 | **Ko-fi** | 5%, or $12/mo for 0% | Worth adding only if people ask for a non-GitHub option. |
-| **Open Collective** | ~5–10% via a fiscal host | Built for projects with many contributors and transparent budgets. GlobeFM is one person. Not yet. |
+| **Open Collective** | ~5–10% via a fiscal host | Built for projects with many contributors and transparent budgets. AuralFM is one person. Not yet. |
 | **Liberapay** | 0% platform fee | Ideologically aligned, very small audience. Fine as a second link. |
 
 **The Matching Fund is gone.** GitHub matched up to $5,000 in a sponsored

@@ -510,7 +510,7 @@ const isFav = (id) => favorites.some((f) => f.id === id);
 // ── places ───────────────────────────────────────────────────────────────────
 async function loadPlaces(query = "") {
   const my = ++seq;
-  const { total, places } = await window.globefm.places(query, 400);
+  const { total, places } = await window.auralfm.places(query, 400);
   if (my !== seq) return;
   placeHeadEl.textContent = `${total.toLocaleString()} places · most stations first`;
   placeListEl.hidden = false;
@@ -555,7 +555,7 @@ function markPlaceSelection({ scroll = false } = {}) {
 
 async function selectPlace(i, { keepFilter = false } = {}) {
   if (!keepFilter) filter = { band: null, tag: null };   // a new place starts unfiltered
-  const { place, channels, total } = await window.globefm.placeChannels(i, filter);
+  const { place, channels, total } = await window.auralfm.placeChannels(i, filter);
   if (!place) return;
   selection.placeIndex = i;
   selection.place = place;
@@ -579,7 +579,7 @@ async function renderChips() {
   const el = $("chips");
   el.innerHTML = "";
   if (selection.placeIndex == null) return;
-  const facets = await window.globefm.placeFacets(selection.placeIndex);
+  const facets = await window.auralfm.placeFacets(selection.placeIndex);
 
   const chip = (label, active, onClick) => {
     const b = document.createElement("button");
@@ -705,7 +705,7 @@ function renderStations() {
     el.querySelector(".stags").textContent = ch.tags.length ? ch.tags.slice(0, 4).join(" · ") : "";
     el.onclick = (e) => {
       if (e.target.closest(".star")) return;
-      window.globefm.tune(ch);           // an explicit pick always plays
+      window.auralfm.tune(ch);           // an explicit pick always plays
       if (locked) setLocked(true);       // and becomes the new locked station
     };
     el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
@@ -717,7 +717,7 @@ function renderStations() {
       rm.title = t("mine.remove", "Remove this station");
       rm.onclick = async (e) => {
         e.stopPropagation();
-        await window.globefm.mineRemove(ch.id);
+        await window.auralfm.mineRemove(ch.id);
         await selectPlace(selection.placeIndex, { keepFilter: true });
       };
       el.append(rm);
@@ -769,7 +769,7 @@ function openAddForm(row) {
     e.preventDefault();
     const err = $$(".err");
     err.hidden = true;
-    const res = await window.globefm.mineAdd({
+    const res = await window.auralfm.mineAdd({
       title: $$('[name="title"]').value,
       url: $$('[name="url"]').value,
       placeIndex: selection.placeIndex,
@@ -778,32 +778,32 @@ function openAddForm(row) {
     await selectPlace(selection.placeIndex, { keepFilter: true });
     // It exists now, so the globe should know: a place with no stations before
     // has a dot it did not have.
-    globePts = (await window.globefm.globePoints())
+    globePts = (await window.auralfm.globePoints())
       .map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
     applyLod(true);
-    window.globefm.tune(res.station);      // adding one is asking to hear it
+    window.auralfm.tune(res.station);      // adding one is asking to hear it
   };
   row.append(f);
   $$('[name="title"]').focus();
 }
 
 async function toggleFav(ch) {
-  const state = (await window.globefm.getState()) || {};
+  const state = (await window.auralfm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   // Before the globe builds, so the first point layer is already the right size.
-  applyPrefs((await window.globefm.getPrefs()) || {});
+  applyPrefs((await window.auralfm.getPrefs()) || {});
   await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   const i = favorites.findIndex((f) => f.id === ch.id);
   if (i >= 0) favorites.splice(i, 1);
   else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
   state.favorites = favorites;
-  await window.globefm.setState(state);
+  await window.auralfm.setState(state);
   renderStations();
 }
 
 // ── playback (observed, never performed here) ────────────────────────────────
-window.globefm.onPlayerState((s) => {
+window.auralfm.onPlayerState((s) => {
   playing = s.playing ? s.channel : null;
   document.body.classList.toggle("playing", !!s.playing);
   const bar = $("now");
@@ -830,7 +830,7 @@ window.globefm.onPlayerState((s) => {
 // ── transport ────────────────────────────────────────────────────────────────
 // Explore has no audio element — these drive the one player in the popover, so
 // there is still exactly one stream no matter which window you touch.
-$("play").onclick = () => window.globefm.transport({ action: "toggle" });
+$("play").onclick = () => window.auralfm.transport({ action: "toggle" });
 
 let preMute = 0.8;
 function paintVolume(v) {
@@ -840,14 +840,14 @@ function paintVolume(v) {
 $("vol").oninput = () => {
   const v = +$("vol").value;
   paintVolume(v);
-  window.globefm.transport({ action: "volume", value: v });
+  window.auralfm.transport({ action: "volume", value: v });
 };
 $("mute").onclick = () => {
   const cur = +$("vol").value;
   const next = cur > 0 ? 0 : (preMute || 0.8);
   if (cur > 0) preMute = cur;
   paintVolume(next);
-  window.globefm.transport({ action: "volume", value: next });
+  window.auralfm.transport({ action: "volume", value: next });
 };
 
 // ── station lock ─────────────────────────────────────────────────────────────
@@ -869,7 +869,7 @@ function setLocked(on) {
   b.title = on
     ? "Locked — browsing won't change the station. Click a station to switch."
     : "Lock this station while you browse";
-  window.globefm.getState().then((st) => window.globefm.setState({ ...(st || {}), locked: on }));
+  window.auralfm.getState().then((st) => window.auralfm.setState({ ...(st || {}), locked: on }));
 }
 $("lock").onclick = () => setLocked(!locked);
 
@@ -877,10 +877,10 @@ $("lock").onclick = () => setLocked(!locked);
 let showingFavorites = false;
 
 async function showFavorites() {
-  const state = (await window.globefm.getState()) || {};
+  const state = (await window.auralfm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   // Before the globe builds, so the first point layer is already the right size.
-  applyPrefs((await window.globefm.getPrefs()) || {});
+  applyPrefs((await window.auralfm.getPrefs()) || {});
   await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   showingFavorites = true;
@@ -929,7 +929,7 @@ let lastPrices = new Map();
 async function renderMarkets() {
   const el = $("markets");
   if (!el) return;
-  const { items, hasStocks } = (await window.globefm.markets()) || { items: [] };
+  const { items, hasStocks } = (await window.auralfm.markets()) || { items: [] };
   if (!items?.length) { el.textContent = ""; return; }
 
   // Same symbols in the same order: update the numbers and leave the DOM alone.
@@ -983,7 +983,7 @@ async function renderMarkets() {
   }
   el.title = hasStocks
     ? "Crypto and equities · 24h change"
-    : "Crypto · 24h change. Equities need an API key (set GLOBEFM_STOCK_KEY).";
+    : "Crypto · 24h change. Equities need an API key (set AURALFM_STOCK_KEY).";
 }
 
 // ── headline panel ───────────────────────────────────────────────────────────
@@ -1034,7 +1034,7 @@ async function renderNewsPanel() {
   const list = $("newslist");
   list.innerHTML = `<div class="empty" style="padding:22px 12px">Loading…</div>`;
 
-  const items = await window.globefm.news(country);
+  const items = await window.auralfm.news(country);
   if (!newsOpen) return;
   if (!items?.length) {
     list.innerHTML = `<div class="empty" style="padding:22px 12px">`
@@ -1049,7 +1049,7 @@ async function renderNewsPanel() {
     el.innerHTML = `<div class="h"></div><div class="m"></div>`;
     el.querySelector(".h").textContent = it.title;
     el.querySelector(".m").textContent = [it.source, relTime(it.at)].filter(Boolean).join(" · ");
-    if (it.link) el.onclick = () => window.globefm.openLink(it.link);
+    if (it.link) el.onclick = () => window.auralfm.openLink(it.link);
     list.appendChild(el);
   }
 }
@@ -1073,7 +1073,7 @@ async function loadNews(country) {
   el.classList.remove("on");
   if (!country) return;
 
-  const items = await window.globefm.news(country);
+  const items = await window.auralfm.news(country);
   if (tickCountry !== country || !items.length) return;
   tickItems = items;
   showHeadline();
@@ -1105,7 +1105,7 @@ async function loadWeather(place) {
   el.textContent = "";
   const asked = place.i;
 
-  const w = await window.globefm.weather(place.i, place.lat, place.lon);
+  const w = await window.auralfm.weather(place.i, place.lat, place.lon);
   // The user may have clicked elsewhere while this was in flight.
   if (!w || selection.placeIndex !== asked) return;
 
@@ -1451,7 +1451,7 @@ const loadImage = (src) => new Promise((res, rej) => {
  */
 async function loadLiveImagery(TexClass, like) {
   try {
-    const sky = await window.globefm.clouds();
+    const sky = await window.auralfm.clouds();
     if (!sky?.base && !sky?.goesE && !sky?.goesW) return;
 
     const cv = document.createElement("canvas");
@@ -1536,7 +1536,7 @@ function updateSun() {
 
 async function initGlobe() {
   await loadGlobeLib();
-  const raw = await window.globefm.globePoints();      // [i, lon, lat, count]
+  const raw = await window.auralfm.globePoints();      // [i, lon, lat, count]
   globePts = raw.map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
 
   const accent = css("--accent") || "#30D158";
@@ -1684,7 +1684,7 @@ async function initGlobe() {
   sizeGlobe();
   watchGlobeSize();
   updateSun();
-  layers = (await window.globefm.layers()) || layers;
+  layers = (await window.auralfm.layers()) || layers;
   syncFlightTimer();
   drawSky();
   tickISS();
@@ -1961,7 +1961,7 @@ function applyLayers(next) {
   if (layers.constellations !== prev.constellations) drawSky();
 }
 
-window.globefm.onLayers((l) => applyLayers(l));
+window.auralfm.onLayers((l) => applyLayers(l));
 
 // ── preferences ──────────────────────────────────────────────────────────────
 /**
@@ -1989,7 +1989,7 @@ let prefs = { theme: "system", contrast: "system", dotSize: "normal", language: 
 let palette = null;
 
 async function applyPalette() {
-  palette = (await window.globefm.palette()) || null;
+  palette = (await window.auralfm.palette()) || null;
   if (!palette) return;
   const r = document.documentElement;
   // Light appearance needs the darker variant to stay legible on a pale panel,
@@ -2028,11 +2028,11 @@ function applyPrefs(next) {
   if (prefs.palette !== prev.palette || prefs.theme !== prev.theme ||
       prefs.contrast !== prev.contrast) applyPalette();
 }
-window.globefm.onPrefs(applyPrefs);
+window.auralfm.onPrefs(applyPrefs);
 
 // ── interface language ───────────────────────────────────────────────────────
 /**
- * Only GlobeFM's own chrome is translated. Station names, place names and
+ * Only AuralFM's own chrome is translated. Station names, place names and
  * headlines stay in the language of the place they come from — translating
  * those would be wrong, not helpful.
  */
@@ -2040,7 +2040,7 @@ let T = {};
 const t = (key, fallback) => T[key] || fallback;
 
 async function applyStrings() {
-  T = (await window.globefm.strings()) || {};
+  T = (await window.auralfm.strings()) || {};
   for (const el of document.querySelectorAll("[data-i18n]")) {
     const v = T[el.dataset.i18n];
     if (v) el.textContent = v;
@@ -2072,7 +2072,7 @@ async function drawSky() {
     globe.backgroundImageUrl("vendor/night-sky.png");   // plain stars, no figures
     return;
   }
-  const sky = await window.globefm.sky();
+  const sky = await window.auralfm.sky();
   if (!sky?.stars?.length) return;   // keep the vendored texture
 
   const W = 4096, H = 2048;
@@ -2220,7 +2220,7 @@ async function tickFlights() {
     // is far wider than that — so close in, the honest move is to fill the circle
     // we are allowed to ask for rather than thin it out.
     const want = pov.altitude <= 0.55 ? 320 : pov.altitude <= 1.2 ? 200 : 120;
-    flightData = (await window.globefm.flights(pov.lat, pov.lng, span, want)) || [];
+    flightData = (await window.auralfm.flights(pov.lat, pov.lng, span, want)) || [];
     paintFlights(flightData);
   } catch { /* best-effort, like everything else live here */ }
   finally { flightBusy = false; }
@@ -2252,7 +2252,7 @@ function paintFlights() { paintOrbits(); }
  */
 async function tickSatellites() {
   if (!globe || !layers.iss) return;
-  const list = await window.globefm.satellites();
+  const list = await window.auralfm.satellites();
   if (Array.isArray(list) && list.length) sats = list;
   paintOrbits();
 }
@@ -2313,7 +2313,7 @@ function splitTrail(trail) {
 
 async function tickISS() {
   if (!globe || !layers.iss) return;
-  const p = await window.globefm.iss();
+  const p = await window.auralfm.iss();
   if (!p) return;
 
   issTrail.push([p.lat, p.lng]);
@@ -2433,8 +2433,8 @@ async function runSearch(query) {
   if (!q) { await loadPlaces(""); return; }
 
   const [places, stations] = await Promise.all([
-    window.globefm.places(q, 40),
-    window.globefm.search(q, 25),
+    window.auralfm.places(q, 40),
+    window.auralfm.search(q, 25),
   ]);
   if (my !== seq) return;
 
@@ -2481,11 +2481,11 @@ function stationResultRow(ch) {
   el.querySelector(".pn").textContent = ch.title;
   el.querySelector(".pc").textContent = [ch.place, ch.country].filter(Boolean).join(" · ");
   el.onclick = async () => {
-    const list = await window.globefm.places(ch.place, 8);
+    const list = await window.auralfm.places(ch.place, 8);
     const hit = list.places.find((p) => p.title === ch.place && p.country === ch.country)
              || list.places[0];
     if (hit) await goToPlace(hit.i);
-    window.globefm.tune(ch);
+    window.auralfm.tune(ch);
   };
   return el;
 }
@@ -2573,7 +2573,7 @@ function selectReceiver(rx) {
       (open ? "" : ` · ${t("sdr.unlikely", "likely quiet now")}`);
     if (!open) el.style.opacity = ".55";
     const go = () => {
-      window.globefm.tuneSdr({
+      window.auralfm.tuneSdr({
         host: rx.host, name: rx.name, loc: rx.loc,
         freq: b.freq, mode: b.mode, band: b.label,
       });
@@ -2603,7 +2603,7 @@ async function goToPlace(i, { play = false, fly = true } = {}) {
   // Prefer a station the directory believes is alive.
   if (play && !locked && selection.channels.length) {
     const pick = selection.channels.find((c) => c.ok !== false) || selection.channels[0];
-    window.globefm.tune(pick);
+    window.auralfm.tune(pick);
   }
 }
 document.addEventListener("keydown", (e) => {
@@ -2614,10 +2614,10 @@ document.addEventListener("keydown", (e) => {
 
 // ── boot ─────────────────────────────────────────────────────────────────────
 (async () => {
-  const state = (await window.globefm.getState()) || {};
+  const state = (await window.auralfm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   // Before the globe builds, so the first point layer is already the right size.
-  applyPrefs((await window.globefm.getPrefs()) || {});
+  applyPrefs((await window.auralfm.getPrefs()) || {});
   await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   setLocked(!!state.locked);
@@ -2630,7 +2630,7 @@ document.addEventListener("keydown", (e) => {
   await loadPlaces("");
   // Receivers before the globe, so the first point layer already carries them.
   try {
-    sdrPts = await window.globefm.sdrPoints();
+    sdrPts = await window.auralfm.sdrPoints();
   } catch { sdrPts = []; }
   try {
     await initGlobe();
@@ -2642,7 +2642,7 @@ document.addEventListener("keydown", (e) => {
   }
 
   // Quietly flag a stale catalog rather than letting it rot invisibly.
-  const st = await window.globefm.stats();
+  const st = await window.auralfm.stats();
   const days = st.generated ? Math.floor((Date.now() - new Date(st.generated)) / 86400000) : 0;
   if (days >= 120) {
     placeHeadEl.textContent =

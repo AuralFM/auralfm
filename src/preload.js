@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 // Deliberately narrow. contextIsolation is on, so this is the entire surface a
 // renderer can reach — no filesystem, no network, no node. Both the popover and
 // the Explore window load this same bridge.
-contextBridge.exposeInMainWorld("globefm", {
+contextBridge.exposeInMainWorld("auralfm", {
   // persistence
   getState: () => ipcRenderer.invoke("state:get"),
   setState: (state) => ipcRenderer.invoke("state:set", state),

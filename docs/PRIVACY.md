@@ -1,16 +1,16 @@
-# GlobeFM — Privacy Policy
+# AuralFM — Privacy Policy
 
 **Last updated: 2 August 2026**
 
-GlobeFM is a desktop application that plays internet radio. This policy explains
+AuralFM is a desktop application that plays internet radio. This policy explains
 what it does and does not do with your information.
 
-Short version: **GlobeFM has no servers, no accounts, and no analytics. Nothing
+Short version: **AuralFM has no servers, no accounts, and no analytics. Nothing
 about what you listen to is sent to us, because there is no "us" to send it to.**
 
-## What GlobeFM stores
+## What AuralFM stores
 
-Everything GlobeFM saves is stored **only on your own computer**, in your macOS
+Everything AuralFM saves is stored **only on your own computer**, in your macOS
 Application Support folder:
 
 | File | Contains |
@@ -22,7 +22,7 @@ Application Support folder:
 
 You can delete any of it at any time. Removing the app removes it all.
 
-## What GlobeFM does not do
+## What AuralFM does not do
 
 - No user accounts, sign-in, or profiles
 - No analytics, telemetry, crash reporting, or usage tracking
@@ -30,7 +30,7 @@ You can delete any of it at any time. Removing the app removes it all.
 - No collection of your name, email, location, contacts, or device identifiers
 - No selling or sharing of data, because none is collected
 
-## Third-party services GlobeFM contacts
+## Third-party services AuralFM contacts
 
 Playing live radio and showing live conditions requires network requests. These
 go **directly from your computer to the service** — they do not pass through any
@@ -52,7 +52,7 @@ server we operate, and we never see them.
 Two points worth stating plainly:
 
 1. **Weather requests contain the coordinates of the city you clicked**, chosen
-   from a fixed public list — never your own location. GlobeFM never requests or
+   from a fixed public list — never your own location. AuralFM never requests or
    uses your device location.
 2. **Play counts are reported to radio-browser.** Their documentation asks
    clients to do this so station popularity rankings stay meaningful. The report
@@ -69,7 +69,7 @@ from that, and both are worth saying plainly.
 
 **A receiver you click sees your IP address and the frequency you tuned**, in the
 same way a radio station's server sees your IP when you press play on a station.
-GlobeFM connects only when you click a specific receiver, only to that one, and
+AuralFM connects only when you click a specific receiver, only to that one, and
 only one at a time. It never contacts a receiver in the background, never scans
 them to see who is free, and never retries one that refused — the list of who
 exists comes from a single aggregate file, not from asking 837 machines.
@@ -80,13 +80,13 @@ someone's antenna, and it is the same bargain the receiver's own web page offers
 ## Optional features that are off by default
 
 **Listener presence** is disabled unless you deliberately configure a server
-address. If you enable it, GlobeFM sends a randomly generated per-session
+address. If you enable it, AuralFM sends a randomly generated per-session
 identifier and the station you are listening to, so listeners can be counted. The
 identifier is not tied to you and changes every time the app launches.
 
 ## Children
 
-GlobeFM is not directed at children and collects no information from anyone.
+AuralFM is not directed at children and collects no information from anyone.
 
 ## Changes
 

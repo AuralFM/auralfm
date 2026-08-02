@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
-<title>GlobeFM</title>
+<title>AuralFM</title>
 <style>
   :root{
     --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.58); --line:rgba(255,255,255,.12);
@@ -89,7 +89,7 @@ function inline(text, into) {
       const href = m[5];
       // Only ever hand a URL to the OS browser; never navigate this window.
       el.href = "#";
-      el.addEventListener("click", (e) => { e.preventDefault(); window.globefm.openLink(href); });
+      el.addEventListener("click", (e) => { e.preventDefault(); window.auralfm.openLink(href); });
     }
     into.append(el);
     rest = rest.slice(m.index + m[0].length);
@@ -164,8 +164,8 @@ function render(md, root) {
 (async () => {
   const name = new URLSearchParams(location.search).get("name") || "PRIVACY.md";
   const [md, prefs] = await Promise.all([
-    window.globefm.docText(name),
-    window.globefm.getPrefs(),
+    window.auralfm.docText(name),
+    window.auralfm.getPrefs(),
   ]);
   if (prefs.theme !== "system") document.documentElement.setAttribute("data-theme", prefs.theme);
   render(md || "# Not found", document.getElementById("doc"));

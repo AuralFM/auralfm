@@ -9,7 +9,7 @@ labels: catalogue
 **What is wrong** — dead stream / wrong location / wrong genre / missing entirely
 
 **Worth knowing first:** the catalogue is a build-time snapshot from radio.garden
-and radio-browser, so GlobeFM cannot fix a listing at either source. What it *can*
+and radio-browser, so AuralFM cannot fix a listing at either source. What it *can*
 do is let you add the station yourself — the foot of the station list for any
 place has **+ Add a station here**, and it lives on your machine.
 

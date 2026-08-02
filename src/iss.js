@@ -27,7 +27,7 @@ async function get() {
 
   try {
     const res = await fetch(PRIMARY, {
-      headers: { "User-Agent": "GlobeFM/0.1" },
+      headers: { "User-Agent": "AuralFM/0.1" },
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

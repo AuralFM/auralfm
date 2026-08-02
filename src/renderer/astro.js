@@ -1,7 +1,7 @@
 /**
  * Where the planets are.
  *
- * The sky in GlobeFM is real — 5,044 catalogued stars and 89 constellation
+ * The sky in AuralFM is real — 5,044 catalogued stars and 89 constellation
  * figures from the Yale Bright Star Catalog — but until now it was missing the
  * five objects most people can actually name. If Jupiter is up over Marfa
  * tonight, it should be up over Marfa in the app.

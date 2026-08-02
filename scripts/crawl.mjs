@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * GlobeFM station crawler.
+ * AuralFM station crawler.
  *
  * Builds the static station bundle the app ships with, so that at runtime we
  * never depend on radio.garden being reachable or unblocked.

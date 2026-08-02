@@ -15,7 +15,7 @@ say so. Better to fix them now than to be corrected in public.
 
 ### "Serverless" is already not true, and Nostr makes it less true
 
-GlobeFM has no backend **of its own**. That is the true claim, and it is a strong
+AuralFM has no backend **of its own**. That is the true claim, and it is a strong
 one. But the app talks to radio.garden, radio-browser, NASA GIBS, Open-Meteo,
 Google News, CoinGecko, Celestrak and wheretheiss.at — all servers. Adding Nostr
 does not remove servers; **relays are servers.** Probing six well-known relays on
@@ -128,7 +128,7 @@ the North Atlantic sky right now.
 
 ### The constraint, and it is not optional
 
-Last night GlobeFM got IP-rate-limited by Celestrak for retrying a failed fetch
+Last night AuralFM got IP-rate-limited by Celestrak for retrying a failed fetch
 every 30 seconds. That was 8 objects and one free service. **KiwiSDR is 849
 hobbyists paying their own bandwidth, and the same carelessness would be 849 times
 worse.** The protocol tells us the limits directly — the Swedish receiver reports:
@@ -169,7 +169,7 @@ damus, nostr.band, snort and wine for kind-1 notes carrying a `#g` geohash tag
 across 22 leading geohash characters over 7 days returned **5 notes.** Five. On the
 three relays that answered at all.
 
-There is no thriving geotagged Nostr map to plug into. Anything GlobeFM does here
+There is no thriving geotagged Nostr map to plug into. Anything AuralFM does here
 is **seeding that data, not consuming it.** That is a legitimate thing to do — it
 is arguably the more interesting thing to do — but it changes the pitch from
 "we connect you to a decentralised network" to "we are trying to start one," and
@@ -217,7 +217,7 @@ Two problems:
    with a value block. Stations publish an Icecast URL and nothing else. There is
    no registry of station Lightning addresses.
 2. **Building that registry means building a server** — the exact thing the whole
-   position rejects. This is the idea that most tempts GlobeFM into becoming what
+   position rejects. This is the idea that most tempts AuralFM into becoming what
    it said it would not be.
 
 Adoption is also thin by the movement's own account: limited awareness, uneven
@@ -252,7 +252,7 @@ Commercial licences come only through their paid developer programme.
 
 **The harm case is real.** Live public-safety audio, geolocated on a world map,
 one click from anywhere, is a tool for evading response and for finding people at
-their worst moment. GlobeFM is an app for wonder. That is not a squeamish
+their worst moment. AuralFM is an app for wonder. That is not a squeamish
 objection; it is a design one.
 
 There is a legitimate adjacent thing: **NOAA Weather Radio and shortwave emergency
@@ -312,7 +312,7 @@ needs a claim that would not hold up:
 1. ~~**KiwiSDR receivers on the globe** (#24)~~ — **done**, 326c4a2. 837
    receivers, all seven etiquette rules in the code, verified in the packaged
    build against Christoval TX, Trondheim, Siknäs, Bavaria, Örlygshöfn and
-   South Australia. GlobeFM now has audio that is not a stream server.
+   South Australia. AuralFM now has audio that is not a stream server.
 2. ~~**Fix the language**~~ — done. "No backend of our own" replaces
    "serverless" in the README, `PRODUCT.md`, the Settings promise in all five
    languages, and the About panel.

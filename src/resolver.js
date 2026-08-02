@@ -20,7 +20,7 @@ const path = require("node:path");
 const RG = "https://radio.garden/api/ara/content/listen";
 // Discovered at runtime from the mirror pool; de1 is only the bootstrap.
 let RB_HOST = "https://de1.api.radio-browser.info";
-const UA = "GlobeFM/0.1";
+const UA = "AuralFM/0.1";
 
 const RG_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
