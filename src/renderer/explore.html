@@ -37,9 +37,23 @@
     flex:none;height:52px;display:flex;align-items:center;gap:10px;
     padding:0 14px 0 84px;-webkit-app-region:drag;
   }
-  .toolbar .seg, .toolbar input{-webkit-app-region:no-drag}
-  h1{font-size:13px;font-weight:590;letter-spacing:-.006em;margin:0}
+  .toolbar input{-webkit-app-region:no-drag}
+  .toolbar .mark{width:15px;height:15px;opacity:.9}
+  h1{font-size:13px;font-weight:640;letter-spacing:-.01em;margin:0}
+  .toolbar .sub{font-size:13px;color:var(--label3);letter-spacing:-.006em}
   .toolbar .sp{flex:1}
+  .toolbar #q{
+    width:270px;height:24px;padding:0 9px;border:0;border-radius:6px;
+    background:var(--fill);color:var(--label);font:inherit;outline:none;
+    box-shadow:inset 0 0 0 .5px var(--line);
+    transition:box-shadow .15s ease-out,background .15s ease-out,width .18s ease-out;
+  }
+  .toolbar #q:focus{
+    width:330px;background:var(--fill-hi);
+    box-shadow:inset 0 0 0 .5px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent);
+  }
+  .toolbar #q::placeholder{color:var(--label2)}
+  .toolbar #q::-webkit-search-cancel-button{display:none}
 
   /* Segmented control — the switch between List and Globe. */
   .seg{display:flex;background:var(--fill);border-radius:7px;padding:2px;gap:2px}
@@ -72,6 +86,9 @@
   .secthead{
     padding:2px 15px 5px;font-size:11px;font-weight:590;letter-spacing:.005em;color:var(--label2);flex:none;
   }
+  .sublabel{
+    padding:10px 8px 4px;font-size:11px;font-weight:590;color:var(--label3);letter-spacing:.005em;
+  }
 
   .scroll{flex:1;overflow-y:auto;padding:0 7px 10px}
   .scroll::-webkit-scrollbar{width:0}
@@ -92,8 +109,9 @@
     min-width:22px;text-align:right;
   }
 
-  /* Globe pane. Swaps in for the places list; the stations pane never moves,
-     which is what makes the shared selection obvious. */
+  /* The globe is the product, so it is always on screen — never a mode you
+     switch into. The right rail is what changes: results while searching,
+     stations once a place is chosen. */
   .globewrap{flex:1;position:relative;min-width:0;border-right:.5px solid var(--line)}
   #globe{position:absolute;inset:0}
   #globe canvas{display:block}
@@ -101,9 +119,7 @@
     position:absolute;left:0;right:0;bottom:12px;text-align:center;
     font-size:11px;color:var(--label3);pointer-events:none;
   }
-  /* In globe mode the globe takes the room and the station list narrows. */
-  body.view-globe .places{display:none}
-  body.view-globe .stations{width:330px;flex:none}
+  .stations{width:336px;flex:none}
 
   /* Right: stations in the selected place. */
   .stations{flex:1;display:flex;flex-direction:column;min-height:0}
@@ -156,37 +172,43 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
   .now b{font-weight:590}
   .now span{color:var(--label2)}
+  /* Headlines cross-fade one at a time rather than scrolling. A marquee fights
+     prefers-reduced-motion and moving text is simply harder to read. */
+  .tickwrap{
+    flex:1;min-width:0;display:flex;justify-content:flex-end;
+    padding-left:14px;overflow:hidden;
+  }
+  .tick{
+    color:var(--label3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    opacity:0;transition:opacity .5s ease-out;max-width:100%;
+  }
+  .tick.on{opacity:1}
+  @media (prefers-reduced-motion: reduce){ .tick{transition:none} }
 </style>
 </head>
 <body>
 
 <div class="toolbar">
-  <h1>Explore</h1>
+  <img class="mark" src="../../assets/icon.svg" alt="">
+  <h1>GlobeFM</h1>
+  <span class="sub">Explore</span>
   <span class="sp"></span>
-  <div class="seg" role="tablist">
-    <button id="tabList" role="tab" aria-selected="true">List</button>
-    <button id="tabGlobe" role="tab" aria-selected="false">Globe</button>
-  </div>
+  <input id="q" type="search" placeholder="Search a city, country, or station"
+         autocomplete="off" spellcheck="false">
 </div>
 
 <div class="cols">
-  <div class="places">
-    <div class="searchwrap">
-      <input id="q" type="search" placeholder="Search city or country" autocomplete="off" spellcheck="false">
-    </div>
-    <div class="secthead" id="placehead">Places</div>
-    <div class="scroll" id="placelist"></div>
-  </div>
-
-  <div class="globewrap" id="globewrap" hidden>
+  <div class="globewrap" id="globewrap">
     <div id="globe"></div>
     <div class="globehint" id="globehint">Loading globe…</div>
   </div>
 
   <div class="stations">
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div></div>
+    <div class="secthead" id="placehead"></div>
+    <div class="scroll" id="placelist" hidden></div>
     <div class="scroll" id="stationlist">
-      <div class="empty">Pick a place to hear what's on air there.</div>
+      <div class="empty">Spin the globe, or search for a city.</div>
     </div>
   </div>
 </div>
@@ -195,6 +217,7 @@
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
+  <span class="tickwrap"><span class="tick" id="ticker"></span></span>
 </div>
 
 <script>
@@ -219,10 +242,9 @@ async function loadPlaces(query = "") {
   const my = ++seq;
   const { total, places } = await window.globefm.places(query, 400);
   if (my !== seq) return;
-  placeHeadEl.textContent = query.trim()
-    ? `${total.toLocaleString()} place${total === 1 ? "" : "s"}`
-    : `${total.toLocaleString()} places · most stations first`;
-
+  placeHeadEl.textContent = `${total.toLocaleString()} places · most stations first`;
+  placeListEl.hidden = false;
+  stationListEl.hidden = true;
   placeListEl.innerHTML = "";
   if (!places.length) {
     placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">No place matches that.</div>`;
@@ -238,7 +260,7 @@ async function loadPlaces(query = "") {
     el.querySelector(".pn").textContent = p.title;
     el.querySelector(".pc").textContent = p.country;
     el.querySelector(".cnt").textContent = p.count;
-    el.onclick = () => selectPlace(p.i);
+    el.onclick = () => goToPlace(p.i);
     placeListEl.appendChild(el);
   }
   markPlaceSelection();
@@ -318,18 +340,54 @@ window.globefm.onPlayerState((s) => {
   playing = s.playing ? s.channel : null;
   document.body.classList.toggle("playing", !!s.playing);
   const bar = $("now");
-  if (!s.channel) { bar.hidden = true; }
-  else {
+  if (!s.channel) {
+    bar.hidden = true;
+    loadNews(null);
+  } else {
     bar.hidden = false;
     $("nowName").textContent = s.channel.title;
     $("nowStatus").textContent = s.status || "";
     $("dot").style.display = s.playing ? "" : "none";
+    // Headlines from wherever the station is broadcasting from.
+    loadNews(s.playing ? s.channel.country : null);
   }
   for (const el of stationListEl.children) {
     if (!el.dataset?.id) continue;
     el.setAttribute("aria-current", playing?.id === el.dataset.id);
   }
 });
+
+// ── local headlines ──────────────────────────────────────────────────────────
+let tickItems = [], tickIdx = 0, tickTimer = null, tickCountry = null;
+
+async function loadNews(country) {
+  if (country === tickCountry) return;      // already showing this country
+  tickCountry = country;
+  clearInterval(tickTimer);
+  tickItems = []; tickIdx = 0;
+  const el = $("ticker");
+  el.classList.remove("on");
+  if (!country) return;
+
+  const items = await window.globefm.news(country);
+  if (tickCountry !== country || !items.length) return;
+  tickItems = items;
+  showHeadline();
+  // 9s is long enough to actually read one, short enough to feel alive.
+  tickTimer = setInterval(showHeadline, 9000);
+}
+
+function showHeadline() {
+  const el = $("ticker");
+  if (!tickItems.length) return;
+  el.classList.remove("on");
+  setTimeout(() => {
+    el.textContent = tickItems[tickIdx % tickItems.length];
+    el.title = el.textContent;
+    tickIdx++;
+    el.classList.add("on");
+  }, 260);
+}
 
 // ── weather ──────────────────────────────────────────────────────────────────
 // Imperial for US locales, metric everywhere else — the app is used by whoever
@@ -535,12 +593,14 @@ async function initGlobe() {
     .pointsData(globePts)
     .pointLat("lat").pointLng("lng")
     .pointColor((d) => (d.i === selection.placeIndex ? "#ffffff" : "#5ef08a"))
+    .pointLabel((d) => d.label)
     // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
     // read as noise rather than geography.
     .pointAltitude(0.002)
-    // sqrt, not linear: Paris has 710 stations and a village has 1, and a linear
-    // scale would make Paris a blob that swallows northern France.
-    .pointRadius((d) => (d.i === selection.placeIndex ? 0.7 : 0.13 + Math.sqrt(d.count) * 0.022))
+    // Smaller than they were. At full zoom 12,296 dots merge into a haze and
+    // picking one is a fight; the fix is fewer, tighter dots plus level-of-detail
+    // below, not a bigger hit target.
+    .pointRadius((d) => (d.i === selection.placeIndex ? 0.55 : 0.09 + Math.sqrt(d.count) * 0.013))
     // Merged into one geometry: unmerged, 12,296 points cost 12,298 draw calls
     // per frame. Merged it is ~3. The tradeoff is that changing a point's colour
     // means rebuilding the layer, which only happens on selection.
@@ -552,6 +612,8 @@ async function initGlobe() {
   globe.controls().autoRotate = true;
   globe.controls().autoRotateSpeed = 0.35;
   globe.controls().enableDamping = true;
+  globe.controls().addEventListener("change", onCameraChange);
+  applyLod(true);
 
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
   // is the fastest way to make a globe feel broken.
@@ -564,9 +626,48 @@ async function initGlobe() {
   clearInterval(sunTimer);
   sunTimer = setInterval(updateSun, 60000);
   $("globehint").innerHTML =
-    `${globePts.length.toLocaleString()} places · drag to spin, click a point`
-    + ` &nbsp;·&nbsp; <span id="sunreadout"></span>`;
+    `<span id="lodhint"></span> &nbsp;·&nbsp; <span id="sunreadout"></span>`;
+  applyLod(true);
   updateSun();
+}
+
+/**
+ * Level of detail. Zoomed out, only places with enough stations to matter are
+ * drawn — the whole 12,296 at global zoom is an unreadable smear and makes
+ * clicking a specific city nearly impossible. Zoom in and the rest appear.
+ *
+ * Swapping the point set rebuilds merged geometry, so this only runs when the
+ * tier actually changes, not on every camera frame.
+ */
+const LOD_TIERS = [
+  { minAltitude: 1.6, minCount: 12 },   // whole-globe: only major broadcast cities
+  { minAltitude: 0.9, minCount: 4 },
+  { minAltitude: 0,   minCount: 1 },    // close in: everything
+];
+let lodTier = -1;
+
+function applyLod(force = false) {
+  if (!globe || !globePts) return;
+  const alt = globe.pointOfView().altitude;
+  const idx = LOD_TIERS.findIndex((t) => alt >= t.minAltitude);
+  const tier = idx < 0 ? LOD_TIERS.length - 1 : idx;
+  if (tier === lodTier && !force) return;
+  lodTier = tier;
+  const min = LOD_TIERS[tier].minCount;
+  const shown = globePts.filter((p) => p.count >= min || p.i === selection.placeIndex);
+  globe.pointsData(shown);
+  const hint = $("lodhint");
+  if (hint) {
+    hint.textContent = min > 1
+      ? `showing ${shown.length.toLocaleString()} of ${globePts.length.toLocaleString()} places · zoom in for more`
+      : `${globePts.length.toLocaleString()} places`;
+  }
+}
+
+let lodPending = null;
+function onCameraChange() {
+  clearTimeout(lodPending);
+  lodPending = setTimeout(() => applyLod(), 160);
 }
 
 function sizeGlobe() {
@@ -575,38 +676,18 @@ function sizeGlobe() {
   globe.width(w.clientWidth).height(w.clientHeight);
 }
 
-function flyTo(lat, lng) {
-  globe?.pointOfView({ lat, lng, altitude: 1.6 }, 700);
+function flyTo(lat, lng, altitude = 0.62) {
+  if (!globe) return;
+  globe.controls().autoRotate = false;   // don't drift away from what you picked
+  globe.pointOfView({ lat, lng, altitude }, 800);
+  setTimeout(() => applyLod(), 900);     // after the move, refresh detail
 }
 
 /** Merged geometry means selection changes need the layer rebuilt, not just recoloured. */
 function refreshGlobeSelection() {
-  if (globe && globePts) globe.pointsData(globePts);
+  if (globe && globePts) applyLod(true);
 }
 
-async function setView(view) {
-  const isGlobe = view === "globe";
-  document.body.classList.toggle("view-globe", isGlobe);
-  $("tabList").setAttribute("aria-selected", !isGlobe);
-  $("tabGlobe").setAttribute("aria-selected", isGlobe);
-  $("globewrap").hidden = !isGlobe;
-
-  const state = (await window.globefm.getState()) || {};
-  state.exploreView = view;
-  await window.globefm.setState(state);
-
-  if (!isGlobe) return;
-  try {
-    if (!globe) await initGlobe();
-    sizeGlobe();
-    if (selection.place) flyTo(selection.place.lat, selection.place.lon);
-  } catch (err) {
-    $("globehint").textContent = err.message;
-  }
-}
-
-$("tabList").onclick = () => setView("list");
-$("tabGlobe").onclick = () => setView("globe");
 window.addEventListener("resize", sizeGlobe);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (globe) refreshGlobeSelection();
@@ -615,11 +696,90 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
 // ── input ────────────────────────────────────────────────────────────────────
 qEl.addEventListener("input", () => {
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadPlaces(qEl.value), 120);
+  debounce = setTimeout(() => runSearch(qEl.value), 130);
 });
+
+/**
+ * One field for both kinds of target. Places come first because "take me to
+ * Los Angeles" is the common intent; individual stations follow, and picking
+ * one flies to its city *and* starts it — which is the whole point of typing a
+ * station name rather than a city.
+ */
+async function runSearch(query) {
+  const q = query.trim();
+  const my = ++seq;
+  if (!q) { await loadPlaces(""); return; }
+
+  const [places, stations] = await Promise.all([
+    window.globefm.places(q, 40),
+    window.globefm.search(q, 25),
+  ]);
+  if (my !== seq) return;
+
+  placeListEl.hidden = false;
+  stationListEl.hidden = true;
+  headEl.hidden = true;
+  placeHeadEl.textContent = `${places.total.toLocaleString()} place${places.total === 1 ? "" : "s"}`
+    + (stations.length ? ` · ${stations.length} station${stations.length === 1 ? "" : "s"}` : "");
+
+  placeListEl.innerHTML = "";
+  for (const p of places.places) placeListEl.appendChild(placeRow(p));
+
+  if (stations.length) {
+    const h = document.createElement("div");
+    h.className = "sublabel";
+    h.textContent = "Stations";
+    placeListEl.appendChild(h);
+    for (const ch of stations) placeListEl.appendChild(stationResultRow(ch));
+  }
+  if (!places.places.length && !stations.length) {
+    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">Nothing matches that.</div>`;
+  }
+}
+
+function placeRow(p) {
+  const el = document.createElement("div");
+  el.className = "place";
+  el.dataset.i = p.i;
+  el.setAttribute("aria-selected", p.i === selection.placeIndex);
+  el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>
+                  <span class="cnt"></span>`;
+  el.querySelector(".pn").textContent = p.title;
+  el.querySelector(".pc").textContent = p.country;
+  el.querySelector(".cnt").textContent = p.count;
+  el.onclick = () => goToPlace(p.i);
+  return el;
+}
+
+/** A station hit: fly to its city, show that city, and play it. */
+function stationResultRow(ch) {
+  const el = document.createElement("div");
+  el.className = "place";
+  el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>`;
+  el.querySelector(".pn").textContent = ch.title;
+  el.querySelector(".pc").textContent = [ch.place, ch.country].filter(Boolean).join(" · ");
+  el.onclick = async () => {
+    const list = await window.globefm.places(ch.place, 8);
+    const hit = list.places.find((p) => p.title === ch.place && p.country === ch.country)
+             || list.places[0];
+    if (hit) await goToPlace(hit.i);
+    window.globefm.tune(ch);
+  };
+  return el;
+}
+
+/** Select a place and take the globe there — the two always happen together. */
+async function goToPlace(i) {
+  qEl.value = "";
+  placeListEl.hidden = true;
+  stationListEl.hidden = false;
+  placeHeadEl.textContent = "";      // the search summary no longer applies
+  await selectPlace(i);
+  if (selection.place) flyTo(selection.place.lat, selection.place.lon);
+}
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.activeElement === qEl && qEl.value) {
-    qEl.value = ""; loadPlaces("");
+    qEl.value = ""; runSearch("");
   }
 });
 
@@ -628,7 +788,7 @@ document.addEventListener("keydown", (e) => {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   await loadPlaces("");
-  if (state.exploreView === "globe") await setView("globe");
+  try { await initGlobe(); } catch (err) { $("globehint").textContent = err.message; }
 })();
 </script>
 </body>

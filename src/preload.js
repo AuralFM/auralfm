@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("globefm", {
   placeChannels: (i) => ipcRenderer.invoke("catalog:placeChannels", i),
   globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
+  news: (country) => ipcRenderer.invoke("news:get", country),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),
 

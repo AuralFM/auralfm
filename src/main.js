@@ -11,6 +11,7 @@ const fs = require("node:fs");
 const catalog = require("./catalog");
 const resolver = require("./resolver");
 const weather = require("./weather");
+const news = require("./news");
 
 const POPOVER = { width: 380, height: 560, min: 210 };   // height is the cap; the panel sizes to content
 const STORE = path.join(app.getPath("userData"), "state.json");
@@ -178,6 +179,7 @@ ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit)
 ipcMain.handle("catalog:placeChannels", (_e, i) => catalog.placeChannels(i));
 ipcMain.handle("catalog:globePoints", () => catalog.globePoints());
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
+ipcMain.handle("news:get", (_e, country) => news.get(country));
 ipcMain.on("explore:open", openExplore);
 
 /**
