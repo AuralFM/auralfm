@@ -97,6 +97,15 @@
   }
 
   .scroll{flex:1;overflow-y:auto;padding:0 7px 10px}
+  /* Wide rails get columns rather than one lonely strip of text. */
+  @media (min-width: 1250px){
+    #stationlist, #placelist{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+      grid-auto-rows:max-content; gap:0 6px; align-content:start;
+    }
+    #stationlist .empty, #placelist .empty{grid-column:1/-1}
+    .sublabel{grid-column:1/-1}
+  }
   .scroll::-webkit-scrollbar{width:0}
 
   .place{
@@ -125,10 +134,15 @@
     position:absolute;left:0;right:0;bottom:12px;text-align:center;
     font-size:11px;color:var(--label3);pointer-events:none;
   }
-  .stations{width:336px;flex:none}
+
 
   /* Right: stations in the selected place. */
-  .stations{flex:1;display:flex;flex-direction:column;min-height:0}
+  /* Rail scales with the window but stays a rail — flex:1 here previously
+     overrode the width below it and gave the list half the screen. */
+  .stations{
+    flex:none;width:clamp(340px, 30vw, 640px);
+    display:flex;flex-direction:column;min-height:0;
+  }
   .placehead{flex:none;padding:0 18px 10px}
   .placehead h2{margin:0;font-size:19px;font-weight:640;letter-spacing:-.018em;line-height:1.15}
   .placehead p{margin:2px 0 0;font-size:12px;color:var(--label2)}
@@ -190,6 +204,14 @@
   }
   .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 2s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  #lock{
+    flex:none;background:none;border:0;font-size:12px;line-height:1;cursor:default;
+    padding:3px 5px;border-radius:5px;opacity:.55;
+    transition:background .12s ease-out,opacity .12s ease-out,transform 90ms ease-out;
+  }
+  #lock:hover{background:var(--fill);opacity:1}
+  #lock:active{transform:scale(.9)}
+  #lock[aria-pressed="true"]{opacity:1;background:color-mix(in srgb,var(--accent) 24%,transparent)}
   .now b{font-weight:590}
   .now span{color:var(--label2)}
   /* Headlines cross-fade one at a time rather than scrolling. A marquee fights
@@ -236,6 +258,7 @@
 </div>
 
 <div class="now" id="now" hidden>
+  <button id="lock" title="Lock this station while you browse">🔓</button>
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
@@ -385,7 +408,11 @@ function renderStations() {
                     <span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".sn").textContent = ch.title;
     el.querySelector(".stags").textContent = ch.tags.length ? ch.tags.slice(0, 4).join(" · ") : "";
-    el.onclick = (e) => { if (!e.target.closest(".star")) window.globefm.tune(ch); };
+    el.onclick = (e) => {
+      if (e.target.closest(".star")) return;
+      window.globefm.tune(ch);           // an explicit pick always plays
+      if (locked) setLocked(true);       // and becomes the new locked station
+    };
     el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
     stationListEl.appendChild(el);
   }
@@ -423,6 +450,29 @@ window.globefm.onPlayerState((s) => {
     el.setAttribute("aria-current", playing?.id === el.dataset.id);
   }
 });
+
+// ── station lock ─────────────────────────────────────────────────────────────
+/**
+ * Lock keeps what you're hearing fixed while you wander the globe.
+ *
+ * It blocks *incidental* changes only — clicking a dot, or the list following
+ * the map. Explicitly clicking a station name still plays it, because that is an
+ * unambiguous "play this", and it re-locks onto the new station rather than
+ * silently unlocking.
+ */
+let locked = false;
+
+function setLocked(on) {
+  locked = on;
+  const b = $("lock");
+  b.setAttribute("aria-pressed", on);
+  b.textContent = on ? "🔒" : "🔓";
+  b.title = on
+    ? "Locked — browsing won't change the station. Click a station to switch."
+    : "Lock this station while you browse";
+  window.globefm.getState().then((st) => window.globefm.setState({ ...(st || {}), locked: on }));
+}
+$("lock").onclick = () => setLocked(!locked);
 
 // ── favourites ───────────────────────────────────────────────────────────────
 let showingFavorites = false;
@@ -676,6 +726,12 @@ async function applyDayNight() {
     loadTexture("vendor/earth-topology.png", TexClass, dayTex),
   ]);
 
+  // Satellite imagery is fetched *without* blocking: on a cold start it can take
+  // tens of seconds, and a globe that refuses to appear until the weather
+  // downloads is a worse globe. Compile on Blue Marble now, swap the live layer
+  // in when it lands.
+  loadLiveImagery(TexClass, dayTex);
+
   mat.bumpMap = bumpTex;
   mat.bumpScale = 4;            // globe radius is 100, so this is subtle relief
   mat.shininess = 6;
@@ -686,6 +742,8 @@ async function applyDayNight() {
 
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.nightMap = { value: nightTex };
+    shader.uniforms.liveMap = { value: nightTex };   // placeholder until imagery lands
+    shader.uniforms.hasLive = { value: 0 };
     shader.uniforms.sunDirection = { value: sunVector() };
 
     // Pass the geometry's own UVs through a varying we control. Deriving UVs
@@ -696,11 +754,23 @@ async function applyDayNight() {
       .replace("void main() {", "void main() {\n  vObjNormal = normalize(position);\n  vGlobeUv = uv;");
 
     shader.fragmentShader =
-      "uniform sampler2D nightMap;\nuniform vec3 sunDirection;\nvarying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" +
+      "uniform sampler2D nightMap;\nuniform sampler2D liveMap;\nuniform float hasLive;\n" +
+      "uniform vec3 sunDirection;\nvarying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" +
       shader.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>
         vec3 n = normalize(vObjNormal);
         vec3 dayC   = texture2D(map, vGlobeUv).rgb;
         vec3 nightC = texture2D(nightMap, vGlobeUv).rgb;
+
+        // Today's satellite pass, where it exists. VIIRS returns pure black
+        // where the swaths don't meet, so treat near-black as "no data" and keep
+        // Blue Marble there — a gap should look like clear sky, not a puncture.
+        vec3 liveC = texture2D(liveMap, vGlobeUv).rgb;
+        float haveData = step(0.035, max(liveC.r, max(liveC.g, liveC.b))) * hasLive;
+        dayC = mix(dayC, liveC, haveData);
+        // Clouds are bright; carry a little of them onto the night side too, so
+        // a storm doesn't vanish at the terminator.
+        float cloud = smoothstep(0.45, 0.85, dot(liveC, vec3(0.33))) * haveData;
+        nightC = mix(nightC, nightC + vec3(0.10), cloud);
         float cosSun = dot(n, normalize(sunDirection));
         // ~10 degrees of softness: civil twilight, not a hard line
         float t = smoothstep(-0.09, 0.09, cosSun);
@@ -716,6 +786,21 @@ async function applyDayNight() {
   mat.needsUpdate = true;
 }
 
+/** Fetch today's satellite pass in the background and fade it in when ready. */
+async function loadLiveImagery(TexClass, like) {
+  try {
+    const p = await window.globefm.clouds();
+    if (!p) return;
+    const tex = await loadTexture("file://" + p, TexClass, like);
+    const sh = globe?.globeMaterial()?.userData?.shader;
+    if (!sh) return;
+    sh.uniforms.liveMap.value = tex;
+    sh.uniforms.hasLive.value = 1;
+    const el = $("liveflag");
+    if (el) el.textContent = " · live cloud cover";
+  } catch { /* Blue Marble is a perfectly good fallback */ }
+}
+
 function updateSun() {
   if (!globe) return;
   // The readout must not depend on the shader: the program compiles on the first
@@ -729,10 +814,9 @@ function updateSun() {
   if (el) {
     const fmt = (v, pos, neg) => `${Math.abs(v).toFixed(1)}°${v >= 0 ? pos : neg}`;
     el.textContent =
-      `☀︎ ${fmt(lat, "N", "S")} ${fmt(lng, "E", "W")}`
-      + `   ${glyph} ${fmt(m.lat, "N", "S")} ${fmt(m.lng, "E", "W")} · ${phase} ${Math.round(m.illum * 100)}%`;
+      `☀︎ sun over ${fmt(lat, "N", "S")} ${fmt(lng, "E", "W")}`
+      + `   ${glyph} ${phase} ${Math.round(m.illum * 100)}%`;
   }
-  drawMoonMarker(m);
 }
 
 async function initGlobe() {
@@ -746,7 +830,9 @@ async function initGlobe() {
   globe = Globe()(el)
     // Textures are vendored from three-globe, so the real Earth costs no network.
     .globeImageUrl("vendor/earth-blue-marble.jpg")
-    .backgroundColor("rgba(0,0,0,0)")
+    // Sitting in space, not floating on a window background. The starfield is
+    // vendored, so this costs no network.
+    .backgroundImageUrl("vendor/night-sky.png")
     .showGlobe(true)
     .showAtmosphere(true)
     .atmosphereColor("#8ab4f8")
@@ -770,15 +856,21 @@ async function initGlobe() {
     .onPointClick((d) => goToPlace(d.i, { play: true }));
 
   await applyDayNight();
+  // A slow, permanent drift — the Earth is never truly still, and a dead-static
+  // globe reads as a screenshot. Slow enough not to fight you while you aim.
   globe.controls().autoRotate = true;
-  globe.controls().autoRotateSpeed = 0.35;
+  globe.controls().autoRotateSpeed = 0.18;
   globe.controls().enableDamping = true;
+  globe.controls().dampingFactor = 0.08;
+  globe.controls().rotateSpeed = 0.75;
   globe.controls().addEventListener("change", onCameraChange);
   applyLod(true);
 
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
   // is the fastest way to make a globe feel broken.
-  el.addEventListener("pointerdown", () => { globe.controls().autoRotate = false; }, { once: false });
+  // Pause the drift while you're actually handling it, then let it resume.
+  el.addEventListener("pointerdown", () => { globe.controls().autoRotate = false; pauseDrift(); });
+  el.addEventListener("wheel", () => { globe.controls().autoRotate = false; pauseDrift(); }, { passive: true });
 
   sizeGlobe();
   updateSun();
@@ -787,7 +879,7 @@ async function initGlobe() {
   clearInterval(sunTimer);
   sunTimer = setInterval(updateSun, 60000);
   $("globehint").innerHTML =
-    `<span id="lodhint"></span> &nbsp;·&nbsp; <span id="sunreadout"></span>`;
+    `<span id="lodhint"></span> &nbsp;·&nbsp; <span id="sunreadout"></span><span id="liveflag"></span>`;
   applyLod(true);
   updateSun();
 }
@@ -823,6 +915,12 @@ function applyLod(force = false) {
       ? `showing ${shown.length.toLocaleString()} of ${globePts.length.toLocaleString()} places · zoom in for more`
       : `${globePts.length.toLocaleString()} places`;
   }
+}
+
+let driftTimer = null;
+function pauseDrift(ms = 6000) {
+  clearTimeout(driftTimer);
+  driftTimer = setTimeout(() => { if (globe && !flying) globe.controls().autoRotate = true; }, ms);
 }
 
 let lodPending = null, followPending = null;
@@ -866,18 +964,6 @@ function nearestPlace(lat, lng) {
   return { i: best.i, dist: Math.acos(Math.min(1, Math.max(-1, bestCos))) / rad };
 }
 
-/** A single ring on the globe marking where the moon is directly overhead. */
-function drawMoonMarker(m) {
-  if (!globe) return;
-  globe.ringsData([{ lat: m.lat, lng: m.lng, illum: m.illum }])
-    .ringLat("lat").ringLng("lng")
-    .ringMaxRadius(3.2)
-    .ringPropagationSpeed(0)          // static marker, not a pulse
-    .ringRepeatPeriod(0)
-    .ringAltitude(0.006)
-    .ringColor(() => () => `rgba(255,255,255,${0.25 + m.illum * 0.5})`);
-}
-
 function sizeGlobe() {
   if (!globe) return;
   const w = $("globewrap");
@@ -888,6 +974,7 @@ let flying = false;
 function flyTo(lat, lng, altitude = 0.62) {
   if (!globe) return;
   globe.controls().autoRotate = false;   // don't drift away from what you picked
+  pauseDrift(9000);
   // Suppress follow-the-centre for the duration: the fly emits change events the
   // whole way, and following mid-flight snaps the selection to whatever city the
   // camera happens to pass over. That is how picking Los Angeles landed on
@@ -996,7 +1083,7 @@ async function goToPlace(i, { play = false, fly = true } = {}) {
   await selectPlace(i);
   if (fly && selection.place) flyTo(selection.place.lat, selection.place.lon);
   // Prefer a station the directory believes is alive.
-  if (play && selection.channels.length) {
+  if (play && !locked && selection.channels.length) {
     const pick = selection.channels.find((c) => c.ok !== false) || selection.channels[0];
     window.globefm.tune(pick);
   }
@@ -1011,6 +1098,7 @@ document.addEventListener("keydown", (e) => {
 (async () => {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  setLocked(!!state.locked);
   await loadPlaces("");
   try { await initGlobe(); } catch (err) { $("globehint").textContent = err.message; }
 

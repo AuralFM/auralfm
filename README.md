@@ -28,8 +28,11 @@ down the radio station support in Shortcuts and Apple Music.
 - **Plays any station in the world** — 38,342 channels, 12,296 places, 242 countries.
 - **Search** by station, city, country, or genre. "jazz new orleans" works.
 - **Favorites** with `1`–`9` hotkeys.
-- **Explore** — browse by place, as a list or on a real 3-D globe with a live
-  day/night terminator computed from the sun's actual position.
+- **A globe sitting in space** — real Earth, starfield, and a day/night
+  terminator computed from the sun's actual position right now.
+- **Live cloud cover** — near-real-time VIIRS satellite imagery from NASA GIBS,
+  so the weather on the globe is the weather that's actually up there.
+- **Lock a station** and browse the world without changing what you're hearing.
 - **Live local conditions** — pick a place and see its current weather and local
   time, so you know it's 53°F and overcast at 12:45 AM where the station is.
 - **Now playing in the menu bar** — the station name sits next to the icon.
@@ -179,6 +182,7 @@ and why.
 ## Credits
 
 - Station geography: [radio.garden](https://radio.garden)
+- Satellite imagery: [NASA GIBS](https://nasa-gibs.github.io/gibs-api-docs/) (VIIRS true colour)
 - Station genres and fallback streams: [radio-browser.info](https://www.radio-browser.info)
 - Globe icon by **emilegraphics** via [the Noun Project](https://thenounproject.com) —
   see [`assets/ATTRIBUTION.md`](assets/ATTRIBUTION.md)

@@ -14,6 +14,7 @@ const LIBS = [
   ["three-globe", "example/img/earth-blue-marble.jpg"],
   ["three-globe", "example/img/earth-night.jpg"],
   ["three-globe", "example/img/earth-topology.png"],
+  ["three-globe", "example/img/night-sky.png"],
 ];
 
 fs.mkdirSync(OUT, { recursive: true });

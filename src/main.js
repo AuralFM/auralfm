@@ -14,6 +14,7 @@ const weather = require("./weather");
 const news = require("./news");
 const failures = require("./failures");
 const presence = require("./presence");
+const clouds = require("./clouds");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -226,6 +227,7 @@ ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit)
 ipcMain.handle("catalog:placeChannels", (_e, i, filter) => catalog.placeChannels(i, filter));
 ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), bands: catalog.placeBands(i) }));
 ipcMain.handle("catalog:globePoints", () => catalog.globePoints());
+ipcMain.handle("clouds:get", () => clouds.get());
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));
 ipcMain.on("explore:open", openExplore);
@@ -309,6 +311,7 @@ if (!app.requestSingleInstanceLock()) {
     catalog.load();
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
+    clouds.init(app.getPath("userData"));
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     if (presence.enabled()) console.log("presence: enabled");
     createWindow();
