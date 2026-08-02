@@ -65,11 +65,20 @@ async function getDump() {
   if (!res.ok) throw new Error(`radio-browser HTTP ${res.status}`);
   const all = await res.json();
   // Keep only what we need — the raw dump is ~68 MB and we want none of it on disk.
-  const slim = all
-    .filter((s) => s.tags && s.tags.trim())
-    .map((s) => ({ name: s.name.trim(), country: s.country || "", home: s.homepage || "", tags: s.tags }));
+  // Keep untagged stations too now: they still carry a UUID (for click
+  // reporting) and a daily check result (for dead-stream detection).
+  const slim = all.map((s) => ({
+    uuid: s.stationuuid,
+    name: (s.name || "").trim(),
+    country: s.country || "",
+    home: s.homepage || "",
+    tags: s.tags || "",
+    ok: s.lastcheckok,            // radio-browser probes every station daily
+  }));
   fs.writeFileSync(F.dump, JSON.stringify(slim));
-  console.log(`radio-browser: ${all.length} stations, ${slim.length} with tags`);
+  const tagged = slim.filter((s) => s.tags.trim()).length;
+  const broken = slim.filter((s) => s.ok === 0).length;
+  console.log(`radio-browser: ${all.length} stations · ${tagged} tagged · ${broken} failing their last check`);
   return slim;
 }
 
@@ -97,7 +106,7 @@ function tokenPrefix(a, b) {
 function match(ch, country, ix) {
   const sameCountry = (list) =>
     list.find((s) => s.country && country && s.country.toLowerCase() === country.toLowerCase());
-  const one = (s, via) => ({ tags: cleanTags(s.tags), via });
+  const one = (s, via) => ({ tags: cleanTags(s.tags), uuid: s.uuid, ok: s.ok, via });
 
   // 1. Exact name in the same country — the only tier that needs no corroboration.
   const exact = ix.byName.get(norm(ch.title));
@@ -130,7 +139,8 @@ function match(ch, country, ix) {
     const overlap = dom.filter((s) => tokenPrefix(l, loose(s.name)));
     if (overlap.length) {
       const tags = [...new Set(overlap.flatMap((s) => cleanTags(s.tags)))];
-      if (tags.length) return { tags, via: "domain+prefix" };
+      const best = overlap.find((s) => s.ok === 1) || overlap[0];
+      return { tags, uuid: best.uuid, ok: best.ok, via: "domain+prefix" };
     }
   }
 
@@ -152,18 +162,24 @@ const full = JSON.parse(fs.readFileSync(F.full, "utf8"));
 const ix = buildIndexes(rb);
 
 const stats = {};
-let tagged = 0;
+let tagged = 0, matched = 0;
 for (const ch of full.channels) {
   const country = full.places[ch.p]?.country;
   const m = match(ch, country, ix);
-  if (!m || !m.tags.length) continue;
-  ch.tags = m.tags;
-  tagged++;
+  if (!m) continue;
+  if (m.tags.length) { ch.tags = m.tags; tagged++; }
+  if (m.uuid) ch.rbuuid = m.uuid;          // for click reporting
+  if (m.ok === 0 || m.ok === 1) ch.ok = m.ok;
+  matched++;
   stats[m.via] = (stats[m.via] || 0) + 1;
 }
 
 const pct = (n) => `${((100 * n) / full.channels.length).toFixed(1)}%`;
-console.log(`\nmatched ${tagged} / ${full.channels.length} channels (${pct(tagged)})`);
+const broken = full.channels.filter((c) => c.ok === 0).length;
+console.log(`\nmatched ${matched} / ${full.channels.length} channels (${pct(matched)})`);
+console.log(`  with genre tags   ${String(tagged).padStart(6)}  ${pct(tagged)}`);
+console.log(`  with radio-browser id ${String(full.channels.filter((c) => c.rbuuid).length).padStart(2)}`);
+console.log(`  failing last check ${String(broken).padStart(5)}  ${pct(broken)}`);
 for (const [via, n] of Object.entries(stats).sort((a, b) => b[1] - a[1])) {
   console.log(`  ${via.padEnd(16)} ${String(n).padStart(6)}  ${pct(n)}`);
 }
@@ -173,11 +189,15 @@ fs.writeFileSync(F.full, JSON.stringify(full));
 const min = {
   g: full.generated,
   p: full.places.map((p) => [p.title, p.country, p.geo[0], p.geo[1]]),
-  c: full.channels.map((c) => {
-    const row = [c.id, c.title, c.p, c.secure ? 1 : 0];
-    if (c.tags?.length) row.push(c.tags.join(","));   // 5th slot, only when present
-    return row;
-  }),
+  // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk]
+  // Fixed arity now that later slots exist — optional trailing fields stop
+  // working the moment anything follows them.
+  c: full.channels.map((c) => [
+    c.id, c.title, c.p, c.secure ? 1 : 0,
+    c.tags?.length ? c.tags.join(",") : "",
+    c.rbuuid || "",
+    c.ok === 0 ? 0 : c.ok === 1 ? 1 : "",
+  ]),
 };
 fs.writeFileSync(F.min, JSON.stringify(min));
 

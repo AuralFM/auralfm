@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+      content="default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
 <title>Explore</title>
 <style>
   :root{
@@ -323,7 +323,7 @@ window.globefm.onPlayerState((s) => {
 });
 
 // ── globe view ───────────────────────────────────────────────────────────────
-let globe = null, globeLoading = null, globePts = null;
+let globe = null, globeLoading = null, globePts = null, sunTimer = null;
 
 /** Load the 1.7 MB globe bundle only when someone actually asks for the globe. */
 function loadGlobeLib() {
@@ -340,11 +340,138 @@ function loadGlobeLib() {
 }
 
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const isDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
-// A near-black sphere sits like a hole punched in a light window; lift it in
-// light appearance so the globe reads as an object on the surface.
-const globeHex = () => (isDark() ? 0x15181d : 0xdfe3e8);
-const selColor = () => (isDark() ? "#ffffff" : "#0b3d24");
+
+/**
+ * Sub-solar point: the lat/lng where the sun is directly overhead right now.
+ * NOAA-style approximation — declination plus the equation of time, which is the
+ * bit that stops the terminator drifting up to ~16 minutes off across the year.
+ * Accurate to well under a degree, which is far finer than a globe this size can
+ * show.
+ */
+function subsolarPoint(date = new Date()) {
+  const rad = Math.PI / 180;
+  const dayOfYear = (date - Date.UTC(date.getUTCFullYear(), 0, 0)) / 86400000;
+  const decl = -23.44 * Math.cos(rad * (360 / 365) * (dayOfYear + 10));
+  const B = rad * (360 / 365) * (dayOfYear - 81);
+  const eqTime = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B); // minutes
+  const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  let lng = -15 * (utcHours - 12 + eqTime / 60);
+  lng = ((lng + 180) % 360 + 360) % 360 - 180;
+  return { lat: decl, lng };
+}
+
+/** Unit vector toward the sun, in the globe's own coordinate frame. */
+function sunVector() {
+  const { lat, lng } = subsolarPoint();
+  const c = globe.getCoords(lat, lng, 0);
+  const len = Math.hypot(c.x, c.y, c.z) || 1;
+  return { x: c.x / len, y: c.y / len, z: c.z / len };
+}
+
+/** globe.gl doesn't re-export THREE, so clone the texture class off an existing one. */
+function loadTexture(url, TexClass, like) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const t = new TexClass(img);
+      if (like) {
+        t.wrapS = like.wrapS; t.wrapT = like.wrapT;
+        t.colorSpace = like.colorSpace; t.flipY = like.flipY;
+        t.minFilter = like.minFilter; t.magFilter = like.magFilter;
+      }
+      t.needsUpdate = true;
+      resolve(t);
+    };
+    img.onerror = () => reject(new Error(`texture failed: ${url}`));
+    img.src = url;
+  });
+}
+
+const waitFor = (fn, ms = 8000) => new Promise((res, rej) => {
+  const t0 = Date.now();
+  (function poll() {
+    const v = fn();
+    if (v) return res(v);
+    if (Date.now() - t0 > ms) return rej(new Error("timed out waiting for texture"));
+    setTimeout(poll, 60);
+  })();
+});
+
+/**
+ * Blend the daytime and night-lights textures across the real terminator.
+ *
+ * Injected into the existing MeshPhongMaterial rather than built as a fresh
+ * ShaderMaterial, because globe.gl bundles three privately and never exposes the
+ * constructors. UVs are derived from the object-space normal instead of a
+ * varying, so this doesn't break when three renames vUv to vMapUv.
+ *
+ * Injected at <opaque_fragment>, not at the end of the shader: everything after
+ * it (tone mapping, colour-space encoding) still has to run on our blended
+ * colour. Writing gl_FragColor last skips sRGB encoding and the daylit half
+ * comes out several stops too dark.
+ */
+async function applyDayNight() {
+  const mat = globe.globeMaterial();
+  const dayTex = await waitFor(() => mat.map);
+  const TexClass = dayTex.constructor;
+
+  const [nightTex, bumpTex] = await Promise.all([
+    loadTexture("vendor/earth-night.jpg", TexClass, dayTex),
+    loadTexture("vendor/earth-topology.png", TexClass, dayTex),
+  ]);
+
+  mat.bumpMap = bumpTex;
+  mat.bumpScale = 4;            // globe radius is 100, so this is subtle relief
+  mat.shininess = 6;
+  // three-globe nulls material.color once a globe texture is applied, so this
+  // has to be guarded — assigning through it threw and silently skipped the
+  // shader hook below.
+  mat.color?.setHex?.(0xffffff);
+
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.nightMap = { value: nightTex };
+    shader.uniforms.sunDirection = { value: sunVector() };
+
+    shader.vertexShader = "varying vec3 vObjNormal;\n" + shader.vertexShader
+      .replace("void main() {", "void main() {\n  vObjNormal = normalize(position);");
+
+    shader.fragmentShader =
+      "uniform sampler2D nightMap;\nuniform vec3 sunDirection;\nvarying vec3 vObjNormal;\n" +
+      shader.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>
+        vec3 n = normalize(vObjNormal);
+        float uu = atan(n.x, n.z) / 6.2831853 + 0.5;
+        float vv = asin(clamp(n.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+        vec2 eq = vec2(uu, vv);
+        vec3 dayC   = texture2D(map, eq).rgb;
+        vec3 nightC = texture2D(nightMap, eq).rgb;
+        float cosSun = dot(n, normalize(sunDirection));
+        // ~10 degrees of softness: civil twilight, not a hard line
+        float t = smoothstep(-0.09, 0.09, cosSun);
+        vec3 col = mix(nightC * 1.6, dayC, t);
+        // A restrained warm band either side of the terminator — sunrise, not sunset filter.
+        col += vec3(0.075, 0.032, 0.0) * max(0.0, 1.0 - abs(cosSun) * 22.0);
+        gl_FragColor = vec4(col, gl_FragColor.a);`);
+
+    mat.userData.shader = shader;   // handle for the per-minute sun update
+  };
+  // three's default program cache key already stringifies onBeforeCompile, so
+  // replacing the hook is enough to force a recompile.
+  mat.needsUpdate = true;
+}
+
+function updateSun() {
+  if (!globe) return;
+  // The readout must not depend on the shader: the program compiles on the first
+  // render after needsUpdate, which is after initGlobe returns.
+  const sh = globe.globeMaterial()?.userData?.shader;
+  if (sh) sh.uniforms.sunDirection.value = sunVector();
+  const { lat, lng } = subsolarPoint();
+  const el = $("sunreadout");
+  if (el) {
+    el.textContent = `sun overhead ${Math.abs(lat).toFixed(1)}°${lat >= 0 ? "N" : "S"} `
+      + `${Math.abs(lng).toFixed(1)}°${lng >= 0 ? "E" : "W"}`;
+  }
+}
 
 async function initGlobe() {
   await loadGlobeLib();
@@ -355,16 +482,16 @@ async function initGlobe() {
   const el = $("globe");
 
   globe = Globe()(el)
-    // No texture image: the app is offline-first, and 12,296 station points
-    // trace the continents on their own — radio follows population.
+    // Textures are vendored from three-globe, so the real Earth costs no network.
+    .globeImageUrl("vendor/earth-blue-marble.jpg")
     .backgroundColor("rgba(0,0,0,0)")
     .showGlobe(true)
     .showAtmosphere(true)
-    .atmosphereColor(accent)
-    .atmosphereAltitude(0.14)
+    .atmosphereColor("#8ab4f8")
+    .atmosphereAltitude(0.17)
     .pointsData(globePts)
     .pointLat("lat").pointLng("lng")
-    .pointColor((d) => (d.i === selection.placeIndex ? selColor() : accent))
+    .pointColor((d) => (d.i === selection.placeIndex ? "#ffffff" : "#5ef08a"))
     // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
     // read as noise rather than geography.
     .pointAltitude(0.002)
@@ -378,7 +505,7 @@ async function initGlobe() {
     .pointLabel((d) => `${d.count} station${d.count === 1 ? "" : "s"}`)
     .onPointClick((d) => { selectPlace(d.i); flyTo(d.lat, d.lng); });
 
-  globe.globeMaterial().color = new THREE_COLOR(globeHex());
+  await applyDayNight();
   globe.controls().autoRotate = true;
   globe.controls().autoRotateSpeed = 0.35;
   globe.controls().enableDamping = true;
@@ -388,14 +515,15 @@ async function initGlobe() {
   el.addEventListener("pointerdown", () => { globe.controls().autoRotate = false; }, { once: false });
 
   sizeGlobe();
-  $("globehint").textContent = `${globePts.length.toLocaleString()} places · drag to spin, click a point`;
-}
-
-// globe.gl bundles three, but doesn't re-export Color; grab it off an existing material.
-function THREE_COLOR(hex) {
-  const c = globe.globeMaterial().color.clone();
-  c.setHex(hex);
-  return c;
+  updateSun();
+  // The terminator moves ~0.25° a minute; once a minute is imperceptibly smooth
+  // and costs nothing.
+  clearInterval(sunTimer);
+  sunTimer = setInterval(updateSun, 60000);
+  $("globehint").innerHTML =
+    `${globePts.length.toLocaleString()} places · drag to spin, click a point`
+    + ` &nbsp;·&nbsp; <span id="sunreadout"></span>`;
+  updateSun();
 }
 
 function sizeGlobe() {
@@ -438,9 +566,7 @@ $("tabList").onclick = () => setView("list");
 $("tabGlobe").onclick = () => setView("globe");
 window.addEventListener("resize", sizeGlobe);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if (!globe) return;
-  globe.globeMaterial().color = new THREE_COLOR(globeHex());
-  refreshGlobeSelection();
+  if (globe) refreshGlobeSelection();
 });
 
 // ── input ────────────────────────────────────────────────────────────────────
