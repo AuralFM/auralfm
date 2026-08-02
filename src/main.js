@@ -12,6 +12,7 @@ const catalog = require("./catalog");
 const resolver = require("./resolver");
 const weather = require("./weather");
 const news = require("./news");
+const markets = require("./markets");
 const failures = require("./failures");
 const presence = require("./presence");
 const clouds = require("./clouds");
@@ -350,6 +351,7 @@ ipcMain.handle("sky:get", () => {
 });
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));
+ipcMain.handle("markets:get", () => markets.get());
 // Headlines open in the real browser. GlobeFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
 ipcMain.on("open:external", (_e, url) => {

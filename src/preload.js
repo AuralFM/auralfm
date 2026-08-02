@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("globefm", {
   onLayers: (fn) => ipcRenderer.on("globe:layers", (_e, l) => fn(l)),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),
+  markets: () => ipcRenderer.invoke("markets:get"),
   openLink: (url) => ipcRenderer.send("open:external", url),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),

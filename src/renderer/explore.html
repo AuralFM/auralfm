@@ -313,11 +313,22 @@
     flex:1;min-width:0;display:flex;justify-content:flex-end;
     padding-left:14px;overflow:hidden;
   }
+  @media (max-width: 1100px){ .tickwrap{display:none} }
   .tick{
     color:var(--label3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     opacity:0;transition:opacity .5s ease-out;max-width:100%;
   }
   .tick.on{opacity:1}
+  .markets{
+    flex:none;display:flex;align-items:center;gap:14px;padding-left:16px;
+    font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .markets .m{display:flex;align-items:baseline;gap:5px}
+  .markets .sym{color:var(--label2);font-weight:590;letter-spacing:.01em}
+  .markets .px{color:var(--label)}
+  .markets .ch{font-size:11px}
+  .markets .up{color:var(--accent)}
+  .markets .dn{color:var(--err)}
   @media (prefers-reduced-motion: reduce){ .tick{transition:none} }
 </style>
 </head>
@@ -372,6 +383,7 @@
     <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
   </span>
   <span class="tickwrap"><span class="tick" id="ticker"></span></span>
+  <span class="markets" id="markets"></span>
 </div>
 
 <script>
@@ -638,6 +650,44 @@ $("favBtn").onclick = () => {
   if (showingFavorites) { showingFavorites = false; $("favBtn").setAttribute("aria-pressed","false"); loadPlaces(""); }
   else showFavorites();
 };
+
+// ── markets ──────────────────────────────────────────────────────────────────
+/**
+ * Live prices in the transport bar.
+ *
+ * Crypto is keyless via CoinGecko. Equities are not: Yahoo's public endpoint
+ * 429s and Stooq's CSV is gone, so every remaining provider wants an API key.
+ * Rather than fake an index, the strip shows what it can actually verify and
+ * says so on hover.
+ */
+let marketTimer = null;
+
+async function renderMarkets() {
+  const el = $("markets");
+  if (!el) return;
+  const { items, hasStocks } = (await window.globefm.markets()) || { items: [] };
+  if (!items?.length) { el.textContent = ""; return; }
+
+  el.innerHTML = "";
+  for (const it of items) {
+    const up = (it.changePct ?? 0) >= 0;
+    const wrap = document.createElement("span");
+    wrap.className = "m";
+    wrap.innerHTML = `<span class="sym"></span><span class="px"></span><span class="ch"></span>`;
+    wrap.querySelector(".sym").textContent = it.symbol;
+    wrap.querySelector(".px").textContent =
+      it.price >= 1000 ? Math.round(it.price).toLocaleString()
+      : it.price >= 1   ? it.price.toFixed(2)
+      : it.price.toFixed(4);
+    const ch = wrap.querySelector(".ch");
+    ch.className = `ch ${up ? "up" : "dn"}`;
+    ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(2)}%`;
+    el.appendChild(wrap);
+  }
+  el.title = hasStocks
+    ? "Crypto and equities · 24h change"
+    : "Crypto · 24h change. Equities need an API key (set GLOBEFM_STOCK_KEY).";
+}
 
 // ── headline panel ───────────────────────────────────────────────────────────
 /**
@@ -1612,6 +1662,10 @@ document.addEventListener("keydown", (e) => {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   setLocked(!!state.locked);
+  renderMarkets();
+  clearInterval(marketTimer);
+  marketTimer = setInterval(renderMarkets, 90000);   // matches the cache TTL
+
   await loadPlaces("");
   try { await initGlobe(); } catch (err) { $("globehint").textContent = err.message; }
 
