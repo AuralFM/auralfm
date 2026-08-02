@@ -2030,6 +2030,19 @@ function applyPrefs(next) {
 }
 window.auralfm.onPrefs(applyPrefs);
 
+/**
+ * Stations you add or remove can change in another window — Settings has a
+ * "Your stations" list with a Remove button on it. Without this, removing one
+ * there left it sitting in the rail here until you navigated away and back,
+ * and left the globe's dot counting a station that no longer existed.
+ */
+window.auralfm.onMineChanged(async () => {
+  const raw = await window.auralfm.globePoints();
+  globePts = raw.map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
+  if (selection.placeIndex != null) await selectPlace(selection.placeIndex, { keepFilter: true });
+  applyLod(true);
+});
+
 // ── interface language ───────────────────────────────────────────────────────
 /**
  * Only AuralFM's own chrome is translated. Station names, place names and
