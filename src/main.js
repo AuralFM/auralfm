@@ -248,11 +248,56 @@ ipcMain.on("player:state", (_e, state) => {
   if (explore && !explore.isDestroyed()) explore.webContents.send("player:state", state);
 });
 
+// ── deep links ────────────────────────────────────────────────────────────────
+/**
+ * globefm://play?station=KEXP        play the best match for a station name
+ * globefm://play?place=New%20Orleans play the top station in a place
+ * globefm://pause  ·  globefm://stop  ·  globefm://next  ·  globefm://open
+ *
+ * This is what makes GlobeFM callable from Shortcuts and therefore from Siri —
+ * the thing Apple's own radio support used to do. A Shortcut just opens a URL.
+ */
+async function handleDeepLink(raw) {
+  let u;
+  try { u = new URL(raw); } catch { return; }
+  if (u.protocol !== "globefm:") return;
+
+  const action = (u.hostname || u.pathname.replace(/\//g, "") || "open").toLowerCase();
+  const q = u.searchParams;
+
+  if (action === "open") return show();
+  if (action === "pause" || action === "stop") return win?.webContents.send("player:mediakey", "playpause");
+  if (action === "next") return win?.webContents.send("player:mediakey", "next");
+  if (action !== "play") return;
+
+  const station = q.get("station");
+  const place = q.get("place");
+  let target = null;
+
+  if (station) {
+    target = catalog.search(station, 1)[0] || null;
+  } else if (place) {
+    const hit = catalog.placeSearch(place, 1).places[0];
+    if (hit) {
+      const list = catalog.placeChannels(hit.i).channels;
+      target = list.find((c) => c.ok !== false) || list[0] || null;
+    }
+  }
+  if (target) win?.webContents.send("player:tune", target);
+  else console.warn(`deep link: nothing matched ${raw}`);
+}
+
+app.setAsDefaultProtocolClient("globefm");
+app.on("open-url", (e, url) => { e.preventDefault(); handleDeepLink(url); });
+
 // ── lifecycle ─────────────────────────────────────────────────────────────────
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => show());
+  app.on("second-instance", (_e, argv) => {
+    const link = argv.find((a) => a.startsWith("globefm://"));
+    if (link) handleDeepLink(link); else show();
+  });
 
   app.whenReady().then(() => {
     // Menu bar app: no Dock icon, no app switcher entry.

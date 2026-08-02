@@ -184,3 +184,22 @@ and why.
   see [`assets/ATTRIBUTION.md`](assets/ATTRIBUTION.md)
 
 Personal project, not affiliated with or endorsed by any of the above.
+
+## Siri and Shortcuts
+
+GlobeFM registers a `globefm://` URL scheme, so any Shortcut that opens a URL can
+drive it — which is how you get "Hey Siri, play KEXP" back.
+
+| URL | Does |
+|---|---|
+| `globefm://play?station=KEXP` | Play the best match for a station name |
+| `globefm://play?place=Reykjavik` | Play the top station in a place |
+| `globefm://pause` | Pause / resume |
+| `globefm://next` | Next favorite |
+| `globefm://open` | Open the popover |
+
+**Making a Shortcut:** Shortcuts → new shortcut → *Open URLs* → paste one of the
+above → name it "Play KEXP". Saying that name to Siri now runs it.
+
+Station and place names are matched with the same ranking the in-app search uses,
+so "kexp", "wwoz" and "new orleans" all work without being exact.

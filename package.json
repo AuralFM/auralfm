@@ -54,7 +54,15 @@
         }
       ],
       "extendInfo": {
-        "LSUIElement": true
+        "LSUIElement": true,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "com.meltonbell.globefm",
+            "CFBundleURLSchemes": [
+              "globefm"
+            ]
+          }
+        ]
       }
     },
     "dmg": {
