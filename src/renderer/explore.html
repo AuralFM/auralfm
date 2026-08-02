@@ -61,6 +61,19 @@
   @media (prefers-reduced-transparency: reduce){ body{background:var(--bg)} .content{background:var(--bg)} }
   @media (prefers-reduced-motion: reduce){ *{transition-duration:.01ms !important;animation-duration:.01ms !important} }
 
+  /* Stations vs shortwave. Same segmented shape as Settings, so the two places
+     in the app where you pick between modes look like the same idea. */
+  .railtabs{display:flex;gap:2px;padding:2px;margin:0 13px 6px;background:var(--fill);border-radius:7px}
+  .railtabs button{
+    flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
+    font:inherit;font-size:11px;font-weight:530;letter-spacing:-.002em;
+    padding:4px 8px;border-radius:5px;cursor:default;white-space:nowrap;
+    transition:background .12s ease-out,color .12s ease-out;
+  }
+  .railtabs button:hover{background:var(--fill-hi);color:var(--label)}
+  .railtabs button[aria-checked="true"]{background:var(--label);color:var(--bg);font-weight:590}
+  .railtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overflow:hidden}
   body{
@@ -406,6 +419,7 @@
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
     </div>
+    <div class="railtabs" id="railtabs" role="radiogroup" hidden></div>
     <div class="secthead" id="placehead"></div>
     <div class="scroll" id="placelist" hidden></div>
     <div class="scroll" id="stationlist">
@@ -546,6 +560,52 @@ async function setFilter(next) {
 }
 
 // ── stations ─────────────────────────────────────────────────────────────────
+/**
+ * A place offers two different things to listen to, and they are not
+ * interchangeable: the stations broadcasting *from* there, and the shortwave
+ * receivers near there that let you hear what the sky sounds like *over* there.
+ *
+ * Before this, the receivers existed only as dots on the globe, so the only way
+ * to reach one was to hit a 4-pixel target — and in somewhere like Los Angeles
+ * they are buried under a hundred station dots. A place with receivers nearby
+ * now says so, and you can switch.
+ */
+let railMode = "stations";        // stations | shortwave
+
+function renderRailTabs(nearby) {
+  const tabs = $("railtabs");
+  tabs.innerHTML = "";
+  if (!nearby.length) { tabs.hidden = true; return; }
+  tabs.hidden = false;
+  const mk = (mode, label) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.setAttribute("aria-checked", String(railMode === mode));
+    b.setAttribute("role", "radio");
+    b.onclick = () => { railMode = mode; renderStations(); };
+    tabs.append(b);
+  };
+  mk("stations", `${t("app.stations", "Stations")} ${selection.total ?? selection.channels.length}`);
+  mk("shortwave", `${t("rail.shortwave", "Shortwave")} ${nearby.length}`);
+}
+
+/** Receivers within a day's drive of the selected place, nearest first. */
+function nearbyReceivers() {
+  if (!selection.place || !sdrPts) return [];
+  const { lat, lon } = selection.place;
+  const R = 6371, rad = Math.PI / 180;
+  return sdrPts
+    .map((r) => {
+      const dLat = (r.lat - lat) * rad, dLng = (r.lng - lon) * rad;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLng / 2) ** 2;
+      return { ...r, km: Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(a)))) };
+    })
+    .filter((r) => r.km <= 1500)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, 12);
+}
+
 function renderStations() {
   const { place, channels } = selection;
   headEl.hidden = false;
@@ -555,6 +615,12 @@ function renderStations() {
     `${place.country} · ` + (shown === total
       ? `${total} station${total === 1 ? "" : "s"}`
       : `${shown} of ${total} stations`);
+
+  const nearby = nearbyReceivers();
+  if (!nearby.length) railMode = "stations";
+  renderRailTabs(nearby);
+
+  if (railMode === "shortwave") return renderNearbyReceivers(nearby);
 
   stationListEl.innerHTML = "";
   if (!channels.length) {
@@ -1330,7 +1396,11 @@ async function initGlobe() {
     .pointLabel((d) => d.kind === "sdr"
       ? `${d.loc || d.name} · shortwave receiver`
       : `${d.count} station${d.count === 1 ? "" : "s"}`)
-    .onPointClick((d) => d.kind === "sdr" ? selectReceiver(d) : goToPlace(d.i, { play: true }));
+    // NOT .onPointClick — see pickPoint(). pointsMerge collapses every dot into
+    // one mesh, so globe.gl raycasts that single object and hands the callback
+    // the entire data array rather than the dot under the cursor. Wiring it up
+    // meant every click on the globe selected an arbitrary place.
+    ;
 
   await setupDayNight();
   // A slow, permanent drift — the Earth is never truly still, and a dead-static
@@ -1346,7 +1416,80 @@ async function initGlobe() {
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
   // is the fastest way to make a globe feel broken.
   // Pause the drift while you're actually handling it, then let it resume.
-  el.addEventListener("pointerdown", () => { globe.controls().autoRotate = false; pauseDrift(); });
+  /**
+   * Hit-testing, in screen space, because globe.gl cannot do it for us.
+   *
+   * `pointsMerge` merges 13,000 dots into a single mesh — without it the globe
+   * ran at 5fps — and a merged mesh has no per-dot geometry to raycast against.
+   * So we project every visible dot to the screen and take the nearest one
+   * within a finger's width of the cursor.
+   *
+   * Doing it in pixels rather than degrees is what makes a dense region usable:
+   * zoomed out over Europe the dots are on top of each other and you get the
+   * nearest, zoomed into Los Angeles they are far apart and you get exactly the
+   * one you aimed at. The threshold never has to change.
+   */
+  const HIT_PX = 14;
+  function pickPoint(ev) {
+    const data = globe.pointsData();
+    if (!data.length) return null;
+    const rect = el.getBoundingClientRect();
+    const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
+    let best = null, bestD = HIT_PX * HIT_PX;
+    for (const d of data) {
+      const c = globe.getScreenCoords(d.lat, d.lng, 0.002);
+      if (!c || c.x == null) continue;
+      // Points on the far side project onto the disc too; getScreenCoords does
+      // not tell us, so drop anything behind the horizon by comparing against
+      // the camera's sub-point.
+      const dx = c.x - x, dy = c.y - y;
+      const dd = dx * dx + dy * dy;
+      if (dd < bestD) { bestD = dd; best = d; }
+    }
+    return best;
+  }
+
+  /** True when a lat/lng faces the camera — the far hemisphere must not be clickable. */
+  function facing(lat, lng) {
+    const pov = globe.pointOfView();
+    const rad = Math.PI / 180;
+    return Math.sin(lat * rad) * Math.sin(pov.lat * rad) +
+           Math.cos(lat * rad) * Math.cos(pov.lat * rad) *
+           Math.cos((lng - pov.lng) * rad) > 0;
+  }
+
+  let downAt = null;
+  el.addEventListener("pointerdown", (e) => {
+    globe.controls().autoRotate = false; pauseDrift();
+    downAt = { x: e.clientX, y: e.clientY, t: Date.now() };
+  });
+  el.addEventListener("pointerup", (e) => {
+    if (!downAt) return;
+    // A drag is not a click. Rotating the globe should never select anything.
+    const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+    const quick = Date.now() - downAt.t < 500;
+    downAt = null;
+    if (moved > 5 || !quick) return;
+    const d = pickPoint(e);
+    if (!d || !facing(d.lat, d.lng)) return;
+    d.kind === "sdr" ? selectReceiver(d) : goToPlace(d.i, { play: true });
+  });
+
+  // Hover label, throttled to one projection pass per frame.
+  let hoverRaf = null;
+  el.addEventListener("pointermove", (e) => {
+    if (hoverRaf) return;
+    hoverRaf = requestAnimationFrame(() => {
+      hoverRaf = null;
+      const d = pickPoint(e);
+      const hit = d && facing(d.lat, d.lng) ? d : null;
+      el.style.cursor = hit ? "pointer" : "";
+      el.title = !hit ? "" : hit.kind === "sdr"
+        ? `${hit.loc || hit.name} · shortwave receiver`
+        : `${hit.label || ""} ${hit.count} station${hit.count === 1 ? "" : "s"}`.trim();
+    });
+  });
+
   el.addEventListener("wheel", () => { globe.controls().autoRotate = false; pauseDrift(); }, { passive: true });
 
   sizeGlobe();
@@ -1405,9 +1548,19 @@ function applyLod(force = false) {
 }
 
 let driftTimer = null;
+/**
+ * Resume the idle drift a few seconds after you stop handling the globe.
+ *
+ * The `layers.drift` check is the whole point: without it, turning Slow Rotation
+ * off in the View menu stopped the globe for six seconds and then the next touch
+ * of the mouse started it again, which reads as the setting being ignored. It
+ * was.
+ */
 function pauseDrift(ms = 6000) {
   clearTimeout(driftTimer);
-  driftTimer = setTimeout(() => { if (globe && !flying) globe.controls().autoRotate = true; }, ms);
+  driftTimer = setTimeout(() => {
+    if (globe && !flying && layers.drift) globe.controls().autoRotate = true;
+  }, ms);
 }
 
 let lodPending = null, followPending = null;
@@ -1851,6 +2004,23 @@ function stationResultRow(ch) {
 }
 
 /** Select a place and take the globe there — the two always happen together. */
+/** Receivers near the selected place, with how far away each one is. */
+function renderNearbyReceivers(nearby) {
+  stationListEl.innerHTML = "";
+  const dist = (km) => km < 1 ? "here" : `${km.toLocaleString()} km`;
+  for (const rx of nearby) {
+    const el = document.createElement("div");
+    el.className = "st";
+    el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
+    el.querySelector(".sn").textContent = rx.loc || rx.name;
+    el.querySelector(".stags").textContent =
+      `${dist(rx.km)} away · ${rx.slots} ${rx.slots === 1
+        ? t("sdr.slot", "listener slot") : t("sdr.slots", "listener slots")}`;
+    el.onclick = () => selectReceiver(rx);
+    stationListEl.append(el);
+  }
+}
+
 /**
  * Click a receiver: put its bands in the rail where a place's stations would go.
  *
@@ -1862,6 +2032,7 @@ function stationResultRow(ch) {
  */
 function selectReceiver(rx) {
   sdrSel = rx;
+  railMode = "stations";                 // its bands, not the nearby-receiver list
   selection.placeIndex = null;
   showingFavorites = false;
   $("favBtn").setAttribute("aria-pressed", "false");
@@ -1877,7 +2048,8 @@ function selectReceiver(rx) {
   head.querySelector("h2").textContent = rx.loc || rx.name;
   const asl = rx.asl ? ` · ${rx.asl} m` : "";
   head.querySelector("p").textContent =
-    `${t("sdr.receiver", "Shortwave receiver")}${asl} · ${rx.slots} ${t("sdr.slots", "listener slots")}`;
+    `${t("sdr.receiver", "Shortwave receiver")}${asl} · ${rx.slots} ${rx.slots === 1
+      ? t("sdr.slot", "listener slot") : t("sdr.slots", "listener slots")}`;
 
   // Is this receiver in daylight? Same sub-solar point the terminator uses.
   const { lat: sunLat, lng: sunLng } = subsolarPoint();
