@@ -82,6 +82,33 @@
   .m .px.tick-dn{animation:tickDn .9s ease-out}
   @media (prefers-reduced-motion: reduce){ .m .px.tick-up,.m .px.tick-dn{animation:none} }
 
+  /* Add-a-station lives at the foot of the list, quiet until wanted. */
+  .addst{padding:8px 15px 18px}
+  .addst > button{
+    appearance:none;background:none;border:0;color:var(--label2);font:inherit;font-size:12px;
+    padding:6px 0;cursor:default;text-align:left;width:100%;
+  }
+  .addst > button:hover{color:var(--accent)}
+  .addst form{display:flex;flex-direction:column;gap:6px}
+  .addst input{
+    appearance:none;background:var(--fill);border:0;border-radius:7px;color:var(--label);
+    font:inherit;font-size:12px;padding:7px 9px;box-shadow:inset 0 0 0 .5px var(--line);
+  }
+  .addst input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .addst .acts{display:flex;gap:6px;margin-top:2px}
+  .addst .acts button{
+    appearance:none;border:0;border-radius:7px;font:inherit;font-size:12px;font-weight:530;
+    padding:6px 11px;cursor:default;
+  }
+  .addst .acts button[type=submit]{background:var(--accent);color:var(--on-accent)}
+  .addst .acts .cancel{background:var(--fill);color:var(--label2)}
+  .addst .err{font-size:11px;color:#FF453A;padding:1px 2px}
+  .st .rm{
+    appearance:none;background:none;border:0;color:var(--label3);font:inherit;font-size:15px;
+    line-height:1;padding:2px 6px;cursor:default;border-radius:5px;
+  }
+  .st .rm:hover{color:#FF453A;background:var(--fill)}
+
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overflow:hidden}
   body{
@@ -671,8 +698,82 @@ function renderStations() {
       if (locked) setLocked(true);       // and becomes the new locked station
     };
     el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
+    // A station you added can be removed again; one you did not, cannot.
+    if (ch.mine) {
+      const rm = document.createElement("button");
+      rm.className = "rm";
+      rm.textContent = "−";
+      rm.title = t("mine.remove", "Remove this station");
+      rm.onclick = async (e) => {
+        e.stopPropagation();
+        await window.globefm.mineRemove(ch.id);
+        await selectPlace(selection.placeIndex, { keepFilter: true });
+      };
+      el.append(rm);
+      el.querySelector(".sn").textContent = ch.title;
+      el.querySelector(".stags").textContent =
+        [t("mine.yours", "added by you"), ...(ch.tags || []).slice(0, 3)].join(" · ");
+    }
     stationListEl.appendChild(el);
   }
+  stationListEl.appendChild(addStationRow());
+}
+
+/**
+ * "Add a station" at the foot of the list for wherever you are.
+ *
+ * Deliberately here rather than in a menu: the moment you notice a station is
+ * missing is the moment you are looking at the place it should be in, and the
+ * place is the one piece of information the form would otherwise have to ask
+ * for.
+ */
+function addStationRow() {
+  const row = document.createElement("div");
+  row.className = "addst";
+  const btn = document.createElement("button");
+  btn.textContent = `+ ${t("mine.add", "Add a station here")}`;
+  btn.onclick = () => openAddForm(row);
+  row.append(btn);
+  return row;
+}
+
+function openAddForm(row) {
+  if (row.querySelector("form")) return;
+  row.innerHTML = "";
+  const place = selection.place;
+  const f = document.createElement("form");
+  f.innerHTML =
+    `<input name="title" type="text" autocomplete="off" spellcheck="false">
+     <input name="url" type="url" autocomplete="off" spellcheck="false">
+     <div class="err" hidden></div>
+     <div class="acts"><button type="submit"></button><button type="button" class="cancel"></button></div>`;
+  const $$ = (n) => f.querySelector(n);
+  $$('[name="title"]').placeholder = t("mine.name", "Station name");
+  $$('[name="url"]').placeholder = t("mine.url", "Stream URL (http:// or https://)");
+  $$("button[type=submit]").textContent = `${t("mine.save", "Add to")} ${place.title}`;
+  $$(".cancel").textContent = t("mine.cancel", "Cancel");
+  $$(".cancel").onclick = () => { row.replaceWith(addStationRow()); };
+
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const err = $$(".err");
+    err.hidden = true;
+    const res = await window.globefm.mineAdd({
+      title: $$('[name="title"]').value,
+      url: $$('[name="url"]').value,
+      placeIndex: selection.placeIndex,
+    });
+    if (!res.ok) { err.textContent = res.error; err.hidden = false; return; }
+    await selectPlace(selection.placeIndex, { keepFilter: true });
+    // It exists now, so the globe should know: a place with no stations before
+    // has a dot it did not have.
+    globePts = (await window.globefm.globePoints())
+      .map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
+    applyLod(true);
+    window.globefm.tune(res.station);      // adding one is asking to hear it
+  };
+  row.append(f);
+  $$('[name="title"]').focus();
 }
 
 async function toggleFav(ch) {

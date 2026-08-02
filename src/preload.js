@@ -35,6 +35,12 @@ contextBridge.exposeInMainWorld("globefm", {
   languages: () => ipcRenderer.invoke("i18n:languages"),
   palettes: () => ipcRenderer.invoke("palettes:list"),
   palette: () => ipcRenderer.invoke("palettes:get"),
+
+  // stations you added yourself
+  mineList: () => ipcRenderer.invoke("mine:list"),
+  mineAdd: (input) => ipcRenderer.invoke("mine:add", input),
+  mineRemove: (id) => ipcRenderer.invoke("mine:remove", id),
+  onMineChanged: (fn) => ipcRenderer.on("mine:changed", () => fn()),
   version: () => ipcRenderer.invoke("app:version"),
 
   // shortwave receivers

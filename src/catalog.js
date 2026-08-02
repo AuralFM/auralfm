@@ -233,6 +233,9 @@ function globePoints() {
   return out;
 }
 
+/** One place by index, for anything that already knows which place it means. */
+const placeById = (i) => (places[i] ? hydratePlace(i) : null);
+
 function placeIndexOf(title, country) {
   const t = norm(title || ""), c = norm(country || "");
   for (let i = 0; i < places.length; i++) {
@@ -263,4 +266,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, placeSearch, placeChannels, placeTags, placeBands, globePoints, nextInPlace, byId, stats };
+module.exports = { load, search, placeSearch, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats };

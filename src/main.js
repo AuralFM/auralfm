@@ -15,6 +15,7 @@ const news = require("./news");
 const markets = require("./markets");
 const prefs = require("./prefs");
 const palettes = require("./palettes");
+const mine = require("./mystations");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -370,6 +371,29 @@ function createTray() {
   });
 }
 
+/**
+ * Give a user station the same shape as a catalogue channel, so every consumer —
+ * the lists, the globe, favourites, the player — needs no special case. `mine`
+ * is the only new field, and it exists so the UI can offer to remove it.
+ */
+function hydrateMine(s) {
+  const pl = catalog.placeById?.(s.placeIndex);
+  return {
+    id: s.id,
+    title: s.title,
+    secure: s.url.startsWith("https:"),
+    tags: s.tags || [],
+    band: null,
+    rbuuid: null,
+    ok: true,
+    mine: true,
+    place: pl?.title || "",
+    country: pl?.country || "",
+    lon: pl?.lon ?? null,
+    lat: pl?.lat ?? null,
+  };
+}
+
 // ── ipc ───────────────────────────────────────────────────────────────────────
 ipcMain.handle("state:get", () => load());
 ipcMain.handle("state:set", (_e, state) => { save(state); return true; });
@@ -377,7 +401,10 @@ ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
   // Push known-bad streams down rather than hiding them — a station that failed
   // last night may be fine now, and silently vanishing would be worse.
   const hits = catalog.search(q, limit, filter);
-  return hits.sort((a, b) => failures.penalty(a.id) - failures.penalty(b.id));
+  hits.sort((a, b) => failures.penalty(a.id) - failures.penalty(b.id));
+  // Your own stations first. You added them deliberately, so a query that
+  // matches one should not have to out-rank 38,000 others to surface it.
+  return [...mine.search(q).map(hydrateMine), ...hits];
 });
 /**
  * Hardware media keys, held only while GlobeFM is actually playing.
@@ -412,7 +439,26 @@ ipcMain.on("player:ok", (_e, id) => failures.markPlayed(id));
 ipcMain.handle("player:next", (_e, ch, tried) =>
   catalog.nextInPlace(ch, [...(tried || []), ...failures.recentlyFailed()]));
 ipcMain.handle("catalog:stats", () => catalog.stats());
-ipcMain.handle("stream:resolve", (_e, ch) => resolver.resolve(ch));
+ipcMain.handle("stream:resolve", (_e, ch) => {
+  // Nothing to resolve: you told us the URL. Going through the three-tier
+  // resolver would ask radio.garden about a station it has never heard of.
+  if (mine.isMine(ch?.id)) {
+    const s = mine.get(ch.id);
+    return s ? { url: s.url } : null;
+  }
+  return resolver.resolve(ch);
+});
+ipcMain.handle("mine:list", () => mine.all().map(hydrateMine));
+ipcMain.handle("mine:add", (_e, input) => {
+  const r = mine.add(input);
+  if (r.ok) broadcast("mine:changed");
+  return r.ok ? { ok: true, station: hydrateMine(r.station) } : r;
+});
+ipcMain.handle("mine:remove", (_e, id) => {
+  const ok = mine.remove(id);
+  if (ok) broadcast("mine:changed");
+  return ok;
+});
 ipcMain.on("popover:hide", hide);
 ipcMain.on("popover:height", (_e, h) => {
   // AppKit popovers size to their content; a fixed-height panel with a pool of
@@ -424,9 +470,34 @@ ipcMain.on("popover:height", (_e, h) => {
   win.setBounds({ ...b, height }, false);
 });
 ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit));
-ipcMain.handle("catalog:placeChannels", (_e, i, filter) => catalog.placeChannels(i, filter));
+ipcMain.handle("catalog:placeChannels", (_e, i, filter) => {
+  const r = catalog.placeChannels(i, filter);
+  if (!r.place) return r;
+  // Filters describe catalogue metadata (band, radio-browser tag) that a
+  // hand-added station does not have, so yours are only hidden when a filter is
+  // actually on — otherwise they would vanish for no reason the user can see.
+  const own = (filter?.band || filter?.tag) ? [] : mine.forPlace(i).map(hydrateMine);
+  return { ...r, channels: [...own, ...r.channels], total: r.total + own.length };
+});
 ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), bands: catalog.placeBands(i) }));
-ipcMain.handle("catalog:globePoints", () => catalog.globePoints());
+ipcMain.handle("catalog:globePoints", () => {
+  const pts = catalog.globePoints();
+  const extra = mine.countsByPlace();
+  if (!extra.size) return pts;
+  const seen = new Set();
+  for (const p of pts) {
+    const n = extra.get(p[0]);
+    if (n) { p[3] += n; seen.add(p[0]); }
+  }
+  // A station you added somewhere the catalogue has none puts a dot on the
+  // globe that was not there before.
+  for (const [i, n] of extra) {
+    if (seen.has(i)) continue;
+    const pl = catalog.placeById?.(i);
+    if (pl) pts.push([i, pl.lon, pl.lat, n]);
+  }
+  return pts;
+});
 ipcMain.handle("clouds:get", () => clouds.get());
 ipcMain.handle("iss:get", () => iss.get());
 ipcMain.handle("sats:get", () => satellites.get());
@@ -561,6 +632,7 @@ if (!app.requestSingleInstanceLock()) {
     failures.init(app.getPath("userData"));
     clouds.init(app.getPath("userData"));
     satellites.init(app.getPath("userData"));
+    mine.init(app.getPath("userData"));
     sdr.init(app.getPath("userData"));
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
     markets.start();        // live crypto feed; falls back to polling on its own
