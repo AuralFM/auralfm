@@ -38,8 +38,6 @@
     padding:0 14px 0 84px;-webkit-app-region:drag;
   }
   .toolbar input{-webkit-app-region:no-drag}
-  .toolbar .mark{width:15px;height:15px;opacity:.9}
-  h1{font-size:13px;font-weight:640;letter-spacing:-.01em;margin:0}
   .toolbar .sp{flex:1}
   .toolbar #favBtn{
     -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
@@ -260,8 +258,6 @@
 <body>
 
 <div class="toolbar">
-  <img class="mark" src="../../assets/icon.svg" alt="">
-  <h1>GlobeFM</h1>
   <span class="sp"></span>
   <button id="favBtn" title="Favorites">☆</button>
   <input id="q" type="search" placeholder="Search a city, country, or station"
@@ -1205,11 +1201,40 @@ async function tickISS() {
   }
 }
 
+/**
+ * Pixel budget per frame.
+ *
+ * The cost here is pure fill rate — the day/night shader across every pixel.
+ * Measured on a 4K display: disabling the atmosphere gained 1fps and removing
+ * all 12,296 points gained 2, while halving the buffer took it from 5fps to 56.
+ * Geometry is not the problem; resolution is.
+ *
+ * There is a hard cliff around 4 Mpx where the frame misses vsync and drops
+ * straight to half rate: 6.0 Mpx -> 31fps, 4.5 -> 31, 3.4 -> 56. Sitting just
+ * under it is worth a little softness on very large windows.
+ */
+const TARGET_PIXELS = 3.5e6;
+
 function sizeGlobe() {
   if (!globe) return;
   const w = $("globewrap");
   if (!w.clientWidth || !w.clientHeight) return;
   globe.width(w.clientWidth).height(w.clientHeight);
+
+  /**
+   * Scale the drawing buffer to fit the pixel budget rather than blindly
+   * honouring devicePixelRatio. A 3840px window at ratio 2 asks for a 7680x4320
+   * buffer — 24 megapixels a frame, which is what the stutter was.
+   *
+   * Going below 1.0 on a huge window is the right trade: the globe is a smooth
+   * sphere, so slight softness is nearly invisible, while 5fps is not.
+   */
+  const r = globe.renderer();
+  if (!r) return;
+  const css = w.clientWidth * w.clientHeight;
+  const ratio = Math.max(0.75, Math.min(window.devicePixelRatio || 1,
+                                        Math.sqrt(TARGET_PIXELS / Math.max(css, 1))));
+  if (Math.abs(r.getPixelRatio() - ratio) > 0.02) r.setPixelRatio(ratio);
 }
 
 /**
