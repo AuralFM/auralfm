@@ -141,6 +141,7 @@
   .globewrap{flex:1;position:relative;min-width:0}
   /* Read-outs sit on chrome above the globe, not over it. White text on bright
      cloud was illegible — which is what the screenshot showed. */
+  .globebar[hidden]{display:none}   /* display:flex below would otherwise win */
   .globebar{
     flex:none;display:flex;align-items:center;gap:0;
     padding:0 16px 7px;font-size:11px;color:var(--label2);
@@ -263,7 +264,7 @@
 
   /* Now-playing strip, mirroring the popover's transport bar. */
   .now{
-    flex:none;display:flex;align-items:center;gap:9px;padding:9px 16px;
+    flex:none;display:flex;align-items:center;gap:9px;padding:9px 15px 9px 16px;
     box-shadow:inset 0 .5px 0 var(--line);font-size:12px;
   }
   .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 2s ease-in-out infinite}
@@ -301,7 +302,7 @@
     .placehead h2{font-size:23px}
     .scroll{padding:0 15px 16px}
     .secthead{padding:2px 23px 6px}
-    .now{padding:13px 26px;font-size:13px}
+    .now{padding:13px 27px 13px 26px;font-size:13px}   /* 15px scroll + 12px row */
     #play{width:30px;height:30px}
     #vol{width:110px}
     .st{padding:9px 12px}
@@ -320,7 +321,10 @@
   }
   .tick.on{opacity:1}
   .markets{
-    flex:none;display:flex;align-items:center;gap:14px;padding-left:16px;
+    /* margin-left:auto, not a flexible sibling: the headline ticker beside it
+       hides below 1100px, and when it collapsed nothing pushed markets right.
+       This pins it to the right edge whether the ticker is there or not. */
+    flex:none;margin-left:auto;display:flex;align-items:center;gap:14px;padding-left:16px;
     font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
   }
   .markets .m{display:flex;align-items:baseline;gap:5px}
@@ -342,7 +346,7 @@
          autocomplete="off" spellcheck="false">
 </div>
 
-<div class="globebar" id="globehint">Loading globe…</div>
+<div class="globebar" id="globehint" hidden>Loading globe…</div>
 
 <div class="cols">
 
@@ -1303,11 +1307,15 @@ function nearestPlace(lat, lng) {
  * options rather than settings, so they live in the menu and take effect at once
  * — no dialog, no apply button.
  */
-let layers = { clouds: true, dayNight: true, stations: true, iss: true, constellations: true, drift: true };
+let layers = { clouds: true, dayNight: true, stations: true, iss: true,
+               constellations: true, drift: true, statusBar: false };
 
 function applyLayers(next) {
   const prev = layers;
   layers = { ...layers, ...next };
+
+  const bar = $("globehint");
+  if (bar) bar.hidden = !layers.statusBar;
   if (!globe) return;
 
   const sh = globe.globeMaterial()?.userData?.shader;

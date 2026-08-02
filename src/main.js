@@ -188,6 +188,9 @@ const LAYERS = [
   { id: "iss",            label: "ISS and Orbits",       default: true },
   { id: "constellations", label: "Constellations",       default: true },
   { id: "drift",          label: "Slow Rotation",        default: true },
+  // Off until the read-outs earn their place — sun, moon, ISS and imagery
+  // provenance are interesting but they are not what the app is for.
+  { id: "statusBar",      label: "Status Readout",       default: false },
 ];
 
 function layerState() {
