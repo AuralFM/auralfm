@@ -15,7 +15,8 @@
     "dist": "npm run vendor && npm run icons && electron-builder --mac",
     "check": "node scripts/crawl.mjs --check",
     "sky": "node scripts/sky.mjs",
-    "audit": "node scripts/audit.mjs"
+    "audit": "node scripts/audit.mjs",
+    "crawl:sdr": "node scripts/crawl-sdr.mjs"
   },
   "devDependencies": {
     "electron": "^38.0.0",
@@ -44,6 +45,7 @@
       "assets/ATTRIBUTION.md",
       "package.json",
       "data/stations.min.json",
+      "data/sdr.min.json",
       "docs/PRIVACY.md",
       "docs/TERMS.md",
       "assets/sky.json"

@@ -67,6 +67,12 @@ const en = {
   "layer.constellations": "Constellations",
   "layer.drift": "Slow Rotation",
   "layer.statusBar": "Status Readout",
+  "layer.shortwave": "Shortwave Receivers",
+  "sdr.receiver": "Shortwave receiver",
+  "sdr.slots": "listener slots",
+  "sdr.day": "In daylight — the higher bands carry furthest right now.",
+  "sdr.night": "In darkness — the lower bands carry furthest right now.",
+  "sdr.unlikely": "likely quiet now",
 
   // settings window
   "set.title": "Settings",
@@ -91,7 +97,7 @@ const en = {
   "set.contactHint": "Questions, bugs, or a station that won't play — send a note.",
   "set.privacy": "Privacy Policy",
   "set.terms": "Terms of Service",
-  "set.promise": "No servers. No accounts. No analytics. Nothing about what you listen to leaves this Mac.",
+  "set.promise": "No backend of our own. No accounts. No analytics. Nothing about what you listen to leaves this Mac.",
 };
 
 const es = {
@@ -139,6 +145,12 @@ const es = {
   "layer.constellations": "Constelaciones",
   "layer.drift": "Rotación lenta",
   "layer.statusBar": "Panel de estado",
+  "layer.shortwave": "Receptores de onda corta",
+  "sdr.receiver": "Receptor de onda corta",
+  "sdr.slots": "plazas de escucha",
+  "sdr.day": "A plena luz: ahora las bandas altas llegan más lejos.",
+  "sdr.night": "De noche: ahora las bandas bajas llegan más lejos.",
+  "sdr.unlikely": "probablemente en silencio",
 
   "set.title": "Ajustes",
   "set.appearance": "Apariencia",
@@ -162,7 +174,7 @@ const es = {
   "set.contactHint": "Dudas, fallos o una emisora que no suena — escríbenos.",
   "set.privacy": "Política de privacidad",
   "set.terms": "Términos del servicio",
-  "set.promise": "Sin servidores. Sin cuentas. Sin analíticas. Nada de lo que escuchas sale de este Mac.",
+  "set.promise": "Sin servidor propio. Sin cuentas. Sin analíticas. Nada de lo que escuchas sale de este Mac.",
 };
 
 const fr = {
@@ -210,6 +222,12 @@ const fr = {
   "layer.constellations": "Constellations",
   "layer.drift": "Rotation lente",
   "layer.statusBar": "Barre d'état",
+  "layer.shortwave": "Récepteurs à ondes courtes",
+  "sdr.receiver": "Récepteur à ondes courtes",
+  "sdr.slots": "places d'écoute",
+  "sdr.day": "En plein jour : les bandes hautes portent le plus loin en ce moment.",
+  "sdr.night": "De nuit : les bandes basses portent le plus loin en ce moment.",
+  "sdr.unlikely": "sans doute silencieuse",
 
   "set.title": "Réglages",
   "set.appearance": "Apparence",
@@ -233,7 +251,7 @@ const fr = {
   "set.contactHint": "Une question, un bug, une station qui ne passe pas — écrivez-nous.",
   "set.privacy": "Politique de confidentialité",
   "set.terms": "Conditions d'utilisation",
-  "set.promise": "Aucun serveur. Aucun compte. Aucune analyse. Rien de ce que vous écoutez ne quitte ce Mac.",
+  "set.promise": "Aucun serveur à nous. Aucun compte. Aucune analyse. Rien de ce que vous écoutez ne quitte ce Mac.",
 };
 
 const de = {
@@ -281,6 +299,12 @@ const de = {
   "layer.constellations": "Sternbilder",
   "layer.drift": "Langsame Drehung",
   "layer.statusBar": "Statusanzeige",
+  "layer.shortwave": "Kurzwellenempfänger",
+  "sdr.receiver": "Kurzwellenempfänger",
+  "sdr.slots": "Hörplätze",
+  "sdr.day": "Bei Tageslicht — die oberen Bänder tragen jetzt am weitesten.",
+  "sdr.night": "Bei Dunkelheit — die unteren Bänder tragen jetzt am weitesten.",
+  "sdr.unlikely": "vermutlich still",
 
   "set.title": "Einstellungen",
   "set.appearance": "Erscheinungsbild",
@@ -304,7 +328,7 @@ const de = {
   "set.contactHint": "Fragen, Fehler oder ein Sender, der nicht spielt — schreib uns.",
   "set.privacy": "Datenschutzerklärung",
   "set.terms": "Nutzungsbedingungen",
-  "set.promise": "Keine Server. Keine Konten. Keine Analyse. Nichts von dem, was du hörst, verlässt diesen Mac.",
+  "set.promise": "Kein eigener Server. Keine Konten. Keine Analyse. Nichts von dem, was du hörst, verlässt diesen Mac.",
 };
 
 const pt = {
@@ -352,6 +376,12 @@ const pt = {
   "layer.constellations": "Constelações",
   "layer.drift": "Rotação lenta",
   "layer.statusBar": "Painel de status",
+  "layer.shortwave": "Receptores de onda curta",
+  "sdr.receiver": "Receptor de onda curta",
+  "sdr.slots": "vagas de escuta",
+  "sdr.day": "À luz do dia — as bandas altas alcançam mais longe agora.",
+  "sdr.night": "No escuro — as bandas baixas alcançam mais longe agora.",
+  "sdr.unlikely": "provavelmente em silêncio",
 
   "set.title": "Ajustes",
   "set.appearance": "Aparência",
@@ -375,7 +405,7 @@ const pt = {
   "set.contactHint": "Dúvidas, erros ou uma estação que não toca — mande uma mensagem.",
   "set.privacy": "Política de Privacidade",
   "set.terms": "Termos de Serviço",
-  "set.promise": "Sem servidores. Sem contas. Sem análise. Nada do que você ouve sai deste Mac.",
+  "set.promise": "Sem servidor próprio. Sem contas. Sem análise. Nada do que você ouve sai deste Mac.",
 };
 
 /**

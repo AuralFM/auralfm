@@ -20,6 +20,7 @@ const presence = require("./presence");
 const clouds = require("./clouds");
 const iss = require("./iss");
 const satellites = require("./satellites");
+const sdr = require("./sdr");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -191,6 +192,7 @@ const LAYERS = [
   { id: "clouds",         key: "layer.clouds",         default: true },
   { id: "dayNight",       key: "layer.dayNight",       default: true },
   { id: "stations",       key: "layer.stations",       default: true },
+  { id: "shortwave",      key: "layer.shortwave",      default: true },
   { id: "iss",            key: "layer.iss",            default: true },
   { id: "constellations", key: "layer.constellations", default: true },
   { id: "drift",          key: "layer.drift",          default: true },
@@ -449,6 +451,23 @@ ipcMain.handle("doc:text", (_e, name) =>
 ipcMain.handle("i18n:strings", () => getStrings());
 ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("app:version", () => app.getVersion());
+
+// ── shortwave ────────────────────────────────────────────────────────────────
+// Only the aggregate list is served from here. An individual receiver is
+// contacted by the popover, once, when someone clicks it — see src/sdr.js for
+// why that distinction is the whole discipline.
+ipcMain.handle("sdr:points", () => sdr.points());
+ipcMain.handle("sdr:get", (_e, i) => sdr.get(i));
+ipcMain.handle("sdr:stats", () => sdr.stats());
+ipcMain.handle("sdr:nearest", (_e, lat, lng, n) => sdr.nearest(lat, lng, n));
+/**
+ * Explore asks, the popover plays — same rule as stations, so there is still
+ * exactly one thing in this app that makes sound.
+ */
+ipcMain.on("sdr:tune", (_e, rx) => {
+  win?.webContents.send("sdr:tune", rx);
+  if (!win?.isVisible()) show();
+});
 // Headlines open in the real browser. GlobeFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
 ipcMain.on("open:external", (_e, url) => {
@@ -539,6 +558,8 @@ if (!app.requestSingleInstanceLock()) {
     failures.init(app.getPath("userData"));
     clouds.init(app.getPath("userData"));
     satellites.init(app.getPath("userData"));
+    sdr.init(app.getPath("userData"));
+    sdr.refresh();          // never awaited: a stale receiver list is a fine list
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();

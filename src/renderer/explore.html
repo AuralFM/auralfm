@@ -428,6 +428,7 @@
   <span class="markets" id="markets"></span>
 </div>
 
+<script src="kiwi.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const placeListEl=$("placelist"), stationListEl=$("stationlist"), qEl=$("q"),
@@ -878,6 +879,16 @@ async function loadWeather(place) {
 
 // ── globe view ───────────────────────────────────────────────────────────────
 let globe = null, globeLoading = null, globePts = null, sunTimer = null;
+
+/**
+ * Shortwave receivers, merged into the same point layer as the stations rather
+ * than given a layer of their own. globe.gl merges points into one geometry, so
+ * a second layer would mean a second full rebuild on every selection change for
+ * the sake of 838 dots. Per-point colour is a function, so one layer can carry
+ * both — the only cost is that everything downstream has to check `kind`.
+ */
+let sdrPts = null;
+let sdrSel = null;      // the receiver whose bands are in the rail
 let liveTexReady = false;
 
 /** Load the 1.7 MB globe bundle only when someone actually asks for the globe. */
@@ -1295,7 +1306,11 @@ async function initGlobe() {
     .atmosphereAltitude(0.17)
     .pointsData(globePts)
     .pointLat("lat").pointLng("lng")
-    .pointColor((d) => (d.i === selection.placeIndex ? "#ffffff" : "#5ef08a"))
+    // Amber for receivers so they read as a different kind of thing entirely —
+    // these are antennas, not places, and conflating them would be a lie.
+    .pointColor((d) => d.kind === "sdr"
+      ? (sdrSel && sdrSel.host === d.host ? "#ffffff" : "#ffb340")
+      : (d.i === selection.placeIndex ? "#ffffff" : "#5ef08a"))
     .pointLabel((d) => d.label)
     // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
     // read as noise rather than geography.
@@ -1304,13 +1319,18 @@ async function initGlobe() {
     // than they were: at full zoom 12,296 dots merge into a haze and
     // picking one is a fight; the fix is fewer, tighter dots plus level-of-detail
     // below, not a bigger hit target — "Large" is there for people who need it.
-    .pointRadius((d) => (d.i === selection.placeIndex ? 0.55 : dotRadius(d)))
+    .pointRadius((d) => {
+      if (d.kind === "sdr") return (sdrSel && sdrSel.host === d.host) ? 0.6 : 0.28;
+      return d.i === selection.placeIndex ? 0.55 : dotRadius(d);
+    })
     // Merged into one geometry: unmerged, 12,296 points cost 12,298 draw calls
     // per frame. Merged it is ~3. The tradeoff is that changing a point's colour
     // means rebuilding the layer, which only happens on selection.
     .pointsMerge(true)
-    .pointLabel((d) => `${d.count} station${d.count === 1 ? "" : "s"}`)
-    .onPointClick((d) => goToPlace(d.i, { play: true }));
+    .pointLabel((d) => d.kind === "sdr"
+      ? `${d.loc || d.name} · shortwave receiver`
+      : `${d.count} station${d.count === 1 ? "" : "s"}`)
+    .onPointClick((d) => d.kind === "sdr" ? selectReceiver(d) : goToPlace(d.i, { play: true }));
 
   await setupDayNight();
   // A slow, permanent drift — the Earth is never truly still, and a dead-static
@@ -1373,7 +1393,12 @@ function applyLod(force = false) {
   if (tier === lodTier && !force) return;
   lodTier = tier;
   const min = LOD_TIERS[tier].minCount;
-  const shown = globePts.filter((p) => p.count >= min || p.i === selection.placeIndex);
+  const shown = layers.stations
+    ? globePts.filter((p) => p.count >= min || p.i === selection.placeIndex)
+    : [];
+  // Receivers are sparse enough that thinning them by zoom would just make them
+  // vanish. All 838, or none.
+  if (layers.shortwave && sdrPts) shown.push(...sdrPts);
   globe.pointsData(shown);
   // No place-count read-out: it told you nothing you could act on, and it was
   // the longest thing in the status bar.
@@ -1432,8 +1457,8 @@ function nearestPlace(lat, lng) {
  * options rather than settings, so they live in the menu and take effect at once
  * — no dialog, no apply button.
  */
-let layers = { clouds: true, dayNight: true, stations: true, iss: true,
-               constellations: true, drift: true, statusBar: false };
+let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
+               iss: true, constellations: true, drift: true, statusBar: false };
 
 function applyLayers(next) {
   const prev = layers;
@@ -1450,8 +1475,8 @@ function applyLayers(next) {
     sh.uniforms.dayNightOn.value = layers.dayNight ? 1 : 0;
   });
 
-  if (!layers.stations) globe.pointsData([]);
-  else if (!prev.stations) applyLod(true);
+  if (!layers.stations && !layers.shortwave) globe.pointsData([]);
+  else if (layers.stations !== prev.stations || layers.shortwave !== prev.shortwave) applyLod(true);
 
   if (!layers.iss) { globe.pathsData([]).labelsData([]).ringsData([]); }
   else paintOrbits();
@@ -1826,7 +1851,88 @@ function stationResultRow(ch) {
 }
 
 /** Select a place and take the globe there — the two always happen together. */
+/**
+ * Click a receiver: put its bands in the rail where a place's stations would go.
+ *
+ * Bands, not stations, because that is what a receiver actually offers — it is
+ * an antenna, and what you hear depends on which slice of the spectrum you point
+ * it at and whether that path is in daylight. The day/night data the globe
+ * already computes is exactly what tells you which bands are worth trying, so
+ * the rail says so rather than making you know it.
+ */
+function selectReceiver(rx) {
+  sdrSel = rx;
+  selection.placeIndex = null;
+  showingFavorites = false;
+  $("favBtn").setAttribute("aria-pressed", "false");
+  qEl.value = "";
+  placeListEl.hidden = true;
+  stationListEl.hidden = false;
+  placeHeadEl.textContent = "";
+  $("chips").innerHTML = "";
+  $("wx").textContent = "";
+
+  const head = $("head");
+  head.hidden = false;
+  head.querySelector("h2").textContent = rx.loc || rx.name;
+  const asl = rx.asl ? ` · ${rx.asl} m` : "";
+  head.querySelector("p").textContent =
+    `${t("sdr.receiver", "Shortwave receiver")}${asl} · ${rx.slots} ${t("sdr.slots", "listener slots")}`;
+
+  // Is this receiver in daylight? Same sub-solar point the terminator uses.
+  const { lat: sunLat, lng: sunLng } = subsolarPoint();
+  const rad = Math.PI / 180;
+  const cosSun =
+    Math.sin(rx.lat * rad) * Math.sin(sunLat * rad) +
+    Math.cos(rx.lat * rad) * Math.cos(sunLat * rad) * Math.cos((rx.lng - sunLng) * rad);
+  const daylight = cosSun > 0;
+
+  const likely = (b) => b.when === "any" || (b.when === "day") === daylight;
+  const bands = [...Kiwi.BANDS].sort((a, b) => (likely(b) ? 1 : 0) - (likely(a) ? 1 : 0));
+
+  stationListEl.innerHTML = "";
+  const note = document.createElement("div");
+  note.className = "empty";
+  note.style.cssText = "padding:6px 15px 10px;text-align:left";
+  note.textContent = daylight
+    ? t("sdr.day", "In daylight — the higher bands carry furthest right now.")
+    : t("sdr.night", "In darkness — the lower bands carry furthest right now.");
+  stationListEl.append(note);
+
+  for (const b of bands) {
+    const el = document.createElement("div");
+    el.className = "st";
+    el.setAttribute("role", "button");
+    el.tabIndex = 0;
+    const open = likely(b);
+    // Same markup as a station row — this is the station list, and a band is
+    // what a receiver offers in place of a station.
+    el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
+    el.querySelector(".sn").textContent = b.label;
+    el.querySelector(".stags").textContent =
+      `${(b.freq / 1000).toFixed(3)} MHz ${b.mode.toUpperCase()} · ${b.hint}` +
+      (open ? "" : ` · ${t("sdr.unlikely", "likely quiet now")}`);
+    if (!open) el.style.opacity = ".55";
+    const go = () => {
+      window.globefm.tuneSdr({
+        host: rx.host, name: rx.name, loc: rx.loc,
+        freq: b.freq, mode: b.mode, band: b.label,
+      });
+      for (const sib of stationListEl.querySelectorAll(".st"))
+        sib.setAttribute("aria-current", "false");
+      el.setAttribute("aria-current", "true");
+    };
+    el.addEventListener("click", go);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    stationListEl.append(el);
+  }
+
+  flyTo(rx.lat, rx.lng);
+  refreshGlobeSelection();
+}
+
 async function goToPlace(i, { play = false, fly = true } = {}) {
+  sdrSel = null;                       // a place and a receiver are never both selected
   qEl.value = "";
   showingFavorites = false;
   $("favBtn").setAttribute("aria-pressed", "false");
@@ -1860,6 +1966,10 @@ document.addEventListener("keydown", (e) => {
   marketTimer = setInterval(renderMarkets, 90000);   // matches the cache TTL
 
   await loadPlaces("");
+  // Receivers before the globe, so the first point layer already carries them.
+  try {
+    sdrPts = await window.globefm.sdrPoints();
+  } catch { sdrPts = []; }
   try {
     await initGlobe();
   } catch (err) {

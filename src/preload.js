@@ -34,6 +34,14 @@ contextBridge.exposeInMainWorld("globefm", {
   strings: () => ipcRenderer.invoke("i18n:strings"),
   languages: () => ipcRenderer.invoke("i18n:languages"),
   version: () => ipcRenderer.invoke("app:version"),
+
+  // shortwave receivers
+  sdrPoints: () => ipcRenderer.invoke("sdr:points"),
+  sdrGet: (i) => ipcRenderer.invoke("sdr:get", i),
+  sdrStats: () => ipcRenderer.invoke("sdr:stats"),
+  sdrNearest: (lat, lng, n) => ipcRenderer.invoke("sdr:nearest", lat, lng, n),
+  tuneSdr: (rx) => ipcRenderer.send("sdr:tune", rx),
+  onTuneSdr: (fn) => ipcRenderer.on("sdr:tune", (_e, rx) => fn(rx)),
   openMail: () => ipcRenderer.send("mail:open"),
   openLink: (url) => ipcRenderer.send("open:external", url),
   stats: () => ipcRenderer.invoke("catalog:stats"),

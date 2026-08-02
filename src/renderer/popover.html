@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; media-src *;">
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; media-src *; connect-src ws: wss:;">
 <title>GlobeFM</title>
 <style>
   /* Colors follow AppKit's label/fill hierarchy and system palette so the panel
@@ -251,6 +251,7 @@
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
 </div>
 
+<script src="kiwi.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const listEl=$("list"), qEl=$("q"), headEl=$("secthead"), toggle=$("toggle"),
@@ -268,10 +269,30 @@ let tried = [];         // ids attempted in the current auto-skip chain
 let skipping = false;   // guards against re-entering the skip while one is running
 let gen = 0, watchdog = null, searchSeq = 0, debounce = null;
 
+/**
+ * Shortwave lives in this window for the same reason everything else audible
+ * does: there is exactly one thing in GlobeFM that makes sound, so play/pause,
+ * volume, the media keys and Now Playing all work without knowing which kind of
+ * radio is playing. Explore asks; this window plays.
+ */
+let sdrSession = null, audioCtx = null, sdrRx = null;
+
+function sdrStop() {
+  if (!sdrSession) return;
+  sdrSession.stop();
+  sdrSession = null;
+  sdrRx = null;
+}
+
 function setStatus(m,c=""){ statusEl.textContent=m; statusEl.className=c; publish(); }
 function publish(){
+  // A shortwave session is described in the same shape as a station, so Explore
+  // and the tray need no special case for it.
+  const ch = sdrRx
+    ? { id: "sdr:" + sdrRx.host, title: sdrRx.label, place: sdrRx.loc, country: "", sdr: true }
+    : current ? {id:current.id,title:current.title,place:current.place,country:current.country} : null;
   window.globefm.publishState({
-    channel: current ? {id:current.id,title:current.title,place:current.place,country:current.country} : null,
+    channel: ch,
     status: statusEl.textContent,
     playing: live,
     volume: audio.volume,
@@ -393,10 +414,26 @@ function start(url, my) {
   }, 15000);
 }
 
+/**
+ * Every play/pause affordance goes through here — the button, the space bar, the
+ * media keys and Explore's transport — so none of them has to know which kind of
+ * radio is playing.
+ *
+ * Shortwave has no resume. Pausing would mean holding a volunteer's receiver
+ * slot open while not listening to it, and resuming would mean a fresh
+ * connection, which the etiquette rules forbid doing automatically. So for a
+ * shortwave session, pause means stop, and that is the honest behaviour.
+ */
+function togglePlay() {
+  if (sdrSession) return stop();
+  if (current) audio.paused ? tune(current) : stop();
+}
+
 function stop(){
   clearTimeout(watchdog); gen++; live = false;
   clearMediaSession();
   window.globefm.mediaKeys(false);
+  sdrStop();
   audio.pause(); audio.removeAttribute("src"); audio.load();
   toggle.textContent = "▶";
   document.body.classList.remove("playing");
@@ -450,11 +487,13 @@ audio.addEventListener("error", () => {
 });
 
 toggle.onclick = () => {
-  if (!current) return;
-  audio.paused ? tune(current) : stop();
+  // `current` is null during a shortwave session — guard on "is anything on".
+  if (!current && !sdrSession) return;
+  togglePlay();
 };
 function applyVolume(v) {
   audio.volume = v;
+  sdrSession?.setVolume(v);
   vol.value = v;
   $("mute").textContent = v === 0 ? "🔇" : v < 0.5 ? "🔈" : "🔊";
   state.vol = +v; persist();
@@ -477,7 +516,7 @@ document.addEventListener("keydown", e => {
   }
   if (e.key === "Enter" && typing && rows.length) { tune(rows[0]); return; }
   if (typing) return;                       // don't steal keys while searching
-  if (e.code === "Space") { e.preventDefault(); if (current) audio.paused ? tune(current) : stop(); }
+  if (e.code === "Space") { e.preventDefault(); togglePlay(); }
   else if (/^[1-9]$/.test(e.key)) {
     const f = state.favorites[+e.key - 1];
     if (f) tune(f);
@@ -535,6 +574,60 @@ function stepFavorite(delta) {
 // Explore has no audio element of its own — it asks us to play.
 window.globefm.onTune((ch) => { tune(ch); });
 
+/**
+ * Tune a shortwave receiver.
+ *
+ * @param {{host,name,loc,freq,mode,band}} rx
+ *
+ * Note what this does NOT do: retry, reconnect, or try a second receiver. These
+ * are volunteers' machines on volunteers' bandwidth, and a client that retries
+ * on failure is how 838 hobbyists become 838 people who block you. A refusal is
+ * an answer — Explore offers a different receiver instead.
+ */
+window.globefm.onTuneSdr((rx) => {
+  stop();                                   // one source of sound, always
+  audioCtx = audioCtx || new AudioContext();
+  audioCtx.resume?.();
+
+  sdrRx = { ...rx, label: `${rx.band} · ${rx.loc || rx.name}` };
+  setStatus("Connecting to receiver…");
+
+  sdrSession = new Kiwi.KiwiSession({
+    host: rx.host,
+    freq: rx.freq,
+    mode: rx.mode,
+    audio: audioCtx,
+    onState: (s) => {
+      // A session that ended for any reason must not leave the UI claiming to play.
+      if (s.status === "playing") {
+        if (!live) {
+          live = true;
+          document.body.classList.add("playing");
+          toggle.textContent = "⏸";
+          window.globefm.mediaKeys(true);
+        }
+        const sig = s.rssi == null ? "" : ` · ${Math.round(s.rssi)} dBm`;
+        setStatus(`${rx.freq >= 1000 ? (rx.freq/1000).toFixed(3) + " MHz" : rx.freq + " kHz"} ${rx.mode.toUpperCase()}${sig}`);
+      } else if (s.status === "error") {
+        live = false;
+        document.body.classList.remove("playing");
+        toggle.textContent = "▶";
+        sdrRx = null; sdrSession = null;
+        setStatus(`Receiver ${s.error}`, "err");
+      } else if (s.status === "stopped" && sdrSession) {
+        live = false;
+        document.body.classList.remove("playing");
+        toggle.textContent = "▶";
+        sdrRx = null; sdrSession = null;
+        setStatus("Receiver disconnected");
+      }
+    },
+  });
+  sdrSession.setVolume(audio.volume);
+  sdrSession.connect();
+  nowName.textContent = sdrRx.label;
+});
+
 // Hardware media keys, forwarded from main.
 // Listener count, when a presence server is configured. Silent otherwise.
 window.globefm.onListeners((n) => {
@@ -545,12 +638,12 @@ window.globefm.onListeners((n) => {
 
 // Explore's transport talks to this player; there is still only one <audio>.
 window.globefm.onTransport(({ action, value }) => {
-  if (action === "toggle") { if (current) audio.paused ? tune(current) : stop(); }
+  if (action === "toggle") togglePlay();
   else if (action === "volume") applyVolume(Math.max(0, Math.min(1, value)));
 });
 
 window.globefm.onMediaKey((action) => {
-  if (action === "playpause") { if (current) audio.paused ? tune(current) : stop(); }
+  if (action === "playpause") togglePlay();
   else if (action === "next") stepFavorite(1);
   else if (action === "prev") stepFavorite(-1);
 });

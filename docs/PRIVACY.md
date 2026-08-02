@@ -46,6 +46,8 @@ server we operate, and we never see them.
 | Google News RSS | Local headlines | Your IP address |
 | CoinGecko | Crypto prices | Your IP address |
 | wheretheiss.at / Celestrak | ISS and satellite positions | Your IP address |
+| rx.linkfanel.net | The list of shortwave receivers, refreshed at most twice a day | Your IP address |
+| A shortwave receiver you click | Listening to that antenna | Your IP address, and which frequency you tuned |
 
 Two points worth stating plainly:
 
@@ -58,6 +60,22 @@ Two points worth stating plainly:
 
 Each of these services has its own privacy policy, which governs what they do
 with a request once it reaches them.
+
+## Shortwave receivers
+
+The shortwave receivers on the globe are private machines — someone's radio and
+antenna, in someone's garden, connected at their own expense. Two things follow
+from that, and both are worth saying plainly.
+
+**A receiver you click sees your IP address and the frequency you tuned**, in the
+same way a radio station's server sees your IP when you press play on a station.
+GlobeFM connects only when you click a specific receiver, only to that one, and
+only one at a time. It never contacts a receiver in the background, never scans
+them to see who is free, and never retries one that refused — the list of who
+exists comes from a single aggregate file, not from asking 837 machines.
+
+**The operator can see they have a listener.** That is inherent to borrowing
+someone's antenna, and it is the same bargain the receiver's own web page offers.
 
 ## Optional features that are off by default
 
