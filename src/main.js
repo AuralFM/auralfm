@@ -23,6 +23,7 @@ const clouds = require("./clouds");
 const iss = require("./iss");
 const satellites = require("./satellites");
 const sdr = require("./sdr");
+const flights = require("./flights");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -196,6 +197,9 @@ const LAYERS = [
   { id: "stations",       key: "layer.stations",       default: true },
   { id: "shortwave",      key: "layer.shortwave",      default: true },
   { id: "iss",            key: "layer.iss",            default: true },
+  // Off by default: it polls a volunteer feed, so it should be a thing you ask
+  // for rather than a thing you have to notice and switch off.
+  { id: "flights",        key: "layer.flights",        default: false },
   { id: "constellations", key: "layer.constellations", default: true },
   { id: "drift",          key: "layer.drift",          default: true },
   // Off until the read-outs earn their place — sun, moon, ISS and imagery
@@ -534,6 +538,7 @@ ipcMain.handle("sdr:points", () => sdr.points());
 ipcMain.handle("sdr:get", (_e, i) => sdr.get(i));
 ipcMain.handle("sdr:stats", () => sdr.stats());
 ipcMain.handle("sdr:nearest", (_e, lat, lng, n) => sdr.nearest(lat, lng, n));
+ipcMain.handle("flights:get", (_e, lat, lng, span) => flights.get(lat, lng, span));
 /**
  * Explore asks, the popover plays — same rule as stations, so there is still
  * exactly one thing in this app that makes sound.

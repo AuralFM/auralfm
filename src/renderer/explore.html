@@ -1871,11 +1871,15 @@ function throttle(fn, ms) {
 }
 
 const followThrottled = throttle(followCentre, 90);
+// Aircraft are fetched for wherever you are looking, so moving the camera has to
+// ask again — but no faster than the feed's own minimum gap.
+const flightsThrottled = throttle(() => { if (layers.flights) tickFlights(); }, 12000);
 const lodThrottled = throttle(() => applyLod(), 200);
 
 function onCameraChange() {
   lodThrottled();
   followThrottled();
+  flightsThrottled();
 }
 
 /**
@@ -1923,7 +1927,7 @@ function nearestPlace(lat, lng) {
  * — no dialog, no apply button.
  */
 let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
-               iss: true, constellations: true, drift: true, statusBar: false };
+               iss: true, flights: false, constellations: true, drift: true, statusBar: false };
 
 function applyLayers(next) {
   const prev = layers;
@@ -1947,6 +1951,17 @@ function applyLayers(next) {
   else paintOrbits();
 
   globe.controls().autoRotate = layers.drift && !flying;
+
+  if (layers.flights !== prev.flights) {
+    clearInterval(flightTimer);
+    if (layers.flights) {
+      tickFlights();
+      flightTimer = setInterval(tickFlights, 12000);
+    } else {
+      flightData = [];
+      paintOrbits();
+    }
+  }
 
   if (layers.constellations !== prev.constellations) drawSky();
 }
@@ -2154,6 +2169,52 @@ async function drawSky() {
  * SGP4 propagator.
  */
 let issTrail = [], issTimer = null, sats = [], satTimer = null;
+let flightData = [], flightTimer = null, flightBusy = false;
+
+/**
+ * Aircraft near where you are looking.
+ *
+ * Three guards, and all three exist because this polls a volunteer-run feed:
+ * nothing is fetched unless the layer is on, nothing is fetched while the window
+ * is hidden, and only one request is ever in flight. The module behind it caps
+ * the result and backs off on failure.
+ *
+ * Drawn as short heading trails rather than dots. A dot cannot show which way
+ * something is going, and direction is most of what makes a moving aircraft
+ * interesting — the traffic over an airport reads as arrivals and departures
+ * rather than a swarm.
+ */
+async function tickFlights() {
+  if (!layers.flights || !globe) { paintFlights([]); return; }
+  if (document.hidden || flightBusy) return;
+  flightBusy = true;
+  try {
+    const pov = globe.pointOfView();
+    // Roughly the angular radius of what is on screen, which is what the module
+    // turns into a request radius.
+    const span = Math.min(12, Math.max(1.5, (Math.acos(1 / (1 + pov.altitude)) * 180 / Math.PI) * 0.6));
+    flightData = (await window.globefm.flights(pov.lat, pov.lng, span)) || [];
+    paintFlights(flightData);
+  } catch { /* best-effort, like everything else live here */ }
+  finally { flightBusy = false; }
+}
+
+/** One short great-circle segment per aircraft, pointing where it is headed. */
+function flightPaths(list) {
+  const rad = Math.PI / 180;
+  return list.map((f) => {
+    // About 90 seconds of travel, so faster aircraft draw longer trails.
+    const km = Math.max(6, ((f.kt || 250) * 1.852) / 40);
+    const d = (km / 6371);
+    const t = (f.track ?? 0) * rad, la = f.lat * rad, lo = f.lng * rad;
+    const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(t));
+    const lon2 = lo + Math.atan2(Math.sin(t) * Math.sin(d) * Math.cos(la),
+                                 Math.cos(d) - Math.sin(la) * Math.sin(lat2));
+    return { flight: f, coords: [[f.lat, f.lng], [lat2 / rad, ((lon2 / rad + 540) % 360) - 180]] };
+  });
+}
+
+function paintFlights() { paintOrbits(); }
 
 /**
  * Orbits, propagated rather than recorded.
@@ -2174,16 +2235,30 @@ function paintOrbits() {
   const orbitPaths = sats.flatMap((s) =>
     s.path.map((seg) => ({ pts: seg, orbit: true })));
   const issPaths = issTrail.length > 1 ? splitTrail(issTrail).map((seg) => ({ pts: seg })) : [];
+  // Aircraft share the path layer rather than adding one: globe.gl rebuilds a
+  // layer wholesale on every update, and two layers updating on different clocks
+  // is twice the rebuild for no gain.
+  const air = (layers.flights ? flightPaths(flightData) : [])
+    .map((f) => ({ pts: f.coords, air: true, flight: f.flight }));
 
   globe
-    .pathsData([...orbitPaths, ...issPaths])
+    .pathsData([...orbitPaths, ...issPaths, ...air])
     .pathPoints((d) => d.pts)
     .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
-    .pathPointAlt(0.052)
-    .pathColor((d) => d.orbit
+    // Aircraft sit just off the surface — high enough to clear the terrain, far
+    // below the orbits, which is roughly the truth.
+    .pathPointAlt((d) => (d.air ? 0.008 : 0.052))
+    .pathColor((d) => d.air
+      ? ["rgba(255,255,255,0)", "rgba(255,236,190,0.85)"]
+      : d.orbit
       ? ["rgba(120,180,255,0.05)", "rgba(120,180,255,0.4)"]
       : ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"])
-    .pathStroke((d) => (d.orbit ? 0.7 : 1.1))
+    .pathStroke((d) => (d.air ? 0.5 : d.orbit ? 0.7 : 1.1))
+    .pathLabel((d) => d.air && d.flight?.flight
+      ? `${d.flight.flight} · ${d.flight.altFt.toLocaleString()} ft` +
+        (d.flight.kt ? ` · ${d.flight.kt} kt` : "") +
+        (d.flight.type ? ` · ${d.flight.type}` : "")
+      : "")
     .pathTransitionDuration(0);
 
   globe

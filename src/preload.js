@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld("globefm", {
   sdrGet: (i) => ipcRenderer.invoke("sdr:get", i),
   sdrStats: () => ipcRenderer.invoke("sdr:stats"),
   sdrNearest: (lat, lng, n) => ipcRenderer.invoke("sdr:nearest", lat, lng, n),
+  flights: (lat, lng, span) => ipcRenderer.invoke("flights:get", lat, lng, span),
   tuneSdr: (rx) => ipcRenderer.send("sdr:tune", rx),
   onTuneSdr: (fn) => ipcRenderer.on("sdr:tune", (_e, rx) => fn(rx)),
   openMail: () => ipcRenderer.send("mail:open"),
