@@ -12,7 +12,8 @@
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
     "vendor": "node scripts/vendor.mjs",
     "postinstall": "node scripts/vendor.mjs",
-    "dist": "npm run vendor && npm run icons && electron-builder --mac"
+    "dist": "npm run vendor && npm run icons && electron-builder --mac",
+    "check": "node scripts/crawl.mjs --check"
   },
   "devDependencies": {
     "electron": "^38.0.0",
@@ -28,7 +29,7 @@
   "build": {
     "appId": "com.meltonbell.globefm",
     "productName": "GlobeFM",
-    "copyright": "Copyright \u00a9 2026 Melton Bell",
+    "copyright": "Copyright © 2026 Melton Bell",
     "directories": {
       "output": "dist",
       "buildResources": "build"

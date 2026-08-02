@@ -54,7 +54,29 @@ const CFG = {
   retries:     opt("retries", 4),
   buildOnly:   flag("build"),
   fresh:       flag("fresh"),
+  check:       flag("check"),
 };
+
+/**
+ * Is the shipped bundle stale? Stations come and go, so the catalog is a
+ * snapshot with a shelf life. This just reports — it never re-crawls on its own,
+ * because a surprise 50-minute crawl is a worse outcome than stale data.
+ */
+function checkAge() {
+  const f = path.join(DATA, "stations.min.json");
+  if (!fs.existsSync(f)) {
+    console.log("catalog: missing — run `npm run crawl`");
+    return process.exit(1);
+  }
+  const bundle = JSON.parse(fs.readFileSync(f, "utf8"));
+  const days = Math.floor((Date.now() - new Date(bundle.g)) / 86400000);
+  console.log(`catalog: ${bundle.c.length.toLocaleString()} channels · ${bundle.p.length.toLocaleString()} places`);
+  console.log(`built:   ${new Date(bundle.g).toISOString().slice(0, 10)} (${days} day${days === 1 ? "" : "s"} ago)`);
+  if (days >= 120) console.log("verdict: stale — worth re-running `npm run crawl && npm run tags`");
+  else if (days >= 60) console.log("verdict: ageing — fine, but plan a refresh");
+  else console.log("verdict: fresh");
+  process.exit(0);
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -261,6 +283,7 @@ function build(places) {
 
 // ── main ──────────────────────────────────────────────────────────────────────
 const t0 = Date.now();
+if (CFG.check) checkAge();
 try {
   if (CFG.fresh && fs.existsSync(F.progress)) {
     fs.unlinkSync(F.progress);

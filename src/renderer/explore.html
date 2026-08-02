@@ -555,6 +555,66 @@ function subsolarPoint(date = new Date()) {
   return { lat: decl, lng };
 }
 
+/**
+ * Sub-lunar point and illuminated fraction.
+ *
+ * Low-precision lunar position (Meeus, chapter 47, principal terms only) —
+ * roughly a degree, which is finer than a dot on this globe can express. A full
+ * ephemeris would be many times the code for no visible gain.
+ *
+ * Deliberately *not* used to light the Earth: real moonlight is ~400,000x
+ * dimmer than sunlight and would be invisible next to the night-lights texture.
+ * It marks where the moon is, and how full it is.
+ */
+function moonPoint(date = new Date()) {
+  const rad = Math.PI / 180;
+  const JD = date.getTime() / 86400000 + 2440587.5;
+  const T = (JD - 2451545) / 36525;
+
+  const L = 218.316 + 13.176396 * (JD - 2451545);        // mean longitude
+  const M = 134.963 + 13.064993 * (JD - 2451545);        // mean anomaly
+  const F = 93.272 + 13.229350 * (JD - 2451545);         // argument of latitude
+
+  const lambda = (L + 6.289 * Math.sin(M * rad)) * rad;  // ecliptic longitude
+  const beta = 5.128 * Math.sin(F * rad) * rad;          // ecliptic latitude
+  const eps = (23.439 - 0.0000004 * (JD - 2451545)) * rad;
+
+  // ecliptic -> equatorial
+  const ra = Math.atan2(
+    Math.sin(lambda) * Math.cos(eps) - Math.tan(beta) * Math.sin(eps),
+    Math.cos(lambda));
+  const dec = Math.asin(
+    Math.sin(beta) * Math.cos(eps) + Math.cos(beta) * Math.sin(eps) * Math.sin(lambda));
+
+  // Greenwich mean sidereal time -> sub-lunar longitude
+  const gmst = (280.46061837 + 360.98564736629 * (JD - 2451545)) % 360;
+  let lng = (ra / rad - gmst) % 360;
+  lng = ((lng + 180) % 360 + 360) % 360 - 180;
+
+  // Illuminated fraction from the sun-moon elongation.
+  const sunM = (357.529 + 0.98560028 * (JD - 2451545)) * rad;
+  const sunLambda = (280.459 + 0.98564736 * (JD - 2451545) + 1.915 * Math.sin(sunM)) * rad;
+  const elong = Math.acos(Math.cos(beta) * Math.cos(lambda - sunLambda));
+  const illum = (1 - Math.cos(elong)) / 2;
+  // Waxing when the moon leads the sun in ecliptic longitude.
+  const waxing = Math.sin(lambda - sunLambda) > 0;
+
+  return { lat: dec / rad, lng, illum, waxing };
+}
+
+const MOON_PHASES = [
+  [0.02, "new moon", "●"], [0.24, "waxing crescent", "☽"], [0.30, "first quarter", "☽"],
+  [0.72, "waxing gibbous", "☽"], [0.98, "full moon", "○"], [1.01, "waning gibbous", "☾"],
+];
+function moonPhaseName({ illum, waxing }) {
+  if (illum < 0.02) return ["new moon", "●"];
+  if (illum > 0.98) return ["full moon", "○"];
+  const band = illum < 0.28 ? "crescent" : illum < 0.72 ? "quarter" : "gibbous";
+  const dir = waxing ? "waxing" : "waning";
+  const name = band === "quarter" ? (waxing ? "first quarter" : "last quarter") : `${dir} ${band}`;
+  return [name, waxing ? "☽" : "☾"];
+}
+
 /** Unit vector toward the sun, in the globe's own coordinate frame. */
 function sunVector() {
   const { lat, lng } = subsolarPoint();
@@ -663,11 +723,16 @@ function updateSun() {
   const sh = globe.globeMaterial()?.userData?.shader;
   if (sh) sh.uniforms.sunDirection.value = sunVector();
   const { lat, lng } = subsolarPoint();
+  const m = moonPoint();
+  const [phase, glyph] = moonPhaseName(m);
   const el = $("sunreadout");
   if (el) {
-    el.textContent = `sun overhead ${Math.abs(lat).toFixed(1)}°${lat >= 0 ? "N" : "S"} `
-      + `${Math.abs(lng).toFixed(1)}°${lng >= 0 ? "E" : "W"}`;
+    const fmt = (v, pos, neg) => `${Math.abs(v).toFixed(1)}°${v >= 0 ? pos : neg}`;
+    el.textContent =
+      `☀︎ ${fmt(lat, "N", "S")} ${fmt(lng, "E", "W")}`
+      + `   ${glyph} ${fmt(m.lat, "N", "S")} ${fmt(m.lng, "E", "W")} · ${phase} ${Math.round(m.illum * 100)}%`;
   }
+  drawMoonMarker(m);
 }
 
 async function initGlobe() {
@@ -799,6 +864,18 @@ function nearestPlace(lat, lng) {
   }
   if (!best) return null;
   return { i: best.i, dist: Math.acos(Math.min(1, Math.max(-1, bestCos))) / rad };
+}
+
+/** A single ring on the globe marking where the moon is directly overhead. */
+function drawMoonMarker(m) {
+  if (!globe) return;
+  globe.ringsData([{ lat: m.lat, lng: m.lng, illum: m.illum }])
+    .ringLat("lat").ringLng("lng")
+    .ringMaxRadius(3.2)
+    .ringPropagationSpeed(0)          // static marker, not a pulse
+    .ringRepeatPeriod(0)
+    .ringAltitude(0.006)
+    .ringColor(() => () => `rgba(255,255,255,${0.25 + m.illum * 0.5})`);
 }
 
 function sizeGlobe() {
@@ -936,6 +1013,14 @@ document.addEventListener("keydown", (e) => {
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   await loadPlaces("");
   try { await initGlobe(); } catch (err) { $("globehint").textContent = err.message; }
+
+  // Quietly flag a stale catalog rather than letting it rot invisibly.
+  const st = await window.globefm.stats();
+  const days = st.generated ? Math.floor((Date.now() - new Date(st.generated)) / 86400000) : 0;
+  if (days >= 120) {
+    placeHeadEl.textContent =
+      `${placeHeadEl.textContent} · catalog ${days} days old — run npm run crawl`;
+  }
 })();
 </script>
 </body>
