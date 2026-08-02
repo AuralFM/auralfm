@@ -7,10 +7,15 @@ where it truly is, the ISS overhead, stars behind. Click anywhere and hear what
 that place is listening to right now. **38,342 live radio stations across 12,296
 places.**
 
-**Offline-first. Serverless. Collects nothing.** The station catalogue lives on
-your machine; search, browse and the globe all work with the network unplugged.
-There is no backend, no account, and nothing about what you listen to leaves your
-computer.
+**Offline-first. No backend of our own. Collects nothing.** The station catalogue
+lives on your machine; search, browse and the globe all work with the network
+unplugged. There is nothing to sign into, nothing that reports back, and nobody
+keeping a list of what you played.
+
+*Said precisely, because the precise version is the stronger one:* the stations
+themselves are stream servers — you need a connection to hear audio, and that is
+true of every radio app there is. What is unusual here is that everything **around**
+the audio is yours already. See [docs/DECENTRALIZATION.md](docs/DECENTRALIZATION.md).
 
 Inspired by [radio.garden](https://radio.garden), started because Apple is winding
 down radio support in Shortcuts and Apple Music — and grown well past it.

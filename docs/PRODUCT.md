@@ -40,8 +40,11 @@ whole character of the thing:
 
 - **Offline-first.** The 38k-station catalogue is on disk. Search, browse and the
   globe work with the network unplugged.
-- **Serverless.** No backend, no account, no sign-in. Presence exists but is off
-  unless self-hosted.
+- **No backend of our own.** No account, no sign-in, nothing of ours to go down.
+  Presence exists but is off unless self-hosted. (Previously written as
+  "serverless" — that word does not survive contact with the eight third-party
+  services the app talks to, and every one of them is a server. See
+  [DECENTRALIZATION.md](DECENTRALIZATION.md) §1.)
 - **Collects nothing.** No telemetry, no profile, no history leaving the machine.
 
 That trio is a genuine position, not a limitation to apologise for. Almost
@@ -101,7 +104,7 @@ than one mark.
       the app is mostly a dark globe in space, and green now reads as an accent
       rather than a brand.
 - [ ] **About panel** — required anyway for the CC BY credit, and it is where the
-      offline/serverless/collects-nothing promise should be stated plainly.
+      offline-first/no-backend/collects-nothing promise should be stated plainly.
 
 ## 6. Assets to produce
 

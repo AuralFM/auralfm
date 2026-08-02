@@ -166,7 +166,7 @@ function showAbout() {
     applicationName: "GlobeFM",
     applicationVersion: app.getVersion(),
     copyright:
-      "Offline-first · no account · no telemetry\n" +
+      "Offline-first · no account · no telemetry · no backend of ours\n" +
       "The station catalogue lives on your machine. Nothing about what you\n" +
       "listen to leaves it.\n\n" +
       "Stations: radio.garden · radio-browser.info\n" +
