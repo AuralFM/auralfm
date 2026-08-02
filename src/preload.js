@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld("globefm", {
   // playback — Explore requests, the popover performs, everyone observes
   tune: (channel) => ipcRenderer.send("player:tune", channel),
   reportFailed: (id) => ipcRenderer.send("player:failed", id),
+  mediaKeys: (on) => ipcRenderer.send("player:mediakeys", on),
+  onMediaKey: (fn) => ipcRenderer.on("player:mediakey", (_e, a) => fn(a)),
   reportOk: (id) => ipcRenderer.send("player:ok", id),
   nextStation: (ch, tried) => ipcRenderer.invoke("player:next", ch, tried),
   publishState: (state) => ipcRenderer.send("player:state", state),

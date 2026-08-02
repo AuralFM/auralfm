@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const catalog = require("./catalog");
@@ -178,6 +178,33 @@ ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
   const hits = catalog.search(q, limit, filter);
   return hits.sort((a, b) => failures.penalty(a.id) - failures.penalty(b.id));
 });
+/**
+ * Hardware media keys, held only while GlobeFM is actually playing.
+ *
+ * globalShortcut is exclusive: whoever registers a key owns it system-wide. So
+ * holding these permanently would steal F7/F8/F9 from Music and Spotify even
+ * when GlobeFM is silent. Registering on play and releasing on stop keeps the
+ * keys with whatever is making sound.
+ */
+let mediaKeysHeld = false;
+function setMediaKeys(on) {
+  if (on === mediaKeysHeld) return;
+  if (!on) {
+    globalShortcut.unregisterAll();
+    mediaKeysHeld = false;
+    console.log(`media keys: released (playpause=${globalShortcut.isRegistered("MediaPlayPause")})`);
+    return;
+  }
+  const send = (action) => win?.webContents.send("player:mediakey", action);
+  const ok = globalShortcut.register("MediaPlayPause", () => send("playpause"))
+          && globalShortcut.register("MediaNextTrack", () => send("next"))
+          && globalShortcut.register("MediaPreviousTrack", () => send("prev"));
+  mediaKeysHeld = ok;
+  if (!ok) globalShortcut.unregisterAll();   // all or nothing; half is confusing
+  console.log(`media keys: ${ok ? "held" : "NOT registered"}`
+    + ` (playpause=${globalShortcut.isRegistered("MediaPlayPause")})`);
+}
+ipcMain.on("player:mediakeys", (_e, on) => setMediaKeys(!!on));
 ipcMain.on("player:failed", (_e, id) => failures.markFailed(id));
 ipcMain.on("player:ok", (_e, id) => failures.markPlayed(id));
 ipcMain.handle("player:next", (_e, ch, tried) =>
@@ -238,5 +265,5 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on("window-all-closed", () => { /* stay alive in the tray */ });
-  app.on("before-quit", () => { quitting = true; });
+  app.on("before-quit", () => { quitting = true; globalShortcut.unregisterAll(); });
 }

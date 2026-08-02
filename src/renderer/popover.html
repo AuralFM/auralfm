@@ -329,6 +329,8 @@ function start(url, my) {
 
 function stop(){
   clearTimeout(watchdog); gen++; live = false;
+  clearMediaSession();
+  window.globefm.mediaKeys(false);
   audio.pause(); audio.removeAttribute("src"); audio.load();
   toggle.textContent = "▶";
   document.body.classList.remove("playing");
@@ -369,6 +371,8 @@ audio.addEventListener("playing", () => {
   live = true;
   skipping = false;
   window.globefm.reportOk(current?.id);
+  updateMediaSession();
+  window.globefm.mediaKeys(true);
   toggle.textContent = "❚❚";
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
@@ -403,8 +407,63 @@ document.addEventListener("keydown", e => {
   }
 });
 
+/**
+ * macOS Now Playing + media keys, via the MediaSession API.
+ *
+ * Chromium wires MediaSession into the system Now Playing widget and the
+ * hardware media keys, so this covers both without a native module. Handlers are
+ * only meaningful while something is playing, which is also what stops GlobeFM
+ * hijacking F8 from Music or Spotify when it is idle — see clearMediaSession().
+ */
+function updateMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  if (!current || !live) return clearMediaSession();
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: current.title,
+    artist: [current.place, current.country].filter(Boolean).join(" · "),
+    album: "GlobeFM",
+    artwork: [
+      { src: "../../assets/generated/favicon.png", sizes: "64x64", type: "image/png" },
+      { src: "../../assets/generated/app-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  });
+  navigator.mediaSession.playbackState = "playing";
+
+  navigator.mediaSession.setActionHandler("play", () => { if (current) tune(current); });
+  navigator.mediaSession.setActionHandler("pause", () => stop());
+  navigator.mediaSession.setActionHandler("stop", () => stop());
+  // Next/previous walk your favorites — the only ordered list the player has.
+  navigator.mediaSession.setActionHandler("nexttrack", () => stepFavorite(1));
+  navigator.mediaSession.setActionHandler("previoustrack", () => stepFavorite(-1));
+  // Live radio has no timeline; declaring these off keeps scrubbers from appearing.
+  navigator.mediaSession.setActionHandler("seekto", null);
+  navigator.mediaSession.setActionHandler("seekbackward", null);
+  navigator.mediaSession.setActionHandler("seekforward", null);
+}
+
+function clearMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  navigator.mediaSession.playbackState = "none";
+  navigator.mediaSession.metadata = null;
+}
+
+function stepFavorite(delta) {
+  if (!state.favorites.length) return;
+  const at = state.favorites.findIndex((f) => f.id === current?.id);
+  const next = state.favorites[((at < 0 ? 0 : at + delta) + state.favorites.length) % state.favorites.length];
+  if (next) tune(next);
+}
+
 // Explore has no audio element of its own — it asks us to play.
 window.globefm.onTune((ch) => { tune(ch); });
+
+// Hardware media keys, forwarded from main.
+window.globefm.onMediaKey((action) => {
+  if (action === "playpause") { if (current) audio.paused ? tune(current) : stop(); }
+  else if (action === "next") stepFavorite(1);
+  else if (action === "prev") stepFavorite(-1);
+});
 
 // Replay the entrance each time the popover is shown (the window is reused).
 window.globefm.onShown(() => {
