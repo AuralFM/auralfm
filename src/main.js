@@ -13,6 +13,8 @@ const resolver = require("./resolver");
 const weather = require("./weather");
 const news = require("./news");
 const markets = require("./markets");
+const prefs = require("./prefs");
+const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
 const clouds = require("./clouds");
@@ -33,6 +35,7 @@ let win = null;          // popover — also the one and only audio player
 let explore = null;
 let quitting = false;
 let playerState = { channel: null, status: "", playing: false };
+let settingsWin = null;
 
 // ── tiny JSON store ───────────────────────────────────────────────────────────
 function load() {
@@ -146,6 +149,7 @@ function openExplore() {
   explore.webContents.on("did-finish-load", () => {
     explore?.webContents.send("player:state", playerState);
     explore?.webContents.send("globe:layers", layerState());
+    explore?.webContents.send("prefs:changed", getPrefs());
   });
 }
 
@@ -182,15 +186,15 @@ function showAbout() {
  * home for the globe layer toggles: they are view options, not settings.
  */
 const LAYERS = [
-  { id: "clouds",         label: "Live Cloud Cover",     default: true },
-  { id: "dayNight",       label: "Day / Night",          default: true },
-  { id: "stations",       label: "Station Dots",         default: true },
-  { id: "iss",            label: "ISS and Orbits",       default: true },
-  { id: "constellations", label: "Constellations",       default: true },
-  { id: "drift",          label: "Slow Rotation",        default: true },
+  { id: "clouds",         key: "layer.clouds",         default: true },
+  { id: "dayNight",       key: "layer.dayNight",       default: true },
+  { id: "stations",       key: "layer.stations",       default: true },
+  { id: "iss",            key: "layer.iss",            default: true },
+  { id: "constellations", key: "layer.constellations", default: true },
+  { id: "drift",          key: "layer.drift",          default: true },
   // Off until the read-outs earn their place — sun, moon, ISS and imagery
   // provenance are interesting but they are not what the app is for.
-  { id: "statusBar",      label: "Status Readout",       default: false },
+  { id: "statusBar",      key: "layer.statusBar",      default: false },
 ];
 
 function layerState() {
@@ -209,36 +213,39 @@ function setLayer(id, on) {
 
 function buildMenu() {
   const layers = layerState();
+  const t = getStrings();
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {
       label: app.name,
       submenu: [
-        { label: "About GlobeFM", click: showAbout },
+        { label: t["menu.about"], click: showAbout },
         { type: "separator" },
-        { label: "Open at Login",
+        { label: t["menu.settings"], accelerator: "Command+,", click: openSettings },
+        { type: "separator" },
+        { label: t["menu.openAtLogin"],
           type: "checkbox",
           checked: app.getLoginItemSettings().openAtLogin,
           click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
         { type: "separator" },
         { role: "hide" }, { role: "hideOthers" }, { type: "separator" },
-        { label: "Quit GlobeFM", accelerator: "Command+Q",
+        { label: t["menu.quit"], accelerator: "Command+Q",
           click: () => { quitting = true; app.quit(); } },
       ],
     },
-    { label: "Edit", submenu: [
+    { label: t["menu.edit"], submenu: [
       { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" },
     ]},
     {
-      label: "View",
+      label: t["menu.view"],
       submenu: [
-        { label: "Open the Globe", accelerator: "Command+G", click: openExplore },
+        { label: t["menu.openGlobe"], accelerator: "Command+G", click: openExplore },
         { type: "separator" },
         // The reason this menu exists at all: a hidden-title-bar window gives
         // people no obvious way back out of full screen.
         { role: "togglefullscreen" },
         { type: "separator" },
         ...LAYERS.map((l) => ({
-          label: l.label,
+          label: t[l.key],
           type: "checkbox",
           checked: layers[l.id],
           click: (item) => setLayer(l.id, item.checked),
@@ -247,10 +254,80 @@ function buildMenu() {
         { role: "reload" }, { role: "toggleDevTools" },
       ],
     },
-    { label: "Window", submenu: [
+    { label: t["menu.window"], submenu: [
       { role: "minimize" }, { role: "zoom" }, { role: "close" },
     ]},
   ]));
+}
+
+// ── preferences ───────────────────────────────────────────────────────────────
+const getPrefs = () => prefs.normalize(load().prefs);
+
+function setPrefs(patch) {
+  const st = load();
+  st.prefs = { ...getPrefs(), ...patch };
+  save(st);
+  broadcast("prefs:changed", st.prefs);
+  // Menu labels are baked in at build time, so a language change means a rebuild.
+  if ("language" in patch) buildMenu();
+  return st.prefs;
+}
+
+function broadcast(channel, payload) {
+  for (const w of [win, explore, settingsWin]) {
+    if (w && !w.isDestroyed()) w.webContents.send(channel, payload);
+  }
+}
+
+function openSettings() {
+  if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
+  settingsWin = new BrowserWindow({
+    width: 460, height: 560,
+    resizable: false, minimizable: false, maximizable: false,
+    title: "GlobeFM Settings",
+    titleBarStyle: "hiddenInset",
+    backgroundColor: "#1c1c1e",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  settingsWin.loadFile(path.join(__dirname, "renderer", "settings.html"));
+  settingsWin.on("closed", () => { settingsWin = null; });
+}
+
+/** Interface strings for the resolved language, English-filled. */
+const getStrings = () => i18n.strings(getPrefs().language, app.getLocale());
+
+/**
+ * Legal documents ship inside the app bundle, which means they live in the asar
+ * archive — `shell.openPath` can't reach that, and a .md file has no reliable
+ * handler anyway. So we render them ourselves in a plain reading window.
+ */
+const docWins = new Map();
+function openDoc(name) {
+  const existing = docWins.get(name);
+  if (existing && !existing.isDestroyed()) { existing.show(); existing.focus(); return; }
+  const w = new BrowserWindow({
+    width: 720, height: 720,
+    title: "GlobeFM",
+    titleBarStyle: "hiddenInset",
+    backgroundColor: "#1c1c1e",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  w.loadFile(path.join(__dirname, "renderer", "doc.html"), { query: { name } });
+  w.on("closed", () => docWins.delete(name));
+  docWins.set(name, w);
+}
+
+function docText(name) {
+  const file = path.join(__dirname, "..", "docs", name);
+  try { return fs.readFileSync(file, "utf8"); } catch { return ""; }
 }
 
 // ── tray ──────────────────────────────────────────────────────────────────────
@@ -267,20 +344,23 @@ function createTray() {
   tray.on("click", toggle);
 
   tray.on("right-click", () => {
+    // Built on demand so it always reflects the current language.
+    const t = getStrings();
     tray.popUpContextMenu(Menu.buildFromTemplate([
       { label: "GlobeFM", enabled: false },
       { type: "separator" },
-      { label: "Open the Globe", click: openExplore },
-      { label: "About GlobeFM", click: showAbout },
+      { label: t["menu.openGlobe"], click: openExplore },
+      { label: t["menu.settings"], click: openSettings },
+      { label: t["menu.about"], click: showAbout },
       { type: "separator" },
       {
-        label: "Open at Login",
+        label: t["menu.openAtLogin"],
         type: "checkbox",
         checked: app.getLoginItemSettings().openAtLogin,
         click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
       },
       { type: "separator" },
-      { label: "Quit GlobeFM", accelerator: "Command+Q", click: () => { quitting = true; app.quit(); } },
+      { label: t["menu.quit"], accelerator: "Command+Q", click: () => { quitting = true; app.quit(); } },
     ]));
   });
 }
@@ -355,6 +435,18 @@ ipcMain.handle("sky:get", () => {
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));
 ipcMain.handle("markets:get", () => markets.get());
+ipcMain.handle("prefs:get", () => getPrefs());
+ipcMain.handle("prefs:set", (_e, patch) => setPrefs(patch));
+ipcMain.on("settings:open", openSettings);
+ipcMain.on("doc:open", (_e, name) => {
+  if (["PRIVACY.md", "TERMS.md"].includes(name)) openDoc(name);
+});
+ipcMain.on("mail:open", () => shell.openExternal("mailto:meltonbell@icloud.com?subject=GlobeFM"));
+ipcMain.handle("doc:text", (_e, name) =>
+  ["PRIVACY.md", "TERMS.md"].includes(name) ? docText(name) : "");
+ipcMain.handle("i18n:strings", () => getStrings());
+ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
+ipcMain.handle("app:version", () => app.getVersion());
 // Headlines open in the real browser. GlobeFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
 ipcMain.on("open:external", (_e, url) => {

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<title>GlobeFM Settings</title>
+<style>
+  /* Same AppKit-derived palette as the rest of the app. The difference here is
+     that every appearance signal has to be overridable: this is the window where
+     the user says "ignore the system, do this instead", so a media query alone
+     is not enough. The [data-theme] / [data-contrast] attributes on :root win. */
+  :root{
+    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
+    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
+    --line:rgba(255,255,255,.10);
+    --bg:#1c1c1e; --card:rgba(255,255,255,.05);
+    --accent:#30D158; --on-accent:#00210F;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+      --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+      --line:rgba(0,0,0,.09);
+      --bg:#f2f2f7; --card:rgba(255,255,255,.72);
+      --accent:#248A3D; --on-accent:#fff;
+    }
+  }
+  /* Explicit override beats the system in both directions. */
+  :root[data-theme="light"]{
+    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+    --line:rgba(0,0,0,.09);
+    --bg:#f2f2f7; --card:rgba(255,255,255,.72);
+    --accent:#248A3D; --on-accent:#fff;
+  }
+  :root[data-theme="dark"]{
+    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
+    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
+    --line:rgba(255,255,255,.10);
+    --bg:#1c1c1e; --card:rgba(255,255,255,.05);
+    --accent:#30D158; --on-accent:#00210F;
+  }
+  /* Increased contrast follows the system setting until it is forced on here. */
+  @media (prefers-contrast: more){
+    :root:not([data-contrast="normal"]){--label2:var(--label); --line:var(--label3)}
+  }
+  /* Increased contrast. Deliberately NOT the CanvasText system keyword: that
+     keyword tracks the OS appearance, so on a light Mac with the theme forced to
+     Dark it paints black text on a dark background. These track our own theme. */
+  :root[data-contrast="more"]{
+    --label:#fff; --label2:#fff; --label3:rgba(255,255,255,.78);
+    --line:rgba(255,255,255,.55);
+  }
+  :root[data-contrast="more"][data-theme="light"]{
+    --label:#000; --label2:#000; --label3:rgba(0,0,0,.75);
+    --line:rgba(0,0,0,.55);
+  }
+  @media (prefers-color-scheme: light){
+    :root[data-contrast="more"]:not([data-theme="dark"]){
+      --label:#000; --label2:#000; --label3:rgba(0,0,0,.75);
+      --line:rgba(0,0,0,.55);
+    }
+  }
+  :root[data-contrast="more"] .card{outline:1px solid var(--line)}
+  :root[data-contrast="more"] .seg button[aria-checked="true"]{outline:2px solid var(--accent)}
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);color:var(--label);
+    font:13px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;user-select:none;cursor:default;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){*{transition-duration:.01ms !important}}
+
+  .titlebar{height:38px;flex:none;-webkit-app-region:drag}
+  main{flex:1;overflow-y:auto;padding:0 20px 22px}
+
+  h1{
+    /* Large title tracking: SF tightens as size goes up, so we follow it. */
+    font-size:19px;font-weight:700;letter-spacing:-.017em;margin:0 0 16px;
+  }
+  h2{
+    font-size:11px;font-weight:590;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--label2);margin:0 0 6px;padding-left:2px;
+  }
+  section{margin-bottom:20px}
+
+  .card{background:var(--card);border-radius:9px;box-shadow:inset 0 0 0 .5px var(--line)}
+  .row{
+    display:flex;align-items:center;gap:12px;min-height:38px;padding:8px 12px;
+  }
+  .row + .row{box-shadow:inset 0 .5px 0 var(--line)}
+  .row .name{flex:1;min-width:0}
+  .hint{
+    font-size:11px;line-height:1.35;color:var(--label2);
+    padding:2px 14px 9px;margin:0;
+  }
+
+  /* Segmented control — AppKit's shape, not a web radio group. */
+  .seg{display:flex;background:var(--fill);border-radius:7px;padding:2px;gap:2px;flex:none}
+  .seg button{
+    appearance:none;border:0;background:transparent;color:var(--label);
+    font:inherit;font-size:12px;font-weight:500;letter-spacing:-.002em;
+    padding:4px 11px;border-radius:5px;cursor:default;white-space:nowrap;
+    transition:background .12s ease-out,transform 90ms ease-out;
+  }
+  .seg button:hover{background:var(--fill-hi)}
+  .seg button:active{transform:scale(.97)}
+  .seg button[aria-checked="true"]{
+    background:var(--label);color:var(--bg);font-weight:590;
+  }
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* Switch */
+  .sw{
+    appearance:none;flex:none;width:38px;height:22px;border-radius:11px;border:0;
+    background:var(--fill);position:relative;cursor:default;
+    transition:background .18s ease-out;
+  }
+  .sw::after{
+    content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);
+    transition:transform .18s cubic-bezier(.32,.72,0,1);
+  }
+  .sw[aria-checked="true"]{background:var(--accent)}
+  .sw[aria-checked="true"]::after{transform:translateX(16px)}
+  .sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  select{
+    appearance:none;background:var(--fill);color:var(--label);border:0;border-radius:7px;
+    font:inherit;font-size:12px;padding:5px 26px 5px 10px;cursor:default;flex:none;
+    box-shadow:inset 0 0 0 .5px var(--line);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center;
+  }
+  select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  .link{
+    appearance:none;background:none;border:0;color:var(--accent);font:inherit;
+    padding:0;cursor:default;text-align:left;
+  }
+  .link:hover{text-decoration:underline}
+  .link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+  .promise{
+    font-size:11px;line-height:1.45;color:var(--label2);
+    margin:10px 2px 0;max-width:38em;
+  }
+  .ver{font-size:11px;color:var(--label3);margin:6px 2px 0}
+</style>
+</head>
+<body>
+<div class="titlebar"></div>
+<main>
+  <h1 data-i18n="set.title">Settings</h1>
+
+  <section>
+    <h2 data-i18n="set.appearance">Appearance</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" id="theme-lbl" data-i18n="set.theme">Theme</span>
+        <div class="seg" id="theme" role="radiogroup" aria-labelledby="theme-lbl">
+          <button role="radio" data-v="system" data-i18n="set.theme.system">System</button>
+          <button role="radio" data-v="light"  data-i18n="set.theme.light">Light</button>
+          <button role="radio" data-v="dark"   data-i18n="set.theme.dark">Dark</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="name" id="contrast-lbl" data-i18n="set.contrast">Increase contrast</span>
+        <button class="sw" id="contrast" role="switch" aria-checked="false" aria-labelledby="contrast-lbl"></button>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.contrastHint">Stronger text and borders. Follows your macOS setting unless you turn it on here.</p>
+  </section>
+
+  <section>
+    <h2 data-i18n="set.globe">Globe</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" id="dot-lbl" data-i18n="set.dotSize">Station dot size</span>
+        <div class="seg" id="dotSize" role="radiogroup" aria-labelledby="dot-lbl">
+          <button role="radio" data-v="normal" data-i18n="set.dotSize.normal">Normal</button>
+          <button role="radio" data-v="large"  data-i18n="set.dotSize.large">Large</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.dotSizeHint">Larger dots are easier to see and easier to hit, at the cost of some crowding in dense regions.</p>
+  </section>
+
+  <section>
+    <h2 data-i18n="set.language">Language</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" id="lang-lbl" data-i18n="set.languageLabel">Interface language</span>
+        <select id="language" aria-labelledby="lang-lbl"></select>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.languageHint">Translates GlobeFM's own interface. Station names, places and headlines stay in their own language.</p>
+  </section>
+
+  <section>
+    <h2 data-i18n="set.about">About</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" data-i18n="set.contact">Contact</span>
+        <button class="link" id="mail">meltonbell@icloud.com</button>
+      </div>
+      <div class="row">
+        <span class="name" data-i18n="set.privacy">Privacy Policy</span>
+        <button class="link" id="privacy">↗</button>
+      </div>
+      <div class="row">
+        <span class="name" data-i18n="set.terms">Terms of Service</span>
+        <button class="link" id="terms">↗</button>
+      </div>
+    </div>
+    <p class="promise" data-i18n="set.promise">No servers. No accounts. No analytics. Nothing about what you listen to leaves this Mac.</p>
+    <p class="ver" id="ver"></p>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+let T = {};
+let P = { theme: "system", contrast: "system", dotSize: "normal", language: "system" };
+
+/**
+ * Appearance and contrast are applied to this window immediately, before any
+ * round trip. The setting only means something if you can see it take effect.
+ */
+function paint() {
+  const r = document.documentElement;
+  if (P.theme === "system") r.removeAttribute("data-theme");
+  else r.setAttribute("data-theme", P.theme);
+  r.setAttribute("data-contrast", P.contrast === "more" ? "more" : "normal");
+
+  for (const group of ["theme", "dotSize"]) {
+    for (const b of $("#" + group).children) {
+      b.setAttribute("aria-checked", String(b.dataset.v === P[group]));
+      b.tabIndex = b.dataset.v === P[group] ? 0 : -1;
+    }
+  }
+  $("#contrast").setAttribute("aria-checked", String(P.contrast === "more"));
+  $("#language").value = P.language;
+}
+
+function translate() {
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    const s = T[el.dataset.i18n];
+    if (s) el.textContent = s;
+  }
+  document.title = "GlobeFM — " + (T["set.title"] || "Settings");
+}
+
+async function set(patch) {
+  Object.assign(P, patch);
+  paint();
+  P = await window.globefm.setPrefs(patch);
+  paint();
+  if ("language" in patch) { T = await window.globefm.strings(); translate(); }
+}
+
+// Segmented controls: click, plus arrow keys for keyboard users, because a
+// radiogroup that only responds to the mouse is a radiogroup in name only.
+for (const group of ["theme", "dotSize"]) {
+  const el = $("#" + group);
+  el.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-v]");
+    if (b) set({ [group]: b.dataset.v });
+  });
+  el.addEventListener("keydown", (e) => {
+    const dir = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    const opts = [...el.children].map((b) => b.dataset.v);
+    const next = opts[(opts.indexOf(P[group]) + dir + opts.length) % opts.length];
+    set({ [group]: next });
+    el.querySelector(`[data-v="${next}"]`).focus();
+  });
+}
+
+$("#contrast").addEventListener("click", () =>
+  set({ contrast: P.contrast === "more" ? "system" : "more" }));
+
+$("#language").addEventListener("change", (e) => set({ language: e.target.value }));
+
+$("#mail").addEventListener("click", () => window.globefm.openMail());
+$("#privacy").addEventListener("click", () => window.globefm.openDoc("PRIVACY.md"));
+$("#terms").addEventListener("click", () => window.globefm.openDoc("TERMS.md"));
+
+(async () => {
+  const [prefs, strings, langs, version] = await Promise.all([
+    window.globefm.getPrefs(),
+    window.globefm.strings(),
+    window.globefm.languages(),
+    window.globefm.version(),
+  ]);
+  P = prefs; T = strings;
+
+  const sel = $("#language");
+  const sys = document.createElement("option");
+  sys.value = "system";
+  sys.textContent = T["set.language.system"] || "System";
+  sel.append(sys);
+  for (const l of langs) {
+    const o = document.createElement("option");
+    o.value = l.code; o.textContent = l.name;
+    sel.append(o);
+  }
+
+  $("#ver").textContent = "GlobeFM " + version;
+  translate();
+  paint();
+})();
+</script>
+</body>
+</html>

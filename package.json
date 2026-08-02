@@ -43,6 +43,8 @@
       "assets/ATTRIBUTION.md",
       "package.json",
       "data/stations.min.json",
+      "docs/PRIVACY.md",
+      "docs/TERMS.md",
       "assets/sky.json"
     ],
     "mac": {

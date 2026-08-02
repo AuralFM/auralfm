@@ -23,6 +23,18 @@ contextBridge.exposeInMainWorld("globefm", {
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),
   markets: () => ipcRenderer.invoke("markets:get"),
+
+  // preferences
+  getPrefs: () => ipcRenderer.invoke("prefs:get"),
+  setPrefs: (patch) => ipcRenderer.invoke("prefs:set", patch),
+  onPrefs: (fn) => ipcRenderer.on("prefs:changed", (_e, p) => fn(p)),
+  openSettings: () => ipcRenderer.send("settings:open"),
+  openDoc: (name) => ipcRenderer.send("doc:open", name),
+  docText: (name) => ipcRenderer.invoke("doc:text", name),
+  strings: () => ipcRenderer.invoke("i18n:strings"),
+  languages: () => ipcRenderer.invoke("i18n:languages"),
+  version: () => ipcRenderer.invoke("app:version"),
+  openMail: () => ipcRenderer.send("mail:open"),
   openLink: (url) => ipcRenderer.send("open:external", url),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),

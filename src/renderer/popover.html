@@ -13,30 +13,74 @@
     --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
     --line:rgba(255,255,255,.10);
     --accent:#30D158;          /* systemGreen, dark */
+    --bg:#1c1c1e;
     --err:#FF453A;             /* systemRed, dark   */
     --star:#FFD60A;            /* systemYellow, dark*/
     --on-accent:#00210F;
   }
+  /* System appearance, unless Settings has forced the other one. Explicit wins
+     in both directions, which is the whole point of an appearance override. */
   @media (prefers-color-scheme: light){
-    :root{
-      --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-      --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-      --line:rgba(0,0,0,.09);
-      --accent:#248A3D;        /* systemGreen dark-variant: legible on light glass */
-      --err:#D70015;
-      --star:#A16207;
-      --on-accent:#fff;
+    :root:not([data-theme="dark"]){
+    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+    --line:rgba(0,0,0,.09);
+    --accent:#248A3D;        /* systemGreen dark-variant: legible on light glass */
+    --err:#D70015;
+    --star:#A16207;
+    --on-accent:#fff;
+    --bg:#f2f2f7;
     }
+  }
+  :root[data-theme="light"]{
+    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+    --line:rgba(0,0,0,.09);
+    --accent:#248A3D;        /* systemGreen dark-variant: legible on light glass */
+    --err:#D70015;
+    --star:#A16207;
+    --on-accent:#fff;
+    --bg:#f2f2f7;
+  }
+  /* A forced theme has to paint its own backdrop: the vibrancy material behind
+     the window still follows the OS, so transparency would show the wrong one. */
+  :root[data-theme="light"] body,
+  :root[data-theme="dark"] body,
+  :root[data-contrast="more"] body{background:var(--bg)}
+  :root[data-theme="dark"]{
+    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
+    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
+    --line:rgba(255,255,255,.10);
+    --accent:#30D158; --err:#FF453A; --star:#FFD60A; --on-accent:#00210F; --bg:#1c1c1e;
   }
   /* Vibrancy is a real material here; if the user has asked for less of it,
      go frosty-solid rather than shipping unreadable text over a busy desktop. */
   @media (prefers-reduced-transparency: reduce){
-    body{background:Canvas}
+    body{background:var(--bg)}
   }
+  /* Increased contrast follows the system setting until Settings overrides it. */
   @media (prefers-contrast: more){
-    :root{--label:CanvasText; --label2:CanvasText; --line:CanvasText}
-    .row[aria-current="true"]{outline:1px solid var(--accent)}
+    :root:not([data-contrast="normal"]){--label2:var(--label); --label3:var(--label2)}
+    :root:not([data-contrast="normal"]) .row[aria-current="true"]{outline:1px solid var(--accent)}
   }
+  /* Increased contrast. Deliberately NOT the CanvasText system keyword: that
+     keyword tracks the OS appearance, so on a light Mac with the theme forced to
+     Dark it paints black text on a dark background. These track our own theme. */
+  :root[data-contrast="more"]{
+    --label:#fff; --label2:#fff; --label3:rgba(255,255,255,.78);
+    --line:rgba(255,255,255,.55); --bg:#000;
+  }
+  :root[data-contrast="more"][data-theme="light"]{
+    --label:#000; --label2:#000; --label3:rgba(0,0,0,.75);
+    --line:rgba(0,0,0,.55); --bg:#fff;
+  }
+  @media (prefers-color-scheme: light){
+    :root[data-contrast="more"]:not([data-theme="dark"]){
+      --label:#000; --label2:#000; --label3:rgba(0,0,0,.75);
+      --line:rgba(0,0,0,.55); --bg:#fff;
+    }
+  }
+  :root[data-contrast="more"] .row[aria-current="true"]{outline:1px solid var(--accent)}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overflow:hidden}
   body{
@@ -177,25 +221,25 @@
 <body>
 
 <header>
-  <button id="explore" title="Explore the world">
+  <button id="explore" title="Explore the world" data-i18n-title="app.explore">
     <img src="../../assets/icon.svg" alt="">
-    <span>Explore the world</span>
+    <span data-i18n="app.explore">Explore the world</span>
     <span class="chev">›</span>
   </button>
 </header>
 
 <div class="searchwrap">
-  <input id="q" type="search" placeholder="Search station, city, or country" autocomplete="off" spellcheck="false">
+  <input id="q" type="search" placeholder="Search station, city, or country" data-i18n-ph="app.searchPlaceholderExplore" autocomplete="off" spellcheck="false">
 </div>
 
-<div class="secthead" id="secthead">Favorites</div>
+<div class="secthead" id="secthead" data-i18n="app.favorites">Favorites</div>
 <div class="list" id="list"></div>
 
 <div class="bar">
   <button id="toggle" disabled>▶</button>
   <div class="now">
-    <div id="nowName">Nothing playing</div>
-    <div id="status">Search for a station</div>
+    <div id="nowName" data-i18n="app.nothingPlaying">Nothing playing</div>
+    <div id="status" data-i18n="app.searchStation">Search for a station</div>
   </div>
   <button id="mute" title="Mute">🔈</button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
@@ -247,7 +291,7 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
       // Empty chips read as broken placeholders; reserve the width without the fill.
       (numbered && i < 9 ? `<span class="key">${i+1}</span>` : `<span class="key blank"></span>`) +
       `<span class="meta"><span class="nm"></span><div class="sub"></div></span>` +
-      `<button class="star${isFav(ch.id)?" on":""}" title="Favorite">${isFav(ch.id)?"★":"☆"}</button>` +
+      `<button class="star${isFav(ch.id)?" on":""}" title="${t('ctl.favorite', 'Favorite')}">${isFav(ch.id)?"★":"☆"}</button>` +
       `<span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".nm").textContent = ch.title;
     const tags = showTags && ch.tags?.length ? ch.tags.slice(0, 2).join(", ") : null;
@@ -278,10 +322,10 @@ function fitHeight() {
 }
 
 function showFavorites() {
-  headEl.textContent = "Favorites";
+  headEl.textContent = t("app.favorites", "Favorites");
   render(state.favorites, {
     numbered: true,
-    empty: "No favorites yet.<br>Search for a station and tap ☆ to save it.",
+    empty: `${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap ☆ beside a station to save it.")}`,
   });
 }
 
@@ -506,6 +550,45 @@ window.globefm.onMediaKey((action) => {
 });
 
 // Replay the entrance each time the popover is shown (the window is reused).
+// ── preferences and language ─────────────────────────────────────────────────
+/**
+ * Pushed from main whenever Settings changes, so both windows stay in step.
+ * "system" clears the attribute rather than setting data-theme="system": an
+ * explicit value would permanently outrank prefers-color-scheme.
+ */
+function applyPrefs(p) {
+  const r = document.documentElement;
+  if (!p.theme || p.theme === "system") r.removeAttribute("data-theme");
+  else r.setAttribute("data-theme", p.theme);
+  r.setAttribute("data-contrast", p.contrast === "more" ? "more" : "normal");
+}
+
+let T = {};
+const t = (key, fallback) => T[key] || fallback;
+
+async function applyStrings() {
+  T = (await window.globefm.strings()) || {};
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    const v = T[el.dataset.i18n];
+    if (v) el.textContent = v;
+  }
+  for (const el of document.querySelectorAll("[data-i18n-title]")) {
+    const v = T[el.dataset.i18nTitle];
+    if (v) { el.title = v; el.setAttribute("aria-label", v); }
+  }
+  for (const el of document.querySelectorAll("[data-i18n-ph]")) {
+    const v = T[el.dataset.i18nPh];
+    if (v) el.placeholder = v;
+  }
+}
+
+window.globefm.onPrefs(async (p) => {
+  applyPrefs(p);
+  await applyStrings();
+  // Rows carry translated titles, so redraw whatever list is on screen.
+  if (!qEl.value.trim()) showFavorites();
+});
+
 window.globefm.onShown(() => {
   document.body.classList.remove("entering");
   void document.body.offsetWidth;          // force reflow so the animation restarts
@@ -515,6 +598,9 @@ window.globefm.onShown(() => {
 
 // ── boot ─────────────────────────────────────────────────────────────────────
 (async () => {
+  applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyStrings();
+
   const saved = await window.globefm.getState();
   state = { favorites: [], vol: 0.8, ...(saved || {}) };
   if (!Array.isArray(state.favorites)) state.favorites = [];
@@ -530,7 +616,7 @@ window.globefm.onShown(() => {
 
   const s = await window.globefm.stats();
   if (!s.channels) {
-    headEl.textContent = "No catalog";
+    headEl.textContent = t("app.noCatalog", "No catalog");
     render([], { empty: "No station data yet.<br>Run <b>npm run crawl</b> to build it." });
   } else {
     qEl.placeholder = `Search ${s.channels.toLocaleString()} stations`;

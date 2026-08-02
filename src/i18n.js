@@ -1,0 +1,408 @@
+/**
+ * Interface language.
+ *
+ * Scope, stated plainly: this translates GlobeFM's own chrome — menus, buttons,
+ * labels, empty states. It does not translate station names, place names,
+ * country names or headlines, because those are data, not interface, and they
+ * belong in the language of the place they come from. A station in Kyoto should
+ * read as it does in Kyoto.
+ *
+ * "system" asks macOS what the user prefers and picks the closest match we ship,
+ * falling back to English. That is the default and it is the right one — an app
+ * that ignores the system language setting is being rude.
+ *
+ * Adding a language means adding one object below. Any key a translation omits
+ * falls back to English rather than rendering blank, so a partial contribution
+ * is still useful.
+ */
+
+const en = {
+  // app chrome
+  "app.name": "GlobeFM",
+  "app.nothingPlaying": "Nothing playing",
+  "app.explore": "Explore the world",
+  "app.favorites": "Favorites",
+  "app.stations": "Stations",
+  "app.searchStation": "Search for a station",
+  "app.searchPlaceholder": "Search a city, country, or station",
+  "app.searchPlaceholderExplore": "Search station, city, or country",
+  "app.noCatalog": "No catalog",
+  "app.loading": "Loading…",
+  "app.loadingGlobe": "Loading globe…",
+  "app.headlines": "Headlines",
+
+  // empty states
+  "empty.favorites": "No favorites yet.",
+  "empty.favoritesHint": "Tap ☆ beside a station to save it.",
+  "empty.noPlace": "No place matches that.",
+  "empty.noStationsFilter": "No stations match that filter here.",
+  "empty.noMatch": "Nothing matches that.",
+  "empty.nothingOnAir": "Nothing on air here.",
+
+  // controls
+  "ctl.playPause": "Play / pause",
+  "ctl.mute": "Mute",
+  "ctl.volume": "Volume",
+  "ctl.favorite": "Favorite",
+  "ctl.close": "Close",
+  "ctl.changeSource": "Change source",
+  "ctl.lockStation": "Lock this station while you browse",
+  "ctl.localHeadlines": "Local headlines",
+
+  // menus
+  "menu.about": "About GlobeFM",
+  "menu.settings": "Settings…",
+  "menu.openGlobe": "Open the Globe",
+  "menu.openAtLogin": "Open at Login",
+  "menu.quit": "Quit GlobeFM",
+  "menu.edit": "Edit",
+  "menu.view": "View",
+  "menu.window": "Window",
+
+  // globe layers
+  "layer.clouds": "Live Cloud Cover",
+  "layer.dayNight": "Day / Night",
+  "layer.stations": "Station Dots",
+  "layer.iss": "ISS and Orbits",
+  "layer.constellations": "Constellations",
+  "layer.drift": "Slow Rotation",
+  "layer.statusBar": "Status Readout",
+
+  // settings window
+  "set.title": "Settings",
+  "set.appearance": "Appearance",
+  "set.theme": "Theme",
+  "set.theme.system": "System",
+  "set.theme.light": "Light",
+  "set.theme.dark": "Dark",
+  "set.contrast": "Increase contrast",
+  "set.contrastHint": "Stronger text and borders. Follows your macOS setting unless you turn it on here.",
+  "set.globe": "Globe",
+  "set.dotSize": "Station dot size",
+  "set.dotSize.normal": "Normal",
+  "set.dotSize.large": "Large",
+  "set.dotSizeHint": "Larger dots are easier to see and easier to hit, at the cost of some crowding in dense regions.",
+  "set.language": "Language",
+  "set.languageLabel": "Interface language",
+  "set.language.system": "System",
+  "set.languageHint": "Translates GlobeFM's own interface. Station names, places and headlines stay in their own language.",
+  "set.about": "About",
+  "set.contact": "Contact",
+  "set.contactHint": "Questions, bugs, or a station that won't play — send a note.",
+  "set.privacy": "Privacy Policy",
+  "set.terms": "Terms of Service",
+  "set.promise": "No servers. No accounts. No analytics. Nothing about what you listen to leaves this Mac.",
+};
+
+const es = {
+  "app.nothingPlaying": "Nada en reproducción",
+  "app.explore": "Explora el mundo",
+  "app.favorites": "Favoritos",
+  "app.stations": "Emisoras",
+  "app.searchStation": "Buscar una emisora",
+  "app.searchPlaceholder": "Busca una ciudad, país o emisora",
+  "app.searchPlaceholderExplore": "Busca emisora, ciudad o país",
+  "app.noCatalog": "Sin catálogo",
+  "app.loading": "Cargando…",
+  "app.loadingGlobe": "Cargando el globo…",
+  "app.headlines": "Titulares",
+
+  "empty.favorites": "Aún no hay favoritos.",
+  "empty.favoritesHint": "Toca ☆ junto a una emisora para guardarla.",
+  "empty.noPlace": "Ningún lugar coincide.",
+  "empty.noStationsFilter": "Ninguna emisora coincide con ese filtro aquí.",
+  "empty.noMatch": "No hay coincidencias.",
+  "empty.nothingOnAir": "Nada al aire aquí.",
+
+  "ctl.playPause": "Reproducir / pausar",
+  "ctl.mute": "Silenciar",
+  "ctl.volume": "Volumen",
+  "ctl.favorite": "Favorito",
+  "ctl.close": "Cerrar",
+  "ctl.changeSource": "Cambiar fuente",
+  "ctl.lockStation": "Fijar esta emisora mientras exploras",
+  "ctl.localHeadlines": "Titulares locales",
+
+  "menu.about": "Acerca de GlobeFM",
+  "menu.settings": "Ajustes…",
+  "menu.openGlobe": "Abrir el globo",
+  "menu.openAtLogin": "Abrir al iniciar sesión",
+  "menu.quit": "Salir de GlobeFM",
+  "menu.edit": "Edición",
+  "menu.view": "Visualización",
+  "menu.window": "Ventana",
+
+  "layer.clouds": "Nubes en directo",
+  "layer.dayNight": "Día / Noche",
+  "layer.stations": "Puntos de emisoras",
+  "layer.iss": "ISS y órbitas",
+  "layer.constellations": "Constelaciones",
+  "layer.drift": "Rotación lenta",
+  "layer.statusBar": "Panel de estado",
+
+  "set.title": "Ajustes",
+  "set.appearance": "Apariencia",
+  "set.theme": "Tema",
+  "set.theme.system": "Sistema",
+  "set.theme.light": "Claro",
+  "set.theme.dark": "Oscuro",
+  "set.contrast": "Aumentar contraste",
+  "set.contrastHint": "Texto y bordes más marcados. Sigue tu ajuste de macOS salvo que lo actives aquí.",
+  "set.globe": "Globo",
+  "set.dotSize": "Tamaño de los puntos",
+  "set.dotSize.normal": "Normal",
+  "set.dotSize.large": "Grande",
+  "set.dotSizeHint": "Los puntos grandes se ven y se tocan mejor, a costa de algo de amontonamiento en zonas densas.",
+  "set.language": "Idioma",
+  "set.languageLabel": "Idioma de la interfaz",
+  "set.language.system": "Sistema",
+  "set.languageHint": "Traduce la interfaz de GlobeFM. Los nombres de emisoras, lugares y titulares se mantienen en su idioma.",
+  "set.about": "Acerca de",
+  "set.contact": "Contacto",
+  "set.contactHint": "Dudas, fallos o una emisora que no suena — escríbenos.",
+  "set.privacy": "Política de privacidad",
+  "set.terms": "Términos del servicio",
+  "set.promise": "Sin servidores. Sin cuentas. Sin analíticas. Nada de lo que escuchas sale de este Mac.",
+};
+
+const fr = {
+  "app.nothingPlaying": "Aucune lecture",
+  "app.explore": "Explorer le monde",
+  "app.favorites": "Favoris",
+  "app.stations": "Stations",
+  "app.searchStation": "Rechercher une station",
+  "app.searchPlaceholder": "Rechercher une ville, un pays ou une station",
+  "app.searchPlaceholderExplore": "Station, ville ou pays",
+  "app.noCatalog": "Aucun catalogue",
+  "app.loading": "Chargement…",
+  "app.loadingGlobe": "Chargement du globe…",
+  "app.headlines": "Actualités",
+
+  "empty.favorites": "Aucun favori pour l'instant.",
+  "empty.favoritesHint": "Touchez ☆ à côté d'une station pour l'enregistrer.",
+  "empty.noPlace": "Aucun lieu ne correspond.",
+  "empty.noStationsFilter": "Aucune station ne correspond à ce filtre ici.",
+  "empty.noMatch": "Aucun résultat.",
+  "empty.nothingOnAir": "Rien à l'antenne ici.",
+
+  "ctl.playPause": "Lecture / pause",
+  "ctl.mute": "Couper le son",
+  "ctl.volume": "Volume",
+  "ctl.favorite": "Favori",
+  "ctl.close": "Fermer",
+  "ctl.changeSource": "Changer de source",
+  "ctl.lockStation": "Garder cette station pendant la navigation",
+  "ctl.localHeadlines": "Actualités locales",
+
+  "menu.about": "À propos de GlobeFM",
+  "menu.settings": "Réglages…",
+  "menu.openGlobe": "Ouvrir le globe",
+  "menu.openAtLogin": "Ouvrir à la connexion",
+  "menu.quit": "Quitter GlobeFM",
+  "menu.edit": "Édition",
+  "menu.view": "Présentation",
+  "menu.window": "Fenêtre",
+
+  "layer.clouds": "Nuages en direct",
+  "layer.dayNight": "Jour / Nuit",
+  "layer.stations": "Points des stations",
+  "layer.iss": "ISS et orbites",
+  "layer.constellations": "Constellations",
+  "layer.drift": "Rotation lente",
+  "layer.statusBar": "Barre d'état",
+
+  "set.title": "Réglages",
+  "set.appearance": "Apparence",
+  "set.theme": "Thème",
+  "set.theme.system": "Système",
+  "set.theme.light": "Clair",
+  "set.theme.dark": "Sombre",
+  "set.contrast": "Augmenter le contraste",
+  "set.contrastHint": "Texte et bordures plus marqués. Suit votre réglage macOS sauf si vous l'activez ici.",
+  "set.globe": "Globe",
+  "set.dotSize": "Taille des points",
+  "set.dotSize.normal": "Normale",
+  "set.dotSize.large": "Grande",
+  "set.dotSizeHint": "Des points plus grands se voient et se visent mieux, au prix d'un peu d'encombrement dans les zones denses.",
+  "set.language": "Langue",
+  "set.languageLabel": "Langue de l'interface",
+  "set.language.system": "Système",
+  "set.languageHint": "Traduit l'interface de GlobeFM. Les noms de stations, de lieux et les actualités restent dans leur langue.",
+  "set.about": "À propos",
+  "set.contact": "Contact",
+  "set.contactHint": "Une question, un bug, une station qui ne passe pas — écrivez-nous.",
+  "set.privacy": "Politique de confidentialité",
+  "set.terms": "Conditions d'utilisation",
+  "set.promise": "Aucun serveur. Aucun compte. Aucune analyse. Rien de ce que vous écoutez ne quitte ce Mac.",
+};
+
+const de = {
+  "app.nothingPlaying": "Nichts läuft",
+  "app.explore": "Die Welt erkunden",
+  "app.favorites": "Favoriten",
+  "app.stations": "Sender",
+  "app.searchStation": "Sender suchen",
+  "app.searchPlaceholder": "Stadt, Land oder Sender suchen",
+  "app.searchPlaceholderExplore": "Sender, Stadt oder Land",
+  "app.noCatalog": "Kein Katalog",
+  "app.loading": "Wird geladen…",
+  "app.loadingGlobe": "Globus wird geladen…",
+  "app.headlines": "Schlagzeilen",
+
+  "empty.favorites": "Noch keine Favoriten.",
+  "empty.favoritesHint": "Auf ☆ neben einem Sender tippen, um ihn zu sichern.",
+  "empty.noPlace": "Kein Ort passt dazu.",
+  "empty.noStationsFilter": "Hier passt kein Sender zu diesem Filter.",
+  "empty.noMatch": "Keine Treffer.",
+  "empty.nothingOnAir": "Hier ist nichts auf Sendung.",
+
+  "ctl.playPause": "Wiedergabe / Pause",
+  "ctl.mute": "Stumm",
+  "ctl.volume": "Lautstärke",
+  "ctl.favorite": "Favorit",
+  "ctl.close": "Schließen",
+  "ctl.changeSource": "Quelle wechseln",
+  "ctl.lockStation": "Diesen Sender beim Stöbern beibehalten",
+  "ctl.localHeadlines": "Lokale Schlagzeilen",
+
+  "menu.about": "Über GlobeFM",
+  "menu.settings": "Einstellungen…",
+  "menu.openGlobe": "Globus öffnen",
+  "menu.openAtLogin": "Bei der Anmeldung öffnen",
+  "menu.quit": "GlobeFM beenden",
+  "menu.edit": "Bearbeiten",
+  "menu.view": "Darstellung",
+  "menu.window": "Fenster",
+
+  "layer.clouds": "Aktuelle Bewölkung",
+  "layer.dayNight": "Tag / Nacht",
+  "layer.stations": "Senderpunkte",
+  "layer.iss": "ISS und Umlaufbahnen",
+  "layer.constellations": "Sternbilder",
+  "layer.drift": "Langsame Drehung",
+  "layer.statusBar": "Statusanzeige",
+
+  "set.title": "Einstellungen",
+  "set.appearance": "Erscheinungsbild",
+  "set.theme": "Design",
+  "set.theme.system": "System",
+  "set.theme.light": "Hell",
+  "set.theme.dark": "Dunkel",
+  "set.contrast": "Kontrast erhöhen",
+  "set.contrastHint": "Kräftigere Schrift und Ränder. Folgt deiner macOS-Einstellung, sofern hier nicht aktiviert.",
+  "set.globe": "Globus",
+  "set.dotSize": "Größe der Senderpunkte",
+  "set.dotSize.normal": "Normal",
+  "set.dotSize.large": "Groß",
+  "set.dotSizeHint": "Größere Punkte sind besser zu sehen und zu treffen — dafür wird es in dichten Regionen enger.",
+  "set.language": "Sprache",
+  "set.languageLabel": "Sprache der Oberfläche",
+  "set.language.system": "System",
+  "set.languageHint": "Übersetzt die Oberfläche von GlobeFM. Sender-, Ortsnamen und Schlagzeilen bleiben in ihrer Sprache.",
+  "set.about": "Über",
+  "set.contact": "Kontakt",
+  "set.contactHint": "Fragen, Fehler oder ein Sender, der nicht spielt — schreib uns.",
+  "set.privacy": "Datenschutzerklärung",
+  "set.terms": "Nutzungsbedingungen",
+  "set.promise": "Keine Server. Keine Konten. Keine Analyse. Nichts von dem, was du hörst, verlässt diesen Mac.",
+};
+
+const pt = {
+  "app.nothingPlaying": "Nada tocando",
+  "app.explore": "Explorar o mundo",
+  "app.favorites": "Favoritos",
+  "app.stations": "Estações",
+  "app.searchStation": "Buscar uma estação",
+  "app.searchPlaceholder": "Busque uma cidade, país ou estação",
+  "app.searchPlaceholderExplore": "Estação, cidade ou país",
+  "app.noCatalog": "Sem catálogo",
+  "app.loading": "Carregando…",
+  "app.loadingGlobe": "Carregando o globo…",
+  "app.headlines": "Manchetes",
+
+  "empty.favorites": "Ainda sem favoritos.",
+  "empty.favoritesHint": "Toque em ☆ ao lado de uma estação para salvá-la.",
+  "empty.noPlace": "Nenhum lugar corresponde.",
+  "empty.noStationsFilter": "Nenhuma estação corresponde a esse filtro aqui.",
+  "empty.noMatch": "Nada corresponde.",
+  "empty.nothingOnAir": "Nada no ar por aqui.",
+
+  "ctl.playPause": "Tocar / pausar",
+  "ctl.mute": "Silenciar",
+  "ctl.volume": "Volume",
+  "ctl.favorite": "Favorito",
+  "ctl.close": "Fechar",
+  "ctl.changeSource": "Trocar fonte",
+  "ctl.lockStation": "Manter esta estação enquanto você navega",
+  "ctl.localHeadlines": "Manchetes locais",
+
+  "menu.about": "Sobre o GlobeFM",
+  "menu.settings": "Ajustes…",
+  "menu.openGlobe": "Abrir o globo",
+  "menu.openAtLogin": "Abrir ao iniciar sessão",
+  "menu.quit": "Encerrar o GlobeFM",
+  "menu.edit": "Editar",
+  "menu.view": "Visualizar",
+  "menu.window": "Janela",
+
+  "layer.clouds": "Nuvens ao vivo",
+  "layer.dayNight": "Dia / Noite",
+  "layer.stations": "Pontos das estações",
+  "layer.iss": "ISS e órbitas",
+  "layer.constellations": "Constelações",
+  "layer.drift": "Rotação lenta",
+  "layer.statusBar": "Painel de status",
+
+  "set.title": "Ajustes",
+  "set.appearance": "Aparência",
+  "set.theme": "Tema",
+  "set.theme.system": "Sistema",
+  "set.theme.light": "Claro",
+  "set.theme.dark": "Escuro",
+  "set.contrast": "Aumentar contraste",
+  "set.contrastHint": "Texto e bordas mais marcados. Segue seu ajuste do macOS, a menos que você ative aqui.",
+  "set.globe": "Globo",
+  "set.dotSize": "Tamanho dos pontos",
+  "set.dotSize.normal": "Normal",
+  "set.dotSize.large": "Grande",
+  "set.dotSizeHint": "Pontos maiores são mais fáceis de ver e de acertar, ao custo de aglomeração em regiões densas.",
+  "set.language": "Idioma",
+  "set.languageLabel": "Idioma da interface",
+  "set.language.system": "Sistema",
+  "set.languageHint": "Traduz a interface do GlobeFM. Nomes de estações, lugares e manchetes ficam no idioma original.",
+  "set.about": "Sobre",
+  "set.contact": "Contato",
+  "set.contactHint": "Dúvidas, erros ou uma estação que não toca — mande uma mensagem.",
+  "set.privacy": "Política de Privacidade",
+  "set.terms": "Termos de Serviço",
+  "set.promise": "Sem servidores. Sem contas. Sem análise. Nada do que você ouve sai deste Mac.",
+};
+
+/**
+ * Endonyms, deliberately. A language picker that lists "Spanish" to someone who
+ * only reads Spanish has failed at the one job it has.
+ */
+const LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "de", name: "Deutsch" },
+  { code: "pt", name: "Português" },
+];
+
+const TABLES = { en, es, fr, de, pt };
+
+/** Match a BCP-47 tag ("pt-BR", "es-419") to a table we actually ship. */
+function resolve(code, systemLocale = "en") {
+  if (code && code !== "system" && TABLES[code]) return code;
+  const base = String(systemLocale || "en").toLowerCase().split(/[-_]/)[0];
+  return TABLES[base] ? base : "en";
+}
+
+/** Returns a flat key→string map with English filling any gaps. */
+function strings(code, systemLocale) {
+  const lang = resolve(code, systemLocale);
+  return { ...en, ...(TABLES[lang] || {}) };
+}
+
+module.exports = { LANGUAGES, resolve, strings };

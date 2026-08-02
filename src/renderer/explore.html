@@ -9,18 +9,56 @@
   :root{
     --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
     --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55);
+    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#1c1c1e;
     --accent:#30D158; --star:#FFD60A;
   }
+  /* System appearance, unless Settings has forced the other one. */
   @media (prefers-color-scheme: light){
-    :root{
-      --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-      --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-      --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55);
-      --accent:#248A3D; --star:#A16207;
+    :root:not([data-theme="dark"]){
+    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+    --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55); --bg:#f2f2f7;
+    --accent:#248A3D; --star:#A16207;
     }
   }
-  @media (prefers-reduced-transparency: reduce){ body{background:Canvas} .content{background:Canvas} }
+  :root[data-theme="light"]{
+    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
+    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
+    --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55); --bg:#f2f2f7;
+    --accent:#248A3D; --star:#A16207;
+  }
+  :root[data-theme="dark"]{
+    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
+    --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
+    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#1c1c1e;
+    --accent:#30D158; --star:#FFD60A;
+  }
+  /* Increased contrast follows the system setting until Settings overrides it. */
+  @media (prefers-contrast: more){
+    :root:not([data-contrast="normal"]){--label2:var(--label); --label3:var(--label2)}
+  }
+  /* Increased contrast. Deliberately NOT the CanvasText system keyword: that
+     keyword tracks the OS appearance, so on a light Mac with the theme forced to
+     Dark it paints black text on a dark background. These track our own theme. */
+  :root[data-contrast="more"]{
+    --label:#fff; --label2:#fff; --label3:rgba(255,255,255,.78);
+    --line:rgba(255,255,255,.55);
+    --pane:rgba(12,12,14,.92); --bg:#000;
+  }
+  :root[data-contrast="more"][data-theme="light"]{
+    --label:#000; --label2:#000; --label3:rgba(0,0,0,.75);
+    --line:rgba(0,0,0,.55);
+    --pane:rgba(255,255,255,.94); --bg:#fff;
+  }
+  @media (prefers-color-scheme: light){
+    :root[data-contrast="more"]:not([data-theme="dark"]){
+      --label:#000; --label2:#000; --label3:rgba(0,0,0,.75);
+      --line:rgba(0,0,0,.55);
+      --pane:rgba(255,255,255,.94); --bg:#fff;
+    }
+  }
+  :root[data-contrast="more"] .row[aria-current="true"]{outline:1px solid var(--accent)}
+  @media (prefers-reduced-transparency: reduce){ body{background:var(--bg)} .content{background:var(--bg)} }
   @media (prefers-reduced-motion: reduce){ *{transition-duration:.01ms !important;animation-duration:.01ms !important} }
 
   *{box-sizing:border-box}
@@ -28,7 +66,7 @@
   body{
     /* The window is opaque now (see the note in main.js), so the page owns its
        own background instead of relying on a vibrancy layer behind it. */
-    background:Canvas;color:var(--label);
+    background:var(--bg);color:var(--label);
     font:13px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;user-select:none;cursor:default;
     display:flex;flex-direction:column;
@@ -163,7 +201,7 @@
     position:absolute;left:0;top:0;bottom:0;z-index:5;
     width:clamp(300px, 34%, 460px);
     display:flex;flex-direction:column;overflow:hidden;
-    background:color-mix(in srgb, Canvas 96%, transparent);
+    background:color-mix(in srgb, var(--bg) 96%, transparent);
     backdrop-filter:blur(30px) saturate(150%);
     border-right:.5px solid var(--line);
     box-shadow:2px 0 22px rgba(0,0,0,.20);
@@ -340,13 +378,13 @@
 
 <div class="toolbar">
   <span class="sp"></span>
-  <button id="newsBtn" title="Local headlines">▤</button>
-  <button id="favBtn" title="Favorites">☆</button>
-  <input id="q" type="search" placeholder="Search a city, country, or station"
+  <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines">▤</button>
+  <button id="favBtn" title="Favorites" data-i18n-title="app.favorites">☆</button>
+  <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
          autocomplete="off" spellcheck="false">
 </div>
 
-<div class="globebar" id="globehint" hidden>Loading globe…</div>
+<div class="globebar" id="globehint" hidden data-i18n="app.loadingGlobe">Loading globe…</div>
 
 <div class="cols">
 
@@ -356,8 +394,8 @@
       <aside class="newspanel" id="newspanel" hidden>
         <div class="newshead">
           <b id="newsplace">Headlines</b>
-          <button id="newsSrc" title="Change source">◎</button>
-          <button id="newsClose" title="Close">×</button>
+          <button id="newsSrc" title="Change source" data-i18n-title="ctl.changeSource">◎</button>
+          <button id="newsClose" title="Close" data-i18n-title="ctl.close">×</button>
         </div>
         <div class="newslist" id="newslist"></div>
       </aside>
@@ -377,14 +415,14 @@
 </div>
 
 <div class="now" id="now" hidden>
-  <button id="play" title="Play / pause">▶</button>
-  <button id="lock" title="Lock this station while you browse">🔓</button>
+  <button id="play" title="Play / pause" data-i18n-title="ctl.playPause">▶</button>
+  <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation">🔓</button>
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
   <span class="volwrap">
-    <button id="mute" title="Mute">🔊</button>
-    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
+    <button id="mute" title="Mute" data-i18n-title="ctl.mute">🔊</button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume" data-i18n-title="ctl.volume">
   </span>
   <span class="tickwrap"><span class="tick" id="ticker"></span></span>
   <span class="markets" id="markets"></span>
@@ -417,7 +455,7 @@ async function loadPlaces(query = "") {
   stationListEl.hidden = true;
   placeListEl.innerHTML = "";
   if (!places.length) {
-    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">No place matches that.</div>`;
+    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">${t("empty.noPlace", "No place matches that.")}</div>`;
     return;
   }
   for (const p of places) {
@@ -520,8 +558,8 @@ function renderStations() {
   stationListEl.innerHTML = "";
   if (!channels.length) {
     stationListEl.innerHTML = (filter.band || filter.tag)
-      ? `<div class="empty">No stations match that filter here.</div>`
-      : `<div class="empty">Nothing on air here.</div>`;
+      ? `<div class="empty">${t("empty.noStationsFilter", "No stations match that filter here.")}</div>`
+      : `<div class="empty">${t("empty.nothingOnAir", "Nothing on air here.")}</div>`;
     return;
   }
   for (const ch of channels) {
@@ -547,6 +585,9 @@ function renderStations() {
 async function toggleFav(ch) {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  // Before the globe builds, so the first point layer is already the right size.
+  applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyStrings();
   const i = favorites.findIndex((f) => f.id === ch.id);
   if (i >= 0) favorites.splice(i, 1);
   else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
@@ -632,6 +673,9 @@ let showingFavorites = false;
 async function showFavorites() {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  // Before the globe builds, so the first point layer is already the right size.
+  applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyStrings();
   showingFavorites = true;
   $("favBtn").setAttribute("aria-pressed", "true");
   qEl.value = "";
@@ -644,7 +688,7 @@ async function showFavorites() {
   placeListEl.innerHTML = "";
   if (!favorites.length) {
     placeListEl.innerHTML =
-      `<div class="empty" style="padding:30px 16px">No favorites yet.<br>Tap ☆ beside a station to save it.</div>`;
+      `<div class="empty" style="padding:30px 16px">${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap ☆ beside a station to save it.")}</div>`;
     return;
   }
   for (const f of favorites) placeListEl.appendChild(stationResultRow(f));
@@ -1176,10 +1220,11 @@ async function initGlobe() {
     // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
     // read as noise rather than geography.
     .pointAltitude(0.002)
-    // Smaller than they were. At full zoom 12,296 dots merge into a haze and
+    // Size comes from dotRadius() so the Settings toggle can change it. Smaller
+    // than they were: at full zoom 12,296 dots merge into a haze and
     // picking one is a fight; the fix is fewer, tighter dots plus level-of-detail
-    // below, not a bigger hit target.
-    .pointRadius((d) => (d.i === selection.placeIndex ? 0.55 : 0.09 + Math.sqrt(d.count) * 0.013))
+    // below, not a bigger hit target — "Large" is there for people who need it.
+    .pointRadius((d) => (d.i === selection.placeIndex ? 0.55 : dotRadius(d)))
     // Merged into one geometry: unmerged, 12,296 points cost 12,298 draw calls
     // per frame. Merged it is ~3. The tradeoff is that changing a point's colour
     // means rebuilding the layer, which only happens on selection.
@@ -1338,6 +1383,64 @@ function applyLayers(next) {
 }
 
 window.globefm.onLayers((l) => applyLayers(l));
+
+// ── preferences ──────────────────────────────────────────────────────────────
+/**
+ * Appearance, contrast and dot size are set in Settings and pushed to every
+ * window, so this reacts rather than polls.
+ *
+ * "system" removes the attribute entirely instead of writing data-theme="system",
+ * which lets the prefers-color-scheme media query win again — an explicit value
+ * here would permanently outrank the OS.
+ */
+let prefs = { theme: "system", contrast: "system", dotSize: "normal", language: "system" };
+
+// Large is ~1.7×: enough to be visibly easier to see and to hit, short of the
+// point where dense regions like western Europe fuse into one blob.
+const DOT_SCALE = { normal: 1, large: 1.7 };
+const dotRadius = (d) =>
+  (0.09 + Math.sqrt(d.count) * 0.013) * (DOT_SCALE[prefs.dotSize] || 1);
+
+function applyPrefs(next) {
+  const prev = prefs;
+  prefs = { ...prefs, ...next };
+  const r = document.documentElement;
+
+  if (prefs.theme === "system") r.removeAttribute("data-theme");
+  else r.setAttribute("data-theme", prefs.theme);
+  r.setAttribute("data-contrast", prefs.contrast === "more" ? "more" : "normal");
+
+  // Points are merged into a single geometry, so a size change means a rebuild.
+  if (globe && prefs.dotSize !== prev.dotSize && layers.stations) applyLod(true);
+
+  if (prefs.language !== prev.language) applyStrings();
+}
+window.globefm.onPrefs(applyPrefs);
+
+// ── interface language ───────────────────────────────────────────────────────
+/**
+ * Only GlobeFM's own chrome is translated. Station names, place names and
+ * headlines stay in the language of the place they come from — translating
+ * those would be wrong, not helpful.
+ */
+let T = {};
+const t = (key, fallback) => T[key] || fallback;
+
+async function applyStrings() {
+  T = (await window.globefm.strings()) || {};
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    const v = T[el.dataset.i18n];
+    if (v) el.textContent = v;
+  }
+  for (const el of document.querySelectorAll("[data-i18n-title]")) {
+    const v = T[el.dataset.i18nTitle];
+    if (v) { el.title = v; el.setAttribute("aria-label", v); }
+  }
+  for (const el of document.querySelectorAll("[data-i18n-ph]")) {
+    const v = T[el.dataset.i18nPh];
+    if (v) el.placeholder = v;
+  }
+}
 
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**
@@ -1603,12 +1706,12 @@ async function runSearch(query) {
   if (stations.length) {
     const h = document.createElement("div");
     h.className = "sublabel";
-    h.textContent = "Stations";
+    h.textContent = t("app.stations", "Stations");
     placeListEl.appendChild(h);
     for (const ch of stations) placeListEl.appendChild(stationResultRow(ch));
   }
   if (!places.places.length && !stations.length) {
-    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">Nothing matches that.</div>`;
+    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">${t("empty.noMatch", "Nothing matches that.")}</div>`;
   }
 }
 
@@ -1669,6 +1772,9 @@ document.addEventListener("keydown", (e) => {
 (async () => {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
+  // Before the globe builds, so the first point layer is already the right size.
+  applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyStrings();
   setLocked(!!state.locked);
   renderMarkets();
   clearInterval(marketTimer);
