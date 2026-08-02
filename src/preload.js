@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("globefm", {
   search: (q, limit) => ipcRenderer.invoke("catalog:search", q, limit),
   places: (q, limit) => ipcRenderer.invoke("catalog:places", q, limit),
   placeChannels: (i) => ipcRenderer.invoke("catalog:placeChannels", i),
+  globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),
 

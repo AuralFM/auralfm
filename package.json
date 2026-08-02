@@ -9,7 +9,9 @@
     "start": "electron .",
     "crawl": "node scripts/crawl.mjs",
     "icons": "electron scripts/make-icons.js",
-    "tags": "node --max-old-space-size=4096 scripts/tags.mjs"
+    "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "postinstall": "node scripts/vendor.mjs"
   },
   "devDependencies": {
     "electron": "^38.0.0"
@@ -17,5 +19,8 @@
   "repository": {
     "type": "git"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/globefm"
+  "homepage": "https://github.com/YOUR_USERNAME/globefm",
+  "dependencies": {
+    "globe.gl": "^2.46.1"
+  }
 }

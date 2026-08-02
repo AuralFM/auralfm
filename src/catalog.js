@@ -168,6 +168,20 @@ function placeSearch(query, limit = 400) {
   return { total: out.length, places: out.slice(0, limit).map(hydratePlace) };
 }
 
+/**
+ * Compact payload for the globe: [placeIndex, lon, lat, stationCount] per place.
+ * Positional on purpose — 12,296 hydrated objects over IPC is ~1 MB of mostly
+ * field names the globe never reads.
+ */
+function globePoints() {
+  const out = [];
+  for (let i = 0; i < places.length; i++) {
+    const n = byPlace[i].length;
+    if (n) out.push([i, places[i][2], places[i][3], n]);
+  }
+  return out;
+}
+
 function byId(id) {
   const i = channels.findIndex((c) => c[0] === id);
   return i < 0 ? null : hydrate(i);
@@ -175,4 +189,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, placeSearch, placeChannels, byId, stats };
+module.exports = { load, search, placeSearch, placeChannels, globePoints, byId, stats };

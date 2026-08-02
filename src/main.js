@@ -161,7 +161,6 @@ function createTray() {
 ipcMain.handle("state:get", () => load());
 ipcMain.handle("state:set", (_e, state) => { save(state); return true; });
 ipcMain.handle("catalog:search", (_e, q, limit) => catalog.search(q, limit));
-ipcMain.handle("catalog:byPlace", (_e, place, country) => catalog.byPlace(place, country));
 ipcMain.handle("catalog:stats", () => catalog.stats());
 ipcMain.handle("stream:resolve", (_e, ch) => resolver.resolve(ch));
 ipcMain.on("popover:hide", hide);
@@ -176,6 +175,7 @@ ipcMain.on("popover:height", (_e, h) => {
 });
 ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit));
 ipcMain.handle("catalog:placeChannels", (_e, i) => catalog.placeChannels(i));
+ipcMain.handle("catalog:globePoints", () => catalog.globePoints());
 ipcMain.on("explore:open", openExplore);
 
 /**

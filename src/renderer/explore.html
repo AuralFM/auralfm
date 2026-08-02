@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
 <title>Explore</title>
 <style>
   :root{
@@ -92,6 +92,19 @@
     min-width:22px;text-align:right;
   }
 
+  /* Globe pane. Swaps in for the places list; the stations pane never moves,
+     which is what makes the shared selection obvious. */
+  .globewrap{flex:1;position:relative;min-width:0;border-right:.5px solid var(--line)}
+  #globe{position:absolute;inset:0}
+  #globe canvas{display:block}
+  .globehint{
+    position:absolute;left:0;right:0;bottom:12px;text-align:center;
+    font-size:11px;color:var(--label3);pointer-events:none;
+  }
+  /* In globe mode the globe takes the room and the station list narrows. */
+  body.view-globe .places{display:none}
+  body.view-globe .stations{width:330px;flex:none}
+
   /* Right: stations in the selected place. */
   .stations{flex:1;display:flex;flex-direction:column;min-height:0}
   .placehead{flex:none;padding:0 18px 10px}
@@ -144,7 +157,7 @@
   <span class="sp"></span>
   <div class="seg" role="tablist">
     <button id="tabList" role="tab" aria-selected="true">List</button>
-    <button id="tabGlobe" role="tab" aria-selected="false" disabled title="Coming in the next phase">Globe</button>
+    <button id="tabGlobe" role="tab" aria-selected="false">Globe</button>
   </div>
 </div>
 
@@ -155,6 +168,11 @@
     </div>
     <div class="secthead" id="placehead">Places</div>
     <div class="scroll" id="placelist"></div>
+  </div>
+
+  <div class="globewrap" id="globewrap" hidden>
+    <div id="globe"></div>
+    <div class="globehint" id="globehint">Loading globe…</div>
   </div>
 
   <div class="stations">
@@ -205,6 +223,7 @@ async function loadPlaces(query = "") {
   for (const p of places) {
     const el = document.createElement("div");
     el.className = "place";
+    el.dataset.i = p.i;
     el.setAttribute("aria-selected", p.i === selection.placeIndex);
     el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>
                     <span class="cnt"></span>`;
@@ -214,6 +233,24 @@ async function loadPlaces(query = "") {
     el.onclick = () => selectPlace(p.i);
     placeListEl.appendChild(el);
   }
+  markPlaceSelection();
+}
+
+/**
+ * Mark the selected place by index, not by comparing display text — the globe
+ * can select a place that the list is currently filtered away from, and text
+ * matching silently failed in exactly that case.
+ */
+function markPlaceSelection({ scroll = false } = {}) {
+  let hit = null;
+  for (const el of placeListEl.children) {
+    if (!el.dataset?.i) continue;
+    const on = Number(el.dataset.i) === selection.placeIndex;
+    el.setAttribute("aria-selected", on);
+    if (on) hit = el;
+  }
+  if (hit && scroll) hit.scrollIntoView({ block: "nearest" });
+  return hit;
 }
 
 async function selectPlace(i) {
@@ -222,17 +259,9 @@ async function selectPlace(i) {
   selection.placeIndex = i;
   selection.place = place;
   selection.channels = channels;
-  [...placeListEl.children].forEach((el, n) => {
-    const p = placeListEl.children[n];
-    p.setAttribute?.("aria-selected", false);
-  });
-  // Re-mark by matching the clicked row (cheap: only ~400 rendered).
-  for (const el of placeListEl.children) {
-    const title = el.querySelector?.(".pn")?.textContent;
-    const country = el.querySelector?.(".pc")?.textContent;
-    if (title === place.title && country === place.country) el.setAttribute("aria-selected", true);
-  }
+  markPlaceSelection({ scroll: true });
   renderStations();
+  refreshGlobeSelection();
 }
 
 // ── stations ─────────────────────────────────────────────────────────────────
@@ -293,6 +322,127 @@ window.globefm.onPlayerState((s) => {
   }
 });
 
+// ── globe view ───────────────────────────────────────────────────────────────
+let globe = null, globeLoading = null, globePts = null;
+
+/** Load the 1.7 MB globe bundle only when someone actually asks for the globe. */
+function loadGlobeLib() {
+  if (window.Globe) return Promise.resolve();
+  if (globeLoading) return globeLoading;
+  globeLoading = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "vendor/globe.gl.min.js";
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("globe.gl failed to load — run `npm run vendor`"));
+    document.head.appendChild(s);
+  });
+  return globeLoading;
+}
+
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const isDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+// A near-black sphere sits like a hole punched in a light window; lift it in
+// light appearance so the globe reads as an object on the surface.
+const globeHex = () => (isDark() ? 0x15181d : 0xdfe3e8);
+const selColor = () => (isDark() ? "#ffffff" : "#0b3d24");
+
+async function initGlobe() {
+  await loadGlobeLib();
+  const raw = await window.globefm.globePoints();      // [i, lon, lat, count]
+  globePts = raw.map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
+
+  const accent = css("--accent") || "#30D158";
+  const el = $("globe");
+
+  globe = Globe()(el)
+    // No texture image: the app is offline-first, and 12,296 station points
+    // trace the continents on their own — radio follows population.
+    .backgroundColor("rgba(0,0,0,0)")
+    .showGlobe(true)
+    .showAtmosphere(true)
+    .atmosphereColor(accent)
+    .atmosphereAltitude(0.14)
+    .pointsData(globePts)
+    .pointLat("lat").pointLng("lng")
+    .pointColor((d) => (d.i === selection.placeIndex ? selColor() : accent))
+    // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
+    // read as noise rather than geography.
+    .pointAltitude(0.002)
+    // sqrt, not linear: Paris has 710 stations and a village has 1, and a linear
+    // scale would make Paris a blob that swallows northern France.
+    .pointRadius((d) => (d.i === selection.placeIndex ? 0.7 : 0.13 + Math.sqrt(d.count) * 0.022))
+    // Merged into one geometry: unmerged, 12,296 points cost 12,298 draw calls
+    // per frame. Merged it is ~3. The tradeoff is that changing a point's colour
+    // means rebuilding the layer, which only happens on selection.
+    .pointsMerge(true)
+    .pointLabel((d) => `${d.count} station${d.count === 1 ? "" : "s"}`)
+    .onPointClick((d) => { selectPlace(d.i); flyTo(d.lat, d.lng); });
+
+  globe.globeMaterial().color = new THREE_COLOR(globeHex());
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.35;
+  globe.controls().enableDamping = true;
+
+  // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
+  // is the fastest way to make a globe feel broken.
+  el.addEventListener("pointerdown", () => { globe.controls().autoRotate = false; }, { once: false });
+
+  sizeGlobe();
+  $("globehint").textContent = `${globePts.length.toLocaleString()} places · drag to spin, click a point`;
+}
+
+// globe.gl bundles three, but doesn't re-export Color; grab it off an existing material.
+function THREE_COLOR(hex) {
+  const c = globe.globeMaterial().color.clone();
+  c.setHex(hex);
+  return c;
+}
+
+function sizeGlobe() {
+  if (!globe) return;
+  const w = $("globewrap");
+  globe.width(w.clientWidth).height(w.clientHeight);
+}
+
+function flyTo(lat, lng) {
+  globe?.pointOfView({ lat, lng, altitude: 1.6 }, 700);
+}
+
+/** Merged geometry means selection changes need the layer rebuilt, not just recoloured. */
+function refreshGlobeSelection() {
+  if (globe && globePts) globe.pointsData(globePts);
+}
+
+async function setView(view) {
+  const isGlobe = view === "globe";
+  document.body.classList.toggle("view-globe", isGlobe);
+  $("tabList").setAttribute("aria-selected", !isGlobe);
+  $("tabGlobe").setAttribute("aria-selected", isGlobe);
+  $("globewrap").hidden = !isGlobe;
+
+  const state = (await window.globefm.getState()) || {};
+  state.exploreView = view;
+  await window.globefm.setState(state);
+
+  if (!isGlobe) return;
+  try {
+    if (!globe) await initGlobe();
+    sizeGlobe();
+    if (selection.place) flyTo(selection.place.lat, selection.place.lon);
+  } catch (err) {
+    $("globehint").textContent = err.message;
+  }
+}
+
+$("tabList").onclick = () => setView("list");
+$("tabGlobe").onclick = () => setView("globe");
+window.addEventListener("resize", sizeGlobe);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (!globe) return;
+  globe.globeMaterial().color = new THREE_COLOR(globeHex());
+  refreshGlobeSelection();
+});
+
 // ── input ────────────────────────────────────────────────────────────────────
 qEl.addEventListener("input", () => {
   clearTimeout(debounce);
@@ -309,6 +459,7 @@ document.addEventListener("keydown", (e) => {
   const state = (await window.globefm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   await loadPlaces("");
+  if (state.exploreView === "globe") await setView("globe");
 })();
 </script>
 </body>
