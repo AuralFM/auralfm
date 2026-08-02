@@ -869,13 +869,40 @@ async function loadLiveImagery(TexClass, like) {
     cv.width = 2048; cv.height = 1024;
     const ctx = cv.getContext("2d");
 
+    // Sub-satellite longitudes. GOES imagery is only trustworthy near the middle
+    // of its disk; toward the limb it is stretched and colour-shifted.
+    const SUBLON = { goesE: -75.2, goesW: -137.0 };
+
     let liveCount = 0;
     for (const key of ["base", "goesE", "goesW"]) {
       if (!sky[key]) continue;
       try {
         const img = await loadImage("file://" + sky[key]);
-        ctx.drawImage(img, 0, 0, cv.width, cv.height);
-        if (key !== "base") liveCount++;
+        if (key === "base") { ctx.drawImage(img, 0, 0, cv.width, cv.height); continue; }
+
+        // Feather the disk instead of pasting it. A hard-edged disk lands as a
+        // pale wedge with a diagonal seam where GOES meets VIIRS — different
+        // sensors, different colour grading, and a visible cut between them.
+        const tmp = document.createElement("canvas");
+        tmp.width = cv.width; tmp.height = cv.height;
+        const tc = tmp.getContext("2d");
+        tc.drawImage(img, 0, 0, tmp.width, tmp.height);
+
+        const cx = ((SUBLON[key] + 180) / 360) * tmp.width;
+        const cy = tmp.height / 2;
+        // ~55 deg of longitude at full strength, fading out by ~78.
+        const r0 = (55 / 360) * tmp.width, r1 = (78 / 360) * tmp.width;
+        const grad = tc.createRadialGradient(cx, cy, r0, cx, cy, r1);
+        grad.addColorStop(0, "rgba(0,0,0,1)");
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        tc.globalCompositeOperation = "destination-in";
+        tc.fillStyle = grad;
+        tc.fillRect(0, 0, tmp.width, tmp.height);
+
+        ctx.globalAlpha = 0.92;
+        ctx.drawImage(tmp, 0, 0);
+        ctx.globalAlpha = 1;
+        liveCount++;
       } catch { /* skip this layer */ }
     }
 
@@ -926,8 +953,8 @@ async function initGlobe() {
   globe = Globe()(el)
     // Textures are vendored from three-globe, so the real Earth costs no network.
     .globeImageUrl("vendor/earth-blue-marble.jpg")
-    // Sitting in space, not floating on a window background. The starfield is
-    // vendored, so this costs no network.
+    // Sky is drawn from a real catalogue below; start on the vendored texture so
+    // there is never a blank frame.
     .backgroundImageUrl("vendor/night-sky.png")
     .showGlobe(true)
     .showAtmosphere(true)
@@ -971,12 +998,17 @@ async function initGlobe() {
   sizeGlobe();
   watchGlobeSize();
   updateSun();
+  drawSky();
+  tickISS();
+  clearInterval(issTimer);
+  issTimer = setInterval(tickISS, 4000);   // it moves 7.6 km/s; 4s is visible motion
   // The terminator moves ~0.25° a minute; once a minute is imperceptibly smooth
   // and costs nothing.
   clearInterval(sunTimer);
   sunTimer = setInterval(updateSun, 60000);
   $("globehint").innerHTML =
-    `<span id="lodhint"></span> &nbsp;·&nbsp; <span id="sunreadout"></span><span id="liveflag"></span>`;
+    `<span id="lodhint"></span> &nbsp;·&nbsp; <span id="sunreadout"></span><span id="liveflag"></span>`
+    + `<span id="issreadout"></span>`;
   applyLod(true);
   updateSun();
 }
@@ -1059,6 +1091,118 @@ function nearestPlace(lat, lng) {
   }
   if (!best) return null;
   return { i: best.i, dist: Math.acos(Math.min(1, Math.max(-1, bestCos))) / rad };
+}
+
+// ── real sky ─────────────────────────────────────────────────────────────────
+/**
+ * Draw the actual sky — 5,044 stars to magnitude 6 and 89 constellation figures
+ * from the Yale Bright Star Catalog — into an equirectangular canvas used as the
+ * scene backdrop.
+ *
+ * Honest limitation: this is a *backdrop*, not an oriented sky dome. Stars sit
+ * correctly relative to each other and the constellations are the real figures,
+ * but the sky does not parallax as you spin the Earth. Doing that properly means
+ * a textured sky sphere on its own rotation, which is a bigger change than the
+ * payoff justifies right now.
+ */
+async function drawSky() {
+  const sky = await window.globefm.sky();
+  if (!sky?.stars?.length) return;   // keep the vendored texture
+
+  const W = 4096, H = 2048;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#05070c";
+  ctx.fillRect(0, 0, W, H);
+
+  // RA 0-360 -> x, Dec +90..-90 -> y
+  const X = (ra) => ((ra % 360) + 360) % 360 / 360 * W;
+  const Y = (dec) => (90 - dec) / 180 * H;
+
+  // Constellation figures first, so stars sit on top of their own lines.
+  ctx.strokeStyle = "rgba(120,165,255,0.22)";
+  ctx.lineWidth = 1.6;
+  for (const c of sky.constellations) {
+    for (const seg of c.l) {
+      ctx.beginPath();
+      seg.forEach(([ra, dec], i) => {
+        const x = X(ra), y = Y(dec);
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.stroke();
+    }
+  }
+
+  for (const [ra, dec, mag] of sky.stars) {
+    // Magnitude is backwards and logarithmic: mag 0 is brilliant, mag 6 is the
+    // naked-eye limit. Map it to radius and alpha so the sky has real hierarchy.
+    const b = Math.max(0, (6.2 - mag) / 6.2);
+    const r = 0.6 + b * b * 3.4;
+    ctx.globalAlpha = 0.35 + b * 0.65;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(X(ra), Y(dec), r, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  globe.backgroundImageUrl(cv.toDataURL("image/jpeg", 0.86));
+}
+
+// ── ISS ──────────────────────────────────────────────────────────────────────
+/**
+ * The station, live, with the track it has just flown.
+ *
+ * The trail is *recorded*, not predicted — positions we actually observed rather
+ * than an orbit we propagated. Less impressive, but it is true, and it needs no
+ * SGP4 propagator.
+ */
+let issTrail = [], issTimer = null;
+
+async function tickISS() {
+  if (!globe) return;
+  const p = await window.globefm.iss();
+  if (!p) return;
+
+  issTrail.push([p.lat, p.lng]);
+  if (issTrail.length > 90) issTrail.shift();          // ~6 min of track
+
+  globe
+    .ringsData([{ lat: p.lat, lng: p.lng }])
+    .ringLat("lat").ringLng("lng")
+    .ringMaxRadius(2.4)
+    .ringPropagationSpeed(1.6)                          // a slow outward pulse
+    .ringRepeatPeriod(1400)
+    .ringAltitude(0.055)
+    .ringColor(() => (t) => `rgba(255,255,255,${0.55 * (1 - t)})`);
+
+  // Break the trail at the antimeridian, or it draws a line straight across the
+  // map every time the station wraps from +180 to -180.
+  const segs = [];
+  let run = [];
+  for (let i = 0; i < issTrail.length; i++) {
+    const [la, ln] = issTrail[i];
+    if (run.length && Math.abs(ln - run[run.length - 1][1]) > 180) { segs.push(run); run = []; }
+    run.push([la, ln]);
+  }
+  if (run.length > 1) segs.push(run);
+
+  globe
+    .pathsData(segs.filter((s) => s.length > 1))
+    .pathPoints((d) => d)
+    .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
+    .pathPointAlt(0.052)
+    .pathColor(() => ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"])
+    .pathStroke(1.1)
+    .pathTransitionDuration(0);
+
+  const el = $("issreadout");
+  if (el) {
+    el.textContent = `  ⌖ ISS ${Math.abs(p.lat).toFixed(1)}°${p.lat >= 0 ? "N" : "S"} `
+      + `${Math.abs(p.lng).toFixed(1)}°${p.lng >= 0 ? "E" : "W"} · ${Math.round(p.altKm)} km`
+      + (p.sunlit === null ? "" : p.sunlit ? " · sunlit" : " · in shadow");
+  }
 }
 
 function sizeGlobe() {

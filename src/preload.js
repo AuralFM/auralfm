@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("globefm", {
   placeFacets: (i) => ipcRenderer.invoke("catalog:placeFacets", i),
   globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
   clouds: () => ipcRenderer.invoke("clouds:get"),
+  iss: () => ipcRenderer.invoke("iss:get"),
+  sky: () => ipcRenderer.invoke("sky:get"),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),
   stats: () => ipcRenderer.invoke("catalog:stats"),

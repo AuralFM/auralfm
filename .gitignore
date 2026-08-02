@@ -17,3 +17,4 @@ data/_radiobrowser.json
 src/renderer/vendor/
 dist/
 build/icon.iconset/
+assets/sky.json
