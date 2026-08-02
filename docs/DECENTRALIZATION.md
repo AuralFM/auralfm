@@ -309,11 +309,13 @@ needs a claim that would not hold up:
 
 ## 6. Sequence
 
-1. **KiwiSDR receivers on the globe** (#24) — the centrepiece, and the only thing
-   here that changes what the app fundamentally *is*. Ship the seven etiquette
-   rules with it or do not ship it.
-2. **Fix the language** — "no backend of our own" replaces "serverless" in
-   `README`, `docs/PRODUCT.md`, `docs/PRIVACY.md` and the About panel.
+1. ~~**KiwiSDR receivers on the globe** (#24)~~ — **done**, 326c4a2. 837
+   receivers, all seven etiquette rules in the code, verified in the packaged
+   build against Christoval TX, Trondheim, Siknäs, Bavaria, Örlygshöfn and
+   South Australia. GlobeFM now has audio that is not a stream server.
+2. ~~**Fix the language**~~ — done. "No backend of our own" replaces
+   "serverless" in the README, `PRODUCT.md`, the Settings promise in all five
+   languages, and the About panel.
 3. **Nostr presence** (#10) — build it expecting an empty room.
 4. **Meshtastic presence** — only after #10 works over the internet.
 5. **Zap button where a station already published an address** — no registry, ever.
