@@ -459,6 +459,13 @@ function stepFavorite(delta) {
 window.globefm.onTune((ch) => { tune(ch); });
 
 // Hardware media keys, forwarded from main.
+// Listener count, when a presence server is configured. Silent otherwise.
+window.globefm.onListeners((n) => {
+  const el = $("status");
+  if (!n || !live) return;
+  el.textContent = `${el.textContent} · ${n} listening`;
+});
+
 window.globefm.onMediaKey((action) => {
   if (action === "playpause") { if (current) audio.paused ? tune(current) : stop(); }
   else if (action === "next") stepFavorite(1);

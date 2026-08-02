@@ -13,6 +13,7 @@ const resolver = require("./resolver");
 const weather = require("./weather");
 const news = require("./news");
 const failures = require("./failures");
+const presence = require("./presence");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -242,6 +243,9 @@ ipcMain.on("player:tune", (_e, channel) => {
 /** The popover is the source of truth for playback; everyone else observes. */
 ipcMain.on("player:state", (_e, state) => {
   playerState = state;
+  // Presence is opt-in and no-ops entirely when unconfigured.
+  if (state.playing && state.channel?.id) presence.join(state.channel.id);
+  else presence.leave();
   // Station name next to the menu bar icon. Truncated so it can't eat the bar.
   const t = state.playing && state.channel?.title ? state.channel.title : "";
   tray?.setTitle(t ? ` ${t.slice(0, 22)}` : "");
@@ -305,6 +309,8 @@ if (!app.requestSingleInstanceLock()) {
     catalog.load();
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
+    presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
+    if (presence.enabled()) console.log("presence: enabled");
     createWindow();
     createTray();
   });

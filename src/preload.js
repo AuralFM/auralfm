@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("globefm", {
   reportFailed: (id) => ipcRenderer.send("player:failed", id),
   mediaKeys: (on) => ipcRenderer.send("player:mediakeys", on),
   onMediaKey: (fn) => ipcRenderer.on("player:mediakey", (_e, a) => fn(a)),
+  onListeners: (fn) => ipcRenderer.on("player:listeners", (_e, n) => fn(n)),
   reportOk: (id) => ipcRenderer.send("player:ok", id),
   nextStation: (ch, tried) => ipcRenderer.invoke("player:next", ch, tried),
   publishState: (state) => ipcRenderer.send("player:state", state),
