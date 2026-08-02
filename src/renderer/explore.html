@@ -1002,12 +1002,24 @@ function loadTexture(url, TexClass, like) {
   });
 }
 
-const waitFor = (fn, ms = 8000) => new Promise((res, rej) => {
-  const t0 = Date.now();
+/**
+ * Poll until fn() returns something truthy.
+ *
+ * The budget counts only time the window is actually visible. three-globe hands
+ * its texture over on a render tick, and a hidden or occluded window has its
+ * animation frames throttled to nothing — so wall-clock time spent in the
+ * background is time in which nothing could possibly have progressed. Charging
+ * it against the timeout is how a backgrounded launch used to fail.
+ */
+const waitFor = (fn, ms = 30000) => new Promise((res, rej) => {
+  let spent = 0, last = Date.now();
   (function poll() {
     const v = fn();
     if (v) return res(v);
-    if (Date.now() - t0 > ms) return rej(new Error("timed out waiting for texture"));
+    const now = Date.now();
+    if (!document.hidden) spent += now - last;
+    last = now;
+    if (spent > ms) return rej(new Error("timed out waiting for texture"));
     setTimeout(poll, 60);
   })();
 });
@@ -1026,6 +1038,28 @@ const waitFor = (fn, ms = 8000) => new Promise((res, rej) => {
  * colour. Writing gl_FragColor last skips sRGB encoding and the daylit half
  * comes out several stops too dark.
  */
+/**
+ * The globe shader only exists once its program compiles, which happens on the
+ * first render after needsUpdate — not when applyDayNight() returns. Anything
+ * that wants to set a uniform before then has to wait rather than give up.
+ *
+ * It used to give up: the live cloud composite was fetched, stitched, and then
+ * dropped on the floor if the shader wasn't ready, and the Day/Night menu toggle
+ * silently did nothing in the same window. Both now queue.
+ */
+let shaderQueue = [];
+function withShader(fn) {
+  const sh = globe?.globeMaterial()?.userData?.shader;
+  if (sh) { fn(sh); return true; }
+  shaderQueue.push(fn);
+  return false;
+}
+function flushShaderQueue(sh) {
+  const q = shaderQueue;
+  shaderQueue = [];
+  for (const fn of q) { try { fn(sh); } catch { /* one bad consumer must not block the rest */ } }
+}
+
 async function applyDayNight() {
   const mat = globe.globeMaterial();
   const dayTex = await waitFor(() => mat.map);
@@ -1057,18 +1091,28 @@ async function applyDayNight() {
     shader.uniforms.dayNightOn = { value: 1 };
     shader.uniforms.sunDirection = { value: sunVector() };
 
-    // Pass the geometry's own UVs through a varying we control. Deriving UVs
-    // from the normal looks right on paper but silently rotates the map: three's
-    // SphereGeometry puts u=0 at -X and u=0.25 at +Z, not u=0.5 at +Z, so the
-    // Americas ended up showing Europe and Africa.
-    shader.vertexShader = "varying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" + shader.vertexShader
-      .replace("void main() {", "void main() {\n  vObjNormal = normalize(position);\n  vGlobeUv = uv;");
+    // Two separate frames here, and mixing them up has bitten this shader twice.
+    //
+    // UVs: pass the geometry's own through, rather than deriving them from the
+    // normal. Deriving looks right on paper but silently rotates the map —
+    // three's SphereGeometry puts u=0 at -X, not u=0.5 at +Z, so the Americas
+    // ended up showing Europe and Africa.
+    //
+    // Normal: it must be in the SAME frame as the sun vector, and it was not.
+    // three-globe rotates the globe mesh by -90 degrees about Y, so `position`
+    // (object space, before that rotation) sat a quarter-turn away from
+    // sunVector(), which comes from getCoords() and is already in the parent
+    // frame. The terminator was therefore always 90 degrees out. Multiplying by
+    // modelMatrix puts the normal in the same frame as the sun and keeps it
+    // correct even if that rotation ever changes.
+    shader.vertexShader = "varying vec3 vGlobeNormal;\nvarying vec2 vGlobeUv;\n" + shader.vertexShader
+      .replace("void main() {", "void main() {\n  vGlobeNormal = normalize(mat3(modelMatrix) * position);\n  vGlobeUv = uv;");
 
     shader.fragmentShader =
       "uniform sampler2D nightMap;\nuniform sampler2D liveMap;\nuniform float hasLive;\nuniform float dayNightOn;\n" +
-      "uniform vec3 sunDirection;\nvarying vec3 vObjNormal;\nvarying vec2 vGlobeUv;\n" +
+      "uniform vec3 sunDirection;\nvarying vec3 vGlobeNormal;\nvarying vec2 vGlobeUv;\n" +
       shader.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>
-        vec3 n = normalize(vObjNormal);
+        vec3 n = normalize(vGlobeNormal);
         vec3 dayC   = texture2D(map, vGlobeUv).rgb;
         vec3 nightC = texture2D(nightMap, vGlobeUv).rgb;
 
@@ -1095,6 +1139,40 @@ async function applyDayNight() {
   // three's default program cache key already stringifies onBeforeCompile, so
   // replacing the hook is enough to force a recompile.
   mat.needsUpdate = true;
+
+  // Don't await this — the globe should be interactive immediately. It only
+  // exists to release anything that queued on the shader.
+  waitFor(() => mat.userData.shader)
+    .then(flushShaderQueue)
+    .catch(() => { /* setupDayNight() owns reporting and retry */ });
+}
+
+/**
+ * applyDayNight() is the one part of init that depends on an asset arriving, so
+ * it is also the one part that can fail. It used to be awaited bare, which meant
+ * a slow texture took the sky, the ISS, the LOD and the live clouds down with
+ * it — and reported the failure into a status bar that is hidden by default, so
+ * the globe just quietly looked wrong.
+ *
+ * Now it fails alone, says so where it can be seen, and tries again when the
+ * window comes back to the front, which is exactly when a throttled load can
+ * finally make progress.
+ */
+let dayNightRetry = null;
+async function setupDayNight() {
+  try {
+    await applyDayNight();
+    if (dayNightRetry) { document.removeEventListener("visibilitychange", dayNightRetry); dayNightRetry = null; }
+    return true;
+  } catch (err) {
+    const el = $("globehint");
+    if (el) el.textContent = `day/night unavailable — ${err.message}`;
+    if (!dayNightRetry) {
+      dayNightRetry = () => { if (!document.hidden) setupDayNight(); };
+      document.addEventListener("visibilitychange", dayNightRetry);
+    }
+    return false;
+  }
 }
 
 const loadImage = (src) => new Promise((res, rej) => {
@@ -1162,11 +1240,11 @@ async function loadLiveImagery(TexClass, like) {
     if (like) { tex.wrapS = like.wrapS; tex.wrapT = like.wrapT; tex.colorSpace = like.colorSpace; tex.flipY = like.flipY; }
     tex.needsUpdate = true;
 
-    const sh = globe?.globeMaterial()?.userData?.shader;
-    if (!sh) return;
-    sh.uniforms.liveMap.value = tex;
-    liveTexReady = true;
-    sh.uniforms.hasLive.value = layers.clouds ? 1 : 0;
+    withShader((sh) => {
+      sh.uniforms.liveMap.value = tex;
+      liveTexReady = true;
+      sh.uniforms.hasLive.value = layers.clouds ? 1 : 0;
+    });
 
     const el = $("liveflag");
     if (el) {
@@ -1181,6 +1259,8 @@ function updateSun() {
   if (!globe) return;
   // The readout must not depend on the shader: the program compiles on the first
   // render after needsUpdate, which is after initGlobe returns.
+  // Deliberately not queued: this runs every minute, so if the shader is not up
+  // yet the next tick will carry a fresher sun anyway.
   const sh = globe.globeMaterial()?.userData?.shader;
   if (sh) sh.uniforms.sunDirection.value = sunVector();
   const { lat, lng } = subsolarPoint();
@@ -1232,7 +1312,7 @@ async function initGlobe() {
     .pointLabel((d) => `${d.count} station${d.count === 1 ? "" : "s"}`)
     .onPointClick((d) => goToPlace(d.i, { play: true }));
 
-  await applyDayNight();
+  await setupDayNight();
   // A slow, permanent drift — the Earth is never truly still, and a dead-static
   // globe reads as a screenshot. Slow enough not to fight you while you aim.
   globe.controls().autoRotate = true;
@@ -1363,13 +1443,12 @@ function applyLayers(next) {
   if (bar) bar.hidden = !layers.statusBar;
   if (!globe) return;
 
-  const sh = globe.globeMaterial()?.userData?.shader;
-  if (sh) {
+  withShader((sh) => {
     sh.uniforms.hasLive.value = (layers.clouds && liveTexReady) ? 1 : 0;
     // Sun fully overhead everywhere reads as permanent daylight, which is what
     // "day/night off" should mean.
     sh.uniforms.dayNightOn.value = layers.dayNight ? 1 : 0;
-  }
+  });
 
   if (!layers.stations) globe.pointsData([]);
   else if (!prev.stations) applyLod(true);
@@ -1781,7 +1860,14 @@ document.addEventListener("keydown", (e) => {
   marketTimer = setInterval(renderMarkets, 90000);   // matches the cache TTL
 
   await loadPlaces("");
-  try { await initGlobe(); } catch (err) { $("globehint").textContent = err.message; }
+  try {
+    await initGlobe();
+  } catch (err) {
+    // Reveal the status bar for this: an init failure is the one time the read-out
+    // has to be visible whether or not the user asked for it.
+    const el = $("globehint");
+    if (el) { el.textContent = err.message; el.hidden = false; }
+  }
 
   // Quietly flag a stale catalog rather than letting it rot invisibly.
   const st = await window.globefm.stats();
