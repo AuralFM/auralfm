@@ -277,8 +277,17 @@ let gen = 0, watchdog = null, searchSeq = 0, debounce = null;
  */
 let sdrSession = null, audioCtx = null, sdrRx = null;
 
+/**
+ * End a shortwave session.
+ *
+ * The callback is detached first, deliberately. Stopping fires onState, and if
+ * we are stopping because the user just picked a station, that callback would
+ * overwrite "Finding stream…" with "Receiver disconnected" — reporting the thing
+ * we did as though something went wrong.
+ */
 function sdrStop() {
   if (!sdrSession) return;
+  sdrSession.opts.onState = null;
   sdrSession.stop();
   sdrSession = null;
   sdrRx = null;
@@ -382,6 +391,10 @@ qEl.addEventListener("input", () => {
 /** Always resolves and plays `ch`. Toggle logic lives at the call sites. */
 async function tune(ch, { chained = false } = {}) {
   if (!chained) tried = [];
+  // A station and a receiver are never both playing. This was missing, so
+  // picking a station left the shortwave audio running underneath it — and
+  // publish() reads sdrRx first, so Now Playing went on naming the receiver.
+  sdrStop();
   current = ch;
   nowName.textContent = ch.title;
   toggle.disabled = false;

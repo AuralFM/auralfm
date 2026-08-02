@@ -560,6 +560,7 @@ if (!app.requestSingleInstanceLock()) {
     satellites.init(app.getPath("userData"));
     sdr.init(app.getPath("userData"));
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
+    markets.start();        // live crypto feed; falls back to polling on its own
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();

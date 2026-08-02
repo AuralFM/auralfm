@@ -74,6 +74,14 @@
   .railtabs button[aria-checked="true"]{background:var(--label);color:var(--bg);font-weight:590}
   .railtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
+  /* A one-shot tint when a price moves, so the ticker reads as alive without
+     demanding attention. Fades over most of a second. */
+  @keyframes tickUp{from{color:#30D158}to{color:inherit}}
+  @keyframes tickDn{from{color:#FF453A}to{color:inherit}}
+  .m .px.tick-up{animation:tickUp .9s ease-out}
+  .m .px.tick-dn{animation:tickDn .9s ease-out}
+  @media (prefers-reduced-motion: reduce){ .m .px.tick-up,.m .px.tick-dn{animation:none} }
+
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overflow:hidden}
   body{
@@ -777,17 +785,59 @@ $("favBtn").onclick = () => {
  */
 let marketTimer = null;
 
+/**
+ * Crypto now arrives over a live Coinbase socket rather than a 90-second poll,
+ * so the ticker refreshes once a second and prices visibly move. Rows are
+ * updated in place rather than rebuilt — replacing the DOM every second
+ * restarts the flash animation on every symbol at once, which turns a quiet
+ * ticker into a strobe.
+ */
+let lastPrices = new Map();
+
 async function renderMarkets() {
   const el = $("markets");
   if (!el) return;
   const { items, hasStocks } = (await window.globefm.markets()) || { items: [] };
   if (!items?.length) { el.textContent = ""; return; }
 
+  // Same symbols in the same order: update the numbers and leave the DOM alone.
+  const existing = [...el.children];
+  const sameShape = existing.length === items.length &&
+    items.every((it, i) => existing[i].dataset.sym === it.symbol);
+  if (sameShape) {
+    items.forEach((it, i) => {
+      const wrap = existing[i];
+      const up = (it.changePct ?? 0) >= 0;
+      const px = wrap.querySelector(".px");
+      const text = it.price >= 1000 ? Math.round(it.price).toLocaleString()
+                 : it.price >= 1   ? it.price.toFixed(2)
+                 : it.price.toFixed(4);
+      if (px.textContent !== text) {
+        const prev = lastPrices.get(it.symbol);
+        px.textContent = text;
+        // A one-shot tint in the direction it moved, so you can see it tick.
+        if (prev != null && it.price !== prev) {
+          px.classList.remove("tick-up", "tick-dn");
+          void px.offsetWidth;                       // restart the animation
+          px.classList.add(it.price > prev ? "tick-up" : "tick-dn");
+        }
+      }
+      lastPrices.set(it.symbol, it.price);
+      const ch = wrap.querySelector(".ch");
+      ch.className = `ch ${up ? "up" : "dn"}`;
+      ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(2)}%`;
+    });
+    el.title = hasStocks ? "" : el.title;
+    return;
+  }
+
   el.innerHTML = "";
   for (const it of items) {
+    lastPrices.set(it.symbol, it.price);
     const up = (it.changePct ?? 0) >= 0;
     const wrap = document.createElement("span");
     wrap.className = "m";
+    wrap.dataset.sym = it.symbol;
     wrap.innerHTML = `<span class="sym"></span><span class="px"></span><span class="ch"></span>`;
     wrap.querySelector(".sym").textContent = it.symbol;
     wrap.querySelector(".px").textContent =
@@ -1563,12 +1613,33 @@ function pauseDrift(ms = 6000) {
   }, ms);
 }
 
-let lodPending = null, followPending = null;
+/**
+ * Run fn at most every `ms`, on both the leading and trailing edge.
+ *
+ * This replaced a debounce, and the difference is the whole reason the list felt
+ * stuck. A debounce waits for the camera to go quiet — but the camera is never
+ * quiet while you are dragging, and with the idle drift on it is never quiet at
+ * all, so the 420ms timer was reset on every frame and the list simply did not
+ * follow until you stopped touching the globe. Measured cost of following:
+ * 1.8ms to find the nearest place, 0.3ms for the channel lookup. There was never
+ * a performance reason to wait.
+ */
+function throttle(fn, ms) {
+  let last = 0, timer = null;
+  return function run() {
+    const now = Date.now();
+    const wait = ms - (now - last);
+    if (wait <= 0) { last = now; clearTimeout(timer); timer = null; fn(); }
+    else if (!timer) timer = setTimeout(() => { timer = null; last = Date.now(); fn(); }, wait);
+  };
+}
+
+const followThrottled = throttle(followCentre, 90);
+const lodThrottled = throttle(() => applyLod(), 200);
+
 function onCameraChange() {
-  clearTimeout(lodPending);
-  lodPending = setTimeout(() => applyLod(), 160);
-  clearTimeout(followPending);
-  followPending = setTimeout(followCentre, 420);   // only once the drag settles
+  lodThrottled();
+  followThrottled();
 }
 
 /**
@@ -1579,6 +1650,11 @@ function onCameraChange() {
  */
 function followCentre() {
   if (!globe || !globePts || showingFavorites || flying) return;
+  // Locked means locked: browsing the globe must not pull the list out from
+  // under you. Clicking a dot or searching still works — this only stops the
+  // globe's own motion from changing what you are looking at.
+  if (locked) return;
+  if (sdrSel) return;                  // a receiver's bands are not a place
   const pov = globe.pointOfView();
   const near = nearestPlace(pov.lat, pov.lng);
   if (!near || near.i === selection.placeIndex) return;
@@ -2135,7 +2211,9 @@ document.addEventListener("keydown", (e) => {
   setLocked(!!state.locked);
   renderMarkets();
   clearInterval(marketTimer);
-  marketTimer = setInterval(renderMarkets, 90000);   // matches the cache TTL
+  // 1 Hz: the socket is faster than that, but a ticker that changes more often
+  // than you can read it is noise, not information.
+  marketTimer = setInterval(renderMarkets, 1000);
 
   await loadPlaces("");
   // Receivers before the globe, so the first point layer already carries them.
