@@ -680,6 +680,7 @@ async function toggleFav(ch) {
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   // Before the globe builds, so the first point layer is already the right size.
   applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   const i = favorites.findIndex((f) => f.id === ch.id);
   if (i >= 0) favorites.splice(i, 1);
@@ -768,6 +769,7 @@ async function showFavorites() {
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   // Before the globe builds, so the first point layer is already the right size.
   applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   showingFavorites = true;
   $("favBtn").setAttribute("aria-pressed", "true");
@@ -1436,15 +1438,15 @@ async function initGlobe() {
     .backgroundImageUrl("vendor/night-sky.png")
     .showGlobe(true)
     .showAtmosphere(true)
-    .atmosphereColor("#8ab4f8")
+    .atmosphereColor(palette?.atmosphere || "#8ab4f8")
     .atmosphereAltitude(0.17)
     .pointsData(globePts)
     .pointLat("lat").pointLng("lng")
     // Amber for receivers so they read as a different kind of thing entirely —
     // these are antennas, not places, and conflating them would be a lie.
     .pointColor((d) => d.kind === "sdr"
-      ? (sdrSel && sdrSel.host === d.host ? "#ffffff" : "#ffb340")
-      : (d.i === selection.placeIndex ? "#ffffff" : "#5ef08a"))
+      ? (sdrSel && sdrSel.host === d.host ? "#ffffff" : (palette?.rx || "#ffb340"))
+      : (d.i === selection.placeIndex ? "#ffffff" : (palette?.dot || "#5ef08a")))
     .pointLabel((d) => d.label)
     // Near-flat discs, not columns. Extruded points turn the limb into fuzz and
     // read as noise rather than geography.
@@ -1826,7 +1828,38 @@ window.globefm.onLayers((l) => applyLayers(l));
  * which lets the prefers-color-scheme media query win again — an explicit value
  * here would permanently outrank the OS.
  */
-let prefs = { theme: "system", contrast: "system", dotSize: "normal", language: "system" };
+let prefs = { theme: "system", contrast: "system", dotSize: "normal", language: "system",
+              palette: "onair" };
+
+/**
+ * The active colour scheme.
+ *
+ * A palette touches the things around the planet, never the planet — the Earth
+ * is real satellite imagery and recolouring it would destroy the one property
+ * the whole app rests on. So: the accent, the station dots, the receiver dots,
+ * the atmosphere glow and the stars.
+ *
+ * The dots are the surface that actually reads as a theme from across the room;
+ * there are seven hundred of them and two colours of them.
+ */
+let palette = null;
+
+async function applyPalette() {
+  palette = (await window.globefm.palette()) || null;
+  if (!palette) return;
+  const r = document.documentElement;
+  // Light appearance needs the darker variant to stay legible on a pale panel,
+  // exactly as the hand-written tokens did before palettes existed.
+  const light = r.getAttribute("data-theme") === "light" ||
+    (r.getAttribute("data-theme") !== "dark" && !matchMedia("(prefers-color-scheme: dark)").matches);
+  r.style.setProperty("--accent", light ? palette.accentLight : palette.accent);
+  r.style.setProperty("--star", palette.star);
+  if (globe) {
+    globe.atmosphereColor(palette.atmosphere);
+    applyLod(true);                       // merged geometry: colour means rebuild
+    drawSky();
+  }
+}
 
 // Large is ~1.7×: enough to be visibly easier to see and to hit, short of the
 // point where dense regions like western Europe fuse into one blob.
@@ -1847,6 +1880,9 @@ function applyPrefs(next) {
   if (globe && prefs.dotSize !== prev.dotSize && layers.stations) applyLod(true);
 
   if (prefs.language !== prev.language) applyStrings();
+  // Appearance changes swap the accent between its light and dark variants.
+  if (prefs.palette !== prev.palette || prefs.theme !== prev.theme ||
+      prefs.contrast !== prev.contrast) applyPalette();
 }
 window.globefm.onPrefs(applyPrefs);
 
@@ -1926,7 +1962,9 @@ async function drawSky() {
     const b = Math.max(0, (6.2 - mag) / 6.2);
     const r = 0.6 + b * b * 3.4;
     ctx.globalAlpha = 0.35 + b * 0.65;
-    ctx.fillStyle = "#ffffff";
+    // Bright stars stay white; the faint ones take the palette's tint, which is
+    // how a real sky looks and keeps the scheme visible without dyeing Sirius.
+    ctx.fillStyle = b > 0.72 ? "#ffffff" : (palette?.star || "#ffffff");
     ctx.beginPath();
     ctx.arc(X(ra), Y(dec), r, 0, 6.2832);
     ctx.fill();
@@ -2344,6 +2382,7 @@ document.addEventListener("keydown", (e) => {
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   // Before the globe builds, so the first point layer is already the right size.
   applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   setLocked(!!state.locked);
   renderMarkets();

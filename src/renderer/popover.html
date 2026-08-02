@@ -669,6 +669,17 @@ window.globefm.onMediaKey((action) => {
  * "system" clears the attribute rather than setting data-theme="system": an
  * explicit value would permanently outrank prefers-color-scheme.
  */
+/** The popover only needs the accent — it has no globe to colour. */
+async function applyPalette() {
+  const pal = await window.globefm.palette();
+  if (!pal) return;
+  const r = document.documentElement;
+  const light = r.getAttribute("data-theme") === "light" ||
+    (r.getAttribute("data-theme") !== "dark" && !matchMedia("(prefers-color-scheme: dark)").matches);
+  r.style.setProperty("--accent", light ? pal.accentLight : pal.accent);
+  r.style.setProperty("--star", pal.star);
+}
+
 function applyPrefs(p) {
   const r = document.documentElement;
   if (!p.theme || p.theme === "system") r.removeAttribute("data-theme");
@@ -697,6 +708,7 @@ async function applyStrings() {
 
 window.globefm.onPrefs(async (p) => {
   applyPrefs(p);
+  await applyPalette();
   await applyStrings();
   // Rows carry translated titles, so redraw whatever list is on screen.
   if (!qEl.value.trim()) showFavorites();
@@ -712,6 +724,7 @@ window.globefm.onShown(() => {
 // ── boot ─────────────────────────────────────────────────────────────────────
 (async () => {
   applyPrefs((await window.globefm.getPrefs()) || {});
+  await applyPalette();
   await applyStrings();
 
   const saved = await window.globefm.getState();

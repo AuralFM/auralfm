@@ -14,6 +14,7 @@ const weather = require("./weather");
 const news = require("./news");
 const markets = require("./markets");
 const prefs = require("./prefs");
+const palettes = require("./palettes");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -450,6 +451,8 @@ ipcMain.handle("doc:text", (_e, name) =>
   ["PRIVACY.md", "TERMS.md"].includes(name) ? docText(name) : "");
 ipcMain.handle("i18n:strings", () => getStrings());
 ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
+ipcMain.handle("palettes:list", () => palettes.list());
+ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
 ipcMain.handle("app:version", () => app.getVersion());
 
 // ── shortwave ────────────────────────────────────────────────────────────────

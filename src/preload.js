@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld("globefm", {
   docText: (name) => ipcRenderer.invoke("doc:text", name),
   strings: () => ipcRenderer.invoke("i18n:strings"),
   languages: () => ipcRenderer.invoke("i18n:languages"),
+  palettes: () => ipcRenderer.invoke("palettes:list"),
+  palette: () => ipcRenderer.invoke("palettes:get"),
   version: () => ipcRenderer.invoke("app:version"),
 
   // shortwave receivers
