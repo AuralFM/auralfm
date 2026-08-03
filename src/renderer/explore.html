@@ -2827,9 +2827,9 @@ async function selectReceiver(rx) {
    * Frequency and mode come from the caller because a schedule entry knows both
    * exactly, where a band only ever knew a centre.
    */
-  const tuneRow = (el, { freq, mode, label }) => {
+  const tuneRow = (el, { freq, mode, label, width }) => {
     const go = () => {
-      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc, freq, mode, band: label });
+      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc, freq, mode, band: label, width });
       for (const sib of stationListEl.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
       el.setAttribute("aria-current", "true");
     };
@@ -2927,7 +2927,9 @@ async function selectReceiver(rx) {
       // is indistinguishable from a broken one.
       (open ? (o.why ? ` · ${o.why}` : "") : ` · ${o.why || t("sdr.unlikely", "likely quiet now")}`);
     if (!open) el.style.opacity = ".55";
-    tuneRow(el, { freq: b.freq, mode: b.mode, label: b.label });
+    // A band may ask for a filter it needs — the digital modes occupy the whole
+    // 3 kHz above the dial and are half silenced at the normal width.
+    tuneRow(el, { freq: b.freq, mode: b.mode, label: b.label, width: b.width });
     stationListEl.append(el);
   }
 

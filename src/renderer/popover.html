@@ -653,6 +653,9 @@ window.auralfm.onTuneSdr((rx) => {
     host: rx.host,
     freq: rx.freq,
     mode: rx.mode,
+    // The band may specify one; otherwise the default that clears the adjacent
+    // carrier. Either way the buttons can still override it.
+    width: rx.width || "normal",
     audio: audioCtx,
     onState: (s) => {
       // A session that ended for any reason must not leave the UI claiming to play.

@@ -162,6 +162,42 @@
     { id: "natB",   label: "Atlantic air · 8.9",  freq: 8906,  mode: "usb", when: "day",   hint: "oceanic air-ground" },
     { id: "volmetS",label: "Shannon VOLMET",      freq: 8957,  mode: "usb", when: "day",   hint: "aviation weather, continuous" },
     { id: "volmetN",label: "New York VOLMET",     freq: 6604,  mode: "usb", when: "night", hint: "aviation weather, continuous" },
+
+    /**
+     * The digital modes.
+     *
+     * We cannot decode these and are not going to try — WSJT-X's decoders are
+     * heavily optimised Fortran built around a fifteen-second sampling
+     * discipline, and it is GPL-3.0 besides. We do not need to: wspr.live
+     * already hands us decoded spots from the global network, which is what the
+     * network is *for*, and those are what draw the propagation arcs.
+     *
+     * What is missing is the sound. FT8 on a good evening is a few dozen
+     * stations warbling over each other in fifteen-second bursts, all inside
+     * three kilohertz, and it is one of the strangest things on shortwave. You
+     * can hear it without decoding a thing.
+     *
+     * These are USB dial frequencies: the signals sit *above* the dial, up to
+     * about 3 kHz, which is why each one asks for the wide filter. Normal width
+     * would cut the top third of the passband and silence half the stations.
+     *
+     * The WSPR figures were checked against wspr.live rather than copied from a
+     * band plan — three hours of real spots, transmit frequencies clustering
+     * 1.5 kHz above each dial, 141,039 of them on 20 m alone. 80 m and 60 m
+     * genuinely have two allocations each; the dominant one is listed.
+     * The FT8 and PSK31 frequencies are the community conventions, which are
+     * near-universal but are not measured here in the same way.
+     */
+    { id: "ft8_40", label: "FT8 · 40 m",  freq: 7074,    mode: "usb", when: "night", width: "wide", hint: "digital, 15-second bursts" },
+    { id: "ft8_30", label: "FT8 · 30 m",  freq: 10136,   mode: "usb", when: "any",   width: "wide", hint: "digital, 15-second bursts" },
+    { id: "ft8_20", label: "FT8 · 20 m",  freq: 14074,   mode: "usb", when: "day",   width: "wide", hint: "digital — the busiest frequency on HF" },
+    { id: "ft8_17", label: "FT8 · 17 m",  freq: 18100,   mode: "usb", when: "day",   width: "wide", hint: "digital, 15-second bursts" },
+    { id: "ft8_15", label: "FT8 · 15 m",  freq: 21074,   mode: "usb", when: "day",   width: "wide", hint: "digital, needs an active sun" },
+    { id: "ft4_20", label: "FT4 · 20 m",  freq: 14080,   mode: "usb", when: "day",   width: "wide", hint: "digital, faster than FT8" },
+    { id: "psk_20", label: "PSK31 · 20 m",freq: 14070,   mode: "usb", when: "day",   width: "wide", hint: "digital, sounds like a warbling tone" },
+    { id: "wsp_40", label: "WSPR · 40 m", freq: 7038.6,  mode: "usb", when: "night", width: "wide", hint: "beacons — this is where the arcs come from" },
+    { id: "wsp_30", label: "WSPR · 30 m", freq: 10138.7, mode: "usb", when: "any",   width: "wide", hint: "beacons, two-minute cycle" },
+    { id: "wsp_20", label: "WSPR · 20 m", freq: 14095.6, mode: "usb", when: "day",   width: "wide", hint: "beacons, two-minute cycle" },
   ];
 
   // ── propagation outlook ────────────────────────────────────────────────────
