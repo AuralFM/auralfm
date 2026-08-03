@@ -118,8 +118,33 @@
     { id: "b31",   label: "31 m",        freq: 9600,   mode: "am",  when: "any",   hint: "international broadcast" },
     { id: "b25",   label: "25 m",        freq: 11800,  mode: "am",  when: "day",   hint: "international broadcast" },
     { id: "b19",   label: "19 m",        freq: 15400,  mode: "am",  when: "day",   hint: "international broadcast" },
+    /**
+     * Amateur bands, chosen from where the activity actually is rather than from
+     * a band plan. The WSPR figures in #27 measured it over ten minutes: 20m
+     * 8,873 spots, 40m 7,529, 30m 4,164, 80m 2,528, 17m 1,247, 15m 724. 10m had
+     * none at all, which the propagation outlook explains — at a solar flux of
+     * 127 it does not open.
+     *
+     * Convention worth knowing if these look wrong: below 10 MHz amateurs use
+     * lower sideband and above it upper, for no better reason than that is how
+     * the equipment was built and everyone stuck with it.
+     */
+    { id: "ham80", label: "80 m amateur", freq: 3750,  mode: "lsb", when: "night", hint: "voice, regional at night" },
     { id: "ham40", label: "40 m amateur", freq: 7100,  mode: "lsb", when: "night", hint: "voice, operators" },
+    { id: "ham30", label: "30 m amateur", freq: 10130, mode: "cw",  when: "any",   hint: "morse and digital only, no voice" },
     { id: "ham20", label: "20 m amateur", freq: 14200, mode: "usb", when: "day",   hint: "voice, operators" },
+    { id: "ham17", label: "17 m amateur", freq: 18130, mode: "usb", when: "day",   hint: "voice, long haul" },
+    { id: "ham15", label: "15 m amateur", freq: 21300, mode: "usb", when: "day",   hint: "voice, needs an active sun" },
+    { id: "ham10", label: "10 m amateur", freq: 28400, mode: "usb", when: "day",   hint: "voice, only when the sun is loud" },
+
+    /**
+     * Morse. Still the most efficient thing on the band — it gets through when
+     * voice cannot, which is why it never went away — and it sounds like nothing
+     * else you will hear. Narrow filters, because the whole point is a signal
+     * squeezed into a few hundred hertz.
+     */
+    { id: "cw40", label: "40 m morse", freq: 7030,  mode: "cw", when: "night", hint: "CW — hand-sent and machine" },
+    { id: "cw20", label: "20 m morse", freq: 14030, mode: "cw", when: "day",   hint: "CW — hand-sent and machine" },
 
     /**
      * Aviation, on shortwave.
@@ -314,6 +339,9 @@
       if (!this.ws || this.ws.readyState !== 1) return;
       const cuts = mode === "usb" ? "low_cut=300 high_cut=2700"
                  : mode === "lsb" ? "low_cut=-2700 high_cut=-300"
+                 // A CW signal occupies a few hundred hertz. Opening a voice-width
+                 // filter around it just lets in every neighbour on the band.
+                 : mode === "cw"  ? "low_cut=300 high_cut=800"
                  : "low_cut=-4900 high_cut=4900";
       this.opts.freq = freq;
       this.opts.mode = mode;
