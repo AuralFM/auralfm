@@ -582,8 +582,14 @@ ipcMain.handle("sats:get", () => satellites.get());
 // over IPC rather than a fetch the CSP would block anyway.
 ipcMain.handle("globe:layers", () => layerState());
 ipcMain.handle("sky:get", () => {
-  try { return JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "sky.json"), "utf8")); }
-  catch { return null; }
+  try {
+    const sky = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "sky.json"), "utf8"));
+    // Constellation names ship in five languages, and only this process knows
+    // which one is in force — "system" is resolved against the OS locale here,
+    // not in the renderer. Resolving it now means the canvas never has to guess.
+    sky.lang = i18n.resolve(getPrefs().language, app.getLocale());
+    return sky;
+  } catch { return null; }
 });
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));
