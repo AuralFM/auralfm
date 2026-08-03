@@ -2886,7 +2886,8 @@ async function selectReceiver(rx) {
       el.tabIndex = 0;
       el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
       el.querySelector(".sn").textContent = e.station;
-      const bits = [`${(e.khz / 1000).toFixed(3)} MHz ${e.mode.toUpperCase()}`];
+      // kHz, to match the tuner readout and the schedule this came from.
+      const bits = [`${Number(e.khz.toFixed(2))} kHz ${e.mode.toUpperCase()}`];
       if (e.lang) bits.push(e.lang);
       if (e.target) bits.push(`→ ${e.target}`);
       // Under an hour left is worth knowing before you settle in.
@@ -2921,7 +2922,7 @@ async function selectReceiver(rx) {
     el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
     el.querySelector(".sn").textContent = b.label;
     el.querySelector(".stags").textContent =
-      `${(b.freq / 1000).toFixed(3)} MHz ${b.mode.toUpperCase()} · ${b.hint}` +
+      `${b.freq} kHz ${b.mode.toUpperCase()} · ${b.hint}` +
       // The reason, not just the verdict. A greyed-out row that cannot say why
       // is indistinguishable from a broken one.
       (open ? (o.why ? ` · ${o.why}` : "") : ` · ${o.why || t("sdr.unlikely", "likely quiet now")}`);

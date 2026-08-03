@@ -229,6 +229,50 @@
     return { open, why, unsettled };
   }
 
+  /**
+   * Filter widths, in hertz either side of the tuned frequency.
+   *
+   * AM shipped at ±4900, which is most of 10 kHz on a band where broadcast
+   * channels sit 5 kHz apart: both neighbours came in along with their carriers,
+   * and two carriers 5 kHz apart beat into a whistle. That is the sound of a
+   * station that is nearly tuned.
+   *
+   * ±3500 is the usual compromise, and it is the default — but it is a
+   * compromise, which is the whole reason there are three. A strong clear signal
+   * has treble worth hearing at ±4900; a crowded evening band needs ±2000 and
+   * the loss of fidelity is the price of intelligibility.
+   *
+   * Sideband widths are the conventional ones: the low cut sits at 300 Hz
+   * because nothing below it carries speech, only rumble.
+   */
+  const PASSBANDS = {
+    am:  { narrow: [-2000, 2000], normal: [-3500, 3500], wide: [-4900, 4900] },
+    usb: { narrow: [300, 2100],   normal: [300, 2700],   wide: [300, 3600] },
+    lsb: { narrow: [-2100, -300], normal: [-2700, -300], wide: [-3600, -300] },
+    // A CW signal occupies a few hundred hertz. Opening a voice-width filter
+    // around it just lets in every neighbour on the band.
+    cw:  { narrow: [400, 700],    normal: [300, 800],    wide: [200, 1000] },
+  };
+  const WIDTHS = ["narrow", "normal", "wide"];
+
+  const passband = (mode, width) =>
+    (PASSBANDS[mode] || PASSBANDS.am)[width] || (PASSBANDS[mode] || PASSBANDS.am).normal;
+
+  /**
+   * How far one press moves you.
+   *
+   * On AM you are correcting a transmitter's drift or stepping to the next
+   * channel; on sideband a tenth of that is the difference between a voice and
+   * a chipmunk, so the steps are an order of magnitude finer.
+   */
+  const STEPS = {
+    am:  { fine: 100, coarse: 1000 },
+    usb: { fine: 10,  coarse: 100 },
+    lsb: { fine: 10,  coarse: 100 },
+    cw:  { fine: 10,  coarse: 100 },
+  };
+  const steps = (mode) => STEPS[mode] || STEPS.am;
+
   // ── session ────────────────────────────────────────────────────────────────
   /**
    * One connection to one receiver.
@@ -304,7 +348,7 @@
         ws.send("SET auth t=kiwi p=");
         setTimeout(() => {
           if (this.closed) return;
-          this.tune(this.opts.freq, this.opts.mode);
+          this.tune(this.opts.freq, this.opts.mode, this.opts.width || "normal");
           ws.send("SET agc=1 hang=0 thresh=-90 slope=6 decay=1000 manGain=50");
           ws.send("SET compression=1");
           ws.send(`SET AR OK in=${KiwiSession.AR_IN} out=48000`);
@@ -346,31 +390,29 @@
     }
 
     /**
-     * Filter widths.
+     * Tune, with a filter width and a frequency the caller can nudge.
      *
-     * AM used to be ±4900 Hz, which is most of 10 kHz on a band where broadcast
-     * channels are spaced 5 kHz apart. That let both neighbours in along with
-     * their carriers, and two carriers 5 kHz apart beat against each other into
-     * a whistle. It is the sound of a station that is *nearly* tuned, which is
-     * exactly the complaint.
-     *
-     * ±3500 is the usual compromise: it stops short of the adjacent carrier
-     * while keeping enough top end that speech and music still sound open. A
-     * strong, uncrowded signal would justify more, and a crowded one less —
-     * that is a control worth having, and it is not here yet.
+     * @param {number} freq   kHz
+     * @param {string} mode   am | usb | lsb | cw
+     * @param {string} [width] narrow | normal | wide
      */
-    tune(freq, mode) {
+    tune(freq, mode, width) {
       if (!this.ws || this.ws.readyState !== 1) return;
-      const cuts = mode === "usb" ? "low_cut=300 high_cut=2700"
-                 : mode === "lsb" ? "low_cut=-2700 high_cut=-300"
-                 // A CW signal occupies a few hundred hertz. Opening a voice-width
-                 // filter around it just lets in every neighbour on the band.
-                 : mode === "cw"  ? "low_cut=300 high_cut=800"
-                 : "low_cut=-3500 high_cut=3500";
       this.opts.freq = freq;
       this.opts.mode = mode;
-      this.ws.send(`SET mod=${mode} ${cuts} freq=${freq.toFixed(2)}`);
+      if (width) this.opts.width = width;
+      const [lo, hi] = passband(mode, this.opts.width);
+      this.ws.send(`SET mod=${mode} low_cut=${lo} high_cut=${hi} freq=${freq.toFixed(2)}`);
     }
+
+    /** Move by hertz, staying inside what a Kiwi will accept. */
+    nudge(hz) {
+      const next = Math.min(30000, Math.max(1, this.opts.freq + hz / 1000));
+      this.tune(+next.toFixed(3), this.opts.mode);
+      return this.opts.freq;
+    }
+
+    setWidth(width) { this.tune(this.opts.freq, this.opts.mode, width); }
 
     /**
      * Schedule decoded samples on the audio clock rather than firing them at
@@ -414,5 +456,6 @@
   // The rate the Kiwi's audio path is built around; it must be sent as an integer.
   KiwiSession.AR_IN = 12000;
 
-  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, outlook, whenFor, parseSnd, parseMsg };
+  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, outlook, whenFor,
+                parseSnd, parseMsg, PASSBANDS, WIDTHS, passband, steps };
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -195,6 +195,33 @@
     flex:none;display:flex;align-items:center;gap:11px;padding:7px 13px 9px;
     box-shadow:inset 0 .5px 0 var(--line);
   }
+
+  /* The tuner. Sits above the transport and only during a shortwave session,
+     because there is nothing to tune about a stream. */
+  #tuner{
+    flex:none;padding:8px 13px 2px;display:flex;flex-direction:column;gap:6px;
+    box-shadow:inset 0 .5px 0 var(--line);
+  }
+  [hidden]{display:none !important}
+  .trow{display:flex;align-items:center;gap:4px}
+  .trow > button{
+    appearance:none;border:0;border-radius:6px;cursor:default;
+    background:var(--fill);color:var(--label2);
+    font:inherit;font-size:11px;padding:5px 0;flex:1;
+    transition:transform 80ms ease-out,color .12s ease-out;
+  }
+  .trow > button:hover{color:var(--label)}
+  .trow > button:active{transform:scale(.94)}
+  /* The step buttons are targets, not labels — wider glyph, same footprint. */
+  .tb{font-size:13px;line-height:1;max-width:38px}
+  #tfreq{
+    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;white-space:nowrap;
+  }
+  /* aria-pressed is the state; the styling follows it rather than a second class
+     that could disagree with it. */
+  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
   #toggle{
     flex:none;width:34px;height:34px;border-radius:50%;border:0;cursor:default;
     background:var(--accent);color:var(--on-accent);font-size:10px;
@@ -240,6 +267,22 @@
 
 <div class="secthead" id="secthead" data-i18n="app.favorites">Favorites</div>
 <div class="list" id="list"></div>
+
+<!-- Only ever visible during a shortwave session; a stream has nothing to tune. -->
+<div id="tuner" hidden>
+  <div class="trow">
+    <button class="tb" data-hz="-coarse" title="Down 1 kHz">&laquo;</button>
+    <button class="tb" data-hz="-fine" title="Down 100 Hz">&lsaquo;</button>
+    <b id="tfreq">—</b>
+    <button class="tb" data-hz="+fine" title="Up 100 Hz">&rsaquo;</button>
+    <button class="tb" data-hz="+coarse" title="Up 1 kHz">&raquo;</button>
+  </div>
+  <div class="trow" id="bw">
+    <button data-w="narrow" data-i18n="sdr.narrow">Narrow</button>
+    <button data-w="normal" data-i18n="sdr.normal">Normal</button>
+    <button data-w="wide" data-i18n="sdr.wide">Wide</button>
+  </div>
+</div>
 
 <div class="bar">
   <button id="toggle" disabled>▶</button>
@@ -621,26 +664,96 @@ window.auralfm.onTuneSdr((rx) => {
           window.auralfm.mediaKeys(true);
         }
         const sig = s.rssi == null ? "" : ` · ${Math.round(s.rssi)} dBm`;
-        setStatus(`${rx.freq >= 1000 ? (rx.freq/1000).toFixed(3) + " MHz" : rx.freq + " kHz"} ${rx.mode.toUpperCase()}${sig}`);
+        // s.freq, not rx.freq: after a nudge the two differ, and the status line
+        // claiming the frequency you started on is worse than no readout at all.
+        setStatus(`${fmtHz(s.freq ?? rx.freq)} ${(s.mode || rx.mode).toUpperCase()}${sig}`);
+        paintTuner();
       } else if (s.status === "error") {
-        live = false;
-        document.body.classList.remove("playing");
-        toggle.textContent = "▶";
-        sdrRx = null; sdrSession = null;
-        setStatus(`Receiver ${s.error}`, "err");
+        sdrEnded(`Receiver ${s.error}`, "err");
       } else if (s.status === "stopped" && sdrSession) {
-        live = false;
-        document.body.classList.remove("playing");
-        toggle.textContent = "▶";
-        sdrRx = null; sdrSession = null;
-        setStatus("Receiver disconnected");
+        sdrEnded("Receiver disconnected");
       }
     },
   });
   sdrSession.setVolume(audio.volume);
   sdrSession.connect();
   nowName.textContent = sdrRx.label;
+  paintTuner();
 });
+
+/**
+ * The tuner.
+ *
+ * Two facts drove the shape. The AM filter was ±4900 Hz on a band whose
+ * channels sit 5 kHz apart, so both neighbours and their carriers came in and
+ * beat into a whistle — audible, never quite a station. And a broadcast that has
+ * drifted, or a sideband voice, cannot be fixed by picking a different row in a
+ * list. Neither is a default that can be got right for everyone: they are
+ * controls, and they belong next to the signal meter that tells you whether
+ * turning them helped.
+ */
+/**
+ * Frequency, in kHz.
+ *
+ * It was MHz to three decimals, which cannot show a hundred-hertz step: nudging
+ * off 9780 to 9779.6 still read "9.780 MHz", so the fine control looked broken
+ * while working perfectly. kHz is also the unit shortwave is spoken and
+ * published in — it is how EiBi lists every one of these frequencies — so the
+ * readout now matches both the source and the step size.
+ */
+const fmtHz = (khz) => `${Number(khz.toFixed(2))} kHz`;
+
+/**
+ * A shortwave session has ended, for whatever reason.
+ *
+ * Refusal and disconnection are different sentences and the same teardown, and
+ * they were written out twice — which is how the transport once went on showing
+ * a pause button for a receiver that had already hung up.
+ */
+function sdrEnded(message, cls = "") {
+  live = false;
+  document.body.classList.remove("playing");
+  toggle.textContent = "▶";
+  sdrRx = null;
+  sdrSession = null;
+  paintTuner();
+  setStatus(message, cls);
+}
+
+function paintTuner() {
+  const on = !!sdrSession;
+  $("tuner").hidden = !on;
+  if (!on) return;
+  const { freq, mode, width = "normal" } = sdrSession.opts;
+  $("tfreq").textContent = `${fmtHz(freq)} ${mode.toUpperCase()}`;
+  for (const b of $("bw").children) b.setAttribute("aria-pressed", String(b.dataset.w === width));
+  // The step is mode-dependent — 100 Hz on AM, 10 Hz on sideband — so the
+  // tooltips have to be too, or they describe a radio we are not tuning.
+  const st = Kiwi.steps(mode);
+  const label = (hz) => (Math.abs(hz) >= 1000 ? `${Math.abs(hz) / 1000} kHz` : `${Math.abs(hz)} Hz`);
+  for (const b of document.querySelectorAll(".tb")) {
+    const [sign, kind] = [b.dataset.hz[0], b.dataset.hz.slice(1)];
+    const hz = st[kind];
+    b.title = `${sign === "-" ? "Down" : "Up"} ${label(hz)}`;
+  }
+}
+
+for (const b of document.querySelectorAll(".tb")) {
+  b.onclick = () => {
+    if (!sdrSession) return;
+    const [sign, kind] = [b.dataset.hz[0], b.dataset.hz.slice(1)];
+    sdrSession.nudge((sign === "-" ? -1 : 1) * Kiwi.steps(sdrSession.opts.mode)[kind]);
+    paintTuner();
+  };
+}
+
+for (const b of $("bw").children) {
+  b.onclick = () => {
+    if (!sdrSession) return;
+    sdrSession.setWidth(b.dataset.w);
+    paintTuner();
+  };
+}
 
 // Hardware media keys, forwarded from main.
 // Listener count, when a presence server is configured. Silent otherwise.
