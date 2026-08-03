@@ -28,13 +28,14 @@
   },
   "homepage": "https://github.com/YOUR_USERNAME/auralfm",
   "dependencies": {
+    "@noble/curves": "^2.2.0",
     "globe.gl": "^2.46.1",
     "satellite.js": "^7.1.0"
   },
   "build": {
     "appId": "com.meltonbell.auralfm",
     "productName": "AuralFM",
-    "copyright": "Copyright \u00a9 2026 Melton Bell",
+    "copyright": "Copyright © 2026 Melton Bell",
     "directories": {
       "output": "dist",
       "buildResources": "build"
