@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   sdrStats: () => ipcRenderer.invoke("sdr:stats"),
   sdrNearest: (lat, lng, n) => ipcRenderer.invoke("sdr:nearest", lat, lng, n),
   flights: (lat, lng, span, want) => ipcRenderer.invoke("flights:get", lat, lng, span, want),
+  wspr: (band) => ipcRenderer.invoke("wspr:get", band),
   tuneSdr: (rx) => ipcRenderer.send("sdr:tune", rx),
   onTuneSdr: (fn) => ipcRenderer.on("sdr:tune", (_e, rx) => fn(rx)),
   openMail: () => ipcRenderer.send("mail:open"),

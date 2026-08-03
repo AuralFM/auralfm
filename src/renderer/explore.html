@@ -636,6 +636,12 @@ function renderRailTabs(nearby) {
   mk("shortwave", `${t("rail.shortwave", "Shortwave")} ${nearby.length}`);
 }
 
+/** "#RRGGBB" plus an alpha, as an rgba() string. */
+function hexA(hex, a) {
+  const n = parseInt(String(hex).replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 /** Great-circle distance in kilometres, rounded. */
 function greatCircleKm(lat1, lon1, lat2, lon2) {
   const R = 6371, rad = Math.PI / 180;
@@ -1686,6 +1692,7 @@ async function initGlobe() {
   updateSun();
   layers = (await window.auralfm.layers()) || layers;
   syncFlightTimer();
+  syncWsprTimer();
   drawSky();
   tickISS();
   tickSatellites();
@@ -1928,7 +1935,8 @@ function nearestPlace(lat, lng) {
  * — no dialog, no apply button.
  */
 let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
-               iss: true, flights: false, constellations: true, drift: true, statusBar: false };
+               iss: true, flights: false, wspr: false, constellations: true,
+               drift: true, statusBar: false };
 
 function applyLayers(next) {
   const prev = layers;
@@ -1957,6 +1965,7 @@ function applyLayers(next) {
   // at launch, too. Keying it on the transition meant quitting with aircraft
   // switched on came back to a checked menu item and an empty sky.
   syncFlightTimer();
+  syncWsprTimer();
 
   if (layers.constellations !== prev.constellations) drawSky();
 }
@@ -2178,6 +2187,47 @@ async function drawSky() {
  */
 let issTrail = [], issTimer = null, sats = [], satTimer = null;
 let flightData = [], flightTimer = null, flightBusy = false;
+let wsprData = [], wsprTimer = null, wsprBusy = false;
+
+/**
+ * Radio propagation — the ionosphere, drawn.
+ *
+ * Every WSPR report is a statement that a signal left one grid square and
+ * arrived in another, right now, on a named band. Drawn as great-circle arcs,
+ * that is a live picture of which paths across the planet are open — the thing
+ * the whole shortwave feature depends on and the one thing the globe could not
+ * previously show.
+ *
+ * Same discipline as the aircraft layer: nothing fetched unless the layer is on,
+ * nothing fetched while the window is hidden, and the module behind it caps the
+ * result and backs off.
+ */
+async function tickWspr() {
+  if (!layers.wspr) { wsprData = []; paintOrbits(); return; }
+  if (document.hidden || wsprBusy) return;
+  wsprBusy = true;
+  try {
+    wsprData = (await window.auralfm.wspr(null)) || [];
+    paintOrbits();
+  } catch { /* best-effort, like everything else live here */ }
+  finally { wsprBusy = false; }
+}
+
+function syncWsprTimer() {
+  const wanted = !!layers.wspr;
+  const running = !!wsprTimer;
+  if (wanted === running) return;
+  clearInterval(wsprTimer);
+  wsprTimer = null;
+  if (wanted) {
+    tickWspr();
+    // WSPR transmits on a two-minute cycle; nothing new exists faster.
+    wsprTimer = setInterval(tickWspr, 3 * 60000);
+  } else {
+    wsprData = [];
+    paintOrbits();
+  }
+}
 
 /**
  * Aircraft near where you are looking.
@@ -2214,7 +2264,9 @@ function syncFlightTimer() {
  * remaining interval.
  */
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && layers.flights) tickFlights();
+  if (document.hidden) return;
+  if (layers.flights) tickFlights();
+  if (layers.wspr) tickWspr();
 });
 
 async function tickFlights() {
@@ -2281,20 +2333,53 @@ function paintOrbits() {
   const air = (layers.flights ? flightPaths(flightData) : [])
     .map((f) => ({ pts: f.coords, air: true, flight: f.flight }));
 
+  /**
+   * Propagation arcs. globe.gl interpolates a path along the great circle
+   * between its points, so two endpoints are enough to get the curve that
+   * actually crosses the planet — which is the shape the signal took.
+   *
+   * Split at the antimeridian, because a path from Rome to New Zealand crosses
+   * it and would otherwise draw straight back across the map.
+   */
+  const prop = [];
+  if (layers.wspr) {
+    for (const w of wsprData) {
+      let lon2 = w.rxLon;
+      if (Math.abs(lon2 - w.txLon) > 180) lon2 += lon2 < w.txLon ? 360 : -360;
+      prop.push({ pts: [[w.txLat, w.txLon], [w.rxLat, lon2]], wspr: true, spot: w });
+    }
+  }
+
   globe
-    .pathsData([...orbitPaths, ...issPaths, ...air])
+    .pathsData([...prop, ...orbitPaths, ...issPaths, ...air])
     .pathPoints((d) => d.pts)
     .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
     // Aircraft sit just off the surface — high enough to clear the terrain, far
     // below the orbits, which is roughly the truth.
-    .pathPointAlt((d) => (d.air ? 0.008 : 0.052))
-    .pathColor((d) => d.air
-      ? ["rgba(255,255,255,0)", "rgba(255,236,190,0.85)"]
-      : d.orbit
-      ? ["rgba(120,180,255,0.05)", "rgba(120,180,255,0.4)"]
-      : ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"])
-    .pathStroke((d) => (d.air ? 0.5 : d.orbit ? 0.7 : 1.1))
-    .pathLabel((d) => d.air && d.flight?.flight
+    // Propagation arcs bow well off the surface — a shortwave signal really does
+    // go up to the ionosphere and come back down, and drawing it flat against
+    // the ground would be both uglier and less true.
+    .pathPointAlt((d) => (d.wspr ? 0.16 : d.air ? 0.008 : 0.052))
+    .pathColor((d) => {
+      if (d.wspr) {
+        // Strength by signal-to-noise. WSPR runs from roughly -30dB, which is
+        // below the noise floor and still decodable, up to about 0 — so a strong
+        // path reads bright and a marginal one is a whisper, which is honest.
+        const a = Math.max(0.12, Math.min(0.8, (d.spot.snr + 32) / 34));
+        const c = palette?.rx || "#C9A227";
+        return [`${hexA(c, 0)}`, `${hexA(c, a)}`, `${hexA(c, 0)}`];
+      }
+      return d.air
+        ? ["rgba(255,255,255,0)", "rgba(255,236,190,0.85)"]
+        : d.orbit
+        ? ["rgba(120,180,255,0.05)", "rgba(120,180,255,0.4)"]
+        : ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"];
+    })
+    .pathStroke((d) => (d.wspr ? 0.45 : d.air ? 0.5 : d.orbit ? 0.7 : 1.1))
+    .pathDashLength(1).pathDashGap(0)
+    .pathLabel((d) => d.wspr
+      ? `${d.spot.tx} → ${d.spot.rx} · ${d.spot.bandName} · ${d.spot.km.toLocaleString()} km · SNR ${d.spot.snr}`
+      : d.air && d.flight?.flight
       ? `${d.flight.flight} · ${d.flight.altFt.toLocaleString()} ft` +
         (d.flight.kt ? ` · ${d.flight.kt} kt` : "") +
         (d.flight.type ? ` · ${d.flight.type}` : "")
