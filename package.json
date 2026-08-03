@@ -11,14 +11,15 @@
     "crawl": "node scripts/crawl.mjs",
     "icons": "electron scripts/make-icons.js",
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
-    "vendor": "node scripts/vendor.mjs",
+    "vendor": "node scripts/vendor.mjs && node scripts/lights.mjs",
     "postinstall": "node scripts/vendor.mjs",
     "dist": "npm run vendor && npm run icons && electron-builder --mac",
     "check": "node scripts/crawl.mjs --check",
     "sky": "node scripts/sky.mjs",
     "audit": "node scripts/audit.mjs",
     "crawl:sdr": "node scripts/crawl-sdr.mjs",
-    "schedule": "node scripts/fetch-schedule.mjs"
+    "schedule": "node scripts/fetch-schedule.mjs",
+    "lights": "node scripts/lights.mjs"
   },
   "devDependencies": {
     "electron": "^38.0.0",

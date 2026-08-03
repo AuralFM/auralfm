@@ -1432,9 +1432,12 @@ async function applyDayNight() {
   const dayTex = await waitFor(() => mat.map);
   const TexClass = dayTex.constructor;
 
-  const [nightTex, bumpTex] = await Promise.all([
+  const [nightTex, bumpTex, lightsTex] = await Promise.all([
     loadTexture("vendor/earth-night.jpg", TexClass, dayTex),
     loadTexture("vendor/earth-topology.png", TexClass, dayTex),
+    // 8192x4096 city lights. Fails soft: if it is missing the shader keeps the
+    // vendored night texture, which is the same imagery at a quarter the size.
+    loadTexture("vendor/earth-lights.jpg", TexClass, dayTex).catch(() => null),
   ]);
 
   // Satellite imagery is fetched *without* blocking: on a cold start it can take
@@ -1457,6 +1460,8 @@ async function applyDayNight() {
     shader.uniforms.hasLive = { value: 0 };
     shader.uniforms.dayNightOn = { value: 1 };
     shader.uniforms.sunDirection = { value: sunVector() };
+    shader.uniforms.lightsMap = { value: lightsTex || nightTex };
+    shader.uniforms.hasLights = { value: lightsTex ? 1 : 0 };
 
     // Two separate frames here, and mixing them up has bitten this shader twice.
     //
@@ -1477,11 +1482,28 @@ async function applyDayNight() {
 
     shader.fragmentShader =
       "uniform sampler2D nightMap;\nuniform sampler2D liveMap;\nuniform float hasLive;\nuniform float dayNightOn;\n" +
+      "uniform sampler2D lightsMap;\nuniform float hasLights;\n" +
       "uniform vec3 sunDirection;\nvarying vec3 vGlobeNormal;\nvarying vec2 vGlobeUv;\n" +
       shader.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>
         vec3 n = normalize(vGlobeNormal);
         vec3 dayC   = texture2D(map, vGlobeUv).rgb;
         vec3 nightC = texture2D(nightMap, vGlobeUv).rgb;
+
+        // City lights, at four times the resolution of the vendored night
+        // texture and as a mask rather than a picture: the colour is decided
+        // here, so it can be tuned without refetching 6.8 MB from NASA.
+        //
+        // The base is the day texture at a few percent — continents stay
+        // faintly readable at night the way they do under a full moon, and it
+        // keeps coastlines legible where nobody lives. The old night texture is
+        // still the fallback when the 8K one is missing.
+        if (hasLights > 0.5) {
+          float lit = texture2D(lightsMap, vGlobeUv).r;
+          // Sodium and LED street lighting, warm and slightly orange. The power
+          // curve lifts small towns without blowing out the conurbations.
+          vec3 glow = vec3(1.0, 0.78, 0.50) * pow(lit, 0.80) * 2.0;
+          nightC = dayC * 0.055 + glow;
+        }
 
         // Today's satellite pass, where it exists. VIIRS returns pure black
         // where the swaths don't meet, so treat near-black as "no data" and keep
