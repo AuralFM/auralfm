@@ -184,7 +184,23 @@ means picking a side in an unresolved argument.
 local, off by default. Expect to be alone there at first. Do not build anything
 that *depends* on other people's geotagged notes existing.
 
-### Meshtastic / LoRa — real, and cannot carry audio
+### Meshtastic / LoRa — real, cannot carry audio, and blocked on licensing
+
+**Update (#28): researched properly, and the blocker is not technical.** Every
+official Meshtastic JavaScript package — `@meshtastic/core`, `protobufs`,
+`transport-node`, `js` — is **GPL-3.0**. AuralFM is MIT. Linking them makes the
+combined work GPL-3.0, which is the licence doing its job rather than an obstacle
+to route around.
+
+It also needs hardware: MQTT does not let a client subscribe without a physical
+gateway node, so the feature would be invisible to almost every user.
+
+Worth noting that the objection which killed hosted chat (#11) does *not* apply
+here — there is no server of ours, nothing to moderate, and no database. The idea
+survives on merit. Revisit if Meshtastic ever ships a permissive client, or if
+GPL-3.0 becomes acceptable for AuralFM.
+
+
 
 Meshtastic is genuine off-grid mesh: LoRa radios, no carrier, no cloud, encrypted,
 multi-hop, and deployments beyond 100 nodes are ordinary.
