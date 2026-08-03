@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld("auralfm", {
   sdrGet: (i) => ipcRenderer.invoke("sdr:get", i),
   sdrStats: () => ipcRenderer.invoke("sdr:stats"),
   sdrNearest: (lat, lng, n) => ipcRenderer.invoke("sdr:nearest", lat, lng, n),
+  sdrOnAir: (opts) => ipcRenderer.invoke("sdr:onair", opts),
+  sdrSchedule: () => ipcRenderer.invoke("sdr:schedule"),
   flights: (lat, lng, span, want) => ipcRenderer.invoke("flights:get", lat, lng, span, want),
   wspr: (band) => ipcRenderer.invoke("wspr:get", band),
   space: () => ipcRenderer.invoke("space:get"),

@@ -17,7 +17,8 @@
     "check": "node scripts/crawl.mjs --check",
     "sky": "node scripts/sky.mjs",
     "audit": "node scripts/audit.mjs",
-    "crawl:sdr": "node scripts/crawl-sdr.mjs"
+    "crawl:sdr": "node scripts/crawl-sdr.mjs",
+    "schedule": "node scripts/fetch-schedule.mjs"
   },
   "devDependencies": {
     "electron": "^38.0.0",
@@ -35,7 +36,7 @@
   "build": {
     "appId": "com.meltonbell.auralfm",
     "productName": "AuralFM",
-    "copyright": "Copyright © 2026 Melton Bell",
+    "copyright": "Copyright \u00a9 2026 Melton Bell",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -50,7 +51,8 @@
       "data/sdr.min.json",
       "docs/PRIVACY.md",
       "docs/TERMS.md",
-      "assets/sky.json"
+      "assets/sky.json",
+      "data/schedule.json"
     ],
     "mac": {
       "category": "public.app-category.music",

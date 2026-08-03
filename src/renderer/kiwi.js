@@ -193,6 +193,16 @@
     { mhz: 99, sfi: 140 },
   ];
 
+  /**
+   * Which half of the day a bare frequency belongs to.
+   *
+   * `outlook` needs a band's `when`. The 21 hand-written bands carry it as a
+   * field; a schedule entry is just a frequency, so it is derived here by the
+   * same rule of thumb the table was written with — and it lives next to
+   * `outlook` so the two cannot drift apart.
+   */
+  const whenFor = (khz) => (khz < 8000 ? "night" : khz <= 11000 ? "any" : "day");
+
   function outlook(band, daylight, space) {
     const mhz = band.freq / 1000;
     const tier = FLUX_FLOOR.find((t) => mhz < t.mhz) || FLUX_FLOOR[FLUX_FLOOR.length - 1];
@@ -335,6 +345,20 @@
       if (kv.status === "config_failed") this.fail("receiver unavailable");
     }
 
+    /**
+     * Filter widths.
+     *
+     * AM used to be ±4900 Hz, which is most of 10 kHz on a band where broadcast
+     * channels are spaced 5 kHz apart. That let both neighbours in along with
+     * their carriers, and two carriers 5 kHz apart beat against each other into
+     * a whistle. It is the sound of a station that is *nearly* tuned, which is
+     * exactly the complaint.
+     *
+     * ±3500 is the usual compromise: it stops short of the adjacent carrier
+     * while keeping enough top end that speech and music still sound open. A
+     * strong, uncrowded signal would justify more, and a crowded one less —
+     * that is a control worth having, and it is not here yet.
+     */
     tune(freq, mode) {
       if (!this.ws || this.ws.readyState !== 1) return;
       const cuts = mode === "usb" ? "low_cut=300 high_cut=2700"
@@ -342,7 +366,7 @@
                  // A CW signal occupies a few hundred hertz. Opening a voice-width
                  // filter around it just lets in every neighbour on the band.
                  : mode === "cw"  ? "low_cut=300 high_cut=800"
-                 : "low_cut=-4900 high_cut=4900";
+                 : "low_cut=-3500 high_cut=3500";
       this.opts.freq = freq;
       this.opts.mode = mode;
       this.ws.send(`SET mod=${mode} ${cuts} freq=${freq.toFixed(2)}`);
@@ -390,5 +414,5 @@
   // The rate the Kiwi's audio path is built around; it must be sent as an integer.
   KiwiSession.AR_IN = 12000;
 
-  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, outlook, parseSnd, parseMsg };
+  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, outlook, whenFor, parseSnd, parseMsg };
 })(typeof globalThis !== "undefined" ? globalThis : this);

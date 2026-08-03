@@ -191,5 +191,28 @@ for (const { file, html } of renderers) {
     : pass(rel(file));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\nshortwave schedule is current");
+// The schedule is per-season and committed, so it goes wrong on a date rather
+// than on a code change: on the last Sunday in October the A-season file starts
+// describing broadcasts that have moved. Nothing would fail — the app would just
+// tune confidently to the wrong frequencies, which is worse.
+{
+  const sched = JSON.parse(fs.readFileSync(R("data/schedule.json"), "utf8"));
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const lastSun = (month) => {
+    const d = new Date(Date.UTC(y, month + 1, 0));
+    d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+    return d;
+  };
+  const summer = now >= lastSun(2) && now < lastSun(9);
+  const yy = String((summer ? y : now.getUTCMonth() >= 9 ? y : y - 1) % 100).padStart(2, "0");
+  const want = `${summer ? "A" : "B"}${yy}`;
+  sched.season === want
+    ? pass(`${sched.season}, ${sched.entries.length} broadcasts, built ${sched.built}`)
+    : fail("data/schedule.json", `season ${sched.season}, but it is now ${want} — run \`npm run schedule\``);
+}
+
 console.log(failures ? `\n${failures} check(s) failed\n` : "\nall checks passed\n");
 process.exit(failures ? 1 : 0);

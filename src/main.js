@@ -24,6 +24,7 @@ const clouds = require("./clouds");
 const iss = require("./iss");
 const satellites = require("./satellites");
 const sdr = require("./sdr");
+const schedule = require("./schedule");
 const flights = require("./flights");
 const wspr = require("./wspr");
 const space = require("./space");
@@ -610,6 +611,11 @@ ipcMain.handle("sdr:points", () => sdr.points());
 ipcMain.handle("sdr:get", (_e, i) => sdr.get(i));
 ipcMain.handle("sdr:stats", () => sdr.stats());
 ipcMain.handle("sdr:nearest", (_e, lat, lng, n) => sdr.nearest(lat, lng, n));
+// What is transmitting right now, from the EiBi schedule. A receiver is a place
+// to listen from; this is the thing to listen to. Computed here rather than in
+// the renderer so the 9,289-row table is parsed once, in one process.
+ipcMain.handle("sdr:onair", (_e, opts) => schedule.onAir(new Date(), opts || {}));
+ipcMain.handle("sdr:schedule", () => schedule.meta());
 ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng, span, want));
 ipcMain.handle("wspr:get", (_e, band) => wspr.get(band));
 ipcMain.handle("space:get", () => space.get());

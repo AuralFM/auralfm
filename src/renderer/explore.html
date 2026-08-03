@@ -2762,7 +2762,7 @@ function renderNearbyReceivers(nearby) {
  * already computes is exactly what tells you which bands are worth trying, so
  * the rail says so rather than making you know it.
  */
-function selectReceiver(rx) {
+async function selectReceiver(rx) {
   sdrSel = rx;
   railMode = "stations";                 // its bands, not the nearby-receiver list
   selection.placeIndex = null;
@@ -2796,6 +2796,11 @@ function selectReceiver(rx) {
   const look = (b) => Kiwi.outlook(b, daylight, spaceWx);
   const bands = [...Kiwi.BANDS].sort((a, b) => (look(b).open ? 1 : 0) - (look(a).open ? 1 : 0));
 
+  // What is actually transmitting, this minute, in UTC. Until now this list was
+  // 21 band centres, so "49 m" tuned 6100 kHz whether or not anything was there.
+  let air = [];
+  try { air = await window.auralfm.sdrOnAir({ lat: rx.lat, lng: rx.lng }); } catch { air = []; }
+
   stationListEl.innerHTML = "";
   const note = document.createElement("div");
   note.className = "empty";
@@ -2816,6 +2821,94 @@ function selectReceiver(rx) {
   note.textContent = wx.length ? `${lead}  ·  ${wx.join(" · ")}` : lead;
   stationListEl.append(note);
 
+  /**
+   * Tune something and mark the row.
+   *
+   * Frequency and mode come from the caller because a schedule entry knows both
+   * exactly, where a band only ever knew a centre.
+   */
+  const tuneRow = (el, { freq, mode, label }) => {
+    const go = () => {
+      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc, freq, mode, band: label });
+      for (const sib of stationListEl.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
+      el.setAttribute("aria-current", "true");
+    };
+    el.addEventListener("click", go);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+  };
+
+  const heading = (text) => {
+    const h = document.createElement("div");
+    h.className = "empty";
+    h.style.cssText = "padding:14px 15px 4px;text-align:left;font-weight:590;color:var(--label2)";
+    h.textContent = text;
+    stationListEl.append(h);
+  };
+
+  if (air.length) {
+    /**
+     * Rank what is worth trying from *this* receiver.
+     *
+     * Frequency order alone put Norwegian coastal stations at the top of a
+     * Wellington list, so the first question is where a broadcast is aimed:
+     * inside the target area beats a band merely being open, because a signal
+     * pointed elsewhere is faint even on a good band. Then the band, then
+     * broadcasts ahead of morse and telemetry.
+     *
+     * Nothing here predicts an opening. It orders the guesses.
+     */
+    const NEAR = 5000, WIDE = 9000;      // km from the middle of the target area
+    // Broadcasters outrank everything, because that is what "a station" means.
+    // Coastal radio, oceanic air-ground and VOLMET are still listed — they are
+    // some of the best listening on the bands — just underneath.
+    const score = (e, o) => (e.utility ? 0 : 8)
+                          + (e.beamKm == null ? 0 : e.beamKm < NEAR ? 4 : e.beamKm < WIDE ? 2 : 0)
+                          + (o.open ? 3 : 0);
+    const scored = air.map((e) => {
+      const o = look({ freq: e.khz, when: Kiwi.whenFor(e.khz) });
+      return { e, o, s: score(e, o) };
+    });
+    scored.sort((a, b) => b.s - a.s
+                       || (a.e.beamKm ?? 1e9) - (b.e.beamKm ?? 1e9)
+                       || a.e.khz - b.e.khz);
+
+    const SHOW = 80;
+    const open = scored.filter((x) => x.o.open).length;
+    heading(t("sdr.onair", "On air now") +
+            ` · ${open} ${t("sdr.ofN", "of")} ${scored.length} ${t("sdr.onOpen", "on open bands")}`);
+
+    for (const { e, o } of scored.slice(0, SHOW)) {
+      const el = document.createElement("div");
+      el.className = "st";
+      el.setAttribute("role", "button");
+      el.tabIndex = 0;
+      el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
+      el.querySelector(".sn").textContent = e.station;
+      const bits = [`${(e.khz / 1000).toFixed(3)} MHz ${e.mode.toUpperCase()}`];
+      if (e.lang) bits.push(e.lang);
+      if (e.target) bits.push(`→ ${e.target}`);
+      // Under an hour left is worth knowing before you settle in.
+      if (e.until <= 60) bits.push(`${e.until} min ${t("sdr.left", "left")}`);
+      if (e.note) bits.push(e.note);
+      if (!o.open) { bits.push(o.why || t("sdr.unlikely", "likely quiet now")); el.style.opacity = ".55"; }
+      el.querySelector(".stags").textContent = bits.join(" · ");
+      tuneRow(el, { freq: e.khz, mode: e.mode, label: e.station });
+      stationListEl.append(el);
+    }
+    // Never let a cap read as "that is all there is".
+    if (scored.length > SHOW) {
+      const more = document.createElement("div");
+      more.className = "empty";
+      more.style.cssText = "padding:8px 15px;text-align:left";
+      more.textContent =
+        `${scored.length - SHOW} ${t("sdr.more", "more are on air; the bands below tune anywhere.")}`;
+      stationListEl.append(more);
+    }
+    heading(t("sdr.bands", "Browse the bands"));
+  }
+
   for (const b of bands) {
     const el = document.createElement("div");
     el.className = "st";
@@ -2833,17 +2926,7 @@ function selectReceiver(rx) {
       // is indistinguishable from a broken one.
       (open ? (o.why ? ` · ${o.why}` : "") : ` · ${o.why || t("sdr.unlikely", "likely quiet now")}`);
     if (!open) el.style.opacity = ".55";
-    const go = () => {
-      window.auralfm.tuneSdr({
-        host: rx.host, name: rx.name, loc: rx.loc,
-        freq: b.freq, mode: b.mode, band: b.label,
-      });
-      for (const sib of stationListEl.querySelectorAll(".st"))
-        sib.setAttribute("aria-current", "false");
-      el.setAttribute("aria-current", "true");
-    };
-    el.addEventListener("click", go);
-    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    tuneRow(el, { freq: b.freq, mode: b.mode, label: b.label });
     stationListEl.append(el);
   }
 
