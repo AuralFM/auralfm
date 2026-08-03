@@ -1958,7 +1958,7 @@ function applyLayers(next) {
   if (!layers.stations && !layers.shortwave) globe.pointsData([]);
   else if (layers.stations !== prev.stations || layers.shortwave !== prev.shortwave) applyLod(true);
 
-  if (!layers.iss) { globe.pathsData([]).labelsData([]).ringsData([]); }
+  if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
   else paintOrbits();
 
   globe.controls().autoRotate = layers.drift && !flying;
@@ -2196,6 +2196,20 @@ let wsprData = [], wsprTimer = null, wsprBusy = false;
  * K-index only meaningfully moves every three hours, and flux is a daily figure.
  */
 let spaceWx = null;
+
+/**
+ * Other listeners, if presence is switched on.
+ *
+ * Drawn as slow pulsing rings rather than dots, because a different *shape*
+ * reads as a different kind of thing far more reliably than a different colour —
+ * and on a globe that already carries station dots, receiver dots, aircraft
+ * trails and propagation arcs, one more coloured dot would just be noise.
+ *
+ * A ring is also the honest picture: these are not points, they are geohash
+ * cells about twenty kilometres across. Somebody is listening near there.
+ */
+let peers = [];
+window.auralfm.onPeers((list) => { peers = Array.isArray(list) ? list : []; paintRings(); });
 async function refreshSpace() {
   try { spaceWx = (await window.auralfm.space()) || spaceWx; } catch { /* keep the last */ }
 }
@@ -2333,6 +2347,33 @@ async function tickSatellites() {
   paintOrbits();
 }
 
+let issAt = null;
+
+/**
+ * One rings layer, two tenants. globe.gl rebuilds a layer wholesale on update,
+ * so the ISS and the listeners share it and branch on `kind` rather than
+ * fighting over which one drew last.
+ */
+function paintRings() {
+  if (!globe) return;
+  const data = [];
+  if (layers.iss && issAt) data.push({ ...issAt, kind: "iss" });
+  for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
+
+  globe
+    .ringsData(data)
+    .ringLat("lat").ringLng("lng")
+    // Listeners pulse wider and slower than the ISS — it is overhead and moving,
+    // they are a place on the ground where somebody is sitting.
+    .ringMaxRadius((d) => (d.kind === "peer" ? 3.6 : 2.4))
+    .ringPropagationSpeed((d) => (d.kind === "peer" ? 0.8 : 1.6))
+    .ringRepeatPeriod((d) => (d.kind === "peer" ? 2600 : 1400))
+    .ringAltitude(0.055)
+    .ringColor((d) => d.kind === "peer"
+      ? (t) => hexA(palette?.star || "#F5F0E4", 0.5 * (1 - t))
+      : (t) => `rgba(255,255,255,${0.55 * (1 - t)})`);
+}
+
 function paintOrbits() {
   if (!globe) return;
   const orbitPaths = sats.flatMap((s) =>
@@ -2428,15 +2469,8 @@ async function tickISS() {
   issTrail.push([p.lat, p.lng]);
   if (issTrail.length > 90) issTrail.shift();          // ~6 min of track
 
-  globe
-    .ringsData([{ lat: p.lat, lng: p.lng }])
-    .ringLat("lat").ringLng("lng")
-    .ringMaxRadius(2.4)
-    .ringPropagationSpeed(1.6)                          // a slow outward pulse
-    .ringRepeatPeriod(1400)
-    .ringAltitude(0.055)
-    .ringColor(() => (t) => `rgba(255,255,255,${0.55 * (1 - t)})`);
-
+  issAt = { lat: p.lat, lng: p.lng };
+  paintRings();
   paintOrbits();
 
   const el = $("issreadout");

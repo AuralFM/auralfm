@@ -19,6 +19,7 @@ const mine = require("./mystations");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
+const nostr = require("./presence-nostr");
 const clouds = require("./clouds");
 const iss = require("./iss");
 const satellites = require("./satellites");
@@ -325,6 +326,7 @@ function setPrefs(patch) {
   st.prefs = { ...getPrefs(), ...patch };
   save(st);
   broadcast("prefs:changed", st.prefs);
+  if ("presence" in patch) syncNostrPresence();
   // Menu labels are baked in at build time, so a language change means a rebuild.
   if ("language" in patch) buildMenu();
   return st.prefs;
@@ -385,6 +387,29 @@ function openDoc(name) {
 function docText(name) {
   const file = path.join(__dirname, "..", "docs", name);
   try { return fs.readFileSync(file, "utf8"); } catch { return ""; }
+}
+
+/**
+ * Announce on Nostr, or stop.
+ *
+ * Two conditions, both required: the user has switched presence on, and
+ * something is actually playing. Announcing silence would be noise, and
+ * announcing without being asked would break the only promise this app makes
+ * that it could not take back.
+ *
+ * The coordinates sent are the *station's*, blurred to a four-character geohash
+ * — about twenty kilometres. Never the listener's. That is the same rule weather
+ * already follows, and it is what makes this honest: "someone is listening to
+ * this place" says nothing about where the listener is.
+ */
+function syncNostrPresence() {
+  const on = getPrefs().presence === true;
+  const ch = playerState.playing ? playerState.channel : null;
+  if (!on || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
+    nostr.leave();
+    return;
+  }
+  nostr.join(ch.lat, ch.lon, ch.title || "");
 }
 
 // ── tray ──────────────────────────────────────────────────────────────────────
@@ -588,6 +613,7 @@ ipcMain.handle("sdr:nearest", (_e, lat, lng, n) => sdr.nearest(lat, lng, n));
 ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng, span, want));
 ipcMain.handle("wspr:get", (_e, band) => wspr.get(band));
 ipcMain.handle("space:get", () => space.get());
+ipcMain.handle("presence:stats", () => nostr.stats());
 /**
  * Explore asks, the popover plays — same rule as stations, so there is still
  * exactly one thing in this app that makes sound.
@@ -619,6 +645,7 @@ ipcMain.on("player:state", (_e, state) => {
   // Presence is opt-in and no-ops entirely when unconfigured.
   if (state.playing && state.channel?.id) presence.join(state.channel.id);
   else presence.leave();
+  syncNostrPresence();
   // Station name next to the menu bar icon. Truncated so it can't eat the bar.
   const t = state.playing && state.channel?.title ? state.channel.title : "";
   tray?.setTitle(t ? ` ${t.slice(0, 22)}` : "");
@@ -691,6 +718,7 @@ if (!app.requestSingleInstanceLock()) {
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
     markets.start();        // live crypto feed; falls back to polling on its own
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
+    nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();
     createWindow();

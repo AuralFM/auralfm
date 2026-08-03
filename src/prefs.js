@@ -16,12 +16,31 @@ const DEFAULTS = {
   dotSize: "normal",     // normal | large
   language: "system",    // system | en | es
   palette: "onyx",       // see src/palettes.js
+  /**
+   * Presence is off, and has to stay off by default.
+   *
+   * Everything else in this app is a promise that nothing leaves the machine.
+   * This is the one feature that sends something, so it is the one feature the
+   * user has to reach for deliberately. A default of true would make the promise
+   * a lie for anyone who never opened Settings.
+   */
+  presence: false,
 };
 
+/**
+ * Take only the keys we know about, and only when the saved value is the same
+ * kind of thing as the default.
+ *
+ * This used to test `typeof saved[k] === "string"`, which was fine while every
+ * preference was a string and silently discarded the first boolean one — the
+ * presence switch appeared to work, wrote itself to disk, and came back false on
+ * the very next read. Comparing against the default's own type fixes the whole
+ * category rather than the one instance.
+ */
 function normalize(saved = {}) {
   const out = { ...DEFAULTS };
   for (const k of Object.keys(DEFAULTS)) {
-    if (typeof saved[k] === "string") out[k] = saved[k];
+    if (typeof saved[k] === typeof DEFAULTS[k]) out[k] = saved[k];
   }
   return out;
 }

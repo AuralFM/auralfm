@@ -183,6 +183,7 @@
     margin:10px 2px 0;max-width:38em;
   }
   .ver{font-size:11px;color:var(--label3);margin:6px 2px 0}
+  .row .name.sub{font-size:11px;color:var(--label2)}
 </style>
 </head>
 <body>
@@ -247,6 +248,18 @@
   </section>
 
   <section>
+    <h2 data-i18n="set.presence">Listeners</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" id="presence-lbl" data-i18n="set.presenceLabel">Show other listeners</span>
+        <button class="sw" id="presence" role="switch" aria-checked="false" aria-labelledby="presence-lbl"></button>
+      </div>
+      <div class="row"><span class="name sub" id="presence-status"></span></div>
+    </div>
+    <p class="hint" data-i18n="set.presenceHint">Off by default, because it is the only thing here that sends anything. Switched on, while you are playing something, AuralFM announces the station's location — rounded to about 20 km — and its name, so other people running AuralFM can see a listener there. It never sends your location, and there is no account: the key is made when the app opens and thrown away when it closes. The messages use a kind relays are asked not to keep — widely honoured, though not something anyone can guarantee, which is why nothing in them is worth keeping.</p>
+  </section>
+
+  <section>
     <h2 data-i18n="set.about">About</h2>
     <div class="card">
       <div class="row">
@@ -296,6 +309,8 @@ function paint() {
     }
   }
   $("#contrast").setAttribute("aria-checked", String(P.contrast === "more"));
+  $("#presence").setAttribute("aria-checked", String(P.presence === true));
+  paintPresence();
   $("#language").value = P.language;
 }
 
@@ -402,6 +417,26 @@ async function paintPalettes() {
     box.append(b);
   }
 }
+
+$("#presence").addEventListener("click", () => set({ presence: !P.presence }));
+
+/**
+ * Say what is actually happening, not just that the switch is on. "Announcing to
+ * 3 relays, 0 listeners nearby" is the difference between a feature that looks
+ * broken and one that is honestly reporting an empty room — which is what this
+ * will be at first.
+ */
+async function paintPresence() {
+  const el = $("#presence-status");
+  if (!P.presence) { el.textContent = ""; return; }
+  const s = await window.auralfm.presenceStats();
+  if (!s) { el.textContent = ""; return; }
+  el.textContent = s.announcing
+    ? `${s.connected}/${s.relays} ${T["set.presenceRelays"] || "relays"} · ` +
+      `${s.peers} ${s.peers === 1 ? (T["set.presenceOne"] || "listener") : (T["set.presenceMany"] || "listeners")}`
+    : (T["set.presenceIdle"] || "Waiting for something to play.");
+}
+setInterval(() => { if (!document.hidden) paintPresence(); }, 4000);
 
 $("#mail").addEventListener("click", () => window.auralfm.openMail());
 $("#privacy").addEventListener("click", () => window.auralfm.openDoc("PRIVACY.md"));

@@ -8,9 +8,18 @@
  * Three properties make Nostr right for this specifically:
  *
  *  - **Ephemeral events.** NIP-01 reserves kinds 20000–29999 for events relays
- *    forward to current subscribers and do not store. That is not a privacy
- *    setting we are trusting someone to honour on our behalf; it is what the
- *    kind *means*. Nothing is written down anywhere, by design.
+ *    *should not* store, only forward to whoever is subscribed at the time.
+ *
+ *    Said precisely, because the first draft of this comment overclaimed and
+ *    testing caught it: that is a SHOULD, not a MUST. Subscribing with a
+ *    five-minute lookback returned an announcement from a previous run of this
+ *    very app, which means at least one relay in the list keeps them for a
+ *    while. So the honest claim is that we ask relays not to retain this and
+ *    the convention is widely honoured — not that retention is impossible.
+ *
+ *    Which is exactly why the payload is built to be worthless if kept: a
+ *    throwaway key, a station's coordinates rather than a person's, and those
+ *    rounded to about twenty kilometres.
  *
  *  - **No account.** The keypair is generated at launch and thrown away at quit.
  *    A stable key would make you the same person across sessions, which is a
@@ -30,8 +39,8 @@ const crypto = require("node:crypto");
 const { schnorr } = require("@noble/curves/secp256k1.js");
 
 /**
- * Ephemeral kind, so relays forward and forget. Picked from the unassigned part
- * of the range; nothing else uses it, and nothing needs to.
+ * Ephemeral kind — relays are asked to forward and forget. Picked from the
+ * unassigned part of the range; nothing else uses it, and nothing needs to.
  */
 const KIND = 20808;
 
