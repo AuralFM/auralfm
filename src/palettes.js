@@ -23,6 +23,30 @@
 
 const PALETTES = [
   {
+    id: "onyx",
+    name: "Onyx",
+    free: true,
+    /**
+     * The brand. Onyx and bone.
+     *
+     * Bone rather than white, because white is what every system accent already
+     * is — bone is warm and slightly soft, and it is what stops the app looking
+     * like it borrowed its colours from the OS. Onyx is not flat black either;
+     * real onyx has depth, which is why the icon's background is a gradient
+     * rather than a fill.
+     *
+     * The receiver dots stay brass rather than going bone too: an antenna is not
+     * a place, and the whole point of two dot colours is that you can tell them
+     * apart at a glance across seven hundred of them.
+     */
+    accent: "#E9E2D4",
+    accentLight: "#2A2622",
+    dot: "#EDE6D8",
+    rx: "#C9A227",
+    atmosphere: "#9A9188",
+    star: "#F5F0E4",
+  },
+  {
     id: "onair",
     name: "On Air",
     free: true,
@@ -94,7 +118,11 @@ const PALETTES = [
   },
 ];
 
-const DEFAULT_ID = "onair";
+/**
+ * Onyx leads. On Air is kept because it is where the app started and some people
+ * will prefer it, but the identity is onyx and bone now.
+ */
+const DEFAULT_ID = "onyx";
 
 const byId = (id) => PALETTES.find((p) => p.id === id) || PALETTES[0];
 

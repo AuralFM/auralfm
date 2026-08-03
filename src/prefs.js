@@ -15,7 +15,7 @@ const DEFAULTS = {
   contrast: "system",    // system | more
   dotSize: "normal",     // normal | large
   language: "system",    // system | en | es
-  palette: "onair",      // see src/palettes.js
+  palette: "onyx",       // see src/palettes.js
 };
 
 function normalize(saved = {}) {
