@@ -8,8 +8,8 @@ Open it and the Earth is there — real weather moving across it, the day/night 
 where it truly is, the ISS overhead, the actual planets behind. Click anywhere and
 hear what that place is listening to right now.
 
-**38,342 radio stations across 12,296 places in 227 countries — and 837 shortwave
-receivers you can borrow.**
+**38,342 radio stations across 12,296 places in 227 countries, 837 shortwave
+receivers you can borrow, and the ionosphere drawn over the top of it.**
 
 The stations are streams. The shortwave receivers are somebody's actual antenna,
 in somebody's actual garden, and the signal reaches it off the ionosphere with no
@@ -113,9 +113,15 @@ anyone built a platform. It still does.
   Bands are ordered by whether that path is likely open right now, because
   shortwave propagation depends on whether the path is in daylight — and the globe
   already knows where the terminator is.
+- **21 bands**, including seven amateur bands and two morse frequencies — chosen
+  from where the activity measurably is, not from a band plan.
 - **Aviation on HF.** Out over an ocean an aircraft is beyond VHF range and talks
   to the ground on shortwave. Tune *Shannon VOLMET* from Iceland and you hear the
   weather being read for transatlantic flights.
+- **It tells you why a band is dead.** Bands are ordered by daylight, solar flux
+  and geomagnetic activity — the operator's actual rule of thumb — and a closed
+  band says which one it failed. *"solar flux 127 is too low for 28.4 MHz"* is a
+  different thing from a greyed-out row that could just be broken.
 - **Add a station AuralFM doesn't have.** The catalogue is a snapshot; your local
   station might not be in it. Add it, and it lives on your machine.
 - **Search** by station, city, country, or genre. "jazz new orleans" works.
@@ -131,7 +137,14 @@ anyone built a platform. It still does.
 - **Live cloud cover** — GOES geostationary imagery refreshed every 10 minutes over
   a daily global pass, so the weather on the globe is the weather that is up there.
 - **The ISS and the Chinese space station**, live, named, with their ground tracks.
+- **The ionosphere, drawn.** WSPR is a worldwide network of amateurs
+  transmitting tiny beacons and reporting everything they hear, so every report
+  is a statement that a signal left one grid square and arrived in another, just
+  now. Drawn as arcs bowing off the surface — because that is what the signal
+  did — with brightness following signal-to-noise. Rome to New Zealand is 18,512
+  km and it is on the globe right now.
 - **Aircraft near where you are looking** — optional, capped, and off by default.
+- **Other listeners**, if you switch it on — see below.
 - **Live local conditions** — pick a place and see its weather and local time, so
   you know it is 53°F and overcast at 12:45 AM where the station is.
 
@@ -139,9 +152,32 @@ anyone built a platform. It still does.
 
 - **The globe is the app** — a standalone window, with a menu bar companion that
   keeps playing when the window is closed. It hides, it doesn't stop.
-- **Six colour schemes**, five interface languages, an appearance override, an
-  increased-contrast mode and adjustable dot sizes.
+- **Seven colour schemes** — onyx and bone by default — five interface
+  languages, an appearance override, an increased-contrast mode and adjustable
+  dot sizes. A palette colours the things *around* the planet; the Earth is real
+  satellite imagery and is never recoloured.
 - **Now playing in the menu bar**, with media key support.
+
+### Other listeners, if you want them
+
+Off by default, because it is the only thing in AuralFM that sends anything.
+
+Switched on, and only while something is playing, it announces the **station's**
+location — rounded to a four-character geohash, about 20 km — and the station's
+name, over public [Nostr](https://nostr.com) relays. Other people running AuralFM
+see a slow pulsing ring there.
+
+- **Never your location.** The coordinates are the station's, the same rule the
+  weather already follows.
+- **No account.** The keypair is generated when the app opens and thrown away
+  when it closes. A stable key would make you the same person across sessions.
+- **No server of ours.** Relays are other people's and interchangeable.
+- **Said precisely:** it uses an *ephemeral* event kind, which relays are asked
+  not to retain. That is a SHOULD in the spec, not a MUST — testing found an
+  announcement replayed after the fact — so the payload is built to be worthless
+  if kept rather than relying on the promise.
+
+Expect an empty room for now. Nobody else is running this yet.
 
 ## Requirements
 
@@ -151,7 +187,7 @@ anyone built a platform. It still does.
 ## Getting started
 
 ```bash
-git clone git@github.com:meltonbell3/auralfm.git
+git clone https://github.com/meltonbell3/auralfm.git
 cd auralfm
 npm install
 ```
@@ -162,9 +198,13 @@ reproducible. Build it once (~50 minutes, one time):
 ```bash
 npm run crawl     # radio.garden -> data/stations.json + stations.min.json
 npm run tags      # fold in radio-browser genre tags
-npm run icons     # rasterize assets/*.svg into the PNGs macOS needs
+npm run crawl:sdr # kiwisdr -> data/sdr.min.json, the 837 receivers
+npm run icons     # rasterize assets/*.svg, and build build/icon.icns
 npm start         # run it
 ```
+
+`crawl:sdr` takes seconds — it is one request to an aggregate list, never to the
+receivers themselves. `crawl` is the slow one.
 
 The globe opens on launch. Close it and AuralFM keeps playing from the menu bar —
 right-click the tray icon for **Open the Globe**, **About**, **Open at Login** and
@@ -172,7 +212,8 @@ right-click the tray icon for **Open the Globe**, **About**, **Open at Login** a
 
 ### Just trying it out?
 
-`npm run crawl -- --limit 300` builds a usable catalog in about two minutes.
+`npm run crawl -- --limit 300` builds a usable catalog in about two minutes. The
+receiver bundle is committed, so shortwave works immediately either way.
 
 ## Keyboard
 
@@ -230,6 +271,20 @@ for. It is the one live thing in an otherwise offline-first app, so it is
 strictly best-effort: cached for 10 minutes, and silent on failure. Only the
 selected city's coordinates are sent, never the user's location.
 
+**The live layers, and what each one costs somebody.**
+
+```
+  wspr.live        propagation arcs      one aggregated query / 3 min
+  NOAA SWPC        solar flux, Kp        every 20 min
+  adsb.lol         aircraft near view    every 12s, only while the layer is on
+  Coinbase         crypto ticker         one WebSocket
+  a KiwiSDR        shortwave audio       only when you click that receiver
+  Nostr relays     other listeners       only if you switch presence on
+```
+
+Every one is free, most are run by volunteers, and none of them is load-bearing:
+the globe, the catalogue and search work with all of it unreachable.
+
 **Being a good guest.** Every live service here is free and most are run by
 volunteers. Each one gets a contactable `User-Agent`, a cache, and an exponential
 backoff on failure. That discipline is not decorative — AuralFM once retried a
@@ -253,7 +308,10 @@ src/
   resolver.js          3-tier stream URL resolution          (main process)
   weather.js           current conditions via Open-Meteo      (main process)
   sdr.js               shortwave receiver list                (main process)
+  wspr.js              propagation reports -> arcs            (main process)
+  space.js             solar flux and geomagnetic activity    (main process)
   flights.js           aircraft near the view, capped         (main process)
+  presence-nostr.js    optional presence over Nostr, no server(main process)
   mystations.js        stations you added yourself            (main process)
   palettes.js          colour schemes
   i18n.js              interface strings, 5 languages
@@ -306,7 +364,9 @@ phase0/index.html      the original single-file prototype
 | Player, menu bar shell, catalogue, search, favourites | ✅ |
 | Explore — list and globe | ✅ |
 | Day/night, live clouds, real sky, planets, ISS | ✅ |
-| Shortwave receivers, aviation HF | ✅ |
+| Shortwave receivers, aviation HF, 21 bands | ✅ |
+| WSPR propagation arcs, space weather | ✅ |
+| Presence over Nostr, off by default | ✅ |
 | Settings — appearance, contrast, dot size, language, palettes | ✅ |
 | User-added stations | ✅ |
 | Aircraft layer | ✅ |
@@ -333,6 +393,15 @@ phase0/index.html      the original single-file prototype
 - **Shortwave receivers are volunteers' machines.** AuralFM connects only when you
   click one, one at a time, never retries a refusal, and never scans them. If a
   receiver is busy, that is a person's hardware being used by somebody else.
+- **Presence is an empty room.** It works — verified between two instances across
+  three relays — but nobody else is running AuralFM yet, and geotagged Nostr
+  traffic generally is thin. It seeds a convention rather than joining one.
+- **Propagation arcs are the loudest paths, not all of them.** Around 30,000 WSPR
+  spots arrive every ten minutes; the globe draws the 260 longest, because the
+  short domestic hops would be specks and the long paths are the ones saying
+  something about the ionosphere.
+- **The band outlook is a rule of thumb, not a propagation model.** It answers
+  "is this worth tuning", not "will this specific path open".
 - **Stocks are dormant.** There is no keyless real-time equity source — Yahoo,
   Stooq and CNBC were all re-probed and all refuse. Crypto is genuinely live over
   Coinbase's keyless feed; equities light up only if you set `AURALFM_STOCK_KEY`.
@@ -344,6 +413,9 @@ phase0/index.html      the original single-file prototype
   operators who pay for the bandwidth
 - Orbital elements: [CelesTrak](https://celestrak.org) and [SatNOGS](https://db.satnogs.org)
 - Aircraft positions: [adsb.lol](https://adsb.lol)
+- Propagation reports: [wspr.live](https://wspr.live), and the amateurs whose
+  beacons and receivers make the data exist at all
+- Space weather: [NOAA SWPC](https://www.swpc.noaa.gov)
 - Crypto prices: [Coinbase](https://www.coinbase.com)
 - Satellite imagery: [NASA GIBS](https://nasa-gibs.github.io/gibs-api-docs/) (VIIRS true colour)
 - Station genres and fallback streams: [radio-browser.info](https://www.radio-browser.info)
