@@ -25,6 +25,7 @@ const satellites = require("./satellites");
 const sdr = require("./sdr");
 const flights = require("./flights");
 const wspr = require("./wspr");
+const space = require("./space");
 
 // height is the cap, not the size — the panel grows to fit its content. The cap
 // is a share of the usable screen so it doesn't overflow a small display.
@@ -586,6 +587,7 @@ ipcMain.handle("sdr:stats", () => sdr.stats());
 ipcMain.handle("sdr:nearest", (_e, lat, lng, n) => sdr.nearest(lat, lng, n));
 ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng, span, want));
 ipcMain.handle("wspr:get", (_e, band) => wspr.get(band));
+ipcMain.handle("space:get", () => space.get());
 /**
  * Explore asks, the popover plays — same rule as stations, so there is still
  * exactly one thing in this app that makes sound.

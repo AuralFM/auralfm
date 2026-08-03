@@ -84,6 +84,8 @@ const en = {
   "sdr.day": "In daylight — the higher bands carry furthest right now.",
   "sdr.night": "In darkness — the lower bands carry furthest right now.",
   "sdr.unlikely": "likely quiet now",
+  "sdr.flux": "solar flux",
+  "sdr.storm": "Geomagnetic storm — HF is degraded everywhere, and high-latitude paths worst.",
 
   // settings window
   "set.title": "Settings",
@@ -181,6 +183,8 @@ const es = {
   "sdr.day": "A plena luz: ahora las bandas altas llegan más lejos.",
   "sdr.night": "De noche: ahora las bandas bajas llegan más lejos.",
   "sdr.unlikely": "probablemente en silencio",
+  "sdr.flux": "flujo solar",
+  "sdr.storm": "Tormenta geomagnética: la HF está degradada en todas partes, y peor en las rutas polares.",
 
   "set.title": "Ajustes",
   "set.appearance": "Apariencia",
@@ -277,6 +281,8 @@ const fr = {
   "sdr.day": "En plein jour : les bandes hautes portent le plus loin en ce moment.",
   "sdr.night": "De nuit : les bandes basses portent le plus loin en ce moment.",
   "sdr.unlikely": "sans doute silencieuse",
+  "sdr.flux": "flux solaire",
+  "sdr.storm": "Orage géomagnétique — les HF sont dégradées partout, et le pire sur les trajets polaires.",
 
   "set.title": "Réglages",
   "set.appearance": "Apparence",
@@ -373,6 +379,8 @@ const de = {
   "sdr.day": "Bei Tageslicht — die oberen Bänder tragen jetzt am weitesten.",
   "sdr.night": "Bei Dunkelheit — die unteren Bänder tragen jetzt am weitesten.",
   "sdr.unlikely": "vermutlich still",
+  "sdr.flux": "Sonnenfluss",
+  "sdr.storm": "Geomagnetischer Sturm — KW ist überall gestört, auf polnahen Wegen am stärksten.",
 
   "set.title": "Einstellungen",
   "set.appearance": "Erscheinungsbild",
@@ -469,6 +477,8 @@ const pt = {
   "sdr.day": "À luz do dia — as bandas altas alcançam mais longe agora.",
   "sdr.night": "No escuro — as bandas baixas alcançam mais longe agora.",
   "sdr.unlikely": "provavelmente em silêncio",
+  "sdr.flux": "fluxo solar",
+  "sdr.storm": "Tempestade geomagnética — a HF está degradada em toda parte, e pior nas rotas polares.",
 
   "set.title": "Ajustes",
   "set.appearance": "Aparência",

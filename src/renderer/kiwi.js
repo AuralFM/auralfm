@@ -139,6 +139,61 @@
     { id: "volmetN",label: "New York VOLMET",     freq: 6604,  mode: "usb", when: "night", hint: "aviation weather, continuous" },
   ];
 
+  // ── propagation outlook ────────────────────────────────────────────────────
+  /**
+   * Whether a frequency is worth trying from a given receiver, right now.
+   *
+   * Three inputs, and the band list previously used only the first:
+   *
+   *  - **Daylight.** Low frequencies are absorbed by the D layer during the day
+   *    and carry for thousands of miles once it decays after dark. High
+   *    frequencies need the sun to sustain the F layer, so they close at night.
+   *
+   *  - **Solar flux (F10.7).** How hard the sun is driving the ionosphere, which
+   *    sets the highest frequency that will still bend back to Earth instead of
+   *    escaping. Below roughly 70 the upper bands simply do not return.
+   *
+   *  - **Geomagnetic activity (Kp).** A disturbed field degrades HF broadly and
+   *    can black out paths crossing high latitudes entirely.
+   *
+   * This is the operator's rule of thumb, not a propagation model — it will not
+   * predict a specific opening. It is enough to answer "is it worth tuning", and
+   * it can say why, which is the part a greyed-out row could never do.
+   */
+  const FLUX_FLOOR = [
+    { mhz: 8,  sfi: 0 },        // always returns; the low bands do not need the sun
+    { mhz: 12, sfi: 70 },
+    { mhz: 16, sfi: 90 },
+    { mhz: 22, sfi: 110 },
+    { mhz: 99, sfi: 140 },
+  ];
+
+  function outlook(band, daylight, space) {
+    const mhz = band.freq / 1000;
+    const tier = FLUX_FLOOR.find((t) => mhz < t.mhz) || FLUX_FLOOR[FLUX_FLOOR.length - 1];
+    const flux = space?.flux ?? null;
+    const kp = space?.kpEstimated ?? space?.kp ?? null;
+
+    // Time of day, which is the strongest single factor.
+    const timeOk = band.when === "any" || (band.when === "day") === daylight;
+
+    // Does the sun support this frequency at all today?
+    const fluxOk = flux == null || flux >= tier.sfi;
+
+    // A disturbed field degrades everything; a storm can close HF outright.
+    const stormy = kp != null && kp >= 5;
+    const unsettled = kp != null && kp >= 4 && kp < 5;
+
+    let open = timeOk && fluxOk && !stormy;
+    let why = null;
+    if (!fluxOk) why = `solar flux ${Math.round(flux)} is too low for ${mhz.toFixed(1)} MHz`;
+    else if (stormy) why = `geomagnetic storm, Kp ${kp.toFixed(1)}`;
+    else if (!timeOk) why = band.when === "day" ? "needs daylight" : "better after dark";
+    else if (unsettled) why = `unsettled, Kp ${kp.toFixed(1)}`;
+
+    return { open, why, unsettled };
+  }
+
   // ── session ────────────────────────────────────────────────────────────────
   /**
    * One connection to one receiver.
@@ -307,5 +362,5 @@
   // The rate the Kiwi's audio path is built around; it must be sent as an integer.
   KiwiSession.AR_IN = 12000;
 
-  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, parseSnd, parseMsg };
+  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, outlook, parseSnd, parseMsg };
 })(typeof globalThis !== "undefined" ? globalThis : this);

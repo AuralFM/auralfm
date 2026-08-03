@@ -1704,6 +1704,8 @@ async function initGlobe() {
   // and costs nothing.
   clearInterval(sunTimer);
   sunTimer = setInterval(updateSun, 60000);
+  refreshSpace();
+  setInterval(refreshSpace, 20 * 60000);
   applyLod(true);
   updateSun();
 }
@@ -2190,6 +2192,15 @@ let flightData = [], flightTimer = null, flightBusy = false;
 let wsprData = [], wsprTimer = null, wsprBusy = false;
 
 /**
+ * Space weather. Refreshed rarely on purpose — the sun does not change fast, the
+ * K-index only meaningfully moves every three hours, and flux is a daily figure.
+ */
+let spaceWx = null;
+async function refreshSpace() {
+  try { spaceWx = (await window.auralfm.space()) || spaceWx; } catch { /* keep the last */ }
+}
+
+/**
  * Radio propagation — the ionosphere, drawn.
  *
  * Every WSPR report is a statement that a signal left one grid square and
@@ -2644,16 +2655,29 @@ function selectReceiver(rx) {
     Math.cos(rx.lat * rad) * Math.cos(sunLat * rad) * Math.cos((rx.lng - sunLng) * rad);
   const daylight = cosSun > 0;
 
-  const likely = (b) => b.when === "any" || (b.when === "day") === daylight;
-  const bands = [...Kiwi.BANDS].sort((a, b) => (likely(b) ? 1 : 0) - (likely(a) ? 1 : 0));
+  // Was: daylight alone. Now the operator's actual rule of thumb — daylight,
+  // solar flux, and whether the field is disturbed — and it can say why.
+  const look = (b) => Kiwi.outlook(b, daylight, spaceWx);
+  const bands = [...Kiwi.BANDS].sort((a, b) => (look(b).open ? 1 : 0) - (look(a).open ? 1 : 0));
 
   stationListEl.innerHTML = "";
   const note = document.createElement("div");
   note.className = "empty";
   note.style.cssText = "padding:6px 15px 10px;text-align:left";
-  note.textContent = daylight
+  const base = daylight
     ? t("sdr.day", "In daylight — the higher bands carry furthest right now.")
     : t("sdr.night", "In darkness — the lower bands carry furthest right now.");
+  // The conditions that decide it, stated rather than implied.
+  const wx = [];
+  if (spaceWx?.flux != null) wx.push(`${t("sdr.flux", "solar flux")} ${Math.round(spaceWx.flux)}`);
+  const kpNow = spaceWx?.kpEstimated ?? spaceWx?.kp;
+  if (kpNow != null) wx.push(`Kp ${kpNow.toFixed(1)}`);
+  // A storm outranks the time of day. Saying "the lower bands carry furthest"
+  // during a geomagnetic storm is true in general and wrong right now.
+  const lead = (kpNow != null && kpNow >= 5)
+    ? t("sdr.storm", "Geomagnetic storm — HF is degraded everywhere, and high-latitude paths worst.")
+    : base;
+  note.textContent = wx.length ? `${lead}  ·  ${wx.join(" · ")}` : lead;
   stationListEl.append(note);
 
   for (const b of bands) {
@@ -2661,14 +2685,17 @@ function selectReceiver(rx) {
     el.className = "st";
     el.setAttribute("role", "button");
     el.tabIndex = 0;
-    const open = likely(b);
+    const o = look(b);
+    const open = o.open;
     // Same markup as a station row — this is the station list, and a band is
     // what a receiver offers in place of a station.
     el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
     el.querySelector(".sn").textContent = b.label;
     el.querySelector(".stags").textContent =
       `${(b.freq / 1000).toFixed(3)} MHz ${b.mode.toUpperCase()} · ${b.hint}` +
-      (open ? "" : ` · ${t("sdr.unlikely", "likely quiet now")}`);
+      // The reason, not just the verdict. A greyed-out row that cannot say why
+      // is indistinguishable from a broken one.
+      (open ? (o.why ? ` · ${o.why}` : "") : ` · ${o.why || t("sdr.unlikely", "likely quiet now")}`);
     if (!open) el.style.opacity = ".55";
     const go = () => {
       window.auralfm.tuneSdr({
