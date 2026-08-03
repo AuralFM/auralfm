@@ -162,5 +162,34 @@ for (const f of literals) {
   fs.existsSync(R(f)) ? pass(f) : fail("build.files", `${f} is listed but missing`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\nno duplicated blocks");
+// A scripted edit used an anchor that matched in three places, so the four-line
+// boot sequence — applyPrefs, applyPalette, applyStrings — was pasted into
+// toggleFav and showFavorites as well. Both still worked, just slower and with a
+// full re-theme on every star click, which is why it survived review and a
+// release. Verbatim repetition of a real block of logic is the signature.
+const BLOCK = 5;
+const boring = (l) => {
+  const t = l.trim();
+  return !t || "{}()[]});".includes(t) || t.startsWith("//") || t.startsWith("*")
+      || t.startsWith("/*") || t.length < 8;
+};
+for (const { file, html } of renderers) {
+  const js = html.match(/<script>([\s\S]*)<\/script>\s*<\/body>/)?.[1] ?? "";
+  const lines = js.split("\n");
+  const at = new Map();
+  for (let i = 0; i + BLOCK <= lines.length; i++) {
+    const blk = lines.slice(i, i + BLOCK);
+    if (blk.some(boring)) continue;              // only blocks that are all real code
+    const key = blk.join("\n");
+    at.set(key, [...(at.get(key) ?? []), i + 1]);
+  }
+  const dupes = [...at.entries()].filter(([, v]) => v.length > 1);
+  dupes.length
+    ? fail(rel(file), `${BLOCK}+ identical lines at ${dupes[0][1].join(", ")}: ${dupes[0][0].split("\n")[0].trim().slice(0, 60)}`)
+    : pass(rel(file));
+}
+
 console.log(failures ? `\n${failures} check(s) failed\n` : "\nall checks passed\n");
 process.exit(failures ? 1 : 0);

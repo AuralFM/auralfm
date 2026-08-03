@@ -408,19 +408,60 @@
   }
   /* Headlines cross-fade one at a time rather than scrolling. A marquee fights
      prefers-reduced-motion and moving text is simply harder to read. */
+  /**
+   * A crawl, not a slideshow.
+   *
+   * This used to swap one headline for another every nine seconds and clip
+   * whatever did not fit — so on a narrow window you could never read a whole
+   * headline, and on any window you could not read the ones already gone. Now
+   * every headline sits in one strip that moves continuously, at a duration
+   * derived from its length so the pace is the same with three items or thirty.
+   *
+   * It moves leftward, which is what makes it readable: the words arrive in
+   * reading order. A right-to-left interface needs the opposite, and that
+   * belongs with real RTL support rather than as a lone switch.
+   */
   .tickwrap{
-    flex:1;min-width:0;display:flex;justify-content:flex-end;
-    padding-left:14px;overflow:hidden;
+    /* A basis, not just grow. With `flex:1` alone the bar's fixed content —
+       transport, volume and three market symbols — came to 814px, so at a 940px
+       window this got 14px, which is exactly its own padding. The headlines were
+       not being clipped by the swap; there was no room for them at all. */
+    flex:1 1 200px;min-width:0;overflow:hidden;padding-left:14px;
+    /* Fade both ends so headlines emerge and leave rather than being chopped. */
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 26px,#000 calc(100% - 26px),transparent 100%);
+            mask-image:linear-gradient(90deg,transparent 0,#000 26px,#000 calc(100% - 26px),transparent 100%);
   }
-  @media (max-width: 1100px){ .tickwrap{display:none} }
-  .tick{
-    color:var(--label3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    opacity:0;transition:opacity .5s ease-out;max-width:100%;
+  @media (max-width: 820px){ .tickwrap{display:none} }
+  /* Below that, the space has to come from somewhere, and it comes from here.
+     The prices are ambient; the headlines are the thing that was asked for. So
+     markets sheds a symbol at a time rather than starving the ticker. */
+  @media (max-width: 1200px){ .markets .m:nth-child(3){display:none} }
+  @media (max-width: 1000px){ .markets .m:nth-child(2){display:none} }
+  .tick{ display:inline-block;white-space:nowrap;color:var(--label3);will-change:transform }
+  .tick.run{ animation:crawl var(--crawl,90s) linear infinite }
+  .tickwrap:hover .tick{ animation-play-state:paused }      /* stop to read one */
+  @keyframes crawl{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  /* Reduce Motion is on for a real reason, and a marquee is the textbook case it
+     exists to suppress — so nothing moves on its own here. But the point of this
+     bar is that you can read the whole bulletin, and an ellipsis would put us
+     back where we started. So the strip stays still and becomes scrollable
+     instead: swipe or wheel through it, motion only when you ask for it. */
+  @media (prefers-reduced-motion: reduce){
+    .tickwrap{overflow-x:auto;scrollbar-width:none}
+    .tickwrap::-webkit-scrollbar{display:none}
+    .tick.run{animation:none}
   }
-  .tick.on{opacity:1}
+  #nowStar{
+    background:none;border:0;color:var(--label3);font-size:14px;line-height:1;
+    padding:2px 4px;cursor:default;flex:none;
+    transition:color .12s ease-out,transform 90ms ease-out;
+  }
+  #nowStar:hover{color:var(--star)}
+  #nowStar:active{transform:scale(.9)}
+  #nowStar.on{color:var(--star)}
   .markets{
     /* margin-left:auto, not a flexible sibling: the headline ticker beside it
-       hides below 1100px, and when it collapsed nothing pushed markets right.
+       hides below 820px, and when it collapsed nothing pushed markets right.
        This pins it to the right edge whether the ticker is there or not. */
     flex:none;margin-left:auto;display:flex;align-items:center;gap:14px;padding-left:16px;
     font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
@@ -431,7 +472,6 @@
   .markets .ch{font-size:11px}
   .markets .up{color:var(--accent)}
   .markets .dn{color:var(--err)}
-  @media (prefers-reduced-motion: reduce){ .tick{transition:none} }
 </style>
 </head>
 <body>
@@ -478,6 +518,7 @@
   <button id="play" title="Play / pause" data-i18n-title="ctl.playPause">▶</button>
   <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation">🔓</button>
   <span class="dot" id="dot"></span>
+  <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden>☆</button>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
   <span class="volwrap">
@@ -796,10 +837,6 @@ function openAddForm(row) {
 async function toggleFav(ch) {
   const state = (await window.auralfm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
-  // Before the globe builds, so the first point layer is already the right size.
-  applyPrefs((await window.auralfm.getPrefs()) || {});
-  await applyPalette();                  // before the globe, so the first build is themed
-  await applyStrings();
   const i = favorites.findIndex((f) => f.id === ch.id);
   if (i >= 0) favorites.splice(i, 1);
   else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
@@ -831,7 +868,39 @@ window.auralfm.onPlayerState((s) => {
     if (!el.dataset?.id) continue;
     el.setAttribute("aria-current", playing?.id === el.dataset.id);
   }
+  paintNowStar();
 });
+
+/**
+ * The star beside the transport.
+ *
+ * Favouriting already existed in every list, but not where you are most likely
+ * to want it: you hear something good, and the thing you are looking at is the
+ * player, not the row you clicked three minutes ago.
+ *
+ * Hidden for shortwave, because a favourite is a station you can return to and a
+ * band on one receiver is a place plus a frequency plus whether the ionosphere
+ * is cooperating. Pretending otherwise would save something that does not come
+ * back.
+ */
+function paintNowStar() {
+  const b = $("nowStar");
+  if (!b) return;
+  const ch = playing;
+  const canFav = !!(ch && ch.id && !ch.sdr);
+  b.hidden = !canFav;
+  if (!canFav) return;
+  const on = isFav(ch.id);
+  b.textContent = on ? "★" : "☆";
+  b.classList.toggle("on", on);
+  b.setAttribute("aria-pressed", String(on));
+}
+
+$("nowStar").onclick = async () => {
+  if (!playing || !playing.id || playing.sdr) return;
+  await toggleFav(playing);          // it reloads `favorites` from disk; paint after
+  paintNowStar();
+};
 
 // ── transport ────────────────────────────────────────────────────────────────
 // Explore has no audio element — these drive the one player in the popover, so
@@ -885,10 +954,6 @@ let showingFavorites = false;
 async function showFavorites() {
   const state = (await window.auralfm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
-  // Before the globe builds, so the first point layer is already the right size.
-  applyPrefs((await window.auralfm.getPrefs()) || {});
-  await applyPalette();                  // before the globe, so the first build is themed
-  await applyStrings();
   showingFavorites = true;
   $("favBtn").setAttribute("aria-pressed", "true");
   qEl.value = "";
@@ -1068,35 +1133,72 @@ $("newsSrc").onclick = () => {
 };
 
 // ── local headlines ──────────────────────────────────────────────────────────
-let tickItems = [], tickIdx = 0, tickTimer = null, tickCountry = null;
+let tickItems = [], tickCountry = null;
 
 async function loadNews(country) {
   if (country === tickCountry) return;      // already showing this country
   tickCountry = country;
-  clearInterval(tickTimer);
-  tickItems = []; tickIdx = 0;
+  tickItems = [];
   const el = $("ticker");
-  el.classList.remove("on");
-  if (!country) return;
+  if (!country) { el.dataset.line = ""; showHeadline(); return; }
 
   const items = await window.auralfm.news(country);
   if (tickCountry !== country || !items.length) return;
   tickItems = items;
   showHeadline();
-  // 9s is long enough to actually read one, short enough to feel alive.
-  tickTimer = setInterval(showHeadline, 9000);
+  // No timer. The crawl runs itself and showHeadline() is idempotent when the
+  // text has not changed — rebuilding on an interval would restart the loop
+  // mid-sentence, which is a version of exactly the problem this replaced.
 }
 
+/**
+ * Reduce Motion, watched rather than read once.
+ *
+ * The strip is built differently depending on it — one copy or two — so reading
+ * it only at build time meant toggling the setting did nothing until the app was
+ * restarted. macOS exposes it live; there is no reason not to follow.
+ */
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+REDUCED.addEventListener("change", () => {
+  const el = $("ticker");
+  if (el) { el.dataset.line = ""; showHeadline(); }   // clear the cache, rebuild
+});
+
+/**
+ * Build the crawl.
+ *
+ * The strip is written twice and translated by exactly -50%, which is the whole
+ * trick: at the end of the animation the second copy sits precisely where the
+ * first began, so the loop is seamless without measuring anything or resetting
+ * on a timer.
+ *
+ * Duration scales with content — roughly 45 pixels a second — so a short
+ * bulletin and a long one crawl at the same readable pace instead of one
+ * sprinting.
+ */
 function showHeadline() {
   const el = $("ticker");
-  if (!tickItems.length) return;
-  el.classList.remove("on");
-  setTimeout(() => {
-    el.textContent = tickItems[tickIdx % tickItems.length]?.title || "";
-    el.title = el.textContent;
-    tickIdx++;
-    el.classList.add("on");
-  }, 260);
+  if (!el) return;
+  if (!tickItems.length) { el.textContent = ""; el.classList.remove("run"); return; }
+
+  const sep = "   ·   ";
+  const line = tickItems.map((i) => i.title).join(sep) + sep;
+  if (el.dataset.line === line) return;      // nothing new; do not restart the loop
+  el.dataset.line = line;
+
+  el.classList.remove("run");
+
+  // Under Reduce Motion the strip is scrolled by hand, and a second copy would
+  // just read as the news repeating itself. Only the crawl needs the duplicate.
+  const still = REDUCED.matches;
+  el.textContent = still ? line : line + line;
+  if (still) { el.parentElement.scrollLeft = 0; return; }
+
+  // Reading the width forces layout so the animation restarts cleanly.
+  const px = el.scrollWidth / 2;
+  el.style.setProperty("--crawl", `${Math.max(30, Math.round(px / 45))}s`);
+  void el.offsetWidth;
+  el.classList.add("run");
 }
 
 // ── weather ──────────────────────────────────────────────────────────────────
