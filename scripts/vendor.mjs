@@ -3,6 +3,7 @@
 // widen it for a path outside the renderer directory.
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,44 +17,6 @@ const LIBS = [
   ["three-globe", "example/img/earth-topology.png"],
   ["three-globe", "example/img/night-sky.png"],
 
-  /**
-   * Whisper, in the renderer.
-   *
-   * Transformers.js runs the model as ONNX over WebAssembly, which is the whole
-   * reason captions do not turn this into a native app — no whisper.cpp, no
-   * per-architecture binaries, no change to how this builds.
-   *
-   * The 12 MB `.wasm` is the plain SIMD build rather than the 25 MB `jsep` one:
-   * jsep carries the WebGPU path, and the integrated GPUs this targets do not
-   * benefit enough to justify doubling the runtime.
-   */
-  /**
-   * Whisper, in the renderer — pinned to transformers 3.8.1.
-   *
-   * 4.x ships onnxruntime-web 1.26-dev, which cannot open the Whisper graphs on
-   * the Hub: every model and every dtype fails identically with
-   * "TransposeDQWeightsForMatMulNBits Missing required scale", including fp32,
-   * which is the tell that it is a runtime mismatch rather than a setting.
-   * 3.8.1 pins 1.22 instead.
-   *
-   * **Not the `.jsep` build.** transformers ships `ort-wasm-simd-threaded.jsep.wasm`
-   * and that is what was vendored first: 20.6 MB. JSEP is the JavaScript
-   * Execution Provider — the WebGPU and WebNN backends — and `captions.js` asks
-   * for `device: "wasm"` and nothing else, so all of that plumbing was shipped
-   * in every download and could never execute. The plain build is 10.6 MB, and
-   * its loader is 47 KB against 389 KB.
-   *
-   * Safe because the versions are the same object: transformers 3.8.1 pins
-   * onnxruntime-web 1.22.0-dev.20250409-89f8206ba4, and that exact build is what
-   * onnxruntime-web resolves to. Checked at vendor time below, because the whole
-   * reason the pair used to come from the transformers package was to stop the
-   * runtime and the loader drifting across an npm update — that risk is real and
-   * an assertion is a better answer to it than a bigger file.
-   */
-  ["@huggingface/transformers", "dist/transformers.web.min.js"],
-  ["onnxruntime-web", "dist/ort-wasm-simd-threaded.wasm"],
-  ["onnxruntime-web", "dist/ort-wasm-simd-threaded.mjs"],
-  ["onnxruntime-web", "dist/ort.wasm.bundle.min.mjs"],
 ];
 
 /**
@@ -61,7 +24,17 @@ const LIBS = [
  * small ES modules with relative imports between them rather than one file — so
  * it is copied whole and the import map points at its entry.
  */
-const TREES = [["onnxruntime-common", "dist/esm", "ort-common"]];
+/**
+ * Nothing is copied as a tree any more.
+ *
+ * `onnxruntime-common` used to be vendored whole — 85 files — because
+ * transformers imports it as a bare specifier. It turns out `ort.wasm.bundle.min.mjs`
+ * already exports every symbol that specifier is used for (Tensor,
+ * InferenceSession, env, registerBackend), so the import map points both names
+ * at the one bundle and the tree is gone. Verified by loading Whisper with the
+ * tree deleted.
+ */
+const TREES = [];
 
 /**
  * The ONNX runtime is now taken from `onnxruntime-web` while the loader that
@@ -123,4 +96,53 @@ for (const [pkg, rel] of LIBS) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
   console.log(`vendor: ${path.basename(rel)}  ${(fs.statSync(dest).size / 1024).toFixed(0)} KB`);
+}
+
+/**
+ * The captions runtime manifest.
+ *
+ * These four files are *not* copied into the app. They are 11 MB of WebAssembly
+ * and loader for a feature that is off by default, so they are fetched on first
+ * use instead — see `src/captions-runtime.js` for the reasoning and the risks.
+ *
+ * What ships is this manifest: a URL, a byte count and a SHA-256 per file. The
+ * hash is taken from the copy in `node_modules`, which is the copy the feature
+ * was actually tested against, so the CDN is not trusted to define what correct
+ * means — it is only trusted to serve it, and checked.
+ *
+ * jsDelivr because it mirrors npm by exact version and needs no key. The
+ * version comes from the installed packages rather than being written here, so
+ * a dependency bump cannot silently leave the manifest pointing at old bytes.
+ */
+const RUNTIME = [
+  ["@huggingface/transformers", "dist/transformers.web.min.js"],
+  ["onnxruntime-web",           "dist/ort.wasm.bundle.min.mjs"],
+  ["onnxruntime-web",           "dist/ort-wasm-simd-threaded.mjs"],
+  ["onnxruntime-web",           "dist/ort-wasm-simd-threaded.wasm"],
+];
+
+const GEN = path.join(ROOT, "assets", "generated");
+fs.mkdirSync(GEN, { recursive: true });
+
+const files = [];
+for (const [pkg, rel] of RUNTIME) {
+  const src = path.join(ROOT, "node_modules", pkg, rel);
+  if (!fs.existsSync(src)) { console.warn(`vendor: ${pkg}/${rel} not installed`); continue; }
+  const buf = fs.readFileSync(src);
+  const version = JSON.parse(
+    fs.readFileSync(path.join(ROOT, "node_modules", pkg, "package.json"), "utf8")).version;
+  files.push({
+    name: path.basename(rel),
+    url: `https://cdn.jsdelivr.net/npm/${pkg}@${version}/${rel}`,
+    bytes: buf.length,
+    sha256: crypto.createHash("sha256").update(buf).digest("hex"),
+  });
+}
+if (files.length === RUNTIME.length) {
+  const out = path.join(GEN, "captions-runtime.json");
+  fs.writeFileSync(out, JSON.stringify({ files }, null, 2) + "\n");
+  const mb = files.reduce((n, f) => n + f.bytes, 0) / 1048576;
+  console.log(`vendor: captions-runtime.json  ${files.length} files  ${mb.toFixed(1)} MB fetched on demand`);
+} else {
+  console.warn("vendor: captions runtime manifest not written — some files missing");
 }

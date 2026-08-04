@@ -82,6 +82,40 @@
   };
 
   let pipe = null, loading = null, ctx = null, node = null, source = null;
+  let mapped = false;
+
+  /**
+   * Make sure the runtime is on disk, and teach the module loader where it is.
+   *
+   * Returns a `file://` directory URL ending in a slash. Two things have to
+   * happen before transformers can be imported, and only one of them is the
+   * download:
+   *
+   * `transformers.web.min.js` imports the bare specifiers `onnxruntime-web` and
+   * `onnxruntime-common`, which nothing in a browser resolves without an import
+   * map — and the map cannot be written into the HTML, because the path depends
+   * on where this machine keeps application support. So it is injected here,
+   * once, immediately before the first module import. Both names point at the
+   * same bundle; it exports every symbol reached for under either.
+   */
+  async function runtimeBase() {
+    const res = await root.auralfm.installCaptionsRuntime();
+    if (!res?.ok) throw new Error(res?.error || "could not install the captions runtime");
+    // encodeURI, not raw: the default macOS path contains "Application Support",
+    // and an unescaped space makes the import a parse error rather than a 404.
+    const base = "file://" + res.dir.split("/").map(encodeURIComponent).join("/") + "/";
+    if (!mapped) {
+      const bundle = base + "ort.wasm.bundle.min.mjs";
+      const el = document.createElement("script");
+      el.type = "importmap";
+      el.textContent = JSON.stringify({
+        imports: { "onnxruntime-web": bundle, "onnxruntime-common": bundle },
+      });
+      document.head.appendChild(el);
+      mapped = true;
+    }
+    return base;
+  }
   let buffer = [], collected = 0, busy = false, stopped = true;
   let onText = () => {}, onStatus = () => {};
   const stats = { runs: 0, audioSec: 0, computeSec: 0, model: null };
@@ -94,22 +128,23 @@
     if (loading) return loading;
     onStatus({ state: "loading", model: which });
     loading = (async () => {
-      const T = await import("./vendor/transformers.web.min.js");
+      const base = await runtimeBase();          // downloads on first use
+      const T = await import(base + "transformers.web.min.js");
       // Weights come from Hugging Face on first use and are cached by the
-      // browser after that. This is the one third party the feature talks to,
-      // it happens only when captions are switched on, and it is weights going
-      // one way — never audio.
+      // browser after that. Together with the runtime fetch above, those are
+      // the two third parties this feature talks to; both happen only when
+      // captions are switched on, and both are one way — never audio.
       T.env.allowLocalModels = false;
-      // Absolute, not "./vendor/". The runtime resolves this with a dynamic
-      // import, and a relative path under a file:// document resolves against
-      // the wrong base — the failure is "no available backend found", which
-      // sounds like a missing feature rather than a missing slash.
-      T.env.backends.onnx.wasm.wasmPaths = new URL("./vendor/", document.baseURI).href;
+      // Absolute, and not derived from document.baseURI: the runtime now lives
+      // outside the app directory, so a relative path resolves against the
+      // wrong base — the failure is "no available backend found", which sounds
+      // like a missing feature rather than a missing slash.
+      T.env.backends.onnx.wasm.wasmPaths = base;
       T.env.backends.onnx.wasm.numThreads = 1;   // renderer stays responsive
       // `device: "wasm"` below is the only backend ever requested, which is why
-      // the vendored runtime is the plain build and not the `.jsep` one — JSEP
+      // the fetched runtime is the plain build and not the `.jsep` one — JSEP
       // is the WebGPU/WebNN provider and its extra 10 MB could never execute.
-      // See the note in scripts/vendor.mjs.
+      // See the manifest note in scripts/vendor.mjs.
       const p = await T.pipeline("automatic-speech-recognition", MODELS[which] || MODELS.base, {
         dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
         device: "wasm",

@@ -260,12 +260,14 @@
 <!-- Transformers.js ships a bare `onnxruntime-web/webgpu` specifier that expects
      a bundler. An import map resolves it in the browser, which keeps this a
      project with no build step. -->
-<script type="importmap">
-{ "imports": {
-  "onnxruntime-web": "./vendor/ort.wasm.bundle.min.mjs",
-  "onnxruntime-common": "./vendor/ort-common/index.js"
-} }
-</script>
+<!-- No import map here on purpose.
+     The runtime is downloaded to the user's application-support directory on
+     first use, so its path is not known when this file is written. captions.js
+     injects the map once it knows where the files landed — Chromium accepts an
+     import map appended after load as long as it precedes the first module
+     resolution, and the only module import in this app is the dynamic one
+     inside Captions.load(). Both names point at the same bundle: it exports
+     every symbol transformers reaches for under `onnxruntime-common`. -->
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
 <script src="captions.js"></script>

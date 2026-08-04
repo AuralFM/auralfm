@@ -17,6 +17,7 @@ const prefs = require("./prefs");
 const palettes = require("./palettes");
 const mine = require("./mystations");
 const i18n = require("./i18n");
+const captionsRuntime = require("./captions-runtime");
 const failures = require("./failures");
 const presence = require("./presence");
 const nostr = require("./presence-nostr");
@@ -742,6 +743,21 @@ ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng
 ipcMain.handle("wspr:get", (_e, band) => wspr.get(band));
 ipcMain.handle("space:get", () => space.get());
 ipcMain.handle("presence:stats", () => nostr.stats());
+
+/**
+ * The captions runtime — 11 MB of ONNX that is fetched rather than shipped.
+ *
+ * `status` is cheap and safe to poll; it hashes what is on disk so a truncated
+ * download reports as missing rather than as installed. `install` is the only
+ * thing here that touches the network, it is idempotent, and progress goes back
+ * to the window that asked so an 11 MB download is not a frozen toggle.
+ */
+ipcMain.handle("captions:runtimeStatus", () => captionsRuntime.status(app.getPath("userData")));
+ipcMain.handle("captions:installRuntime", (e) =>
+  captionsRuntime.ensure(app.getPath("userData"), (p) => {
+    // The renderer may be gone by the time a slow download finishes.
+    if (!e.sender.isDestroyed()) e.sender.send("captions:runtimeProgress", p);
+  }));
 ipcMain.handle("presence:history", () => nostr.history());
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.

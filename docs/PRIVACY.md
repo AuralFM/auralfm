@@ -100,7 +100,24 @@ them on trust.
 
 ## Live captions (off by default)
 
-Switching captions on changes two things, and both are worth stating plainly.
+Switching captions on changes three things, and all three are worth stating
+plainly.
+
+**A one-time download from jsDelivr.** The speech runtime — 11 MB of ONNX
+WebAssembly — is fetched the first time captions are enabled, not shipped inside
+the app. It used to be shipped, and carrying 11 MB in every download for a
+feature most people never switch on was the wrong trade. The cost of the change
+is honest and belongs here: enabling captions now tells one more third party
+(jsDelivr, a public npm mirror) that a request was made, once. Nothing is sent
+but the request.
+
+**Every one of those files is pinned to a SHA-256 recorded when the app was
+built**, and checked before anything is written to disk or executed. A file that
+does not match is deleted and the feature refuses to start. This matters more
+than the download does: fetching executable WebAssembly from a CDN without
+verifying it would be handing a third party the ability to run code inside the
+app. The hashes come from the exact bytes the feature was tested against, so the
+CDN is trusted to *serve* the runtime and never to define what it is.
 
 **A one-time download from Hugging Face.** The speech model's weights are fetched
 the first time captions are enabled — roughly 120 MB — and cached after that.
