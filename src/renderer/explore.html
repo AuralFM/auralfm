@@ -455,7 +455,7 @@
     flex:none;width:var(--rail);
     display:flex;flex-direction:column;min-height:0;
   }
-  .placehead{flex:none;padding:0 18px 10px}
+  .placehead{flex:none;padding:0 17px 10px}   /* 17px: the rail's text column */
   /* One line. A long place name used to wrap and take the list with it, which
      is the same flinch as the tags. */
   .placehead h2{
@@ -642,18 +642,21 @@
     flex:none;display:flex;flex-direction:column;max-height:246px;
     box-shadow:inset 0 .5px 0 var(--line);
   }
+  /* 17px, matching the station names: the list insets rows 7px and each row
+     pads its text another 10px. The chat was on 15 and its input on 13, which
+     is close enough to read as a mistake rather than as a variation. */
   .chathead{
-    flex:none;display:flex;align-items:baseline;gap:8px;padding:9px 15px 5px;
+    flex:none;display:flex;align-items:baseline;gap:8px;padding:9px 17px 5px;
     font-size:11px;color:var(--label2);letter-spacing:.005em;
   }
   #chatpeers{margin-left:auto;color:var(--label3);font-variant-numeric:tabular-nums}
-  #chatlog{flex:1;min-height:0;padding:0 15px 6px;overflow-y:auto}
+  #chatlog{flex:1;min-height:0;padding:0 17px 6px;overflow-y:auto}
   .msg{padding:3px 0;font-size:12px;line-height:1.42;word-wrap:break-word}
   .msg .who{color:var(--label2);font-weight:590}
   /* Your own line is tinted rather than aligned right: a twenty-kilometre
      public square is not a DM thread, and it should not look like one. */
   .msg.mine .who{color:var(--accent)}
-  #chatform{flex:none;padding:0 13px 11px}
+  #chatform{flex:none;padding:0 7px 11px}
   #chatinput{
     width:100%;appearance:none;border:0;border-radius:7px;background:var(--fill);
     color:var(--label);font:inherit;font-size:12px;padding:8px 10px;
