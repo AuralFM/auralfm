@@ -391,6 +391,7 @@ phase0/index.html      the original single-file prototype
 | [`docs/SPONSORSHIP.md`](docs/SPONSORSHIP.md) | The sequence for funding this, and what it is and isn't worth |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is next, what is refused, and why |
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
+| [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
 
 ## Scripts
 
