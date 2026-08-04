@@ -256,6 +256,43 @@ function emit() {
 }
 
 /**
+ * How far back to ask for.
+ *
+ * Ephemeral kinds are ones relays are *asked* to forward and forget, so this is
+ * a request rather than an expectation — some keep them for a while, most do
+ * not. Six hours matches what bitchat's own gossip sync retains, so where a
+ * relay does hold them the two apps agree on how much history a room has.
+ *
+ * What it fixes: joining a cell used to show only what arrived *after* you got
+ * there. A room with people in it read as dead for the first few minutes, which
+ * is exactly when someone decides whether it is worth staying.
+ */
+const LOOKBACK_SEC = 6 * 3600;
+
+/**
+ * Ask a relay for the room.
+ *
+ * Deliberately not filtered by geohash. Putting our own cell in the filter would
+ * tell every relay we connect to roughly where we are, which is the one thing
+ * this design exists to avoid — so the bandwidth is spent instead and the
+ * filtering happens locally.
+ *
+ * The subscription id is constant on purpose: NIP-01 says a REQ reusing an
+ * existing id *replaces* that subscription, so re-sending on a cell change
+ * re-asks for history without opening a second one or closing the first.
+ */
+function subscribe(only) {
+  const msg = JSON.stringify(["REQ", "auralfm", {
+    kinds: [PRESENCE_KIND, CHAT_KIND, LABEL_KIND],
+    since: Math.floor(Date.now() / 1000) - LOOKBACK_SEC,
+  }]);
+  for (const w of (only ? [only] : alive())) {
+    if (w.readyState !== 1) continue;
+    try { w.send(msg); } catch { /* relay went away */ }
+  }
+}
+
+/**
  * Push one signed event to relays.
  *
  * @param {WebSocket} [only]  send to just this socket. Used when a relay has
@@ -367,10 +404,7 @@ function connect() {
       // geohash in the filter would tell every relay we connect to roughly where
       // we are, which is the one thing this design exists to avoid — so the
       // bandwidth is spent instead.
-      w.send(JSON.stringify(["REQ", "auralfm", {
-        kinds: [PRESENCE_KIND, CHAT_KIND, LABEL_KIND],
-        since: Math.floor(Date.now() / 1000) - 900,
-      }]));
+      subscribe(w);
       announce(w);          // this relay only; the others already have it
     };
     w.onmessage = (m) => {
@@ -442,6 +476,9 @@ function join(lat, lon, label) {
     sockets = [];
   }
   connect();
+  // Same relays, different room: the sockets are already up, so nothing would
+  // re-ask for history and the new cell would start blank until somebody spoke.
+  if (moved && sockets.length) subscribe();
   announce();
   clearInterval(beat);
   beat = setInterval(() => { announce(); prune(); }, BEAT_MS);
