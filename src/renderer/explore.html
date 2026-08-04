@@ -2539,6 +2539,15 @@ function paintChat(list) {
     // No nickname is the common case, and a truncated pubkey is at least true.
     who.textContent = (m.mine ? t("chat.you", "you") : (m.nick || m.from)) + "  ";
     el.append(who, document.createTextNode(m.text));
+    // Everyone here from AuralFM is tuned in rather than standing there, and
+    // some bitchat users are too. Say so, quietly.
+    if (m.teleport) {
+      const far = document.createElement("span");
+      far.className = "who";
+      far.style.cssText = "opacity:.55;font-weight:400";
+      far.textContent = `  ${t("chat.tuned", "tuned in")}`;
+      el.append(far);
+    }
     log.append(el);
   }
   if (atBottom) log.scrollTop = log.scrollHeight;
@@ -2549,13 +2558,19 @@ window.auralfm.onChat(paintChat);
 /**
  * Show or hide the whole panel.
  *
- * `playing.sdr` is excluded on purpose: a shortwave receiver is somewhere you
- * are listening *from*, not a place you are in, and the people near its antenna
- * are not the people you are listening with.
+ * Shortwave was excluded here on the argument that a receiver is somewhere you
+ * listen *from* rather than a place you are in. That does not survive the
+ * obvious comparison: tuning a stream from Rio while sitting in Houston puts you
+ * in Rio's cell, and tuning a receiver in Wellington is the same act. Both are
+ * somewhere you are not. The only real difference was that the SDR session was
+ * never given coordinates, which made a missing field look like a decision.
+ *
+ * The condition is now simply: presence is on, something is playing, and it has
+ * a location.
  */
 async function syncChat(prefs) {
-  const want = !!(prefs?.presence === true && playing && !playing.sdr
-                  && typeof playing.lat === "number");
+  const want = !!(prefs?.presence === true && playing
+                  && typeof playing.lat === "number" && typeof playing.lon === "number");
   $("chat").hidden = !want;
   if (want === chatOn) return;
   chatOn = want;
@@ -3104,7 +3119,12 @@ async function selectReceiver(rx) {
    */
   const tuneRow = (el, { freq, mode, label, width }) => {
     const go = () => {
-      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc, freq, mode, band: label, width });
+      // lat/lng travel with the receiver: the popover publishes the playing
+      // channel, and without a position a shortwave session was the only kind
+      // that could not say where it was — so presence and chat quietly did
+      // nothing for it.
+      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc,
+                               lat: rx.lat, lng: rx.lng, freq, mode, band: label, width });
       for (const sib of stationListEl.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
       el.setAttribute("aria-current", "true");
     };

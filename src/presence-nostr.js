@@ -235,7 +235,20 @@ function announce(only) {
 function say(text, nickname) {
   const body = String(text || "").trim().slice(0, MAX_MESSAGE);
   if (!here || !body || !alive().length) return false;
-  const tags = [["g", here.geohash]];
+  /**
+   * Always teleported, and this is the honest part.
+   *
+   * bitchat's `t: teleport` tag marks someone posting into a cell they are not
+   * physically in. For their users that is occasional. For us it is *universal*:
+   * the cell is always the station's or the receiver's, never the listener's —
+   * that is the whole privacy design. Somebody in Houston listening to Rio
+   * appears in Rio's channel, and without this tag that reads as a claim to be
+   * standing there.
+   *
+   * Their clients can then show us for what we are: present in the conversation,
+   * not present in the place.
+   */
+  const tags = [["g", here.geohash], ["t", "teleport"]];
   const nick = String(nickname || "").trim().slice(0, 32);
   if (nick) tags.push(["n", nick]);
   const evt = sign({
@@ -259,6 +272,9 @@ function record(evt, mine = false) {
     geohash: g,
     from: String(evt.pubkey || "").slice(0, 8),
     nick: (evt.tags || []).find((t) => t[0] === "n")?.[1]?.slice(0, 32) || null,
+    // Someone posting into a cell they are not standing in — us, always, and
+    // some of them. Worth showing rather than flattening.
+    teleport: (evt.tags || []).some((t) => t[0] === "t" && t[1] === "teleport"),
     text: String(evt.content || "").slice(0, MAX_MESSAGE),
     mine,
   });

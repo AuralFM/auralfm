@@ -341,7 +341,14 @@ function publish(){
   // A shortwave session is described in the same shape as a station, so Explore
   // and the tray need no special case for it.
   const ch = sdrRx
-    ? { id: "sdr:" + sdrRx.host, title: sdrRx.label, place: sdrRx.loc, country: "", sdr: true }
+    // The receiver's coordinates travel with it. Without them a shortwave
+    // session had no place attached, so presence and the geohash chat silently
+    // did nothing — the only kind of session in the app that could not say
+    // where it was. `lng` here, `lon` there: the SDR list and the catalogue
+    // spell it differently, and the mismatch is why this looked like a design
+    // decision rather than a missing field.
+    ? { id: "sdr:" + sdrRx.host, title: sdrRx.label, place: sdrRx.loc, country: "",
+        lat: sdrRx.lat, lon: sdrRx.lng, sdr: true }
     : current ? {id:current.id, title:current.title, place:current.place,
                  country:current.country, lat:current.lat, lon:current.lon} : null;
   window.auralfm.publishState({
