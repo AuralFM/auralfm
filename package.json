@@ -24,17 +24,17 @@
     "sync-kb": "node scripts/sync-kb.mjs"
   },
   "devDependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "electron": "^38.0.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "globe.gl": "^2.46.1"
   },
   "repository": {
     "type": "git"
   },
   "homepage": "https://github.com/YOUR_USERNAME/auralfm",
   "dependencies": {
-    "@huggingface/transformers": "^3.8.1",
     "@noble/curves": "^2.2.0",
-    "globe.gl": "^2.46.1",
     "satellite.js": "^7.1.0"
   },
   "build": {
