@@ -151,6 +151,35 @@ for (const { code, name } of LANGUAGES) {
                : pass(`${name} (${code}) — ${Object.keys(en).length} keys`);
 }
 
+/**
+ * No key defined twice in one language table.
+ *
+ * This is invisible at runtime — a later key simply wins — and it is how 27
+ * French strings ended up inside the English table and never reached French.
+ * The cause was an anchor shared by two languages: `"cold.station": "station"`
+ * is spelled identically in English and French, so a scripted insert aimed at
+ * one landed in the other. English still resolved correctly, which is exactly
+ * why nobody noticed.
+ *
+ * The blank-value check below cannot catch it either: `strings()` fills gaps
+ * from English, so a missing translation is never empty, only wrong.
+ */
+{
+  const src = fs.readFileSync(R("src/i18n.js"), "utf8");
+  for (const { code, name } of LANGUAGES) {
+    const i = src.indexOf(`const ${code} = {`);
+    if (i < 0) continue;
+    const table = src.slice(i, src.indexOf("\n};", i));
+    const counts = new Map();
+    for (const m of table.matchAll(/^\s*"([\w.]+)":/gm)) {
+      counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+    }
+    const dup = [...counts].filter(([, n]) => n > 1).map(([k]) => k);
+    dup.length ? fail(`${name} (${code})`, `${dup.length} duplicated: ${dup.slice(0, 4).join(", ")}`)
+               : pass(`${name} (${code}) — no duplicates`);
+  }
+}
+
 // Anything the renderers ask for must exist.
 const used = new Set();
 for (const { html } of renderers) {

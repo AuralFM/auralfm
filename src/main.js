@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const catalog = require("./catalog");
@@ -274,6 +274,52 @@ function setLayer(id, on) {
   buildMenu();
 }
 
+/**
+ * Erase everything and quit.
+ *
+ * The app already claims to keep nothing about you anywhere but this machine.
+ * That claim is worth being able to *act on* rather than only read: one item,
+ * one confirmation, and the whole of it is gone in under a second.
+ *
+ * Deliberately wipes the browser storage too — cookies, local storage, caches,
+ * the speech model if it was ever downloaded. Those are not "ours" in the sense
+ * that we wrote them, which is exactly why leaving them behind would make this a
+ * gesture rather than a promise.
+ *
+ * Not offered as an undo. The dialog says so, there is no backup, and the app
+ * quits rather than carrying on with half a state directory.
+ */
+async function panicWipe() {
+  const t = getStrings();
+  const { response } = await dialog.showMessageBox({
+    type: "warning",
+    buttons: [t["erase.confirm"], t["erase.cancel"]],
+    defaultId: 1,
+    cancelId: 1,
+    message: t["erase.title"],
+    detail: t["erase.detail"],
+  });
+  if (response !== 0) return;
+
+  try { nostr.leave(); } catch { /* nothing announced */ }
+  try {
+    // Cookies, storage, caches — everything Chromium keeps on our behalf.
+    await session.defaultSession.clearStorageData();
+    await session.defaultSession.clearCache();
+  } catch { /* best effort; the files below are the substance */ }
+
+  const dir = app.getPath("userData");
+  for (const name of fs.readdirSync(dir)) {
+    // SingletonLock and friends belong to the running process; removing them
+    // mid-flight is how you get a second instance on the next launch.
+    if (name.startsWith("Singleton")) continue;
+    try { fs.rmSync(path.join(dir, name), { recursive: true, force: true }); } catch { /* gone already */ }
+  }
+
+  app.relaunch();
+  app.exit(0);
+}
+
 function buildMenu() {
   const layers = layerState();
   const t = getStrings();
@@ -284,6 +330,8 @@ function buildMenu() {
         { label: t["menu.about"], click: showAbout },
         { type: "separator" },
         { label: t["menu.settings"], accelerator: "Command+,", click: openSettings },
+        { type: "separator" },
+        { label: t["menu.erase"], click: panicWipe },
         { type: "separator" },
         { label: t["menu.openAtLogin"],
           type: "checkbox",
@@ -604,6 +652,60 @@ ipcMain.handle("sky:get", () => {
 });
 ipcMain.handle("weather:get", (_e, i, lat, lon) => weather.get(i, lat, lon));
 ipcMain.handle("news:get", (_e, country) => news.get(country));
+
+/**
+ * Resolve a Google News link to the article it actually points at.
+ *
+ * Google News RSS gives `news.google.com/rss/articles/CBMi…` links, and that
+ * page is a 590 KB interstitial containing exactly one paragraph and no
+ * destination URL — the real address is fetched at runtime by an internal RPC.
+ * Following redirects server-side lands on the interstitial and extracts
+ * nothing, which is why the reader view returned empty for every story.
+ *
+ * So a real browser does what a real browser does. A hidden window loads the
+ * link, the page's own JavaScript navigates to the publisher, and the first
+ * navigation away from google.com is the answer. Nothing is scraped and no
+ * private API is reimplemented; this is a click, performed off-screen.
+ *
+ * Bounded hard: images and media are blocked so only the document loads, the
+ * window is destroyed either way, and eight seconds is the whole budget.
+ */
+function resolveArticle(url) {
+  if (!/^https?:\/\//i.test(String(url || ""))) return Promise.resolve(null);
+  if (!/(^|\.)news\.google\.com$/i.test(new URL(url).hostname)) return Promise.resolve(url);
+
+  return new Promise((done) => {
+    let win = new BrowserWindow({
+      show: false,
+      webPreferences: { offscreen: true, javascript: true, images: false, sandbox: true },
+    });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { if (win && !win.isDestroyed()) win.destroy(); } catch { /* already gone */ }
+      win = null;
+      done(result);
+    };
+    const timer = setTimeout(() => finish(null), 8000);
+
+    win.webContents.on("did-navigate", (_e, to) => {
+      try {
+        if (!/(^|\.)google\.com$/i.test(new URL(to).hostname)) finish(to);
+      } catch { /* not a URL we can read */ }
+    });
+    win.webContents.on("did-fail-load", () => finish(null));
+    win.loadURL(url).catch(() => finish(null));
+  });
+}
+
+ipcMain.handle("news:read", async (_e, url) => {
+  const real = await resolveArticle(url);
+  if (!real) return null;
+  const doc = await news.read(real);
+  return doc ? { ...doc, url: real } : null;
+});
 ipcMain.handle("markets:get", () => markets.get());
 ipcMain.handle("prefs:get", () => getPrefs());
 ipcMain.handle("prefs:set", (_e, patch) => setPrefs(patch));

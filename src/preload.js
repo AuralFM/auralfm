@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   setLayers: (patch) => ipcRenderer.send("globe:setLayers", patch),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),
+  readArticle: (url) => ipcRenderer.invoke("news:read", url),
   markets: () => ipcRenderer.invoke("markets:get"),
 
   // preferences

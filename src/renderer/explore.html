@@ -410,6 +410,23 @@
   #newsClose{font-size:16px}
   .newslist{flex:1;overflow-y:auto;padding:0 8px 12px}
   .newslist::-webkit-scrollbar{width:0}
+  /* The reader. Measured for prose rather than for a list: longer line height,
+     a real paragraph gap, and a maximum width the eye can track. */
+  .readback{
+    appearance:none;border:0;background:none;color:var(--label2);font:inherit;
+    font-size:12px;padding:4px 0 10px;cursor:default;
+  }
+  .readback:hover{color:var(--label)}
+  .readtitle{font-size:16px;font-weight:640;line-height:1.28;letter-spacing:-.012em}
+  .readmeta{font-size:11px;color:var(--label2);margin:5px 0 12px}
+  .readp{margin:0 0 11px;font-size:13px;line-height:1.62;color:var(--label)}
+  .readnote{font-size:12.5px;line-height:1.5;color:var(--label2);margin-bottom:12px}
+  .readopen{
+    appearance:none;border:0;border-radius:7px;background:var(--fill);
+    color:var(--label);font:inherit;font-size:12px;padding:7px 12px;cursor:default;
+  }
+  .readopen:hover{background:var(--fill-hi)}
+
   .story{padding:8px 8px;border-radius:7px;transition:background .12s ease-out}
   .story:hover{background:var(--fill)}
   .story:active{background:var(--fill-hi)}
@@ -1555,6 +1572,7 @@ async function renderNewsPanel() {
       + `</div>`;
     return;
   }
+  if (reading) return renderReader(list);
   list.innerHTML = "";
   for (const it of items) {
     const el = document.createElement("div");
@@ -1562,13 +1580,94 @@ async function renderNewsPanel() {
     el.innerHTML = `<div class="h"></div><div class="m"></div>`;
     el.querySelector(".h").textContent = it.title;
     el.querySelector(".m").textContent = [it.source, relTime(it.at)].filter(Boolean).join(" · ");
-    if (it.link) el.onclick = () => window.auralfm.openLink(it.link);
+    if (it.link) el.onclick = () => openReader(it);
     list.appendChild(el);
   }
 }
 
-$("newsBtn").onclick = () => { newsOpen = !newsOpen; renderNewsPanel(); };
-$("newsClose").onclick = () => { newsOpen = false; renderNewsPanel(); };
+/**
+ * The reader.
+ *
+ * A headline is a promise, and a link out to a page of consent banners and
+ * newsletter interstitials is how that promise gets broken. The article is
+ * fetched and stripped in the main process — no CORS there — and read in the
+ * panel it was found in.
+ *
+ * It fails openly. Roughly a third of stories will not extract: paywalls,
+ * publishers that block anything without a session, pages that are mostly
+ * JavaScript. When that happens the button to open it properly is right there,
+ * which is a better answer than a spinner that never resolves.
+ */
+let reading = null;
+
+async function openReader(item) {
+  reading = { item, doc: null, state: "loading" };
+  renderNewsPanel();
+  const doc = await window.auralfm.readArticle(item.link).catch(() => null);
+  // The panel may have moved on while a slow publisher was thinking.
+  if (!reading || reading.item !== item) return;
+  reading = { item, doc, state: doc ? "ready" : "failed" };
+  renderNewsPanel();
+}
+
+function closeReader() { reading = null; renderNewsPanel(); }
+
+function renderReader(list) {
+  const { item, doc, state } = reading;
+  list.innerHTML = "";
+
+  const back = document.createElement("button");
+  back.className = "readback";
+  back.textContent = t("news.back", "‹ Headlines");
+  back.onclick = closeReader;
+  list.append(back);
+
+  const h = document.createElement("div");
+  h.className = "readtitle";
+  h.textContent = (doc && doc.title) || item.title;
+  const meta = document.createElement("div");
+  meta.className = "readmeta";
+  meta.textContent = [item.source, relTime(item.at),
+    doc ? `${doc.words.toLocaleString()} ${t("news.words", "words")}` : null]
+    .filter(Boolean).join(" · ");
+  list.append(h, meta);
+
+  if (state === "loading") {
+    const p = document.createElement("div");
+    p.className = "readnote";
+    p.textContent = t("news.loading", "Fetching the article…");
+    list.append(p);
+    return;
+  }
+
+  if (state === "failed") {
+    const p = document.createElement("div");
+    p.className = "readnote";
+    p.textContent = t("news.failed",
+      "This one will not open here — it is paywalled or needs a browser.");
+    const b = document.createElement("button");
+    b.className = "readopen";
+    b.textContent = t("news.open", "Open in browser");
+    b.onclick = () => window.auralfm.openLink(item.link);
+    list.append(p, b);
+    return;
+  }
+
+  for (const para of doc.paragraphs) {
+    const p = document.createElement("p");
+    p.className = "readp";
+    p.textContent = para;
+    list.append(p);
+  }
+  const b = document.createElement("button");
+  b.className = "readopen";
+  b.textContent = t("news.open", "Open in browser");
+  b.onclick = () => window.auralfm.openLink(doc.url || item.link);
+  list.append(b);
+}
+
+$("newsBtn").onclick = () => { newsOpen = !newsOpen; reading = null; renderNewsPanel(); };
+$("newsClose").onclick = () => { newsOpen = false; reading = null; renderNewsPanel(); };
 $("newsSrc").onclick = () => {
   newsSource = NEWS_SOURCES[(NEWS_SOURCES.indexOf(newsSource) + 1) % NEWS_SOURCES.length];
   renderNewsPanel();

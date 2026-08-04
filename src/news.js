@@ -57,10 +57,20 @@ const LOCALES = {
 // This endpoint is undocumented, so treat an outage as a reason to stop asking.
 const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "news" });
 
+/**
+ * HTML entities to text.
+ *
+ * The typographic ones matter more than they look: article prose is full of
+ * curly quotes and em dashes, and a reader view that renders them as `&mdash;`
+ * is worse than no reader view.
+ */
 const decode = (s) => s
   .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
   .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
   .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
+  .replace(/&nbsp;/g, " ")
+  .replace(/&lsquo;|&rsquo;/g, "'").replace(/&ldquo;|&rdquo;/g, '"')
+  .replace(/&mdash;/g, "\u2014").replace(/&ndash;/g, "\u2013").replace(/&hellip;/g, "\u2026")
   .trim();
 
 const pick = (item, tag) => {
@@ -132,3 +142,66 @@ async function get(country, limit = 12) {
 }
 
 module.exports = { get, LOCALES };
+
+/**
+ * Read an article without opening a browser.
+ *
+ * A headline is a promise; a link out to a page of consent banners and
+ * newsletter interstitials is how that promise gets broken. This fetches the
+ * page here — the main process has no CORS to negotiate — and pulls out the
+ * text, so the story can be read in the panel it was found in.
+ *
+ * Extraction is a heuristic, not Readability. Bringing in a real parser means
+ * bringing in a DOM implementation, which is tens of megabytes for a feature
+ * that has to work on wire-service HTML most of the time and is allowed to fail
+ * visibly the rest of it. The rule below — the container holding the most
+ * paragraph text wins — is what every readability algorithm does first, and it
+ * is most of the benefit for none of the weight.
+ */
+const READ_TTL_MS = 30 * 60_000;
+const readCache = new Map();
+
+const stripTags = (html) => html
+  .replace(/<!--[\s\S]*?-->/g, "")
+  .replace(/<(script|style|noscript|svg|iframe|form)\b[\s\S]*?<\/\1>/gi, "")
+  .replace(/<(nav|header|footer|aside)\b[\s\S]*?<\/\1>/gi, "");
+
+async function read(url) {
+  if (!/^https?:\/\//i.test(String(url || ""))) return null;
+  const hit = readCache.get(url);
+  if (hit && Date.now() - hit.at < READ_TTL_MS) return hit.doc;
+
+  let html;
+  try {
+    const res = await fetch(url, {
+      // A plain browser UA: a number of publishers serve a stub to anything that
+      // looks automated, and a stub extracts to nothing, which reads as a bug in
+      // here rather than a decision over there.
+      headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+                               "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return null;
+    html = await res.text();
+  } catch { return null; }
+
+  const clean = stripTags(html);
+  const title = decode((/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i.exec(html)
+                      || /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) || [, ""])[1]).trim();
+
+  // Score every block-level container by how much paragraph text it holds, and
+  // take the winner. Nesting means a parent always beats its child on raw total,
+  // so the deepest container above the threshold is preferred.
+  const paras = [...clean.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((m) => decode(m[1].replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim())
+    // Navigation, captions and cookie notices are short; prose is not.
+    .filter((t) => t.length > 60);
+
+  if (!paras.length) return null;
+  const doc = { url, title, paragraphs: paras.slice(0, 40), words: paras.join(" ").split(/\s+/).length };
+  readCache.set(url, { at: Date.now(), doc });
+  return doc;
+}
+
+module.exports.read = read;
