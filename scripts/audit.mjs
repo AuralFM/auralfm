@@ -88,6 +88,22 @@ for (const { file, html } of renderers) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+console.log("\nlocal scripts are permitted by the CSP");
+// Settings loaded icons.js while its CSP said `script-src 'unsafe-inline'` with
+// no 'self'. The file was blocked, `Icons` was undefined, and the two calls at
+// the top of the inline script threw — killing every line below them. The whole
+// settings window rendered empty controls and nothing worked, with no visible
+// error anywhere in the app.
+for (const { file, html } of renderers) {
+  const csp = (/<meta[^>]+Content-Security-Policy[^>]+content="([^"]+)"/i.exec(html) || [, ""])[1];
+  const loadsLocal = /<script\s+src="(?!https?:)/i.test(html);
+  const scriptSrc = (/script-src ([^;]*)/i.exec(csp) || [, ""])[1];
+  if (loadsLocal && !/'self'/.test(scriptSrc)) {
+    fail(rel(file), "loads a local <script src> but script-src has no 'self'");
+  } else pass(rel(file));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log("\nno system colour keywords in themed windows");
 // Canvas and CanvasText follow the OS appearance, not our theme override, so a
 // forced Dark theme on a light Mac painted black text on a dark page.

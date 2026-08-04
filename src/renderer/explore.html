@@ -162,7 +162,7 @@
     transition:background .12s ease-out,color .12s ease-out;
   }
   .toolbar #favBtn:hover{background:var(--fill);color:var(--label)}
-  .toolbar #favBtn[aria-pressed="true"]{color:var(--star);background:var(--fill)}
+  .toolbar #favBtn[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
   .toolbar #q{
     width:clamp(240px, 22vw, 520px);height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
@@ -272,7 +272,11 @@
    * control. A caption must never eat a drag.
    */
   .globebar{
-    position:absolute;left:0;right:0;bottom:10px;z-index:3;pointer-events:none;
+    /* Flush to the bottom edge. A 10px inset looked right against a black night
+       side and showed as a visible band of globe under the line the moment you
+       zoomed into anything bright — the Sahara made it obvious. */
+    position:absolute;left:0;right:0;bottom:0;z-index:3;pointer-events:none;
+    padding-bottom:7px;
     display:flex;align-items:center;justify-content:center;gap:0;
     padding:0 18px;font-size:10.5px;color:var(--label3);
     letter-spacing:.006em;white-space:nowrap;overflow:hidden;
@@ -356,7 +360,7 @@
   @media (prefers-reduced-motion: reduce){ #caption{transition:none} }
 
   .globebar::after{
-    content:"";position:absolute;left:0;right:0;bottom:-10px;height:52px;
+    content:"";position:absolute;left:0;right:0;bottom:0;height:56px;
     background:linear-gradient(to top,rgba(0,0,0,.45),rgba(0,0,0,0));
     z-index:-1;pointer-events:none;
   }
@@ -508,7 +512,10 @@
     transition:opacity .12s ease-out,color .12s ease-out,transform 90ms ease-out;
   }
   .st:hover .star{opacity:1}
-  .star.on{opacity:1;color:var(--star)}
+  /* The accent, not `--star`. A favourite is the app's own mark and should wear
+     the theme; a fixed amber was the one thing on screen that ignored the
+     palette entirely. */
+  .star.on{opacity:1;color:var(--accent)}
   .star:active{transform:scale(.85)}
   .bars{flex:none;display:flex;gap:2px;align-items:flex-end;height:12px;width:8px;opacity:0}
   .st[aria-current="true"] .bars{opacity:1}
@@ -538,10 +545,23 @@
        the token, so in the light theme its glyph was white and this one was
        nearly black. Two play buttons, same app, different colours. */
     background:var(--accent);color:var(--on-accent);font-size:12px;
+    transition:background .15s ease-out,color .15s ease-out,transform 90ms ease-out;
     display:grid;place-items:center;
     transition:transform 90ms ease-out,opacity .15s ease-out;
   }
   #play:active{transform:scale(.92)}
+  /**
+   * Paused reads as an outline, not a filled disc.
+   *
+   * Filled-accent for both states meant that in some palettes the glyph and the
+   * button were near enough the same value that the control disappeared while
+   * paused — exactly when you need to find it. An outlined button is also the
+   * more truthful shape: filled means running.
+   */
+  body:not(.playing) #play{
+    background:transparent;color:var(--accent);
+    box-shadow:inset 0 0 0 1.5px var(--accent);
+  }
   .volwrap{flex:none;display:flex;align-items:center;gap:5px;margin-left:10px}
   #mute{
     background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
@@ -2261,9 +2281,14 @@ async function initGlobe() {
   mountReadouts();
   updateSun();
   await setupDayNight();
-  // A slow, permanent drift — the Earth is never truly still, and a dead-static
-  // globe reads as a screenshot. Slow enough not to fight you while you aim.
-  globe.controls().autoRotate = true;
+  // A slow drift — the Earth is never truly still, and a dead-static globe reads
+  // as a screenshot. Slow enough not to fight you while you aim.
+  //
+  // Set from the layer, not to `true`. Hardcoding it here meant the globe always
+  // span on launch no matter what Slow Rotation was set to, and the only thing
+  // that could stop it was toggling the layer *on* and then off again — so the
+  // control appeared to work backwards.
+  globe.controls().autoRotate = !!layers.drift;
   globe.controls().autoRotateSpeed = 0.18;
   globe.controls().enableDamping = true;
   globe.controls().dampingFactor = 0.08;
@@ -3149,7 +3174,37 @@ function paintLayers() {
   }
 }
 
-$("layersBtn").onclick = () => { layersOpen = !layersOpen; paintLayers(); };
+/**
+ * Move the planet, not the panel.
+ *
+ * The inspector sits over the top-right of the globe, which is where the Earth
+ * usually is. Shrinking the panel would make it cramped and shrinking the globe
+ * would make the whole window lurch; nudging the *camera* costs nothing and is
+ * the thing a person would do themselves — lean the world away from the thing
+ * they just opened.
+ *
+ * A rotation rather than a pan, because three-globe's camera orbits a fixed
+ * centre: panning would fight the controls, where a few degrees of longitude
+ * and a little altitude simply slides the planet down and left and keeps every
+ * layer — constellations included — in the same frame.
+ */
+function shiftForPanel(open) {
+  if (!globe || flying) return;
+  const pov = globe.pointOfView();
+  const dLng = open ? -22 : 22;
+  const dAlt = open ? 0.18 : -0.18;
+  globe.pointOfView({
+    lat: pov.lat,
+    lng: pov.lng + dLng,
+    altitude: Math.max(0.32, Math.min(4, pov.altitude + dAlt)),
+  }, 420);
+}
+
+$("layersBtn").onclick = () => {
+  layersOpen = !layersOpen;
+  paintLayers();
+  shiftForPanel(layersOpen);
+};
 
 // Click anywhere else on the globe to dismiss, the way an inspector should.
 document.addEventListener("pointerdown", (e) => {
@@ -3157,10 +3212,11 @@ document.addEventListener("pointerdown", (e) => {
   if ($("layers").contains(e.target) || $("layersBtn").contains(e.target)) return;
   layersOpen = false;
   paintLayers();
+  shiftForPanel(false);
 }, true);
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && layersOpen) { layersOpen = false; paintLayers(); }
+  if (e.key === "Escape" && layersOpen) { layersOpen = false; paintLayers(); shiftForPanel(false); }
 });
 
 // ── real sky ─────────────────────────────────────────────────────────────────

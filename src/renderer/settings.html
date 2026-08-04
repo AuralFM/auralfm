@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
 <title>AuralFM Settings</title>
 <style>
   /* Same AppKit-derived palette as the rest of the app. The difference here is
@@ -282,8 +282,6 @@
 
 <script src="icons.js"></script>
 <script>
-Icons.set(document.getElementById("privacy"), "external");
-Icons.set(document.getElementById("terms"), "external");
 "use strict";
 const $ = (s) => document.querySelector(s);
 let T = {};
@@ -440,6 +438,9 @@ async function paintPresence() {
     : (T["set.presenceIdle"] || "Waiting for something to play.");
 }
 setInterval(() => { if (!document.hidden) paintPresence(); }, 4000);
+
+Icons.set($("#privacy"), "external");
+Icons.set($("#terms"), "external");
 
 $("#mail").addEventListener("click", () => window.auralfm.openMail());
 $("#privacy").addEventListener("click", () => window.auralfm.openDoc("PRIVACY.md"));
