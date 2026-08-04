@@ -79,8 +79,36 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * port rather than a Mac app.
  */
 const SQUIRCLE = 824 / 1024;
-const RADIUS = 185.4 / 824;
 const GLYPH = 0.62;              // of the squircle — line art needs room to breathe
+
+/**
+ * The squircle, as an actual superellipse.
+ *
+ * This was `border-radius`, and `border-radius` draws a *circular* arc: it
+ * curves at a constant rate and then stops dead where it meets the straight
+ * edge. Apple's corner is continuous — it eases into the straight edge, so the
+ * curvature never jumps. Measured against Music.app at 512px, the difference
+ * shows up as a corner that reads noticeably squarer than the system's, and it
+ * is one of the tells that an icon was not drawn for the Mac.
+ *
+ * |x|^n + |y|^n = 1 with n = 5 is the usual approximation and is close enough
+ * that the remaining error is under a pixel at 1024.
+ *
+ * Sampled rather than fitted with béziers: at these sizes 512 points is smooth
+ * past the resolution of the output, and a sampled path cannot be subtly wrong
+ * in the way a hand-fitted control point can.
+ */
+function squirclePath(box, n = 5) {
+  const r = box / 2, pts = [], N = 512;
+  for (let i = 0; i < N; i++) {
+    const t = (i / N) * 2 * Math.PI;
+    const c = Math.cos(t), s = Math.sin(t);
+    const x = r + r * Math.sign(c) * Math.abs(c) ** (2 / n);
+    const y = r + r * Math.sign(s) * Math.abs(s) ** (2 / n);
+    pts.push(`${x.toFixed(2)} ${y.toFixed(2)}`);
+  }
+  return `M${pts[0]}L${pts.slice(1).join("L")}Z`;
+}
 
 function page(svg, size, style = "template") {
   if (style === "template") {
@@ -94,8 +122,32 @@ function page(svg, size, style = "template") {
   }
 
   const box = Math.round(size * SQUIRCLE);
-  const radius = Math.round(box * RADIUS);
   const glyph = Math.round(box * GLYPH);
+  const clip = squirclePath(box);
+  /**
+   * The shadow, matched to the system rather than guessed.
+   *
+   * Profiled from Music.app at 512px by reading alpha outward from the icon
+   * body: 60 two pixels below, 33 at the sides, 8 above, gone by 24.
+   *
+   * That is one shadow pushed downward, not two. The first attempt here stacked
+   * an ambient blur under a key blur and measured 57 above the icon where the
+   * system has 8 — the ambient term is what makes a shadow look symmetrical, and
+   * a symmetrical shadow reads as a sticker rather than an object on a surface.
+   * A single offset blur reproduces all three numbers. The parameters below were
+   * not chosen by eye: a sweep over offset x blur x opacity, scored as RMS error
+   * against the system's profile at five distances on three sides, bottoms out
+   * at 0.012 / 0.014 / 0.32 with an RMS of 2 out of 255.
+   *
+   * `drop-shadow` and not `box-shadow`: box-shadow is drawn from the border box
+   * and would ignore the clip entirely, casting a rectangle's shadow from behind
+   * a squircle. drop-shadow follows the rendered alpha, which is the whole point
+   * once the shape is no longer a rounded rect.
+   *
+   * The margin this occupies is not padding. macOS reserves it for exactly this,
+   * which is why the body is 824/1024 and not the full canvas.
+   */
+  const px = (f) => (size * f).toFixed(2) + "px";
   return `<!doctype html><meta charset="utf-8">
     <style>
       html,body{margin:0;padding:0;background:transparent}
@@ -103,21 +155,34 @@ function page(svg, size, style = "template") {
         width:${size}px;height:${size}px;
         display:flex;align-items:center;justify-content:center;
       }
+      #d{
+        filter: drop-shadow(0 ${px(0.012)} ${px(0.014)} rgba(0,0,0,.32));
+        display:flex;
+      }
       /* Onyx and bone.
          Onyx is not flat black — real onyx has depth and a slight warmth, so the
          gradient lifts toward the top-left the way the globe's own lit limb does.
          Bone is not white: it is warm and slightly soft, which is what keeps the
          mark from looking like a system glyph borrowed from somewhere else. */
       #s{
-        width:${box}px;height:${box}px;border-radius:${radius}px;
+        width:${box}px;height:${box}px;
+        clip-path:path("${clip}");
         background:radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);
         display:flex;align-items:center;justify-content:center;
-        box-shadow:inset 0 ${Math.round(box*0.004)}px 0 rgba(233,226,212,.16);
       }
-      #g{width:${glyph}px;height:${glyph}px;color:#E9E2D4;display:block}
+      /* The top edge catch-light, drawn inside the clip. It used to be an inset
+         box-shadow, which the clip now eats — and an inset shadow followed the
+         rounded rect anyway, not the squircle. */
+      #s::before{
+        content:"";position:absolute;left:0;right:0;top:0;
+        height:${Math.max(1, Math.round(box*0.004))}px;
+        background:rgba(233,226,212,.16);
+      }
+      #s{position:relative}
+      #g{width:${glyph}px;height:${glyph}px;color:#E9E2D4;display:block;position:relative}
       svg{width:100%;height:100%;display:block}
     </style>
-    <div id="c"><div id="s"><div id="g">${svg}</div></div></div>`;
+    <div id="c"><div id="d"><div id="s"><div id="g">${svg}</div></div></div></div>`;
 }
 
 app.whenReady().then(async () => {

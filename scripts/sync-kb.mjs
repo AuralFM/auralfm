@@ -59,6 +59,7 @@ const DOCS = [
   ["docs/ROADMAP.md",              "Roadmap"],
   ["docs/PRODUCT.md",              "Product"],
   ["docs/INTERFACE.md",            "Interface"],
+  ["docs/IDENTITY.md",             "Identity"],
   ["docs/PRIVACY.md",              "Privacy"],
   ["docs/DECENTRALIZATION.md",     "Decentralization"],
   ["docs/SPONSORSHIP.md",          "Sponsorship"],
