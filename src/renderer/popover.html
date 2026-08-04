@@ -110,6 +110,9 @@
   }
 
   header{display:flex;align-items:center;padding:7px 9px 4px;-webkit-app-region:drag;flex:none}
+  /* Blanket, not per-child: a drag region swallows clicks, and the per-control
+     version is exactly how the Layers button in Explore ended up unpressable. */
+  header button,header input{-webkit-app-region:no-drag}
   /* One unmistakable control instead of a wordmark plus an unlabelled glyph.
      The icon carries the brand; the label says what pressing it does. */
   #explore{

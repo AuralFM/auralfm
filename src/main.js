@@ -251,9 +251,12 @@ const LAYERS = [
   { id: "wspr",           key: "layer.wspr",           default: false },
   { id: "constellations", key: "layer.constellations", default: true },
   { id: "drift",          key: "layer.drift",          default: true },
-  // Off until the read-outs earn their place — sun, moon, ISS and imagery
-  // provenance are interesting but they are not what the app is for.
-  { id: "statusBar",      key: "layer.statusBar",      default: false },
+  // On. It was off "until the read-outs earn their place", and they since have:
+  // they were rewritten to lead with where you are looking and moved flush to
+  // the bottom of the globe, which is where the maintainer asked for them. A
+  // read-out that costs nothing and answers "where am I pointed" is a poor
+  // candidate for something you have to discover in a menu.
+  { id: "statusBar",      key: "layer.statusBar",      default: true },
 ];
 
 function layerState() {

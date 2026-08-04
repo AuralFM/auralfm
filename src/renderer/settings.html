@@ -109,6 +109,8 @@
   @media (prefers-reduced-motion: reduce){*{transition-duration:.01ms !important}}
 
   .titlebar{height:38px;flex:none;-webkit-app-region:drag}
+  /* See explore.html: blanket opt-out so a control added here later works. */
+  .titlebar button,.titlebar input{-webkit-app-region:no-drag}
   main{flex:1;overflow-y:auto;padding:0 20px 22px}
 
   h1{

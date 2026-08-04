@@ -74,6 +74,7 @@
    * specificity (0,1,0) and loses to `#tuner{display:flex}` at (1,0,0).
    */
   [hidden]{display:none !important}
+  :root{--rail:clamp(340px, 26vw, 900px)}
 
   /* Stations vs shortwave. Same segmented shape as Settings, so the two places
      in the app where you pick between modes look like the same idea.
@@ -147,22 +148,27 @@
     flex:none;height:52px;display:flex;align-items:center;gap:10px;
     padding:0 14px 0 84px;-webkit-app-region:drag;
   }
-  .toolbar input{-webkit-app-region:no-drag}
   .toolbar .sp{flex:1}
-  .toolbar #newsBtn{
-    -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
+  /**
+   * Everything interactive in the title bar must opt out of the drag region.
+   *
+   * The bar itself is `-webkit-app-region: drag` so the window can be moved by
+   * its chrome, and that swallows clicks on anything inside it. This was written
+   * per-button, so the Layers button — added later — inherited the drag and
+   * could only be highlighted, never pressed: clicking it moved the window.
+   *
+   * One rule for every control instead of one per id, so the next button to
+   * arrive cannot repeat it.
+   */
+  .toolbar input,
+  .toolbar button{-webkit-app-region:no-drag}
+  .toolbar button{
+    background:none;border:0;color:var(--label2);
     font-size:16px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
     transition:background .12s ease-out,color .12s ease-out;
   }
-  .toolbar #newsBtn:hover{background:var(--fill);color:var(--label)}
-  .toolbar #newsBtn[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
-  .toolbar #favBtn{
-    -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
-    font-size:16px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
-    transition:background .12s ease-out,color .12s ease-out;
-  }
-  .toolbar #favBtn:hover{background:var(--fill);color:var(--label)}
-  .toolbar #favBtn[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
+  .toolbar button:hover{background:var(--fill);color:var(--label)}
+  .toolbar button[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
   .toolbar #q{
     width:clamp(240px, 22vw, 520px);height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
@@ -443,7 +449,10 @@
   /* Rail scales with the window but stays a rail — flex:1 here previously
      overrode the width below it and gave the list half the screen. */
   .stations{
-    flex:none;width:clamp(340px, 26vw, 900px);
+    /* `--rail` rather than a literal, because the markets strip in the transport
+       has to occupy exactly this column and a second copy of the clamp would
+       drift the first time either changed. */
+    flex:none;width:var(--rail);
     display:flex;flex-direction:column;min-height:0;
   }
   .placehead{flex:none;padding:0 18px 10px}
@@ -517,7 +526,22 @@
      palette entirely. */
   .star.on{opacity:1;color:var(--accent)}
   .star:active{transform:scale(.85)}
-  .bars{flex:none;display:flex;gap:2px;align-items:flex-end;height:12px;width:8px;opacity:0}
+  /**
+   * The playing indicator.
+   *
+   * `position:absolute` rather than a flex child: as a child it reserved 8px
+   * plus the row's 10px gap on *every* row, playing or not, so the favourite
+   * star sat 18px short of where the eye expects the column to end. Taken out of
+   * flow it costs nothing when idle and appears in the same place when live.
+   */
+  .st{position:relative}
+  .bars{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    display:flex;gap:2px;align-items:flex-end;height:12px;width:8px;opacity:0;
+  }
+  /* The star shifts left only while something on this row is playing, which is
+     the one moment the indicator needs the space. */
+  .st[aria-current="true"] .star{margin-right:14px}
   .st[aria-current="true"] .bars{opacity:1}
   .bars i{width:2px;background:var(--accent);border-radius:1px;height:3px}
   body.playing .st[aria-current="true"] .bars i{animation:eq .9s ease-in-out infinite}
@@ -534,7 +558,9 @@
        bar, which reads as a layout failure rather than a feature. They clip
        instead — SOL goes first, then ETH, and BTC is the last to leave. */
     flex:none;display:flex;flex-wrap:nowrap;align-items:center;gap:9px;
-    padding:9px 15px 9px 16px;
+    /* 7px on the right, not 15: the markets strip is the last child, and 7px is
+       the station rows' own inset — so the two right edges line up. */
+    padding:9px 7px 9px 16px;
     box-shadow:inset 0 .5px 0 var(--line);font-size:12px;overflow:hidden;
   }
   .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 2s ease-in-out infinite}
@@ -745,13 +771,22 @@
    * solutions to one problem. Back at the right of the transport, which is where
    * a glanceable number belongs.
    */
+  /**
+   * The prices.
+   *
+   * Sized to sit inside the rail's column rather than spilling under the globe.
+   * Three symbols at 11.5px with 14px gaps came to 380px in a 340px rail, so the
+   * strip started 55px into the map — the one element in the window that did not
+   * respect the split. Tighter type and gaps bring it inside; it is a tertiary
+   * read-out and can afford to be small.
+   */
   .markets{
-    /* `min-width:0` so it may shrink, `overflow:hidden` so it clips rather than
-       pushes, and the symbols are ordered so the least-followed leaves first. */
     flex:0 1 auto;min-width:0;margin-left:auto;display:flex;align-items:center;
-    gap:14px;padding-left:16px;overflow:hidden;
-    font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
+    gap:9px;padding-left:10px;overflow:hidden;
+    max-width:calc(var(--rail) - 7px);
+    font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
   }
+  .markets .ch{font-size:10px}
   .markets .m{flex:none}
   .markets .m{display:flex;align-items:baseline;gap:5px}
   .markets .sym{color:var(--label2);font-weight:590;letter-spacing:.01em}
@@ -767,7 +802,7 @@
   <span class="sp"></span>
   <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines"></button>
   <button id="layersBtn" title="Layers" data-i18n-title="ctl.layers" aria-pressed="false"></button>
-      <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
+  <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
   <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
          autocomplete="off" spellcheck="false">
 </div>
@@ -1507,7 +1542,7 @@ async function renderMarkets() {
       lastPrices.set(it.symbol, it.price);
       const ch = wrap.querySelector(".ch");
       ch.className = `ch ${up ? "up" : "dn"}`;
-      ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(2)}%`;
+      ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(1)}%`;
     });
     el.title = hasStocks ? "" : el.title;
     return;
@@ -1528,12 +1563,44 @@ async function renderMarkets() {
       : it.price.toFixed(4);
     const ch = wrap.querySelector(".ch");
     ch.className = `ch ${up ? "up" : "dn"}`;
-    ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(2)}%`;
+    ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(1)}%`;
     el.appendChild(wrap);
   }
   el.title = hasStocks
     ? "Crypto and equities · 24h change"
     : "Crypto · 24h change. Equities need an API key (set AURALFM_STOCK_KEY).";
+  fitMarkets();
+}
+
+/**
+ * Drop whole symbols, never half of one.
+ *
+ * The strip is capped at the rail's width so it can no longer spill across into
+ * the globe — that was the complaint, and `max-width` alone fixes it. But
+ * `overflow:hidden` on its own resolves a narrow window by slicing a price down
+ * the middle, and "SOL 73." reads as a rendering bug rather than as a choice.
+ *
+ * So measure, and hide from the end until what remains fits: SOL goes first,
+ * then ETH, and BTC is the last to leave — the order the markup was already
+ * built in. Costs one layout read per update, on three elements.
+ */
+function fitMarkets() {
+  const el = $("markets");
+  if (!el || !el.children.length) return;
+  const kids = [...el.children];
+  for (const k of kids) k.hidden = false;
+  // `clientWidth` is the padding box; the strip's own left padding is inside it.
+  const room = el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft || 0);
+  const gap = parseFloat(getComputedStyle(el).gap || 0);
+  let used = 0;
+  kids.forEach((k, i) => {
+    const w = k.getBoundingClientRect().width + (i ? gap : 0);
+    // Once one has been dropped, everything after it goes too — a gap in the
+    // middle of the strip would look like missing data rather than a fit.
+    if (k.hidden || used + w > room + 0.5) { k.hidden = true; return; }
+    used += w;
+  });
+  for (let i = 1; i < kids.length; i++) if (kids[i - 1].hidden) kids[i].hidden = true;
 }
 
 // ── headline panel ───────────────────────────────────────────────────────────
@@ -3030,6 +3097,18 @@ const INTRO = [
       "and they change through the day."),
   },
   {
+    // Named rather than described: the maintainer's note was that the three
+    // glyphs top-right are not self-evident, and a drawn icon set buys
+    // consistency at the cost of the recognition an emoji borrows for free.
+    // Naming them once is cheaper than redrawing them until they explain
+    // themselves.
+    t: () => t("intro.tools.title", "Three buttons and a search box"),
+    b: () => t("intro.tools.body",
+      "Top right, left to right: headlines for the place you are looking at, the layer " +
+      "inspector for what the globe draws, and your favourites. The search box takes a " +
+      "city, a country or a station name."),
+  },
+  {
     t: () => t("intro.4.title", "Nothing is collected"),
     b: () => t("intro.4.body",
       "There is no account and no server of ours. The station list is already on your " +
@@ -3886,7 +3965,7 @@ function refreshGlobeSelection() {
   if (globe && globePts) applyLod(true);
 }
 
-window.addEventListener("resize", sizeGlobe);
+window.addEventListener("resize", () => { sizeGlobe(); fitMarkets(); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (globe) refreshGlobeSelection();
 });

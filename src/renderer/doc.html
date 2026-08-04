@@ -39,6 +39,10 @@
     display:flex;flex-direction:column;overflow:hidden;
   }
   .titlebar{height:38px;flex:none;-webkit-app-region:drag}
+  /* Anything interactive placed here later must still be clickable — a drag
+     region swallows clicks, and writing the opt-out per control is how the
+     Layers button ended up only able to move the window. */
+  .titlebar button,.titlebar input{-webkit-app-region:no-drag}
   main{flex:1;overflow-y:auto;padding:0 34px 44px;max-width:760px;width:100%;margin:0 auto;user-select:text}
   h1{font-size:24px;font-weight:700;letter-spacing:-.019em;margin:0 0 4px}
   h2{font-size:17px;font-weight:640;letter-spacing:-.012em;margin:26px 0 6px;padding-top:14px;border-top:.5px solid var(--line)}

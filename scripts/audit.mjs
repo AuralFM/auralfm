@@ -88,6 +88,31 @@ for (const { file, html } of renderers) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+console.log("\ncontrols in a drag region are clickable");
+// A title bar with `-webkit-app-region: drag` swallows clicks on anything inside
+// it. The Layers button spent a day looking pressed and doing nothing — clicking
+// it moved the window — because the opt-out had been written per-id and the new
+// button was not on the list.
+for (const { file, html } of renderers) {
+  // Comments first: a `/* … */` immediately above a rule gets swallowed into the
+  // selector capture, and the check then hunts for a selector that is half a
+  // sentence of English.
+  const css = (html.match(/<style>([\s\S]*?)<\/style>/) || [, ""])[1]
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  // Keep the selector as written — `.toolbar` and a bare `header` are both
+  // legitimate, and stripping the dot broke the element-selector case.
+  const dragSel = [...css.matchAll(/([^{}]+)\{[^}]*-webkit-app-region\s*:\s*drag(?!\w)/g)]
+    .map((m) => m[1].trim().split(/[,]/).pop().trim());
+  if (!dragSel.length) { pass(rel(file)); continue; }
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Every dragging container must give its buttons a blanket no-drag.
+  const blanket = dragSel.every((sel) =>
+    new RegExp(`${esc(sel)}\\s+button[^{]*\\{[^}]*-webkit-app-region\\s*:\\s*no-drag`).test(css));
+  blanket ? pass(rel(file))
+          : fail(rel(file), "a drag region has no blanket `button{-webkit-app-region:no-drag}`");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log("\nlocal scripts are permitted by the CSP");
 // Settings loaded icons.js while its CSP said `script-src 'unsafe-inline'` with
 // no 'self'. The file was blocked, `Icons` was undefined, and the two calls at
