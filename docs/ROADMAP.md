@@ -116,10 +116,57 @@ whisper.cpp. Whatever ships must **benchmark the machine before offering the
 feature** rather than let someone enable captions and watch words arrive a minute
 late.
 
-**An SDR dongle** — the honest answer to "radio when the grid is down". A
-~$30 RTL-SDR turns AuralFM from a client of other people's receivers into an
-actual radio. This is the real version of the Meshtastic instinct, and it is
-hardware, not Bluetooth.
+**An SDR dongle** — the honest answer to "radio when the grid is down", and
+the real version of the Meshtastic instinct. It is hardware, not Bluetooth.
+
+*Is the holdup the MacBook or the software?* **The MacBook.** There is no
+receiver in it to program. The Wi-Fi and Bluetooth chipsets are fixed-function
+parts locked to their own bands with no raw sample access, and HF is nowhere
+near them. No amount of application code invents an antenna. This is a missing
+peripheral, not a missing feature.
+
+But the obvious dongle is the wrong one:
+
+| | Covers | Note |
+|---|---|---|
+| Plain RTL-SDR (~$30) | ~24 MHz – 1.7 GHz | **Does not receive shortwave.** Broadcast HF is 3–30 MHz, below its floor. |
+| RTL-SDR Blog V3/V4 (~$40) | + HF via direct sampling | Works, and is mediocre at it. The cheapest real answer. |
+| SDRplay RSP1B (~$110) | 1 kHz – 2 GHz, 14-bit | Proper HF coverage. |
+| Airspy HF+ Discovery (~$170) | HF/VHF, purpose-built | The one that actually sounds good on shortwave. |
+
+And the part everyone underestimates: **the antenna matters more than the
+dongle.** The whip in the kit hears almost nothing at 7 MHz. A random wire
+outdoors is the actual requirement, and it is what separates this from a
+desk toy.
+
+*Software side — how much is already there?* More than expected, and the
+missing piece is specific. `rtl_tcp` streams IQ over a TCP socket, and this app
+already speaks a socket protocol to a remote receiver, decodes a framed audio
+format and draws a waterfall. Pointing that machinery at `localhost` is the
+same shape as pointing it at a KiwiSDR.
+
+The gap is that **a KiwiSDR sends demodulated audio and `rtl_tcp` sends raw
+IQ.** So AM and SSB detection, filtering, AGC and decimation would have to be
+written here rather than borrowed. That is a few hundred lines of known DSP,
+not research — but it is the whole job, and it is not "wire up a dongle".
+
+Two constraints that are easy to miss:
+
+- **`librtlsdr` is GPL-2.0.** Same category of problem as Meshtastic (#28).
+  Talking to the `rtl_tcp` binary over a socket keeps it at arm's length —
+  separate process, no linking — but that means requiring or shipping a
+  separate install, which is a real wrinkle for a signed and notarised Mac app.
+- **USB access needs entitlements**, which needs the Apple Developer account.
+  This stacks on #4 rather than routing around it.
+
+*The cyberdeck.* Viable, and the canonical build — Pi 5, dongle, display,
+printed case. The honest caveat is that AuralFM is Electron with a three.js
+globe on an 8192×4096 texture. A Pi 5 will run it and will not run it *well*.
+That is a port with real work in it, not a copy.
+
+**The ordering objection.** All of the above is cheap — a dongle and a couple
+of weekends. It is still the wrong next thing while nobody can install the app.
+A radio nobody has is not more useful than a client nobody has.
 
 ---
 
