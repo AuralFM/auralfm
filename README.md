@@ -423,6 +423,8 @@ phase0/index.html      the original single-file prototype
 | City lights, named constellations, ecliptic and zodiac | ✅ |
 | WSPR propagation arcs, space weather | ✅ |
 | Presence and geohash chat over Nostr, off by default | ✅ |
+| First-run walkthrough | ✅ |
+| Drawn icon set — no emoji, no font dependency | ✅ |
 | Settings — appearance, contrast, dot size, language, palettes | ✅ |
 | User-added stations | ✅ |
 | Aircraft layer | ✅ |
@@ -451,12 +453,13 @@ can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - **The catalog is a snapshot, not a subscription.** Stations come and go; re-run
   `npm run crawl` every few months.
 - **Unsigned.** Gatekeeper will complain until the app is signed and notarised.
-- **The interface has outgrown its plan.** This began as a menu-bar player and
-  became a standalone app with a globe, a receiver, a spectrum display and a
-  chat. Each addition was reasonable; the accumulation is not, and the transport
-  bar and the popover are both carrying more than they were designed for. A
-  proper pass against Apple's Human Interface Guidelines is owed and has not
-  happened yet.
+- **The interface is mid-rework.** This began as a menu-bar player and became a
+  standalone app with a globe, a receiver, a spectrum display and a chat. Each
+  addition was reasonable; the accumulation was not. The dial has moved out of
+  the popover and the ticker and prices out of the transport bar — see
+  [#29](https://github.com/meltonbell3/auralfm/issues/29) and
+  [`docs/INTERFACE.md`](docs/INTERFACE.md) for what is left: rail structure, and
+  a layer inspector before the next map layer lands rather than after.
 - **No spam defence in chat.** We share a public channel with anyone. bitchat
   uses optional proof-of-work; we implement none. Fine at this traffic,
   embarrassing at ten times it.
