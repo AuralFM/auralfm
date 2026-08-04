@@ -626,6 +626,10 @@ ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng
 ipcMain.handle("wspr:get", (_e, band) => wspr.get(band));
 ipcMain.handle("space:get", () => space.get());
 ipcMain.handle("presence:stats", () => nostr.stats());
+ipcMain.handle("presence:history", () => nostr.history());
+// Returns false when there is nowhere to say it — nothing playing, presence off,
+// or no relay up. The renderer needs to know rather than assume it landed.
+ipcMain.handle("presence:say", (_e, text, nick) => nostr.say(text, nick));
 /**
  * Explore asks, the popover plays — same rule as stations, so there is still
  * exactly one thing in this app that makes sound.
@@ -731,6 +735,7 @@ if (!app.requestSingleInstanceLock()) {
     markets.start();        // live crypto feed; falls back to polling on its own
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
+    nostr.onMessages((list) => explore?.webContents.send("presence:messages", list));
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();
     createWindow();

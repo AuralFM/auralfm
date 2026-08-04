@@ -39,10 +39,36 @@ const crypto = require("node:crypto");
 const { schnorr } = require("@noble/curves/secp256k1.js");
 
 /**
- * Ephemeral kind — relays are asked to forward and forget. Picked from the
- * unassigned part of the range; nothing else uses it, and nothing needs to.
+ * Kinds, and why these ones.
+ *
+ * The first version of this used kind 20808, chosen because nothing else used
+ * it. That was exactly the mistake: a private room, correctly built, with nobody
+ * in it. Measuring the result confirmed it — five geotagged notes across the
+ * major relays in seven days.
+ *
+ * `bitchat` (permissionlesstech/bitchat, Unlicense, on both app stores) had
+ * independently arrived at the same design — ephemeral kinds, a `g` geohash tag,
+ * a fresh key per area, no accounts — and published a convention other people
+ * are already using. Adopting it costs us nothing we had and gains us everyone
+ * who is already there. Probed across four relays with a six-hour lookback: 321
+ * distinct presence events and eleven live geohash channels, against our zero.
+ *
+ *   20001 — presence. Empty content, `g` tag only. Their rule, followed exactly,
+ *           because a heartbeat that carries a payload is a different thing and
+ *           other clients are entitled to assume it does not.
+ *   20000 — a public message in a geohash channel.
+ *   20808 — kept, ours alone, and the reason is below.
  */
-const KIND = 20808;
+const PRESENCE_KIND = 20001;
+const CHAT_KIND = 20000;
+
+/**
+ * What is playing has nowhere to live in the shared convention: kind 20001 must
+ * be empty. Rather than bend their format — which would make our heartbeats
+ * wrong for every other client reading them — the label goes in an event of our
+ * own that only we parse. Two small events a minute, and neither one lies.
+ */
+const LABEL_KIND = 20808;
 
 /**
  * Relays that answered when this was written. Several of the best-known ones
@@ -57,7 +83,20 @@ const RELAYS = [
 
 const BEAT_MS = 60_000;
 const STALE_MS = 4 * 60_000;      // drop a peer we have not heard from
-const GEOHASH_PRECISION = 4;      // ~20km. Enough for "near here", too coarse to find anyone.
+/**
+ * ~20 km. Enough for "near here", too coarse to find anyone.
+ *
+ * It is also bitchat's "province" level, which is the one we were already using
+ * before we knew that — so joining the shared convention needed no change to the
+ * privacy dial, which would have been the one change worth arguing about.
+ */
+const GEOHASH_PRECISION = 4;
+
+/** Longest message we will send or accept. Anything past this is not a chat. */
+const MAX_MESSAGE = 400;
+
+/** Most messages we keep per channel; older ones fall off the top. */
+const HISTORY = 200;
 
 const B32 = "0123456789bcdefghjkmnpqrstuvwxyz";
 
@@ -121,7 +160,10 @@ let sockets = [];
 let beat = null;
 let here = null;                  // { geohash, label }
 const peers = new Map();          // pubkey -> { geohash, label, at }
+const messages = [];              // newest last, capped at HISTORY
+const seenIds = new Set();        // relays deliver the same event more than once
 let onPeers = () => {};
+let onMessages = () => {};
 
 const alive = () => sockets.filter((w) => w.readyState === 1);
 
@@ -136,24 +178,95 @@ function emit() {
   const list = [];
   for (const [pubkey, v] of peers) {
     const c = ungeohash(v.geohash);
-    if (c) list.push({ id: pubkey.slice(0, 8), lat: c.lat, lon: c.lon, label: v.label });
+    // The cell travels with the peer. Without it the renderer can only place a
+    // ring on the globe, and any count it shows beside a place name would be a
+    // worldwide total wearing a local label.
+    if (c) list.push({ id: pubkey.slice(0, 8), lat: c.lat, lon: c.lon,
+                       label: v.label, geohash: v.geohash });
   }
   onPeers(list);
 }
 
-function announce() {
+/**
+ * Push one signed event to relays.
+ *
+ * @param {WebSocket} [only]  send to just this socket. Used when a relay has
+ *   only now connected: without it, `announce()` on each `onopen` broadcast to
+ *   every socket already up, so three relays received six copies of the same
+ *   heartbeat instead of three. Harmless to us and rude to them, which is the
+ *   same category of mistake as the retry loop that got us blocked by Celestrak.
+ */
+function publish(evt, only) {
+  const msg = JSON.stringify(["EVENT", evt]);
+  for (const w of (only ? [only] : alive())) {
+    if (w.readyState !== 1) continue;
+    try { w.send(msg); } catch { /* relay went away */ }
+  }
+}
+
+function announce(only) {
   if (!here) return;
-  const evt = sign({
-    kind: KIND,
-    created_at: Math.floor(Date.now() / 1000),
-    // `g` is the geohash convention used by NIP-52 and, informally, by everything
-    // else that has tried this. Following it costs nothing and might one day mean
-    // we are not alone.
+  const created_at = Math.floor(Date.now() / 1000);
+
+  // The shared heartbeat. Empty content and a `g` tag, nothing else — the
+  // convention says so and other clients read it.
+  publish(sign({ kind: PRESENCE_KIND, created_at, tags: [["g", here.geohash]], content: "" }), only);
+
+  // Ours: the same cell, plus what is playing there.
+  publish(sign({
+    kind: LABEL_KIND, created_at,
     tags: [["g", here.geohash], ["client", "auralfm"]],
     content: JSON.stringify({ l: here.label }),
+  }), only);
+}
+
+/**
+ * Say something in the geohash channel you are listening to.
+ *
+ * Deliberately not encrypted and deliberately not private: this is a public
+ * square scoped to a twenty-kilometre cell, and it should be as obvious to the
+ * person typing as it is to the relays. Private messaging over Nostr is a
+ * different feature with a different threat model, and bitchat's own private
+ * envelope is explicitly not NIP-17 — interoperating with it is not something to
+ * do by halves.
+ *
+ * @returns {boolean} whether anything was sent
+ */
+function say(text, nickname) {
+  const body = String(text || "").trim().slice(0, MAX_MESSAGE);
+  if (!here || !body || !alive().length) return false;
+  const tags = [["g", here.geohash]];
+  const nick = String(nickname || "").trim().slice(0, 32);
+  if (nick) tags.push(["n", nick]);
+  const evt = sign({
+    kind: CHAT_KIND, created_at: Math.floor(Date.now() / 1000), tags, content: body,
   });
-  const msg = JSON.stringify(["EVENT", evt]);
-  for (const w of alive()) { try { w.send(msg); } catch { /* relay went away */ } }
+  publish(evt);
+  // Show it immediately rather than waiting for a relay to echo it back — some
+  // never do, and a chat that swallows your own message feels broken.
+  record(evt, true);
+  return true;
+}
+
+/** Add a message to the log, newest last, and tell the renderer. */
+function record(evt, mine = false) {
+  if (seenIds.has(evt.id)) return;
+  seenIds.add(evt.id);
+  const g = (evt.tags || []).find((t) => t[0] === "g")?.[1] || null;
+  messages.push({
+    id: evt.id,
+    at: (evt.created_at || 0) * 1000,
+    geohash: g,
+    from: String(evt.pubkey || "").slice(0, 8),
+    nick: (evt.tags || []).find((t) => t[0] === "n")?.[1]?.slice(0, 32) || null,
+    text: String(evt.content || "").slice(0, MAX_MESSAGE),
+    mine,
+  });
+  // created_at is whatever the sender's clock said, so arrival order is not
+  // time order. Sort rather than trust it.
+  messages.sort((a, b) => a.at - b.at);
+  if (messages.length > HISTORY) messages.splice(0, messages.length - HISTORY);
+  onMessages(messages.slice());
 }
 
 function connect() {
@@ -163,25 +276,46 @@ function connect() {
     try { w = new WebSocket(url); } catch { continue; }
     sockets.push(w);
     w.onopen = () => {
-      // Listen for anyone else running this, anywhere. Geographic filtering
-      // happens here rather than at the relay: the filter set would otherwise
-      // leak roughly where you are to every relay you connect to.
+      // Listen for anyone in any cell, and filter locally. Putting our own
+      // geohash in the filter would tell every relay we connect to roughly where
+      // we are, which is the one thing this design exists to avoid — so the
+      // bandwidth is spent instead.
       w.send(JSON.stringify(["REQ", "auralfm", {
-        kinds: [KIND], since: Math.floor(Date.now() / 1000) - 300,
+        kinds: [PRESENCE_KIND, CHAT_KIND, LABEL_KIND],
+        since: Math.floor(Date.now() / 1000) - 900,
       }]));
-      announce();
+      announce(w);          // this relay only; the others already have it
     };
     w.onmessage = (m) => {
       let d;
       try { d = JSON.parse(m.data); } catch { return; }
       if (d[0] !== "EVENT" || !d[2]) return;
       const e = d[2];
-      if (e.kind !== KIND || e.pubkey === pk) return;
+      if (e.pubkey === pk) return;                 // our own, echoed back
       const g = (e.tags || []).find((t) => t[0] === "g")?.[1];
       if (!g || !/^[0-9b-hjkmnp-z]{2,9}$/.test(g)) return;
+
+      if (e.kind === CHAT_KIND) {
+        // Only the cell being listened to. Every other channel on the network is
+        // someone else's conversation.
+        if (!here || !sameCell(g, here.geohash)) return;
+        if (!e.content || String(e.content).length > MAX_MESSAGE) return;
+        record(e);
+        return;
+      }
+
+      // Presence, either flavour. The label only exists in ours; a bitchat peer
+      // is simply present, which is the whole claim being made.
       let label = null;
-      try { label = JSON.parse(e.content)?.l ?? null; } catch { /* content is optional */ }
-      peers.set(e.pubkey, { geohash: g, label: String(label || "").slice(0, 60), at: Date.now() });
+      if (e.kind === LABEL_KIND) {
+        try { label = JSON.parse(e.content)?.l ?? null; } catch { /* optional */ }
+      }
+      const prev = peers.get(e.pubkey);
+      peers.set(e.pubkey, {
+        geohash: g,
+        label: String(label ?? prev?.label ?? "").slice(0, 60),
+        at: Date.now(),
+      });
       emit();
     };
     w.onerror = () => { /* a relay refusing us is normal, see the note above */ };
@@ -199,7 +333,18 @@ function connect() {
  */
 function join(lat, lon, label) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-  here = { geohash: geohash(lat, lon), label: String(label || "").slice(0, 60) };
+  const cell = geohash(lat, lon);
+  // Tuning across the world changes which room you are in. The old room's
+  // conversation is not yours any more, and showing it against a new place
+  // would be a lie about where those people are.
+  if (here && here.geohash !== cell) {
+    messages.length = 0;
+    seenIds.clear();
+    peers.clear();
+    onMessages([]);
+    emit();
+  }
+  here = { geohash: cell, label: String(label || "").slice(0, 60) };
   connect();
   announce();
   clearInterval(beat);
@@ -213,15 +358,34 @@ function leave() {
   for (const w of sockets) { try { w.close(); } catch {} }
   sockets = [];
   peers.clear();
+  // The log belongs to the cell, not to the session. Carrying a Lisbon
+  // conversation into a Tokyo one would be worse than losing it.
+  messages.length = 0;
+  seenIds.clear();
   emit();
+  onMessages([]);
 }
+
+/**
+ * Do two geohashes name the same room?
+ *
+ * bitchat offers six channel sizes from building to region, so a peer may be in
+ * a longer or shorter cell than ours. A shorter one contains us; a longer one is
+ * inside us. Either way it is the same place at a different zoom, so prefix
+ * matching is the right test rather than equality.
+ */
+const sameCell = (a, b) => a.startsWith(b) || b.startsWith(a);
 
 const stats = () => ({
   relays: RELAYS.length,
   connected: alive().length,
   peers: peers.size,
+  messages: messages.length,
+  cell: here?.geohash || null,
   announcing: !!here,
 });
 
-module.exports = { join, leave, stats, geohash, ungeohash,
-                   onPeers: (fn) => { onPeers = fn; } };
+module.exports = { join, leave, say, stats, geohash, ungeohash, sameCell,
+                   history: () => messages.slice(),
+                   onPeers: (fn) => { onPeers = fn; },
+                   onMessages: (fn) => { onMessages = fn; } };

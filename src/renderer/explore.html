@@ -421,6 +421,32 @@
    * reading order. A right-to-left interface needs the opposite, and that
    * belongs with real RTL support rather than as a lone switch.
    */
+  /* Chat, under the station list. It shares the rail rather than taking a
+     window: this is ambient, and it should never be the thing you are looking
+     at when you came here to listen. */
+  #chat{
+    flex:none;display:flex;flex-direction:column;max-height:246px;
+    box-shadow:inset 0 .5px 0 var(--line);
+  }
+  .chathead{
+    flex:none;display:flex;align-items:baseline;gap:8px;padding:9px 15px 5px;
+    font-size:11px;color:var(--label2);letter-spacing:.005em;
+  }
+  #chatpeers{margin-left:auto;color:var(--label3);font-variant-numeric:tabular-nums}
+  #chatlog{flex:1;min-height:0;padding:0 15px 6px;overflow-y:auto}
+  .msg{padding:3px 0;font-size:12px;line-height:1.42;word-wrap:break-word}
+  .msg .who{color:var(--label2);font-weight:590}
+  /* Your own line is tinted rather than aligned right: a twenty-kilometre
+     public square is not a DM thread, and it should not look like one. */
+  .msg.mine .who{color:var(--accent)}
+  #chatform{flex:none;padding:0 13px 11px}
+  #chatinput{
+    width:100%;appearance:none;border:0;border-radius:7px;background:var(--fill);
+    color:var(--label);font:inherit;font-size:12px;padding:8px 10px;
+  }
+  #chatinput::placeholder{color:var(--label3)}
+  #chatinput:disabled{opacity:.5}
+
   .tickwrap{
     /* A basis, not just grow. With `flex:1` alone the bar's fixed content —
        transport, volume and three market symbols — came to 814px, so at a 940px
@@ -447,7 +473,33 @@
      back where we started. So the strip stays still and becomes scrollable
      instead: swipe or wheel through it, motion only when you ask for it. */
   @media (prefers-reduced-motion: reduce){
-    .tickwrap{overflow-x:auto;scrollbar-width:none}
+    /* Chat, under the station list. It shares the rail rather than taking a
+     window: this is ambient, and it should never be the thing you are looking
+     at when you came here to listen. */
+  #chat{
+    flex:none;display:flex;flex-direction:column;max-height:246px;
+    box-shadow:inset 0 .5px 0 var(--line);
+  }
+  .chathead{
+    flex:none;display:flex;align-items:baseline;gap:8px;padding:9px 15px 5px;
+    font-size:11px;color:var(--label2);letter-spacing:.005em;
+  }
+  #chatpeers{margin-left:auto;color:var(--label3);font-variant-numeric:tabular-nums}
+  #chatlog{flex:1;min-height:0;padding:0 15px 6px;overflow-y:auto}
+  .msg{padding:3px 0;font-size:12px;line-height:1.42;word-wrap:break-word}
+  .msg .who{color:var(--label2);font-weight:590}
+  /* Your own line is tinted rather than aligned right: a twenty-kilometre
+     public square is not a DM thread, and it should not look like one. */
+  .msg.mine .who{color:var(--accent)}
+  #chatform{flex:none;padding:0 13px 11px}
+  #chatinput{
+    width:100%;appearance:none;border:0;border-radius:7px;background:var(--fill);
+    color:var(--label);font:inherit;font-size:12px;padding:8px 10px;
+  }
+  #chatinput::placeholder{color:var(--label3)}
+  #chatinput:disabled{opacity:.5}
+
+  .tickwrap{overflow-x:auto;scrollbar-width:none}
     .tickwrap::-webkit-scrollbar{display:none}
     .tick.run{animation:none}
   }
@@ -510,6 +562,19 @@
     <div class="scroll" id="placelist" hidden></div>
     <div class="scroll" id="stationlist">
       <div class="empty">Spin the globe, or search for a city.</div>
+    </div>
+    <!-- Only ever visible when presence is on and something is playing. -->
+    <div id="chat" hidden>
+      <div class="chathead">
+        <span id="chatwhere"></span>
+        <span id="chatpeers"></span>
+      </div>
+      <div class="scroll" id="chatlog"></div>
+      <form id="chatform" autocomplete="off">
+        <input id="chatinput" type="text" maxlength="400"
+               placeholder="Say something to this place"
+               data-i18n-ph="chat.placeholder">
+      </form>
     </div>
   </div>
 </div>
@@ -869,6 +934,12 @@ window.auralfm.onPlayerState((s) => {
     el.setAttribute("aria-current", playing?.id === el.dataset.id);
   }
   paintNowStar();
+  syncChat(prefs);          // presence follows what is playing
+  // Tuning across the world moves us to a different cell; re-read it rather than
+  // keep counting against the last one.
+  window.auralfm.presenceStats()
+    .then((st) => { myCell = st?.cell || null; paintChatHead(); })
+    .catch(() => paintChatHead());
 });
 
 /**
@@ -2166,7 +2237,7 @@ function applyPrefs(next) {
   if (prefs.palette !== prev.palette || prefs.theme !== prev.theme ||
       prefs.contrast !== prev.contrast) applyPalette();
 }
-window.auralfm.onPrefs(applyPrefs);
+window.auralfm.onPrefs((next) => { applyPrefs(next); syncChat(next); });
 
 /**
  * Stations you add or remove can change in another window — Settings has a
@@ -2407,7 +2478,115 @@ let spaceWx = null;
  * cells about twenty kilometres across. Somebody is listening near there.
  */
 let peers = [];
-window.auralfm.onPeers((list) => { peers = Array.isArray(list) ? list : []; paintRings(); });
+window.auralfm.onPeers((list) => {
+  peers = Array.isArray(list) ? list : [];
+  paintRings();
+  paintChatHead();
+});
+
+/**
+ * The conversation in the cell you are listening to.
+ *
+ * This is a *public* square about twenty kilometres across, not a private
+ * message, and the interface should never let anyone forget it: no encryption
+ * badge, no lock, no direct-message affordance, and a placeholder that says
+ * "this place" rather than a person's name.
+ *
+ * It appears only when presence is on and something is playing, because those
+ * are the same two conditions under which we announce at all — a chat box that
+ * cannot send is worse than no chat box.
+ */
+let chatOn = false;
+let myCell = null;
+
+/** Same test the main process uses: one cell contains the other, at any zoom. */
+const sameCell = (a, b) => a.startsWith(b) || b.startsWith(a);
+
+function paintChatHead() {
+  const where = $("chatwhere"), who = $("chatpeers");
+  if (!where || !who) return;
+  /**
+   * Only the people in *this* cell.
+   *
+   * `peers` is everyone the relays have shown us anywhere on Earth, which is
+   * right for the rings on the globe and wrong here: the first version of this
+   * header read "Near Lisbon · 11 listening" while the eleven were in Toronto,
+   * Tehran and Prague. A true number under a false label is worse than no
+   * number.
+   */
+  const cell = myCell;
+  const near = cell ? peers.filter((p) => p.geohash && sameCell(p.geohash, cell)).length : 0;
+  where.textContent = playing?.place
+    ? `${t("chat.near", "Near")} ${playing.place}`
+    : t("chat.here", "Around here");
+  who.textContent = near
+    ? `${near} ${near === 1 ? t("chat.listener", "listening") : t("chat.listeners", "listening")}`
+    : t("chat.alone", "nobody else yet");
+}
+
+function paintChat(list) {
+  const log = $("chatlog");
+  if (!log) return;
+  // Only stick to the bottom if the reader is already there — yanking someone
+  // away from a line they are reading is the classic chat-window sin.
+  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  log.innerHTML = "";
+  for (const m of list) {
+    const el = document.createElement("div");
+    el.className = "msg" + (m.mine ? " mine" : "");
+    const who = document.createElement("span");
+    who.className = "who";
+    // No nickname is the common case, and a truncated pubkey is at least true.
+    who.textContent = (m.mine ? t("chat.you", "you") : (m.nick || m.from)) + "  ";
+    el.append(who, document.createTextNode(m.text));
+    log.append(el);
+  }
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+
+window.auralfm.onChat(paintChat);
+
+/**
+ * Show or hide the whole panel.
+ *
+ * `playing.sdr` is excluded on purpose: a shortwave receiver is somewhere you
+ * are listening *from*, not a place you are in, and the people near its antenna
+ * are not the people you are listening with.
+ */
+async function syncChat(prefs) {
+  const want = !!(prefs?.presence === true && playing && !playing.sdr
+                  && typeof playing.lat === "number");
+  $("chat").hidden = !want;
+  if (want === chatOn) return;
+  chatOn = want;
+  if (want) {
+    try {
+      paintChat(await window.auralfm.chatHistory());
+      myCell = (await window.auralfm.presenceStats())?.cell || null;
+    } catch { /* not up yet */ }
+    paintChatHead();
+  } else {
+    myCell = null;
+  }
+}
+
+$("chatform").onsubmit = async (e) => {
+  e.preventDefault();
+  const input = $("chatinput");
+  const text = input.value.trim();
+  if (!text) return;
+  input.disabled = true;
+  const sent = await window.auralfm.chatSay(text, null).catch(() => false);
+  input.disabled = false;
+  input.focus();
+  if (sent) input.value = "";
+  else {
+    // Never silently swallow it. If no relay took the message, the text stays
+    // where the person typed it.
+    input.placeholder = t("chat.failed", "No relay reachable — not sent");
+    setTimeout(() => { input.placeholder = t("chat.placeholder", "Say something to this place"); }, 4000);
+  }
+};
 async function refreshSpace() {
   try { spaceWx = (await window.auralfm.space()) || spaceWx; } catch { /* keep the last */ }
 }
