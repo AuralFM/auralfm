@@ -17,6 +17,14 @@ const DEFAULTS = {
   language: "system",    // system | en | es
   palette: "onyx",       // see src/palettes.js
   /**
+   * Whether the first-run walkthrough has been seen.
+   *
+   * Boolean rather than a version number on purpose: a tour that reappears
+   * because the app changed is a tour that has learned to interrupt people, and
+   * every one of those is resented.
+   */
+  introSeen: false,
+  /**
    * Presence is off, and has to stay off by default.
    *
    * Everything else in this app is a promise that nothing leaves the machine.

@@ -10,7 +10,7 @@
     --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
     --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
     --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#1c1c1e;
-    --accent:#30D158; --star:#FFD60A;
+    --accent:#30D158; --star:#FFD60A; --on-accent:#04140c;
   }
   /* System appearance, unless Settings has forced the other one. */
   @media (prefers-color-scheme: light){
@@ -18,20 +18,20 @@
     --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
     --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
     --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55); --bg:#f2f2f7;
-    --accent:#248A3D; --star:#A16207;
+    --accent:#248A3D; --star:#A16207; --on-accent:#ffffff;
     }
   }
   :root[data-theme="light"]{
     --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
     --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
     --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55); --bg:#f2f2f7;
-    --accent:#248A3D; --star:#A16207;
+    --accent:#248A3D; --star:#A16207; --on-accent:#ffffff;
   }
   :root[data-theme="dark"]{
     --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
     --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
     --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#1c1c1e;
-    --accent:#30D158; --star:#FFD60A;
+    --accent:#30D158; --star:#FFD60A; --on-accent:#04140c;
   }
   /* Increased contrast follows the system setting until Settings overrides it. */
   @media (prefers-contrast: more){
@@ -451,34 +451,6 @@
   #chatinput::placeholder{color:var(--label3)}
   #chatinput:disabled{opacity:.5}
 
-  /* The dial. */
-  #tuner{
-    flex:none;padding:9px 15px 4px;display:flex;flex-direction:column;gap:6px;
-    box-shadow:inset 0 -.5px 0 var(--line);
-  }
-  /* Time downward, frequency across, the tuned frequency dead centre — the
-     convention every radio has used since the first panadapter. */
-  #wf{
-    width:100%;height:88px;display:block;border-radius:6px;background:#05070c;
-    image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
-  }
-  .trow{display:flex;align-items:center;gap:4px}
-  .trow > button{
-    appearance:none;border:0;border-radius:6px;cursor:default;
-    background:var(--fill);color:var(--label2);
-    font:inherit;font-size:11px;padding:5px 0;flex:1;
-    transition:transform 80ms ease-out,color .12s ease-out;
-  }
-  .trow > button:hover{color:var(--label)}
-  .trow > button:active{transform:scale(.94)}
-  .tb{font-size:13px;line-height:1;max-width:40px}
-  #tfreq{
-    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
-    letter-spacing:-.01em;white-space:nowrap;color:var(--label);
-  }
-  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
-  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
-
   /* The cold open — what fills the rail before anything is selected. */
   #coldopen{padding:0;text-align:left}
   .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
@@ -490,69 +462,11 @@
   .conote{padding:2px 15px 8px;font-size:11px;color:var(--label3);line-height:1.45}
 
   .tickwrap{
-    /* A basis, not just grow. With `flex:1` alone the bar's fixed content —
-       transport, volume and three market symbols — came to 814px, so at a 940px
-       window this got 14px, which is exactly its own padding. The headlines were
-       not being clipped by the swap; there was no room for them at all. */
-    flex:1 1 200px;min-width:0;overflow:hidden;padding-left:14px;
+    /* Nothing competes with it now, so it simply takes the strip. */
+    width:100%;min-width:0;overflow:hidden;padding:0 15px;
     /* Fade both ends so headlines emerge and leave rather than being chopped. */
     -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 26px,#000 calc(100% - 26px),transparent 100%);
             mask-image:linear-gradient(90deg,transparent 0,#000 26px,#000 calc(100% - 26px),transparent 100%);
-  }
-  /**
-   * Below 1200px the ticker takes a line of its own.
-   *
-   * The previous answer was to drop a market symbol at 1200 and another at
-   * 1000, on the reasoning that the prices are ambient and the headlines were
-   * what was asked for. At a 940px window that left exactly one symbol — BTC,
-   * alone, with ETH and SOL simply gone. Making one feature work by quietly
-   * deleting most of another is not a trade-off, it is a bug with a rationale.
-   *
-   * Both fit if they stop sharing a row. `order` puts the ticker last and a
-   * 100% basis forces the wrap, so the prices keep the full width they need and
-   * the headlines get the entire window rather than whatever was left over.
-   */
-  @media (max-width: 1200px){
-    /* The dial. */
-  #tuner{
-    flex:none;padding:9px 15px 4px;display:flex;flex-direction:column;gap:6px;
-    box-shadow:inset 0 -.5px 0 var(--line);
-  }
-  /* Time downward, frequency across, the tuned frequency dead centre — the
-     convention every radio has used since the first panadapter. */
-  #wf{
-    width:100%;height:88px;display:block;border-radius:6px;background:#05070c;
-    image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
-  }
-  .trow{display:flex;align-items:center;gap:4px}
-  .trow > button{
-    appearance:none;border:0;border-radius:6px;cursor:default;
-    background:var(--fill);color:var(--label2);
-    font:inherit;font-size:11px;padding:5px 0;flex:1;
-    transition:transform 80ms ease-out,color .12s ease-out;
-  }
-  .trow > button:hover{color:var(--label)}
-  .trow > button:active{transform:scale(.94)}
-  .tb{font-size:13px;line-height:1;max-width:40px}
-  #tfreq{
-    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
-    letter-spacing:-.01em;white-space:nowrap;color:var(--label);
-  }
-  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
-  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
-
-  /* The cold open — what fills the rail before anything is selected. */
-  #coldopen{padding:0;text-align:left}
-  .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
-  .colead b{color:var(--label);font-weight:590}
-  .cohead{
-    padding:14px 15px 4px;font-size:11px;font-weight:590;color:var(--label2);
-    letter-spacing:.005em;
-  }
-  .conote{padding:2px 15px 8px;font-size:11px;color:var(--label3);line-height:1.45}
-
-  .tickwrap{order:10;flex:1 0 100%;padding-left:0;margin-top:1px}
-    .markets{margin-left:auto}
   }
   .tick{ display:inline-block;white-space:nowrap;color:var(--label3);will-change:transform }
   .tick.run{ animation:crawl var(--crawl,90s) linear infinite }
@@ -640,11 +554,71 @@
   #nowStar:hover{color:var(--star)}
   #nowStar:active{transform:scale(.9)}
   #nowStar.on{color:var(--star)}
+  /* First run. */
+  #intro{
+    position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+    background:rgba(6,8,12,.62);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
+  #intro[hidden]{display:none}
+  .introcard{
+    width:min(430px,calc(100vw - 56px));
+    /* --bg, not --pane: the pane token is deliberately translucent for panels
+       that sit over the globe, and a *modal* card that lets the planet through
+       is unreadable. The first version used a --panel token that has never
+       existed, so the card had no background at all and the body text sat
+       directly on a blurred Earth. */
+    background:var(--bg);border-radius:15px;padding:26px 26px 20px;
+    box-shadow:0 22px 70px rgba(0,0,0,.42),0 0 0 .5px var(--line);
+  }
+  .introstep{
+    font-size:11px;font-weight:590;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:9px;
+  }
+  .introcard h2{
+    margin:0 0 9px;font-size:19px;font-weight:640;letter-spacing:-.014em;
+    color:var(--label);line-height:1.25;
+  }
+  /* Deliberately short: a wall of text on first run gets skipped, and a skipped
+     tour is worse than no tour, because it also spent the goodwill. */
+  .introcard p{margin:0;font-size:13px;line-height:1.55;color:var(--label2)}
+  .introdots{display:flex;gap:6px;margin:20px 0 16px}
+  /* --fill-hi, not --fill: at 5% the unvisited dots were invisible, so the
+     card looked like it had one step rather than four. */
+  .introdots span{width:6px;height:6px;border-radius:50%;background:var(--fill-hi);transition:background .2s ease-out}
+  .introdots span.on{background:var(--accent)}
+  .introacts{display:flex;align-items:center;gap:10px}
+  .introacts button{
+    appearance:none;border:0;border-radius:8px;font:inherit;font-size:13px;
+    padding:9px 16px;cursor:default;transition:transform 80ms ease-out;
+  }
+  .introacts button:active{transform:scale(.97)}
+  .introacts .ghost{background:none;color:var(--label3);padding-left:0}
+  .introacts .ghost:hover{color:var(--label2)}
+  /* The accent is a mid-tone in both themes, so white reads on it either way —
+     and --on-accent, like --panel, was never defined. */
+  .introacts .primary{margin-left:auto;background:var(--accent);color:#fff;font-weight:590}
+  @media (prefers-reduced-motion: reduce){ .introacts button,.introdots span{transition:none} }
+
+  /**
+   * The world strip.
+   *
+   * The headlines and the market prices used to live in the transport bar,
+   * where they were the eighth and ninth things in it. They were there because
+   * it was the only horizontal space in the app, not because they belonged: a
+   * transport bar is about the sound, and both of these are ambient read-outs
+   * about the planet. They had already been given a row of their own to stop
+   * them starving each other, which was the layout admitting it.
+   *
+   * Down here they get the rail's full width, they sit next to the globe they
+   * describe, and the transport is back to five controls.
+   */
+  #world{
+    flex:none;display:flex;flex-direction:column;gap:2px;padding:7px 0 6px;
+    box-shadow:inset 0 .5px 0 var(--line);
+  }
   .markets{
-    /* margin-left:auto, not a flexible sibling: the headline ticker beside it
-       hides below 820px, and when it collapsed nothing pushed markets right.
-       This pins it to the right edge whether the ticker is there or not. */
-    flex:none;margin-left:auto;display:flex;align-items:center;gap:14px;padding-left:16px;
+    flex:none;display:flex;align-items:center;gap:14px;padding:0 15px 3px;
     font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
   }
   .markets .m{display:flex;align-items:baseline;gap:5px}
@@ -682,6 +656,22 @@
     </div>
   </div>
 
+  <!-- First run. Radio, shortwave and ham are genuinely unfamiliar to most
+       people now, and an interface that assumes otherwise is a large part of
+       why this technology reads as inaccessible rather than merely old. -->
+  <div id="intro" hidden role="dialog" aria-modal="true" aria-labelledby="introTitle">
+    <div class="introcard">
+      <div class="introstep" id="introStep"></div>
+      <h2 id="introTitle"></h2>
+      <p id="introBody"></p>
+      <div class="introdots" id="introDots"></div>
+      <div class="introacts">
+        <button class="ghost" id="introSkip"></button>
+        <button class="primary" id="introNext"></button>
+      </div>
+    </div>
+  </div>
+
   <div class="stations">
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
@@ -711,6 +701,12 @@
     <div class="scroll" id="stationlist">
       <div class="empty">Spin the globe, or search for a city.</div>
     </div>
+    <!-- The world strip. Ambient read-outs about the planet, kept out of the
+         transport bar, which is about the sound. -->
+    <div id="world">
+      <span class="markets" id="markets"></span>
+      <span class="tickwrap"><span class="tick" id="ticker"></span></span>
+    </div>
     <!-- Only ever visible when presence is on and something is playing. -->
     <div id="chat" hidden>
       <div class="chathead">
@@ -738,8 +734,6 @@
     <button id="mute" title="Mute" data-i18n-title="ctl.mute"></button>
     <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume" data-i18n-title="ctl.volume">
   </span>
-  <span class="tickwrap"><span class="tick" id="ticker"></span></span>
-  <span class="markets" id="markets"></span>
 </div>
 
 <script src="astro.js"></script>
@@ -2729,6 +2723,98 @@ for (const b of $("bw").children) {
   b.onclick = () => { if (tuneState) retune(tuneState.freq, b.dataset.w); };
 }
 
+/**
+ * The first run.
+ *
+ * Radio is not obvious any more. Most people have never turned a dial, shortwave
+ * is a rumour, and "borrowing somebody's antenna in New Zealand" sounds like a
+ * figure of speech until you have done it. An interface that assumes otherwise
+ * is a large part of why this technology reads as inaccessible rather than
+ * merely old.
+ *
+ * Four cards, and the rules they follow are Apple's rather than mine: explain
+ * only what is *not* discoverable, never explain a button that explains itself,
+ * stay skippable at every step, and never come back. A tour that reappears has
+ * learned to interrupt people.
+ *
+ * So there is nothing here about play or volume. What is here: that the globe is
+ * the control, that the two colours of dot are two different technologies, what
+ * shortwave actually is, and that nothing is being collected — which is the one
+ * promise worth making before someone starts rather than after.
+ */
+const INTRO = [
+  {
+    t: () => t("intro.1.title", "The globe is the interface"),
+    b: () => t("intro.1.body",
+      "Spin it. Whatever sits under the middle becomes the selection, so browsing " +
+      "the world and browsing the stations are the same gesture. Click a dot to listen."),
+  },
+  {
+    t: () => t("intro.2.title", "Two kinds of dot"),
+    b: () => t("intro.2.body",
+      "Most dots are radio stations streaming over the internet — 38,342 of them. " +
+      "The other colour is a shortwave receiver: someone's real antenna, in someone's " +
+      "real garden, that they have left open for strangers to use."),
+  },
+  {
+    t: () => t("intro.3.title", "Shortwave is the strange one"),
+    b: () => t("intro.3.body",
+      "A shortwave signal bounces off the ionosphere and crosses oceans with nothing " +
+      "in between — no company, no cable. That is why the app shows you the daylight " +
+      "line, the solar weather and which bands are open: they decide what you can hear, " +
+      "and they change through the day."),
+  },
+  {
+    t: () => t("intro.4.title", "Nothing is collected"),
+    b: () => t("intro.4.body",
+      "There is no account and no server of ours. The station list is already on your " +
+      "machine, so search and the globe work with the network unplugged. Nothing " +
+      "reports what you played."),
+  },
+];
+
+let introAt = 0;
+
+function paintIntro() {
+  const step = INTRO[introAt];
+  $("introStep").textContent = `${introAt + 1} / ${INTRO.length}`;
+  $("introTitle").textContent = step.t();
+  $("introBody").textContent = step.b();
+  $("introDots").innerHTML = INTRO
+    .map((_, i) => `<span class="${i === introAt ? "on" : ""}"></span>`).join("");
+  $("introNext").textContent = introAt === INTRO.length - 1
+    ? t("intro.start", "Start listening") : t("intro.next", "Next");
+  $("introSkip").textContent = t("intro.skip", "Skip");
+}
+
+function closeIntro() {
+  $("intro").hidden = true;
+  // Written once, on the way out, whichever way it is dismissed. Skipping is a
+  // legitimate answer and has to count as having seen it.
+  window.auralfm.setPrefs({ introSeen: true });
+  qEl?.focus();
+}
+
+function openIntro() {
+  introAt = 0;
+  paintIntro();
+  $("intro").hidden = false;
+  $("introNext").focus();
+}
+
+$("introNext").onclick = () => {
+  if (introAt >= INTRO.length - 1) return closeIntro();
+  introAt++;
+  paintIntro();
+};
+$("introSkip").onclick = closeIntro;
+document.addEventListener("keydown", (e) => {
+  if ($("intro").hidden) return;
+  if (e.key === "Escape") { e.preventDefault(); closeIntro(); }
+  else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); $("introNext").click(); }
+  else if (e.key === "ArrowLeft" && introAt > 0) { e.preventDefault(); introAt--; paintIntro(); }
+});
+
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**
  * Draw the actual sky — 5,044 stars to magnitude 6 and 89 constellation figures
@@ -3734,6 +3820,9 @@ document.addEventListener("keydown", (e) => {
 
   await loadPlaces("");
   paintColdOpen();
+  // After the globe is up, so the first thing behind the card is the thing the
+  // card is about.
+  if (!prefs.introSeen) openIntro();
   // The night moves. Repaint on the hour so a window left open overnight is not
   // still offering places where the sun came up hours ago.
   setInterval(paintColdOpen, 15 * 60_000);
