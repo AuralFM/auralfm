@@ -66,14 +66,24 @@ for (const { file, html } of renderers) {
 // ─────────────────────────────────────────────────────────────────────────────
 console.log("\n[hidden] survives an explicit display");
 // Four separate times, an element was given `display:flex` in CSS and `hidden`
-// in HTML, and the attribute silently lost. Any stylesheet that sets an explicit
-// display must also declare [hidden]{display:none}.
+// in HTML, and the attribute silently lost.
+//
+// This check used to accept *any* [hidden] rule, and that is why it kept
+// missing them: one scoped guard like `#caption[hidden]{display:none}` satisfied
+// it while every other element stayed exposed. The trap is per-element, so a
+// per-element remedy can never clear the whole file.
+//
+// What is required now is the unscoped, !important rule. Unscoped because it has
+// to cover elements nobody has thought about yet, and !important because a plain
+// [hidden] is specificity (0,1,0) and loses to any `#id{display:flex}`.
+// Unscoped means nothing selector-ish immediately precedes it: `#caption[hidden]`
+// must not count, `[hidden]` on its own must.
+const GLOBAL_HIDDEN = /(?:^|[}\s;])\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!important/;
 for (const { file, html } of renderers) {
   const css = (html.match(/<style>([\s\S]*?)<\/style>/) || [, ""])[1];
   const setsDisplay = /(?:^|[;{])\s*display\s*:\s*(?!none)[\w-]+/m.test(css);
-  const guards = /\[hidden\][^{]*\{[^}]*display\s*:\s*none/.test(css);
-  if (setsDisplay && !guards) {
-    fail(rel(file), "sets an explicit display but never declares [hidden]{display:none}");
+  if (setsDisplay && !GLOBAL_HIDDEN.test(css)) {
+    fail(rel(file), "sets an explicit display but has no global [hidden]{display:none !important}");
   } else pass(rel(file));
 }
 

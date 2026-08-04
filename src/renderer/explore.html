@@ -61,15 +61,31 @@
   @media (prefers-reduced-transparency: reduce){ body{background:var(--bg)} .content{background:var(--bg)} }
   @media (prefers-reduced-motion: reduce){ *{transition-duration:.01ms !important;animation-duration:.01ms !important} }
 
+  /**
+   * `hidden` wins, always.
+   *
+   * Four times now an element has been given an explicit `display` in CSS and
+   * the `hidden` attribute in HTML, and the attribute lost — most recently the
+   * shortwave dial, which sat over station lists showing an empty waterfall.
+   * Each time it was patched for that one element, which is exactly why it kept
+   * happening.
+   *
+   * `!important` is load-bearing rather than lazy: a plain `[hidden]` rule is
+   * specificity (0,1,0) and loses to `#tuner{display:flex}` at (1,0,0).
+   */
+  [hidden]{display:none !important}
+
   /* Stations vs shortwave. Same segmented shape as Settings, so the two places
-     in the app where you pick between modes look like the same idea. */
-  /* Always occupies its space, even when there are no receivers nearby to offer.
-     Appearing and disappearing moved everything under it by 32px. */
+     in the app where you pick between modes look like the same idea.
+     Always occupies its space, even when there are no receivers nearby to
+     offer — appearing and disappearing moved everything under it by 32px. That
+     uses a class rather than the `hidden` attribute, because `hidden` means
+     "not here" and this element is here, just not showing anything. */
   .railtabs{
     display:flex;gap:2px;padding:2px;margin:0 13px 6px;
     background:var(--fill);border-radius:7px;min-height:30px;
   }
-  .railtabs[hidden]{display:flex;visibility:hidden}
+  .railtabs.ghost{visibility:hidden}
   .railtabs button{
     flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
     font:inherit;font-size:11px;font-weight:530;letter-spacing:-.002em;
@@ -908,8 +924,19 @@ let railMode = "stations";        // stations | shortwave
 function renderRailTabs(nearby) {
   const tabs = $("railtabs");
   tabs.innerHTML = "";
-  if (!nearby.length) { tabs.hidden = true; return; }
+  // Two different kinds of absent, and they need different mechanisms.
+  //
+  // Before anything is selected the tabs are genuinely not there, which is the
+  // `hidden` attribute's job. Once a place is selected they are always there —
+  // just blank when it has no receivers nearby — because appearing and
+  // disappearing moved everything under them by 32px. That is the `ghost` class.
+  //
+  // Collapsing the two broke it: dropping `hidden` in favour of the class alone
+  // left the attribute set from the markup with nothing to clear it, so the tabs
+  // never appeared at all.
   tabs.hidden = false;
+  tabs.classList.toggle("ghost", !nearby.length);
+  if (!nearby.length) return;
   const mk = (mode, label) => {
     const b = document.createElement("button");
     b.textContent = label;
