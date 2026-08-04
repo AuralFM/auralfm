@@ -450,6 +450,16 @@
   #chatinput::placeholder{color:var(--label3)}
   #chatinput:disabled{opacity:.5}
 
+  /* The cold open — what fills the rail before anything is selected. */
+  #coldopen{padding:0;text-align:left}
+  .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
+  .colead b{color:var(--label);font-weight:590}
+  .cohead{
+    padding:14px 15px 4px;font-size:11px;font-weight:590;color:var(--label2);
+    letter-spacing:.005em;
+  }
+  .conote{padding:2px 15px 8px;font-size:11px;color:var(--label3);line-height:1.45}
+
   .tickwrap{
     /* A basis, not just grow. With `flex:1` alone the bar's fixed content —
        transport, volume and three market symbols — came to 814px, so at a 940px
@@ -474,7 +484,17 @@
    * the headlines get the entire window rather than whatever was left over.
    */
   @media (max-width: 1200px){
-    .tickwrap{order:10;flex:1 0 100%;padding-left:0;margin-top:1px}
+    /* The cold open — what fills the rail before anything is selected. */
+  #coldopen{padding:0;text-align:left}
+  .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
+  .colead b{color:var(--label);font-weight:590}
+  .cohead{
+    padding:14px 15px 4px;font-size:11px;font-weight:590;color:var(--label2);
+    letter-spacing:.005em;
+  }
+  .conote{padding:2px 15px 8px;font-size:11px;color:var(--label3);line-height:1.45}
+
+  .tickwrap{order:10;flex:1 0 100%;padding-left:0;margin-top:1px}
     .markets{margin-left:auto}
   }
   .tick{ display:inline-block;white-space:nowrap;color:var(--label3);will-change:transform }
@@ -512,6 +532,16 @@
   }
   #chatinput::placeholder{color:var(--label3)}
   #chatinput:disabled{opacity:.5}
+
+  /* The cold open — what fills the rail before anything is selected. */
+  #coldopen{padding:0;text-align:left}
+  .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
+  .colead b{color:var(--label);font-weight:590}
+  .cohead{
+    padding:14px 15px 4px;font-size:11px;font-weight:590;color:var(--label2);
+    letter-spacing:.005em;
+  }
+  .conote{padding:2px 15px 8px;font-size:11px;color:var(--label3);line-height:1.45}
 
   .tickwrap{overflow-x:auto;scrollbar-width:none}
     .tickwrap::-webkit-scrollbar{display:none}
@@ -854,6 +884,95 @@ function renderStations() {
     stationListEl.appendChild(el);
   }
   stationListEl.appendChild(addStationRow());
+  paintNearby();
+}
+
+/**
+ * What else is within reach, when a place has almost nothing.
+ *
+ * Most of the 12,296 places carry a handful of stations, so selecting one leaves
+ * a couple of rows above a tall blank panel — which reads as something failing
+ * to load rather than as a small town honestly having one transmitter.
+ *
+ * Filling it with neighbours turns a dead end into a direction. It also happens
+ * to be the truest thing to put there: radio *is* regional, and the next place
+ * over is exactly where a listener in a one-station town would already be
+ * pointing their aerial.
+ *
+ * Only when the list is genuinely short. A city with four hundred stations has
+ * no gap to fill and does not need advice.
+ */
+/**
+ * One clickable place row, in the *station* list's idiom.
+ *
+ * Named `placeSuggestion` rather than the obvious `placeRow`, because that name
+ * was already taken by the row the search results use — and a second function
+ * declaration silently wins or loses depending on source order. It lost, so
+ * these rows rendered in the search list's style with the wrong text, which
+ * looked like a CSS problem and was a naming one.
+ *
+ * The cold open and the nearby list both build this. Writing it twice is how
+ * the two quietly drift apart — different padding, different keyboard handling,
+ * one of them forgetting `role="button"`. The audit caught the copy.
+ */
+function placeSuggestion(p, subtitle) {
+  const row = document.createElement("div");
+  row.className = "st";
+  row.setAttribute("role", "button");
+  row.tabIndex = 0;
+  row.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
+  row.querySelector(".sn").textContent = p.title;
+  row.querySelector(".stags").textContent = subtitle;
+  const go = () => goToPlace(p.i, { play: false });
+  row.addEventListener("click", go);
+  row.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+  });
+  return row;
+}
+
+const NEARBY_WHEN_UNDER = 8;
+let placeCache = null;
+
+async function paintNearby() {
+  const here = selection.place;
+  if (!here || selection.channels.length >= NEARBY_WHEN_UNDER) return;
+  const mine = selection.placeIndex;
+
+  if (!placeCache) {
+    try { placeCache = (await window.auralfm.places("", 900)).places || []; }
+    catch { placeCache = []; }
+  }
+  if (selection.placeIndex !== mine) return;      // selection moved while waiting
+
+  const R = 6371, rad = Math.PI / 180;
+  const km = (a, b) => {
+    const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+    const h = Math.sin(dLat / 2) ** 2 +
+              Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
+
+  const near = placeCache
+    .filter((p) => p.i !== here.i && p.count > 0)
+    .map((p) => ({ ...p, km: km(here, p) }))
+    // 1,200 km is a morning's drive at the top end and still the same weather,
+    // the same news and usually the same language. Past that it is not "nearby",
+    // it is somewhere else.
+    .filter((p) => p.km <= 1200)
+    .sort((a, b) => b.count - a.count || a.km - b.km)
+    .slice(0, 8);
+  if (!near.length) return;
+
+  const head = document.createElement("div");
+  head.className = "cohead";
+  head.textContent = t("near.head", "More within reach");
+  stationListEl.append(head);
+
+  for (const p of near) {
+    stationListEl.append(placeSuggestion(p, `${Math.round(p.km)} km · ${p.count} ` +
+      (p.count === 1 ? t("cold.station", "station") : t("cold.stationsShort", "stations"))));
+  }
 }
 
 /**
@@ -2291,6 +2410,85 @@ async function applyStrings() {
   }
 }
 
+/**
+ * The cold open.
+ *
+ * Before anything is selected the rail was a single line of instruction above a
+ * tall empty panel. Spinning the globe fills it — `followCentre` selects
+ * whatever is under the middle — but at launch nobody has spun anything yet, so
+ * the first thing the app shows is a blank.
+ *
+ * What goes there should be *alive*, so the world reads as awake before you
+ * touch it, and it should be a door rather than a poster. So: the places where
+ * it is currently the middle of the night, which is when radio is most itself —
+ * the overnight shows, the stations nobody is watching. Every row flies you
+ * there.
+ *
+ * The hour is solar, computed from longitude rather than a timezone database.
+ * That is not a shortcut standing in for civil time: it is the same arithmetic
+ * the terminator on the globe uses, so the list and the darkness agree with each
+ * other, which they would not if one followed politics and the other the sun.
+ */
+async function paintColdOpen() {
+  // Built rather than found: the station list clears its own innerHTML whenever
+  // a place is selected or a search runs, so a static child would exist exactly
+  // until the first time anything happened.
+  if (selection.placeIndex !== null || sdrSel || showingFavorites) return;
+  const el = document.createElement("div");
+  el.className = "empty";
+  el.id = "coldopen";
+  el.style.cssText = "padding:0;text-align:left";
+
+  let places = [], stats = null;
+  try {
+    [places, stats] = await Promise.all([
+      window.auralfm.places("", 600).then((r) => r.places || []),
+      window.auralfm.stats().catch(() => null),
+    ]);
+  } catch { return; }
+
+  const utcMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+  const solarHour = (lon) => (((utcMin + lon * 4) / 60) % 24 + 24) % 24;
+
+  const night = places
+    .map((p) => ({ ...p, h: solarHour(p.lon) }))
+    .filter((p) => p.h >= 22 || p.h < 5)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 9);
+
+  // Only now, once the data is in hand, does the placeholder get replaced —
+  // otherwise a slow catalogue leaves the rail blank for longer than before.
+  if (selection.placeIndex !== null || sdrSel) return;
+  stationListEl.innerHTML = "";
+  stationListEl.append(el);
+
+  const lead = document.createElement("div");
+  lead.className = "colead";
+  lead.innerHTML = stats
+    ? `<b>${stats.channels.toLocaleString()}</b> ${t("cold.stations", "stations")} · ` +
+      `<b>${(stats.places || 0).toLocaleString()}</b> ${t("cold.places", "places")}`
+    : "";
+  el.append(lead);
+
+  if (!night.length) return;
+
+  const head = document.createElement("div");
+  head.className = "cohead";
+  head.textContent = t("cold.night", "Where it is the middle of the night");
+  const note = document.createElement("div");
+  note.className = "conote";
+  note.textContent = t("cold.nightWhy",
+    "The overnight shows — the hours radio keeps to itself.");
+  el.append(head, note);
+
+  const unit = (n) => (n === 1 ? t("cold.station", "station") : t("cold.stationsShort", "stations"));
+  for (const p of night) {
+    const hh = String(Math.floor(p.h)).padStart(2, "0");
+    const mm = String(Math.floor((p.h % 1) * 60)).padStart(2, "0");
+    el.append(placeSuggestion(p, `${hh}:${mm} · ${p.country} · ${p.count} ${unit(p.count)}`));
+  }
+}
+
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**
  * Draw the actual sky — 5,044 stars to magnitude 6 and 89 constellation figures
@@ -3284,6 +3482,10 @@ document.addEventListener("keydown", (e) => {
   marketTimer = setInterval(renderMarkets, 1000);
 
   await loadPlaces("");
+  paintColdOpen();
+  // The night moves. Repaint on the hour so a window left open overnight is not
+  // still offering places where the sun came up hours ago.
+  setInterval(paintColdOpen, 15 * 60_000);
   // Receivers before the globe, so the first point layer already carries them.
   try {
     sdrPts = await window.auralfm.sdrPoints();
