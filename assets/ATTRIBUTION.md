@@ -7,7 +7,7 @@ Globe by **emilegraphics** via [the Noun Project](https://thenounproject.com)
 
 | File | Source | Bands | Use | Licence |
 |---|---|---|---|---|
-| `icon.svg` | `noun-globe-1654366.svg` | filled | Menu bar, favicon, and the .icns entries ≤64px | **Not yet purchased** — see below |
+| `icon.svg` | `noun-globe-1654366.svg` | filled | Menu bar, favicon, and the .icns entries ≤64px | Royalty-free, purchased 4 Aug 2026 |
 | `icon-line.svg` | `noun-globe-1654367.svg` | outlined | The .icns entries ≥128px, About panel | Royalty-free, purchased 4 Aug 2026 |
 
 **Two glyphs, on purpose.** The outlined globe is beautiful at 128 and above and
@@ -24,47 +24,40 @@ light and a dark menu bar.
 
 ---
 
-## Licence status — read before shipping
+## Licence status — both glyphs are licensed
 
-### `icon-line.svg` (#1654367) — licensed
+Royalty-free licences for **both** icons were purchased on 4 August 2026.
+Perpetual, **non-exclusive**, worldwide, unlimited use; no attribution required.
+Licensee Melton Bell (Noun Project UserID 12647524); licensor The Noun Project,
+Inc. on behalf of emilegraphics (Creator ID 468375).
 
-Royalty-free licence purchased 4 August 2026. Perpetual, **non-exclusive**,
-worldwide, unlimited use; no attribution required.
+| Icon | File | Charge | Paid | Certificate |
+|---|---|---|---|---|
+| #1654366 (filled) | `icon.svg` | `ch_2U0nO0OlQUEvnWfJ0qe7c0jl` | $4.99 | [`licenses/noun-project-1654366-license.pdf`](licenses/noun-project-1654366-license.pdf) |
+| #1654367 (outlined) | `icon-line.svg` | `ch_2U0n5ZOlQUEvnWfJ1rqC2k1s` | $4.99 | [`licenses/noun-project-1654367-license.pdf`](licenses/noun-project-1654367-license.pdf) |
 
-| | |
+Noun Project licenses per icon — each receipt reads *"A-la-carte purchase of
+icon 'Globe' #…"* and covers exactly one work — so shipping two glyphs needed
+two licences. It briefly shipped with only one.
+
+**The shipped files were checked against what was paid for**, not assumed to
+match from their filenames. Each licensed original and each shipped SVG was
+rasterised to 128px and compared on alpha:
+
+| Comparison | Ink differs |
 |---|---|
-| Licensee | Melton Bell (Noun Project UserID 12647524) |
-| Licensor | The Noun Project, Inc., on behalf of emilegraphics (Creator ID 468375) |
-| Item | A-la-carte purchase of icon "Globe" #1654367 |
-| Paid | $4.99 USD, 4 August 2026 |
-| Charge | `ch_2U0n5ZOlQUEvnWfJ1rqC2k1s` |
+| licensed #1654366 vs `icon.svg` | **0.07%** — same artwork |
+| licensed #1654367 vs `icon-line.svg` | **0.01%** — same artwork |
+| licensed #1654366 vs `icon-line.svg` | 41.58% — confirms these are genuinely two different works |
 
-Certificate: [`licenses/noun-project-1654367-license.pdf`](licenses/noun-project-1654367-license.pdf).
-The unmodified 700×700 download is kept beside it as
-[`licenses/noun-1654367-original.svg`](licenses/noun-1654367-original.svg), so the
-adapted file can always be diffed against what was actually paid for.
+The unmodified 700×700 downloads are kept in `licenses/` as
+`noun-1654366-original.svg` and `noun-1654367-original.svg`, so the adapted
+files can be re-checked against the purchase at any time.
 
-**The invoice is deliberately not in this repo.** It carries an email address and
-the last four digits of a card, and this repository is expected to go public when
-#14 ships — git history is not something you can take back. It lives in the
+**The invoices are deliberately not in this repo.** They carry an email address
+and a card's last four digits, and this repository is expected to go public when
+#14 ships — git history is not something you can take back. Both live in the
 Knowledge-Base vault at `04 Projects/AURALFM/licenses/`.
-
-### `icon.svg` (#1654366) — NOT licensed
-
-**This is a separate icon and it has not been bought.** Noun Project sells
-a-la-carte licences per icon: the receipt above reads *"A-la-carte purchase of
-icon 'Globe' #1654367"* and covers that file only. The filled glyph is a
-different work, and the app currently ships it in the menu bar, the favicon and
-every `.icns` entry at 64px and below — which is to say, in the most visible
-place there is.
-
-Either buy #1654366 (another $4.99) or drop it and render every size from
-#1654367, accepting that the bands merge below about 32px. Until one of those
-happens the app is distributing unlicensed artwork.
-
-*This file previously said the licence "has been bought for these icons", plural.
-That was not true. It is the kind of claim that only ever gets checked by
-someone with standing to sue.*
 
 ### Two constraints in the Noun Project terms
 
@@ -75,9 +68,13 @@ on 4 August 2026:
 - **A 1,000-unit resale cap.** Section 3.A: *"If you purchase a license to use an
   Icon on an item for resale, you may only sell up to 1,000 units of such item
   for each license purchased."* A free app is not resale and is unaffected. A
-  paid app, or a paid tier, plausibly is — and 1,000 is not a large number for
-  something meant to succeed. Worth asking Noun Project before money changes
-  hands rather than after. See #15.
+  paid app, or a paid tier, plausibly is.
+
+  **Owning two licences does not buy 2,000 units.** They are licences to two
+  *different* icons, and the app ships both, so each independently caps the same
+  item at 1,000 — the binding limit is still 1,000. Raising it means buying
+  further licences of *the same* icon, not another icon. Worth confirming with
+  Noun Project before money changes hands rather than after. See #15.
 - **The trademark restriction does not reach Icons.** Their "Restricted
   Activities" list — which includes *"use in trademarks, trade names, service
   marks, or logos"* — sits in section 3.B and governs **Photos**. So using this
