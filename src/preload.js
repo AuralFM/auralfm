@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   sky: () => ipcRenderer.invoke("sky:get"),
   layers: () => ipcRenderer.invoke("globe:layers"),
   onLayers: (fn) => ipcRenderer.on("globe:layers", (_e, l) => fn(l)),
+  setLayers: (patch) => ipcRenderer.send("globe:setLayers", patch),
   weather: (i, lat, lon) => ipcRenderer.invoke("weather:get", i, lat, lon),
   news: (country) => ipcRenderer.invoke("news:get", country),
   markets: () => ipcRenderer.invoke("markets:get"),

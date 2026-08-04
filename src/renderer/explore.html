@@ -290,6 +290,49 @@
    * It will earn its keep twice — live captions belong on this line too.
    */
   /**
+   * The layer inspector.
+   *
+   * Ten toggles had accumulated in a menu, one at a time, and a menu is where
+   * controls go to be forgotten — you cannot see the state of anything without
+   * opening it, and you cannot compare two without opening it twice.
+   *
+   * Over the globe instead, because that is what they change. Closed by default,
+   * because most people set these once.
+   */
+  #layers{
+    position:absolute;top:14px;right:14px;z-index:5;width:206px;
+    padding:9px 8px 10px;border-radius:12px;
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    -webkit-backdrop-filter:blur(22px) saturate(1.6);
+            backdrop-filter:blur(22px) saturate(1.6);
+    box-shadow:0 12px 40px rgba(0,0,0,.30), 0 0 0 .5px var(--line);
+  }
+  .layhead{
+    padding:2px 8px 7px;font-size:11px;font-weight:590;color:var(--label2);
+    letter-spacing:.02em;text-transform:uppercase;
+  }
+  .layrow{
+    display:flex;align-items:center;gap:9px;width:100%;
+    padding:6px 8px;border:0;border-radius:7px;background:none;
+    font:inherit;font-size:12.5px;cursor:default;text-align:left;
+    transition:background .12s ease-out,color .12s ease-out;
+  }
+  .layrow:hover{background:var(--fill)}
+  /* A dot rather than a checkbox: ten checkboxes read as a form, and this is a
+     set of things that are on or off in a picture. */
+  .laydot{
+    flex:none;width:9px;height:9px;border-radius:50%;
+    box-shadow:inset 0 0 0 1.5px var(--label3);
+    transition:background .15s ease-out,box-shadow .15s ease-out;
+  }
+  .layrow[aria-pressed="true"]{color:var(--label)}
+  .layrow[aria-pressed="true"] .laydot{
+    background:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent);
+  }
+  .layrow[aria-pressed="false"]{color:var(--label3)}
+  @media (prefers-reduced-motion: reduce){ .layrow,.laydot{transition:none} }
+
+  /**
    * Captions.
    *
    * Subtitles, on the world. Centred, in the lower third, one or two lines —
@@ -686,7 +729,8 @@
 <div class="toolbar">
   <span class="sp"></span>
   <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines"></button>
-  <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
+  <button id="layersBtn" title="Layers" data-i18n-title="ctl.layers" aria-pressed="false"></button>
+      <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
   <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
          autocomplete="off" spellcheck="false">
 </div>
@@ -700,6 +744,13 @@
            above it. Small, tinted, and out of the way — they are ambient facts,
            not a status bar, and most people will never need to read them. -->
       <div class="globebar" id="globehint" hidden><span id="globestatus" data-i18n="app.loadingGlobe">Loading globe…</span></div>
+      <!-- Layers. One button, closed by default, over the globe it controls —
+           rather than ten items in a menu nobody opens. -->
+      <div id="layers" hidden>
+        <div class="layhead" data-i18n="ctl.layers">Layers</div>
+        <div id="laylist"></div>
+      </div>
+
       <!-- Captions. Over the planet, above the read-outs, sharing their scrim. -->
       <div id="caption" hidden aria-live="polite"></div>
       <aside class="newspanel" id="newspanel" hidden>
@@ -2459,6 +2510,7 @@ function applyLayers(next) {
 
   const bar = $("globehint");
   if (bar) bar.hidden = !layers.statusBar;
+  paintLayers();          // the inspector reflects whatever main just confirmed
   if (!globe) return;
 
   withShader((sh) => {
@@ -2949,6 +3001,68 @@ window.auralfm.onCaption((m) => {
 
 /** Real-time factor of the last measurement, for the audit and for #30. */
 let capRtf = null;
+
+/**
+ * The layer inspector.
+ *
+ * Built from whatever `globe:layers` reports rather than from a list written
+ * here, so adding a layer in main.js puts it in this panel automatically. The
+ * alternative — a second list to keep in step — is how the menu ended up with
+ * ten items nobody could see the state of.
+ *
+ * Labels come from the same i18n keys the menu uses, so the two can never
+ * disagree about what a layer is called.
+ */
+let layersOpen = false;
+
+const LAYER_ORDER = [
+  "stations", "shortwave", "dayNight", "clouds",
+  "constellations", "iss", "flights", "wspr", "drift", "statusBar",
+];
+
+function paintLayers() {
+  const panel = $("layers"), list = $("laylist");
+  if (!panel || !list) return;
+  panel.hidden = !layersOpen;
+  $("layersBtn").setAttribute("aria-pressed", String(layersOpen));
+  if (!layersOpen) return;
+
+  // Known order first so the list does not reshuffle, then anything new.
+  const ids = [...LAYER_ORDER.filter((k) => k in layers),
+               ...Object.keys(layers).filter((k) => !LAYER_ORDER.includes(k))];
+  list.innerHTML = "";
+  for (const id of ids) {
+    const b = document.createElement("button");
+    b.className = "layrow";
+    b.setAttribute("aria-pressed", String(!!layers[id]));
+    const dot = document.createElement("span");
+    dot.className = "laydot";
+    const label = document.createElement("span");
+    label.textContent = t(`layer.${id}`, id);
+    b.append(dot, label);
+    b.onclick = () => {
+      // Paint from the echo, not from the click: main owns this state and
+      // persists it, and a panel that updated optimistically would disagree
+      // with the menu the moment a write failed.
+      window.auralfm.setLayers({ [id]: !layers[id] });
+    };
+    list.append(b);
+  }
+}
+
+$("layersBtn").onclick = () => { layersOpen = !layersOpen; paintLayers(); };
+
+// Click anywhere else on the globe to dismiss, the way an inspector should.
+document.addEventListener("pointerdown", (e) => {
+  if (!layersOpen) return;
+  if ($("layers").contains(e.target) || $("layersBtn").contains(e.target)) return;
+  layersOpen = false;
+  paintLayers();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && layersOpen) { layersOpen = false; paintLayers(); }
+});
 
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**
@@ -3947,6 +4061,7 @@ document.addEventListener("keydown", (e) => {
 
   // The buttons that never change state get their icon once.
   Icons.set($("newsBtn"), "headlines");
+  Icons.set($("layersBtn"), "layers");
   Icons.set($("favBtn"), "star");
   Icons.set($("newsSrc"), "source");
   Icons.set($("play"), "play");

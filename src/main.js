@@ -268,6 +268,10 @@ function setLayer(id, on) {
   st.layers = { ...(st.layers || {}), [id]: on };
   save(st);
   explore?.webContents.send("globe:layers", layerState());
+  // The menu's checkmarks are built from this state, so they have to be rebuilt
+  // when it changes elsewhere — otherwise toggling a layer in the inspector
+  // leaves the menu showing the old answer.
+  buildMenu();
 }
 
 function buildMenu() {
@@ -583,6 +587,11 @@ ipcMain.handle("sats:get", () => satellites.get());
 // The renderer has no filesystem access by design, so the star catalogue comes
 // over IPC rather than a fetch the CSP would block anyway.
 ipcMain.handle("globe:layers", () => layerState());
+// The inspector in Explore writes through the same path the menu uses, so the
+// two can never hold different opinions about what is on.
+ipcMain.on("globe:setLayers", (_e, patch) => {
+  for (const [id, on] of Object.entries(patch || {})) setLayer(id, !!on);
+});
 ipcMain.handle("sky:get", () => {
   try {
     const sky = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "sky.json"), "utf8"));

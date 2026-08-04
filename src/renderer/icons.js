@@ -58,6 +58,12 @@
     headlines: SVG(`<rect x="3.5" y="5" width="17" height="14" rx="2.2"/>
                     <path d="M7 9.2h6M7 12.5h10M7 15.8h10"/>`),
     source:    SVG(`<circle cx="12" cy="12" r="7.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>`),
+    /* Three stacked plates — the universal map-layers mark, and legible at 16px
+       where anything more detailed turns to mush. */
+    layers: SVG(`<path d="M12 3.6 3.4 8 12 12.4 20.6 8Z"/>
+                 <path d="M4.6 12 12 15.8 19.4 12"/>
+                 <path d="M4.6 16 12 19.8 19.4 16"/>`),
+
     external:  SVG(`<path d="M14 5h5v5M19 5l-8.4 8.4"/>
                     <path d="M18 14.2V18a1.8 1.8 0 0 1-1.8 1.8H6A1.8 1.8 0 0 1 4.2 18V7.8A1.8 1.8 0 0 1 6 6h3.8"/>`),
   };
