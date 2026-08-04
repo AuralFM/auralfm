@@ -129,14 +129,14 @@
   .toolbar .sp{flex:1}
   .toolbar #newsBtn{
     -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
-    font-size:14px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
+    font-size:16px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
     transition:background .12s ease-out,color .12s ease-out;
   }
   .toolbar #newsBtn:hover{background:var(--fill);color:var(--label)}
   .toolbar #newsBtn[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
   .toolbar #favBtn{
     -webkit-app-region:no-drag;background:none;border:0;color:var(--label2);
-    font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
+    font-size:16px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
     transition:background .12s ease-out,color .12s ease-out;
   }
   .toolbar #favBtn:hover{background:var(--fill);color:var(--label)}
@@ -286,7 +286,7 @@
   }
   .newshead button:hover{background:var(--fill-hi);color:var(--label)}
   .newshead button:active{transform:scale(.9)}
-  #newsSrc{font-size:12px}
+  #newsSrc{font-size:14px}
   #newsSrc[aria-pressed="true"]{color:var(--accent)}
   #newsClose{font-size:16px}
   .newslist{flex:1;overflow-y:auto;padding:0 8px 12px}
@@ -344,7 +344,7 @@
   .sn{letter-spacing:-.002em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stags{font-size:11px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .star{
-    flex:none;background:none;border:0;color:var(--label3);font-size:13px;
+    flex:none;background:none;border:0;color:var(--label3);font-size:14px;
     padding:2px 4px;border-radius:4px;cursor:default;opacity:0;line-height:1;
     transition:opacity .12s ease-out,color .12s ease-out,transform 90ms ease-out;
   }
@@ -361,6 +361,7 @@
   .empty{padding:56px 28px;text-align:center;color:var(--label3);font-size:13px;line-height:1.7}
 
   /* Now-playing strip, mirroring the popover's transport bar. */
+  button svg{display:block}
   .now{
     /* Wraps, because the headline ticker and the market prices were competing
        for the same row and the ticker always lost. */
@@ -372,20 +373,20 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
   #play{
     flex:none;width:26px;height:26px;border-radius:50%;border:0;cursor:default;
-    background:var(--accent);color:#04140c;font-size:9px;
+    background:var(--accent);color:#04140c;font-size:12px;
     display:grid;place-items:center;
     transition:transform 90ms ease-out,opacity .15s ease-out;
   }
   #play:active{transform:scale(.92)}
   .volwrap{flex:none;display:flex;align-items:center;gap:5px;margin-left:10px}
   #mute{
-    background:none;border:0;color:var(--label2);font-size:12px;line-height:1;
+    background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
     padding:2px;border-radius:4px;cursor:default;transition:color .12s ease-out;
   }
   #mute:hover{color:var(--label)}
   #vol{width:84px;accent-color:var(--accent)}
   #lock{
-    flex:none;background:none;border:0;font-size:12px;line-height:1;cursor:default;
+    flex:none;background:none;border:0;font-size:15px;line-height:1;cursor:default;
     padding:3px 5px;border-radius:5px;opacity:.55;
     transition:background .12s ease-out,opacity .12s ease-out,transform 90ms ease-out;
   }
@@ -548,7 +549,7 @@
     .tick.run{animation:none}
   }
   #nowStar{
-    background:none;border:0;color:var(--label3);font-size:14px;line-height:1;
+    background:none;border:0;color:var(--label3);font-size:15px;line-height:1;
     padding:2px 4px;cursor:default;flex:none;
     transition:color .12s ease-out,transform 90ms ease-out;
   }
@@ -574,8 +575,8 @@
 
 <div class="toolbar">
   <span class="sp"></span>
-  <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines">▤</button>
-  <button id="favBtn" title="Favorites" data-i18n-title="app.favorites">☆</button>
+  <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines"></button>
+  <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
   <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
          autocomplete="off" spellcheck="false">
 </div>
@@ -589,7 +590,7 @@
       <aside class="newspanel" id="newspanel" hidden>
         <div class="newshead">
           <b id="newsplace">Headlines</b>
-          <button id="newsSrc" title="Change source" data-i18n-title="ctl.changeSource">◎</button>
+          <button id="newsSrc" title="Change source" data-i18n-title="ctl.changeSource"></button>
           <button id="newsClose" title="Close" data-i18n-title="ctl.close">×</button>
         </div>
         <div class="newslist" id="newslist"></div>
@@ -624,14 +625,14 @@
 </div>
 
 <div class="now" id="now" hidden>
-  <button id="play" title="Play / pause" data-i18n-title="ctl.playPause">▶</button>
-  <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation">🔓</button>
+  <button id="play" title="Play / pause" data-i18n-title="ctl.playPause"></button>
+  <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation"></button>
   <span class="dot" id="dot"></span>
-  <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden>☆</button>
+  <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden></button>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
   <span class="volwrap">
-    <button id="mute" title="Mute" data-i18n-title="ctl.mute">🔊</button>
+    <button id="mute" title="Mute" data-i18n-title="ctl.mute"></button>
     <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume" data-i18n-title="ctl.volume">
   </span>
   <span class="tickwrap"><span class="tick" id="ticker"></span></span>
@@ -639,6 +640,7 @@
 </div>
 
 <script src="astro.js"></script>
+<script src="icons.js"></script>
 <script src="kiwi.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -855,7 +857,7 @@ function renderStations() {
     el.dataset.id = ch.id;
     el.setAttribute("aria-current", playing?.id === ch.id);
     el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>
-                    <button class="star${isFav(ch.id) ? " on" : ""}">${isFav(ch.id) ? "★" : "☆"}</button>
+                    <button class="star${isFav(ch.id) ? " on" : ""}">${Icons.svg(isFav(ch.id) ? "starFill" : "star")}</button>
                     <span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".sn").textContent = ch.title;
     el.querySelector(".stags").textContent = ch.tags.length ? ch.tags.slice(0, 4).join(" · ") : "";
@@ -1056,7 +1058,7 @@ window.auralfm.onPlayerState((s) => {
     $("nowName").textContent = s.channel.title;
     $("nowStatus").textContent = s.status || "";
     $("dot").style.display = s.playing ? "" : "none";
-    $("play").textContent = s.playing ? "❚❚" : "▶";
+    Icons.set($("play"), s.playing ? "pause" : "play");
     if (typeof s.volume === "number") paintVolume(s.volume);
     // Headlines from wherever the station is broadcasting from.
     loadNews(s.playing ? s.channel.country : null);
@@ -1095,7 +1097,7 @@ function paintNowStar() {
   b.hidden = !canFav;
   if (!canFav) return;
   const on = isFav(ch.id);
-  b.textContent = on ? "★" : "☆";
+  Icons.set(b, on ? "starFill" : "star");
   b.classList.toggle("on", on);
   b.setAttribute("aria-pressed", String(on));
 }
@@ -1114,7 +1116,7 @@ $("play").onclick = () => window.auralfm.transport({ action: "toggle" });
 let preMute = 0.8;
 function paintVolume(v) {
   $("vol").value = v;
-  $("mute").textContent = v === 0 ? "🔇" : v < 0.5 ? "🔈" : "🔊";
+  Icons.set($("mute"), v === 0 ? "volumeOff" : v < 0.5 ? "volumeLow" : "volumeHigh");
 }
 $("vol").oninput = () => {
   const v = +$("vol").value;
@@ -1144,7 +1146,7 @@ function setLocked(on) {
   locked = on;
   const b = $("lock");
   b.setAttribute("aria-pressed", on);
-  b.textContent = on ? "🔒" : "🔓";
+  Icons.set(b, on ? "lock" : "unlock");
   b.title = on
     ? "Locked — browsing won't change the station. Click a station to switch."
     : "Lock this station while you browse";
@@ -1170,7 +1172,7 @@ async function showFavorites() {
   placeListEl.innerHTML = "";
   if (!favorites.length) {
     placeListEl.innerHTML =
-      `<div class="empty" style="padding:30px 16px">${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap ☆ beside a station to save it.")}</div>`;
+      `<div class="empty" style="padding:30px 16px">${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap the star beside a station to save it.")}</div>`;
     return;
   }
   for (const f of favorites) placeListEl.appendChild(stationResultRow(f));
@@ -3480,6 +3482,15 @@ document.addEventListener("keydown", (e) => {
   // 1 Hz: the socket is faster than that, but a ticker that changes more often
   // than you can read it is noise, not information.
   marketTimer = setInterval(renderMarkets, 1000);
+
+  // The buttons that never change state get their icon once.
+  Icons.set($("newsBtn"), "headlines");
+  Icons.set($("favBtn"), "star");
+  Icons.set($("newsSrc"), "source");
+  Icons.set($("play"), "play");
+  Icons.set($("lock"), "unlock");
+  Icons.set($("mute"), "volumeHigh");
+  Icons.set($("nowStar"), "star");
 
   await loadPlaces("");
   paintColdOpen();

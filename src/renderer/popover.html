@@ -191,6 +191,7 @@
 
   .empty{padding:26px 20px;text-align:center;color:var(--label3);font-size:12px;line-height:1.65}
 
+  button svg{display:block}
   .bar{
     flex:none;display:flex;align-items:center;gap:11px;padding:7px 13px 9px;
     box-shadow:inset 0 .5px 0 var(--line);
@@ -232,12 +233,13 @@
   @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
   #toggle{
     flex:none;width:34px;height:34px;border-radius:50%;border:0;cursor:default;
-    background:var(--accent);color:var(--on-accent);font-size:10px;
+    background:var(--accent);color:var(--on-accent);font-size:15px;
     display:grid;place-items:center;
     transition:transform 90ms ease-out,opacity .15s ease-out;
   }
   #toggle:active{transform:scale(.93)}
   #toggle:disabled{opacity:.28}
+  button svg{display:block}
   .now{flex:1;min-width:0}
   #nowName{font-weight:510;font-size:12px;letter-spacing:-.002em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #status{font-size:11px;letter-spacing:.005em;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -249,7 +251,7 @@
   }
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
   #mute{
-    flex:none;background:none;border:0;color:var(--label2);font-size:12px;line-height:1;
+    flex:none;background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
     padding:3px 2px;border-radius:5px;cursor:default;
     transition:color .12s ease-out,transform 90ms ease-out;
   }
@@ -294,15 +296,16 @@
 </div>
 
 <div class="bar">
-  <button id="toggle" disabled>▶</button>
+  <button id="toggle" disabled></button>
   <div class="now">
     <div id="nowName" data-i18n="app.nothingPlaying">Nothing playing</div>
     <div id="status" data-i18n="app.searchStation">Search for a station</div>
   </div>
-  <button id="mute" title="Mute">🔈</button>
+  <button id="mute" title="Mute"></button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
 </div>
 
+<script src="icons.js"></script>
 <script src="kiwi.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -388,7 +391,7 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
       // Empty chips read as broken placeholders; reserve the width without the fill.
       (numbered && i < 9 ? `<span class="key">${i+1}</span>` : `<span class="key blank"></span>`) +
       `<span class="meta"><span class="nm"></span><div class="sub"></div></span>` +
-      `<button class="star${isFav(ch.id)?" on":""}" title="${t('ctl.favorite', 'Favorite')}">${isFav(ch.id)?"★":"☆"}</button>` +
+      `<button class="star${isFav(ch.id)?" on":""}" title="${t('ctl.favorite', 'Favorite')}">${Icons.svg(isFav(ch.id)?"starFill":"star")}</button>` +
       `<span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".nm").textContent = ch.title;
     const tags = showTags && ch.tags?.length ? ch.tags.slice(0, 2).join(", ") : null;
@@ -422,7 +425,7 @@ function showFavorites() {
   headEl.textContent = t("app.favorites", "Favorites");
   render(state.favorites, {
     numbered: true,
-    empty: `${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap ☆ beside a station to save it.")}`,
+    empty: `${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap the star beside a station to save it.")}`,
   });
 }
 
@@ -509,7 +512,7 @@ function stop(){
   window.auralfm.mediaKeys(false);
   sdrStop();
   audio.pause(); audio.removeAttribute("src"); audio.load();
-  toggle.textContent = "▶";
+  Icons.set(toggle, "play");
   document.body.classList.remove("playing");
   setStatus("Stopped");
 }
@@ -517,7 +520,7 @@ function stop(){
 function fail(msg){
   clearTimeout(watchdog); live = false;
   document.body.classList.remove("playing");
-  toggle.textContent = "▶";
+  Icons.set(toggle, "play");
   setStatus(msg, "err");
   autoSkip(msg);
 }
@@ -550,7 +553,7 @@ audio.addEventListener("playing", () => {
   window.auralfm.reportOk(current?.id);
   updateMediaSession();
   window.auralfm.mediaKeys(true);
-  toggle.textContent = "❚❚";
+  Icons.set(toggle, "pause");
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
 });
@@ -569,7 +572,7 @@ function applyVolume(v) {
   audio.volume = v;
   sdrSession?.setVolume(v);
   vol.value = v;
-  $("mute").textContent = v === 0 ? "🔇" : v < 0.5 ? "🔈" : "🔊";
+  Icons.set($("mute"), v === 0 ? "volumeOff" : v < 0.5 ? "volumeLow" : "volumeHigh");
   state.vol = +v; persist();
 }
 vol.oninput = () => applyVolume(+vol.value);
@@ -821,7 +824,7 @@ function sdrEnded(message, cls = "") {
   wfStop();
   live = false;
   document.body.classList.remove("playing");
-  toggle.textContent = "▶";
+  Icons.set(toggle, "play");
   sdrRx = null;
   sdrSession = null;
   paintTuner();

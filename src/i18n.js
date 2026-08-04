@@ -33,7 +33,7 @@ const en = {
 
   // empty states
   "empty.favorites": "No favorites yet.",
-  "empty.favoritesHint": "Tap ☆ beside a station to save it.",
+  "empty.favoritesHint": "Tap the star beside a station to save it.",
   "empty.noPlace": "No place matches that.",
   "empty.noStationsFilter": "No stations match that filter here.",
   "empty.noMatch": "Nothing matches that.",
@@ -168,7 +168,7 @@ const es = {
   "app.headlines": "Titulares",
 
   "empty.favorites": "Aún no hay favoritos.",
-  "empty.favoritesHint": "Toca ☆ junto a una emisora para guardarla.",
+  "empty.favoritesHint": "Toca la estrella junto a una emisora para guardarla.",
   "empty.noPlace": "Ningún lugar coincide.",
   "empty.noStationsFilter": "Ninguna emisora coincide con ese filtro aquí.",
   "empty.noMatch": "No hay coincidencias.",
@@ -298,7 +298,7 @@ const fr = {
   "app.headlines": "Actualités",
 
   "empty.favorites": "Aucun favori pour l'instant.",
-  "empty.favoritesHint": "Touchez ☆ à côté d'une station pour l'enregistrer.",
+  "empty.favoritesHint": "Touchez l'étoile à côté d'une station pour l'enregistrer.",
   "empty.noPlace": "Aucun lieu ne correspond.",
   "empty.noStationsFilter": "Aucune station ne correspond à ce filtre ici.",
   "empty.noMatch": "Aucun résultat.",
@@ -427,7 +427,7 @@ const de = {
   "app.headlines": "Schlagzeilen",
 
   "empty.favorites": "Noch keine Favoriten.",
-  "empty.favoritesHint": "Auf ☆ neben einem Sender tippen, um ihn zu sichern.",
+  "empty.favoritesHint": "Auf den Stern neben einem Sender tippen, um ihn zu sichern.",
   "empty.noPlace": "Kein Ort passt dazu.",
   "empty.noStationsFilter": "Hier passt kein Sender zu diesem Filter.",
   "empty.noMatch": "Keine Treffer.",
@@ -557,7 +557,7 @@ const pt = {
   "app.headlines": "Manchetes",
 
   "empty.favorites": "Ainda sem favoritos.",
-  "empty.favoritesHint": "Toque em ☆ ao lado de uma estação para salvá-la.",
+  "empty.favoritesHint": "Toque na estrela ao lado de uma estação para salvá-la.",
   "empty.noPlace": "Nenhum lugar corresponde.",
   "empty.noStationsFilter": "Nenhuma estação corresponde a esse filtro aqui.",
   "empty.noMatch": "Nada corresponde.",

@@ -268,11 +268,11 @@
       </div>
       <div class="row">
         <span class="name" data-i18n="set.privacy">Privacy Policy</span>
-        <button class="link" id="privacy">↗</button>
+        <button class="link" id="privacy"></button>
       </div>
       <div class="row">
         <span class="name" data-i18n="set.terms">Terms of Service</span>
-        <button class="link" id="terms">↗</button>
+        <button class="link" id="terms"></button>
       </div>
     </div>
     <p class="promise" data-i18n="set.promise">No servers. No accounts. No analytics. Nothing about what you listen to leaves this Mac.</p>
@@ -280,7 +280,10 @@
   </section>
 </main>
 
+<script src="icons.js"></script>
 <script>
+Icons.set(document.getElementById("privacy"), "external");
+Icons.set(document.getElementById("terms"), "external");
 "use strict";
 const $ = (s) => document.querySelector(s);
 let T = {};
