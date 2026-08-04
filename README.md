@@ -29,20 +29,20 @@ Inspired by [radio.garden](https://radio.garden), started because Apple is windi
 down radio support in Shortcuts and Apple Music — and grown well past it.
 
 ```
-┌──────────────────────────────┐
-│  ◍  AuralFM                  │
-│  ┌────────────────────────┐  │
-│  │ Search 38,342 stations │  │
-│  └────────────────────────┘  │
-│  Favorites                   │
-│  1  KEXP 90.3 FM        ★ ⦀⦀ │
-│     Seattle WA · United St…  │
-│  2  WWOZ FM 90.7        ★    │
-│     New Orleans LA · jazz…   │
-│  ─────────────────────────── │
-│  ▐▌ WWOZ FM 90.7      ──●──  │
-│   ● New Orleans LA           │
-└──────────────────────────────┘
+┌────────────────────────────────┐
+│  AuralFM                       │
+│  ┌──────────────────────────┐  │
+│  │  Search 38,342 stations  │  │
+│  └──────────────────────────┘  │
+│  Favorites                     │
+│  1   KEXP 90.3 FM              │
+│      Seattle WA · United St…   │
+│  2   WWOZ FM 90.7              │
+│      New Orleans LA · jazz…    │
+│  ────────────────────────────  │
+│  ⏸   WWOZ FM 90.7    ──●────   │
+│      New Orleans LA            │
+└────────────────────────────────┘
 ```
 
 ---
@@ -113,8 +113,24 @@ anyone built a platform. It still does.
   Bands are ordered by whether that path is likely open right now, because
   shortwave propagation depends on whether the path is in daylight — and the globe
   already knows where the terminator is.
-- **21 bands**, including seven amateur bands and two morse frequencies — chosen
-  from where the activity measurably is, not from a band plan.
+- **Real tuning, not band centres.** The shortwave list is the EiBi schedule —
+  9,289 broadcasts a season, resolved to whatever is transmitting *this minute*
+  in UTC, with the language and where it is beamed. Tuning "New Zealand" gets you
+  RNZ Pacific on the frequency it is actually using this hour, not the middle of
+  the 31 m band and a hiss. Ranked by whether the signal is pointed at that
+  receiver, then by whether the band is open.
+- **A waterfall.** The spectrum around what you are tuned to, so you can see the
+  carrier, the neighbour 5 kHz away, and the fifteen-second stripes of FT8. It
+  is what makes the filter width mean something.
+- **Bandwidth and fine tuning.** AM at ±2000, ±3500 or ±4900 Hz; 100 Hz steps,
+  10 Hz on sideband. The default clears the adjacent carrier — on a band where
+  channels sit 5 kHz apart, a wider filter lets both neighbours in and their
+  carriers beat into a whistle, which is the sound of a station that is *nearly*
+  tuned.
+- **31 bands**, including seven amateur bands, morse, and the digital modes —
+  FT8, FT4, PSK31 and the WSPR beacons the propagation arcs are drawn from. We
+  do not decode them; the point is that you can hear them, and a good evening on
+  14.074 MHz is one of the strangest sounds on shortwave.
 - **Aviation on HF.** Out over an ocean an aircraft is beyond VHF range and talks
   to the ground on shortwave. Tune *Shannon VOLMET* from Iceland and you hear the
   weather being read for transatlantic flights.
@@ -130,9 +146,20 @@ anyone built a platform. It still does.
 
 ### The globe
 
-- **A real Earth in real space** — actual satellite imagery, a day/night
-  terminator computed from the sun's true position, and a starfield of 5,044
-  catalogued stars with 89 constellation figures.
+- **A real Earth in real space** — actual satellite imagery and a day/night
+  terminator computed from the sun's true position.
+- **City lights**, from NASA's Black Marble at 8192x4096. The night side is not
+  a dark texture; it is where people are, down to individual towns along a
+  motorway.
+- **A named sky.** 5,044 catalogued stars and 89 constellations, labelled in
+  whatever language the app is running — so it says *that is Orion* rather than
+  drawing a shape and leaving you to guess.
+- **The zodiac as the fact it is.** The ecliptic — the plane of the solar system
+  seen edge-on from inside it — is drawn across the sky, and the twelve figures
+  the Sun passes through are brightened against it. The planets sit visibly on
+  that line, which is the explanation for both the zodiac and the word *planet*.
+  Ophiuchus is drawn like any other figure and is not in the twelve, because the
+  zodiac is twelve for Babylonian reasons rather than astronomical ones.
 - **The five naked-eye planets**, where they actually are tonight.
 - **Live cloud cover** — GOES geostationary imagery refreshed every 10 minutes over
   a daily global pass, so the weather on the globe is the weather that is up there.
@@ -147,6 +174,10 @@ anyone built a platform. It still does.
 - **Other listeners**, if you switch it on — see below.
 - **Live local conditions** — pick a place and see its weather and local time, so
   you know it is 53°F and overcast at 12:45 AM where the station is.
+- **Somewhere it is the middle of the night.** Before you pick anything, the rail
+  offers the places currently in the small hours — the overnight shows, the hours
+  radio keeps to itself. Pick a town with one station and it offers the
+  neighbours instead of a blank panel.
 
 ### The app
 
@@ -158,14 +189,14 @@ anyone built a platform. It still does.
   satellite imagery and is never recoloured.
 - **Now playing in the menu bar**, with media key support.
 
-### Other listeners, if you want them
+### Other listeners, and talking to them
 
 Off by default, because it is the only thing in AuralFM that sends anything.
 
 Switched on, and only while something is playing, it announces the **station's**
-location — rounded to a four-character geohash, about 20 km — and the station's
-name, over public [Nostr](https://nostr.com) relays. Other people running AuralFM
-see a slow pulsing ring there.
+location — rounded to a four-character geohash, about 20 km — over public
+[Nostr](https://nostr.com) relays, and offers a chat scoped to that cell. Other
+listeners appear as slow pulsing rings on the globe.
 
 - **Never your location.** The coordinates are the station's, the same rule the
   weather already follows.
@@ -177,7 +208,22 @@ see a slow pulsing ring there.
   announcement replayed after the fact — so the payload is built to be worthless
   if kept rather than relying on the promise.
 
-Expect an empty room for now. Nobody else is running this yet.
+- **Somebody else's convention, on purpose.** The first version used an event
+  kind picked because nothing else used it, which is exactly why it was empty —
+  a private room, correctly built, with nobody in it. It now speaks
+  [bitchat](https://github.com/permissionlesstech/bitchat)'s geohash format,
+  which is public domain and already has people using it. Every message we send
+  carries their `teleport` tag, because the cell is always the *station's* and
+  never the listener's: somebody in Houston listening to Rio appears in Rio's
+  channel, and without that tag it would read as a claim to be standing there.
+- **Relays are chosen by distance.** A conversation in Rio lives on the relays
+  near Rio; three hardcoded servers saw 16 people where a geo-aware list saw 328.
+  The directory is [georelays](https://github.com/permissionlesstech/georelays),
+  MIT, 411 relays with coordinates.
+
+Honest expectation: **inhabited, but quiet.** Hundreds announce presence; actual
+conversation is thin. It is a room with people in it rather than an empty one,
+which is a different and better problem.
 
 ## Requirements
 
@@ -343,6 +389,8 @@ phase0/index.html      the original single-file prototype
 | [`docs/PRIVACY.md`](docs/PRIVACY.md) | Everything stored locally, everything any third party sees |
 | [`docs/TERMS.md`](docs/TERMS.md) | Plain-language terms |
 | [`docs/SPONSORSHIP.md`](docs/SPONSORSHIP.md) | The sequence for funding this, and what it is and isn't worth |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is next, what is refused, and why |
+| [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
 
 ## Scripts
 
@@ -354,6 +402,10 @@ phase0/index.html      the original single-file prototype
 | `npm run tags` | Join radio-browser genre tags onto the catalog |
 | `npm run icons` | Regenerate PNGs from `assets/*.svg` |
 | `npm run crawl:sdr` | Refresh the shortwave receiver list |
+| `npm run schedule` | Rebuild the EiBi shortwave broadcast schedule (seasonal) |
+| `npm run relays` | Rebuild the geo-located Nostr relay directory |
+| `npm run sky` | Rebuild the star, constellation and name bundle |
+| `npm run lights` | Fetch NASA Black Marble and build the city-lights texture |
 | `npm run audit` | Pre-flight checks for the traps this codebase has fallen into |
 | `npm run check` | Report how stale the station catalogue is |
 
@@ -364,15 +416,23 @@ phase0/index.html      the original single-file prototype
 | Player, menu bar shell, catalogue, search, favourites | ✅ |
 | Explore — list and globe | ✅ |
 | Day/night, live clouds, real sky, planets, ISS | ✅ |
-| Shortwave receivers, aviation HF, 21 bands | ✅ |
+| Shortwave receivers, aviation HF, 31 bands | ✅ |
+| Real shortwave tuning from the EiBi schedule | ✅ |
+| Waterfall, bandwidth and fine tuning | ✅ |
+| City lights, named constellations, ecliptic and zodiac | ✅ |
 | WSPR propagation arcs, space weather | ✅ |
-| Presence over Nostr, off by default | ✅ |
+| Presence and geohash chat over Nostr, off by default | ✅ |
 | Settings — appearance, contrast, dot size, language, palettes | ✅ |
 | User-added stations | ✅ |
 | Aircraft layer | ✅ |
 | Code signing and notarisation | Needs an Apple Developer account |
 | Downloadable release | Blocked on signing |
-| Presence between listeners | Designed, needs hosting — deliberately unbuilt |
+
+**The honest headline: nobody but the author can install this yet.** There is no
+signing and no release, so every feature above has an audience of one until those
+land — and both need an Apple Developer account rather than any more code. A
+quieter app ten people can install would be worth more than a richer one nobody
+can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Known limits
 
@@ -390,6 +450,15 @@ phase0/index.html      the original single-file prototype
 - **The catalog is a snapshot, not a subscription.** Stations come and go; re-run
   `npm run crawl` every few months.
 - **Unsigned.** Gatekeeper will complain until the app is signed and notarised.
+- **The interface has outgrown its plan.** This began as a menu-bar player and
+  became a standalone app with a globe, a receiver, a spectrum display and a
+  chat. Each addition was reasonable; the accumulation is not, and the transport
+  bar and the popover are both carrying more than they were designed for. A
+  proper pass against Apple's Human Interface Guidelines is owed and has not
+  happened yet.
+- **No spam defence in chat.** We share a public channel with anyone. bitchat
+  uses optional proof-of-work; we implement none. Fine at this traffic,
+  embarrassing at ten times it.
 - **Shortwave receivers are volunteers' machines.** AuralFM connects only when you
   click one, one at a time, never retries a refusal, and never scans them. If a
   receiver is busy, that is a person's hardware being used by somebody else.
