@@ -309,6 +309,107 @@
   };
   const steps = (mode) => STEPS[mode] || STEPS.am;
 
+  /**
+   * The waterfall.
+   *
+   * A Kiwi serves the spectrum on a second socket, `/W/F`, alongside the audio
+   * on `/SND` — which is what its own web client does, so opening both is
+   * ordinary use of the receiver rather than a second visitor.
+   *
+   * Frame format, read off the wire rather than assumed: a four-byte `"W/F "`
+   * identifier (note the trailing space, which cost an hour), three uint32
+   * fields, then exactly 1024 single-byte bins. 1040 bytes in total. Each byte
+   * is a level where **dBm = byte − 255**, so 200 is −55 dBm and 175 is −80.
+   *
+   * `SET zoom=Z cf=kHz` centres the window. The visible span is the receiver's
+   * full 30 MHz divided by 2^Z, so zoom 10 shows 29.3 kHz — about three
+   * broadcast channels either side of whatever you are tuned to, which is
+   * exactly the picture that explains why the filter width matters.
+   */
+  const WF_BINS = 1024;
+  const WF_FRAME = 1040;
+  const WF_BW_KHZ = 30000;
+
+  const wfSpanKHz = (zoom) => WF_BW_KHZ / (1 << zoom);
+
+  class KiwiWaterfall {
+    /**
+     * @param {object} opts
+     * @param {string} opts.host
+     * @param {number} opts.freq   kHz, the centre
+     * @param {number} [opts.zoom] 0-14; 10 is ~29 kHz
+     * @param {(row: Int8Array, meta: object) => void} opts.onRow
+     */
+    constructor(opts) {
+      this.opts = { zoom: 10, ...opts };
+      this.ws = null;
+      this.closed = false;
+      this.rows = 0;
+    }
+
+    connect() {
+      const url = `ws://${this.opts.host}/kiwi/${Math.floor(Date.now() / 1000)}/W/F`;
+      let ws;
+      try { ws = new WebSocket(url); } catch { return; }
+      this.ws = ws;
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        ws.send("SET auth t=kiwi p=");
+        // The same 600ms the audio socket waits: the Kiwi ignores commands sent
+        // before it has finished with the auth line.
+        setTimeout(() => { if (!this.closed) this.aim(); }, 600);
+        this.keepalive = setInterval(() => {
+          if (ws.readyState === 1) ws.send("SET keepalive");
+        }, 5000);
+      };
+      // A receiver that will not serve spectrum is not an error worth showing —
+      // the audio is the point and it is on its own socket.
+      ws.onerror = () => this.stop();
+      ws.onclose = () => this.stop();
+      ws.onmessage = (m) => {
+        if (typeof m.data === "string" || this.closed) return;
+        const b = new Uint8Array(m.data);
+        if (b.length !== WF_FRAME) return;
+        if (b[0] !== 87 || b[1] !== 47 || b[2] !== 70) return;      // "W/F"
+        this.rows++;
+        this.opts.onRow?.(b.subarray(16), {
+          centre: this.opts.freq,
+          span: wfSpanKHz(this.opts.zoom),
+          bins: WF_BINS,
+        });
+      };
+    }
+
+    /** Point the window at the current frequency and zoom. */
+    aim() {
+      if (!this.ws || this.ws.readyState !== 1) return;
+      // Uncompressed, and this is not an optimisation to skip. The Kiwi ships
+      // the waterfall ADPCM-compressed by default — 533-byte frames instead of
+      // 1040 — and without this every frame arrives, is tagged "W/F", and fails
+      // a length check for a reason nothing in the protocol announces. The
+      // symptom is a socket that is plainly connected and a display that stays
+      // black.
+      this.ws.send("SET wf_comp=0");
+      this.ws.send(`SET zoom=${this.opts.zoom} cf=${this.opts.freq}`);
+      // The floor and ceiling the bytes are scaled between. Wide enough that a
+      // strong broadcaster does not clip and the noise floor is still visible.
+      this.ws.send("SET maxdb=-10 mindb=-134");
+      this.ws.send("SET wf_speed=2");
+      this.ws.send("SET interp=0");
+    }
+
+    tune(freq) { this.opts.freq = freq; this.aim(); }
+    setZoom(z) { this.opts.zoom = Math.max(0, Math.min(14, z)); this.aim(); }
+
+    stop() {
+      if (this.closed) return;
+      this.closed = true;
+      clearInterval(this.keepalive);
+      try { this.ws?.close(); } catch { /* already gone */ }
+    }
+  }
+
   // ── session ────────────────────────────────────────────────────────────────
   /**
    * One connection to one receiver.
@@ -492,6 +593,6 @@
   // The rate the Kiwi's audio path is built around; it must be sent as an integer.
   KiwiSession.AR_IN = 12000;
 
-  root.Kiwi = { AdpcmDecoder, KiwiSession, BANDS, outlook, whenFor,
+  root.Kiwi = { AdpcmDecoder, KiwiSession, KiwiWaterfall, wfSpanKHz, BANDS, outlook, whenFor,
                 parseSnd, parseMsg, PASSBANDS, WIDTHS, passband, steps };
 })(typeof globalThis !== "undefined" ? globalThis : this);
