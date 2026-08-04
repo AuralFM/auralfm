@@ -273,6 +273,29 @@
    *
    * It will earn its keep twice — live captions belong on this line too.
    */
+  /**
+   * Captions.
+   *
+   * Subtitles, on the world. Centred, in the lower third, one or two lines —
+   * everything film has settled on over a century, because it is where the eye
+   * can take words without leaving the picture.
+   *
+   * `pointer-events:none` for the same reason as the read-outs: the globe is the
+   * control, and a caption must never eat a drag.
+   */
+  #caption{
+    position:absolute;left:0;right:0;bottom:34px;z-index:4;pointer-events:none;
+    padding:0 14%;text-align:center;
+    font-size:16px;font-weight:530;line-height:1.4;letter-spacing:-.006em;
+    color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.85),0 0 22px rgba(0,0,0,.6);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;
+    transition:opacity .18s ease-out;
+  }
+  #caption[hidden]{display:none}
+  #caption.fading{opacity:0}
+  @media (prefers-reduced-motion: reduce){ #caption{transition:none} }
+
   .globebar::after{
     content:"";position:absolute;left:0;right:0;bottom:-10px;height:52px;
     background:linear-gradient(to top,rgba(0,0,0,.45),rgba(0,0,0,0));
@@ -661,6 +684,8 @@
            above it. Small, tinted, and out of the way — they are ambient facts,
            not a status bar, and most people will never need to read them. -->
       <div class="globebar" id="globehint" hidden><span id="globestatus" data-i18n="app.loadingGlobe">Loading globe…</span></div>
+      <!-- Captions. Over the planet, above the read-outs, sharing their scrim. -->
+      <div id="caption" hidden aria-live="polite"></div>
       <aside class="newspanel" id="newspanel" hidden>
         <div class="newshead">
           <b id="newsplace">Headlines</b>
@@ -2851,6 +2876,52 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); $("introNext").click(); }
   else if (e.key === "ArrowLeft" && introAt > 0) { e.preventDefault(); introAt--; paintIntro(); }
 });
+
+/**
+ * Captions, drawn.
+ *
+ * Produced in the popover, where the audio is, and shown here, where the globe
+ * is — the same split as the dial. This end only paints.
+ */
+let capFade = null;
+
+window.auralfm.onCaption((m) => {
+  const el = $("caption");
+  if (!el) return;
+
+  if (m.status) {
+    // Loading a model is a 120 MB download the first time; saying so beats a
+    // blank strip that looks like the feature is broken.
+    if (m.status.state === "loading") {
+      el.hidden = false;
+      el.classList.remove("fading");
+      el.textContent = t("cap.loading", "Loading the speech model…");
+    } else if (m.status.state === "error") {
+      el.hidden = false;
+      el.textContent = t("cap.error", "Captions unavailable for this station");
+      clearTimeout(capFade);
+      capFade = setTimeout(() => { el.classList.add("fading"); }, 4000);
+    } else if (m.status.state === "idle") {
+      el.hidden = true;
+      el.textContent = "";
+    }
+    return;
+  }
+
+  if (!m.text) return;
+  clearTimeout(capFade);
+  el.hidden = false;
+  el.classList.remove("fading");
+  el.textContent = m.text;
+  // Whisper runs on a six-second window, so a line that outlives the next pass
+  // by much is stale. Fade rather than blank: an abrupt disappearance reads as a
+  // glitch, and speech has gaps.
+  capFade = setTimeout(() => el.classList.add("fading"), 9000);
+  if (m.rtf != null) capRtf = m.rtf;
+});
+
+/** Real-time factor of the last measurement, for the audit and for #30. */
+let capRtf = null;
 
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**

@@ -511,6 +511,8 @@ function setMediaKeys(on) {
 }
 ipcMain.on("player:mediakeys", (_e, on) => setMediaKeys(!!on));
 ipcMain.on("player:transport", (_e, msg) => win?.webContents.send("player:transport", msg));
+// Captions are produced where the audio is and drawn where the globe is.
+ipcMain.on("caption:line", (_e, msg) => explore?.webContents.send("caption:line", msg));
 ipcMain.on("player:failed", (_e, id) => failures.markFailed(id));
 ipcMain.on("player:ok", (_e, id) => failures.markPlayed(id));
 ipcMain.handle("player:next", (_e, ch, tried) =>

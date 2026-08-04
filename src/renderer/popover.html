@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; media-src *; connect-src ws: wss:;">
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; media-src *; connect-src 'self' ws: wss: https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://*.hf.co;">
 <title>AuralFM</title>
 <style>
   /* Colors follow AppKit's label/fill hierarchy and system palette so the panel
@@ -254,8 +254,18 @@
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
 </div>
 
+<!-- Transformers.js ships a bare `onnxruntime-web/webgpu` specifier that expects
+     a bundler. An import map resolves it in the browser, which keeps this a
+     project with no build step. -->
+<script type="importmap">
+{ "imports": {
+  "onnxruntime-web/webgpu": "./vendor/ort.bundle.min.mjs",
+  "onnxruntime-common": "./vendor/ort-common/index.js"
+} }
+</script>
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
+<script src="captions.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const listEl=$("list"), qEl=$("q"), headEl=$("secthead"), toggle=$("toggle"),
@@ -510,6 +520,7 @@ audio.addEventListener("playing", () => {
   Icons.set(toggle, "pause");
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
+  syncCaptions();
 });
 audio.addEventListener("waiting", () => { if (!audio.paused) setStatus("Buffering…"); });
 audio.addEventListener("error", () => {
@@ -744,6 +755,20 @@ window.auralfm.onPrefs(async (p) => {
   await applyStrings();
   // Rows carry translated titles, so redraw whatever list is on screen.
   if (!qEl.value.trim()) showFavorites();
+
+  const was = capsWanted;
+  capsWanted = p.captions === true;
+  capsModel = p.captionModel || "base";
+  if (was !== capsWanted && current) {
+    // crossOrigin only takes effect on the next load, so the stream has to be
+    // restarted for the change to mean anything at all. Doing it silently would
+    // make the toggle look broken.
+    const c = current; stop(); play(c);
+  } else if (!capsWanted) {
+    Captions.stop(); capsOn = false;
+  } else {
+    syncCaptions();
+  }
 });
 
 window.auralfm.onShown(() => {
