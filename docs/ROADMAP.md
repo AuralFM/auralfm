@@ -72,9 +72,20 @@ The request is drafted at `docs/telegeography-request.md`. There is no
 alternative source: OpenStreetMap has zero submarine cables.
 
 **Sound maps** — ambient field recordings, weather, wildlife, keyed to place.
-Fits the tagline better than anything else on this list. Needs a source
-decision: Xeno-canto (wildlife, CC), Radio Aporee (field recordings, CC), or
-commissioned. Licensing is the whole question, as usual.
+Fits the tagline better than anything else on this list. Researched:
+
+| Source | Verdict |
+|---|---|
+| **iNaturalist** | **The one to use.** Keyless API, 1,774,860 geolocated observations with audio, and — critically — `sound_license` filters. **233,926 are CC0, CC-BY or CC-BY-SA**: commercially usable with attribution. Every record carries coordinates, species and licence. |
+| Xeno-canto | v2 API retired (404), v3 requires a registered key (401). A key means shipping a secret or asking users for one, which cuts against the position. Excellent data, wrong access model for us. |
+| Freesound | API requires a key (401). Same objection. |
+| Radio Aporee | Field recordings, but no JSON API found — the map is the interface. Would need scraping, which is a different kind of relationship with a volunteer project. |
+
+The shape that fits: a layer that, for the place under the globe, offers what it
+*sounds* like when nobody is broadcasting — the birds that live there. It is the
+same move as the shortwave schedule: replace "a place" with "what is actually
+happening there right now". Attribution per recording is required and easy,
+since the API returns the licence and the recordist with every result.
 
 **More satellites and debris** — Celestrak refused our probe outright and has
 IP-blocked us once. Route through the existing backoff and cache, or not at all.
