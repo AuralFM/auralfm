@@ -182,7 +182,7 @@ anyone built a platform. It still does.
   did — with brightness following signal-to-noise. Rome to New Zealand is 18,512
   km and it is on the globe right now.
 - **Aircraft near where you are looking** — optional, capped, and off by default.
-- **Other listeners**, if you switch it on — see below.
+- **Other listeners and their messages**, if you switch it on — see below.
 - **Live local conditions** — pick a place and see its weather and local time, so
   you know it is 53°F and overcast at 12:45 AM where the station is.
 - **Somewhere it is the middle of the night.** Before you pick anything, the rail
@@ -437,6 +437,8 @@ phase0/index.html      the original single-file prototype
 | Presence and geohash chat over Nostr, off by default | ✅ |
 | First-run walkthrough | ✅ |
 | Drawn icon set — no emoji, no font dependency | ✅ |
+| Waterfall spectrum, dial in the main window | ✅ |
+| Live captions | Runs, but too slow to be live on 2019 Intel — see below |
 | Settings — appearance, contrast, dot size, language, palettes | ✅ |
 | User-added stations | ✅ |
 | Aircraft layer | ✅ |
@@ -475,6 +477,17 @@ can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - **No spam defence in chat.** We share a public channel with anyone. bitchat
   uses optional proof-of-work; we implement none. Fine at this traffic,
   embarrassing at ten times it.
+- **Live captions do not keep up on older hardware.** Whisper runs entirely on
+  your machine — there is no cloud speech API, because sending the audio
+  somewhere would mean the app transmits what you are listening to. The cost is
+  speed. Measured on an Intel i5-8257U, single-threaded WebAssembly: `whisper-base`
+  takes **39.6 seconds** to transcribe six seconds of audio (RTF 6.61), and
+  `whisper-tiny` **15.5 seconds** (RTF 2.59). Anything above 1.0 cannot keep up.
+  WASM threads would help and are unavailable — `SharedArrayBuffer` needs
+  cross-origin isolation, which a `file://` page cannot have. The feature is off
+  by default and the plumbing is complete; it wants Apple Silicon, a custom
+  protocol with COOP/COEP headers, or native whisper.cpp. See
+  [#30](https://github.com/meltonbell3/auralfm/issues/30).
 - **Shortwave receivers are volunteers' machines.** AuralFM connects only when you
   click one, one at a time, never retries a refusal, and never scans them. If a
   receiver is busy, that is a person's hardware being used by somebody else.

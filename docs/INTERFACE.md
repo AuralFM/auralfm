@@ -1,7 +1,7 @@
-# AuralFM — interface proposal
+# AuralFM — interface
 
-Written because the interface has outgrown its plan. This is a proposal, not a
-decision: the calls that follow are the maintainer's.
+Written because the interface had outgrown its plan. Most of it is now done; the
+diagnosis is kept because the reasoning is worth more than the checklist.
 
 ---
 
@@ -39,57 +39,58 @@ symptom that showed first because it is small.
 
 ---
 
-## Done
+## Done — the pass is complete
 
-**The dial has moved to Explore.** The waterfall and the tuning controls left the
-menu-bar popover, which is a player again: what is playing, a way to stop it,
-volume, favourites, search. Explore owns the picture and the controls and asks
-the popover to retune the audio by message.
-
-That is one of four jobs removed from the wrong window. The remaining three are
-proposals.
+- **The dial moved to Explore**, and is scoped to the receiver view rather than
+  hanging above the station list.
+- **Icons are drawn, not borrowed** — no Apple emoji, no font dependency.
+- **The transport bar is down from nine elements to five.** The headline ticker
+  was deleted; the pop-out card already did that job better, and running both
+  was two answers to one question.
+- **The read-outs moved onto the globe**, small and tinted, leading with where
+  you are looking rather than the subsolar point.
+- **The rail stopped flinching** — zero pixels of movement across eight places,
+  measured.
+- **A first-run walkthrough**, four cards.
 
 ---
 
-## Proposed
+## The three problems, and where each landed
 
-### 1. The transport bar carries too much
+The original diagnosis, kept because the reasoning is worth more than the
+checklist.
 
-Today: play, lock, status dot, favourite, name, frequency/signal, volume, news
-ticker, three market prices. Nine elements, and the ticker and the prices already
-had to be given separate rows to fit.
+### 1. The transport bar carried too much — done
 
-**Neither the news ticker nor the market prices belong in a transport bar.**
-Both are ambient read-outs about the world; a transport bar is about the sound.
-They are there because it was the only horizontal space available.
+Nine elements: play, lock, dot, favourite, name, frequency, volume, news ticker,
+three prices. Neither the ticker nor the prices belonged in a bar that is about
+sound; they were there because it was the app's only horizontal space, and both
+had already been given their own row to stop them starving each other, which was
+the layout admitting it.
 
-*Proposal:* move both into the rail as a "world" panel, alongside the sky and
-space-weather read-outs that are currently squeezed into the top status strip.
-The transport keeps: play, lock, favourite, what is playing, volume. Five things.
+The ticker was **deleted** rather than moved — the pop-out headlines card already
+did that job better, and running both was two answers to one question. The prices
+came back once nothing competed with them, and the bar no longer wraps. Five
+elements.
 
-*Cost:* the prices stop being glanceable while the globe is full-screen. That may
-be the right trade — they are the least related thing in the app to listening.
+### 2. The rail needed sections, not a stack — done
 
-### 2. The rail needs sections, not a stack
+The dial is scoped to the receiver view, so a spectrum panel no longer sits above
+a station list describing a radio that view has nothing to do with. The header
+stopped changing height as the globe turns: tags are one scrolled row rather than
+wrapping, long names clamp, and the tabs keep their space instead of appearing
+and disappearing. **Zero pixels of movement across eight places, measured** —
+where before the list jumped every time the selection changed.
 
-The rail currently switches wholesale between: places, stations, receiver bands,
-the dial, favourites, and the cold open. Adding chat gave it a second permanent
-region and adding the dial a third, so a shortwave session now shows dial → band
-list → chat stacked in one scroll.
+### 3. Layers still need a home that is not a menu
 
-*Proposal:* a fixed header region (what is selected, and its controls), one
-scrolling body, and one optional footer (chat). The dial belongs in the header
-because it is a control for the thing selected, not an item in a list.
+Day/night, clouds, satellites, aircraft, WSPR, presence, constellations, with
+cables and sound maps still to come — a real control surface kept in a menu
+because it arrived one item at a time.
 
-### 3. Layers need a home that is not a menu
-
-Day/night, clouds, satellites, aircraft, WSPR, presence, constellations, cables
-later — that is a real control surface being kept in a menu because it arrived
-one item at a time.
-
-*Proposal:* an inspector, opened from one button, closed by default. This is also
-where sound maps and the NASA layers would go without adding a tenth menu item
-each.
+*Proposal, unchanged:* an inspector, one button, closed by default. Worth doing
+**before** the next layer lands rather than after, which is the only reason it is
+still on this list.
 
 ---
 
@@ -108,14 +109,15 @@ surface nobody has complained about.
 
 ---
 
-## Sequence
+## Where this stands
 
-1. **Signing and a release (#4, #14).** Ahead of all of this. Interface work for
-   an audience of one is the definition of premature. Ten users would tell us
-   more in a week than this document can.
-2. Transport bar, because it is visible in every screenshot.
-3. Rail structure, because it is where the crowding compounds.
-4. Layer inspector, before the next map layer lands rather than after.
+The crowding this document was opened for is gone. What remains is the layer
+inspector, and it is not urgent until another layer is added.
+
+The sequencing note it originally carried — that interface work for an audience
+of one is premature, and ten users would teach us more in a week — still holds,
+and the maintainer has taken the point: the Apple Developer account is being
+sorted, which unblocks #4 and #14.
 
 ---
 

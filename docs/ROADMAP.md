@@ -53,6 +53,22 @@ The app is real and does these things today.
 
 ---
 
+## 1b. Also shipped since this was written
+
+- Waterfall spectrum display, bandwidth and fine tuning, moved out of the
+  menu-bar popover into the main window
+- A drawn icon set — no Apple emoji, no font dependency, no SF Symbols licence
+- First-run walkthrough, four cards
+- Transport bar down from nine elements to five; the headline ticker deleted
+  because the pop-out card already did that job better
+- Read-outs moved onto the globe and rewritten to lead with where you are looking
+- The rail stopped flinching as the globe turns — measured at zero pixels of
+  movement across eight places
+- Live captions: complete plumbing, and a measurement saying the hardware cannot
+  carry it yet (RTF 6.61 for `base` on an i5-8257U). See §3.
+
+---
+
 ## 2. Next — small, and each one finishes something already started
 
 | | Why now |
@@ -60,7 +76,8 @@ The app is real and does these things today.
 | **Gossip-style history on join** | You currently see only what arrives live, which is why a populated room still feels dead. bitchat keeps 6 hours; we keep nothing. This is the single biggest perceived-quality win in the chat. |
 | **Proof-of-work on send (NIP-13)** | We share a public channel with anyone and have no spam answer. Not urgent at this traffic; embarrassing at ten times it. |
 | **Panic wipe** | Trivial, and it makes the privacy claim demonstrable rather than merely true. |
-| **The empty rail** | Before a station is picked, the right-hand panel is blank. Candidates: what is on air near the globe's centre, the space-weather read-out, or the sky's current highlights. |
+| **A layer inspector** | Day/night, clouds, satellites, aircraft, WSPR, presence, constellations — and cables, sound maps and the NASA layers still to come. That is a control surface being kept in a menu because it arrived one item at a time. One button, closed by default, *before* the next layer lands. |
+| **Audit the stylesheets too** | The duplicate-block check has caught copied JavaScript twice and missed the dial's CSS being pasted twice, because it only reads `<script>`. |
 | **Local headlines, properly** | 58 countries have a local edition; everything else falls back to US news. A reader view for the linked article was asked for and is not built. |
 
 ---
@@ -89,6 +106,15 @@ since the API returns the licence and the recordist with every result.
 
 **More satellites and debris** — Celestrak refused our probe outright and has
 IP-blocked us once. Route through the existing backoff and cache, or not at all.
+
+**Live captions, when the hardware can carry them.** Whisper runs on-device over
+WebAssembly and works — it is simply too slow here. `base` is RTF 6.61 on a 2019
+Intel Mac and `tiny` is 2.59, where anything above 1.0 cannot keep up. Threads are
+unavailable because a `file://` page cannot be cross-origin isolated. Three
+routes: a custom protocol with COOP/COEP headers, Apple Silicon, or native
+whisper.cpp. Whatever ships must **benchmark the machine before offering the
+feature** rather than let someone enable captions and watch words arrive a minute
+late.
 
 **An SDR dongle** — the honest answer to "radio when the grid is down". A
 ~$30 RTL-SDR turns AuralFM from a client of other people's receivers into an

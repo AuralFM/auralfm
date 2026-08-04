@@ -97,3 +97,21 @@ them on trust.
 ## Contact
 
 **meltonbell@icloud.com**
+
+## Live captions (off by default)
+
+Switching captions on changes two things, and both are worth stating plainly.
+
+**A one-time download from Hugging Face.** The speech model's weights are fetched
+the first time captions are enabled — roughly 120 MB — and cached after that.
+This is the only request AuralFM makes to Hugging Face, it carries no
+information about you beyond the fact that a model was downloaded, and **no audio
+ever leaves the machine.** Whisper runs entirely in the app. There is no cloud
+speech API, because sending the audio somewhere would mean transmitting what you
+are listening to.
+
+**Streams load with `crossOrigin`.** Web Audio cannot read a cross-origin stream
+— it returns silence — so captions require the station's server to permit it.
+This flag is applied *only* when captions are on; with the feature off, playback
+is byte-for-byte what it has always been. Where a station's server refuses, the
+app falls back to normal playback and says captions are unavailable there.
