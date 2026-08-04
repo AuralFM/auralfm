@@ -637,7 +637,7 @@ window.auralfm.onTuneSdr((rx) => {
         if (!live) {
           live = true;
           document.body.classList.add("playing");
-          toggle.textContent = "⏸";
+          Icons.set(toggle, "pause");
           window.auralfm.mediaKeys(true);
         }
         const sig = s.rssi == null ? "" : ` · ${Math.round(s.rssi)} dBm`;
