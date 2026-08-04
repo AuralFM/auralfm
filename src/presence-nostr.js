@@ -36,6 +36,8 @@
  */
 
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
 const { schnorr } = require("@noble/curves/secp256k1.js");
 
 /**
@@ -71,15 +73,81 @@ const CHAT_KIND = 20000;
 const LABEL_KIND = 20808;
 
 /**
- * Relays that answered when this was written. Several of the best-known ones
- * refuse connections on any given day, so this is a list rather than a host, and
- * a failure to connect is not an error worth surfacing.
+ * Relays that answered when this was written, and are always dialled.
+ *
+ * These are the well-known, well-connected ones. They are the floor: whatever
+ * else we pick, a message should still reach the places most clients watch.
+ * Several refuse connections on any given day, which is why this is a list
+ * rather than a host, and a failure to connect is not an error worth surfacing.
  */
-const RELAYS = [
+const ANCHORS = [
   "wss://nos.lol",
   "wss://relay.primal.net",
   "wss://nostr.wine",
 ];
+
+/** How many geographically-near relays to add on top of the anchors. */
+const NEARBY = 5;
+
+/**
+ * The relay directory, and why distance matters.
+ *
+ * Three hardcoded relays is why the geohash channels looked quieter than they
+ * are. A conversation in Rio lives on the relays *near Rio* — Nostr has no
+ * global broadcast, only servers that happen to hold an event and clients that
+ * happen to ask them. Picking three servers once, months ago, and then
+ * concluding the network is empty is a measurement error, not a finding.
+ *
+ * 411 relays with coordinates, from permissionlesstech/georelays (MIT) — the
+ * same people who wrote bitchat.
+ */
+let DIRECTORY = null;
+function directory() {
+  if (DIRECTORY) return DIRECTORY;
+  try {
+    DIRECTORY = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "..", "data", "relays.json"), "utf8")).relays;
+  } catch {
+    DIRECTORY = [];        // anchors still work; this only ever adds reach
+  }
+  return DIRECTORY;
+}
+
+/**
+ * Which relays to dial for a given cell.
+ *
+ * Note what this does *not* leak. The point we measure from is the station's,
+ * not the listener's — the same coordinates already published in the `g` tag of
+ * every event we send. Choosing a relay near Rio tells its operator that
+ * somebody cares about Rio, which the event says out loud anyway. It says
+ * nothing about where that somebody is sitting.
+ */
+function relaysFor(cell) {
+  const list = [...ANCHORS];
+  const dir = directory();
+  if (!cell || !dir.length) return list;
+  const c = ungeohash(cell);
+  if (!c) return list;
+
+  const near = dir
+    .map(([url, lat, lon]) => ({ url, km: haversine(c.lat, c.lon, lat, lon) }))
+    .sort((a, b) => a.km - b.km);
+
+  for (const { url } of near) {
+    if (list.length >= ANCHORS.length + NEARBY) break;
+    if (!list.includes(url)) list.push(url);
+  }
+  return list;
+}
+
+/** Great-circle kilometres. */
+function haversine(aLat, aLon, bLat, bLon) {
+  const r = Math.PI / 180, R = 6371;
+  const dLat = (bLat - aLat) * r, dLon = (bLon - aLon) * r;
+  const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
 
 const BEAT_MS = 60_000;
 const STALE_MS = 4 * 60_000;      // drop a peer we have not heard from
@@ -285,9 +353,12 @@ function record(evt, mine = false) {
   onMessages(messages.slice());
 }
 
+let dialled = [];        // what relaysFor() chose for the cell we are in
+
 function connect() {
   if (sockets.length) return;
-  for (const url of RELAYS) {
+  dialled = relaysFor(here?.geohash);
+  for (const url of dialled) {
     let w;
     try { w = new WebSocket(url); } catch { continue; }
     sockets.push(w);
@@ -353,7 +424,8 @@ function join(lat, lon, label) {
   // Tuning across the world changes which room you are in. The old room's
   // conversation is not yours any more, and showing it against a new place
   // would be a lie about where those people are.
-  if (here && here.geohash !== cell) {
+  const moved = here && here.geohash !== cell;
+  if (moved) {
     messages.length = 0;
     seenIds.clear();
     peers.clear();
@@ -361,6 +433,14 @@ function join(lat, lon, label) {
     emit();
   }
   here = { geohash: cell, label: String(label || "").slice(0, 60) };
+
+  // Tuning from Rio to Tokyo changes which relays are near, and staying on the
+  // old set would mean announcing into Tokyo's channel on South America's
+  // servers — technically valid, and nobody there would ever see it.
+  if (moved && dialled.join() !== relaysFor(cell).join()) {
+    for (const w of sockets) { try { w.close(); } catch {} }
+    sockets = [];
+  }
   connect();
   announce();
   clearInterval(beat);
@@ -393,7 +473,8 @@ function leave() {
 const sameCell = (a, b) => a.startsWith(b) || b.startsWith(a);
 
 const stats = () => ({
-  relays: RELAYS.length,
+  relays: dialled.length,
+  relayUrls: dialled.slice(),
   connected: alive().length,
   peers: peers.size,
   messages: messages.length,

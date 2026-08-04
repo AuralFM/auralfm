@@ -19,7 +19,8 @@
     "audit": "node scripts/audit.mjs",
     "crawl:sdr": "node scripts/crawl-sdr.mjs",
     "schedule": "node scripts/fetch-schedule.mjs",
-    "lights": "node scripts/lights.mjs"
+    "lights": "node scripts/lights.mjs",
+    "relays": "node scripts/relays.mjs"
   },
   "devDependencies": {
     "electron": "^38.0.0",
@@ -53,7 +54,8 @@
       "docs/PRIVACY.md",
       "docs/TERMS.md",
       "assets/sky.json",
-      "data/schedule.json"
+      "data/schedule.json",
+      "data/relays.json"
     ],
     "mac": {
       "category": "public.app-category.music",
