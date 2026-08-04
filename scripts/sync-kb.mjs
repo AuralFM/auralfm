@@ -60,6 +60,7 @@ const DOCS = [
   ["docs/PRODUCT.md",              "Product"],
   ["docs/INTERFACE.md",            "Interface"],
   ["docs/IDENTITY.md",             "Identity"],
+  ["docs/LEGAL-AND-SECURITY.md",   "Legal and Security"],
   ["docs/PRIVACY.md",              "Privacy"],
   ["docs/DECENTRALIZATION.md",     "Decentralization"],
   ["docs/SPONSORSHIP.md",          "Sponsorship"],
