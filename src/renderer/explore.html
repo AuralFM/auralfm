@@ -3419,6 +3419,28 @@ async function drawSky() {
    * The label point comes from the catalogue rather than a centroid of the
    * lines: a centroid lands inside the figure and collides with its own stars.
    */
+  /**
+   * Write a label that survives the sky's mirroring.
+   *
+   * This canvas is handed to `backgroundImageUrl`, which maps it onto the
+   * inside of the celestial sphere — and from the inside you see it flipped
+   * left-for-right. That is *correct* for the geometry: the constellations then
+   * appear the way they do when you stand outside and look up, which is the
+   * whole point of drawing real ones. Text does not survive the same trip, so
+   * every label read backwards — Orion rendered as "noirO", Shield as "bleidS".
+   *
+   * Pre-flipping just the glyphs cancels the mapping's flip and leaves every
+   * star, line and coordinate exactly where it was. Flipping the whole canvas
+   * instead would have fixed the words and quietly mirrored the sky.
+   */
+  function skyText(text, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(-1, 1);
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
   ctx.textAlign = "center";
   for (const n of sky.names || []) {
     const label = n.name?.[lang] || n.name?.en || n.id;
@@ -3428,7 +3450,7 @@ async function drawSky() {
                `-apple-system, system-ui, sans-serif`;
     ctx.globalAlpha = n.z ? 0.72 : (prominent ? 0.55 : 0.34);
     ctx.fillStyle = n.z ? (palette?.accent || "#E9E2D4") : "#cfe0ff";
-    ctx.fillText(label, X(n.ra), Y(n.dec));
+    skyText(label, X(n.ra), Y(n.dec));
   }
   ctx.globalAlpha = 1;
 
@@ -3464,7 +3486,7 @@ async function drawSky() {
     ctx.font = "600 21px -apple-system, system-ui, sans-serif";
     ctx.fillStyle = "rgba(255,255,255,0.62)";
     ctx.textAlign = "center";
-    ctx.fillText(pl.name, x, y - r - 11);
+    skyText(pl.name, x, y - r - 11);
   }
   ctx.globalAlpha = 1;
   ctx.textAlign = "left";
