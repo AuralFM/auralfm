@@ -182,9 +182,10 @@ convention — no account, no server of ours.
 - **Volunteer infrastructure is borrowed, not owned.** Celestrak IP-blocked this
   project once and three KiwiSDRs stopped answering after over-probing. Anything
   that polls someone else's service stays off by default and behind a backoff.
-- **Licences to re-check the moment money is involved:** the Noun Project icon
-  (#21, receipt required), TeleGeography (unanswered), and any CC-BY-NC source
-  that has crept in.
+- **Licences to re-check the moment money is involved:** the Noun Project icons
+  (both bought and verified — but §3.A caps resale at 1,000 units per licence,
+  and two licences to two different icons do not raise that to 2,000),
+  TeleGeography (unanswered), and any CC-BY-NC source that has crept in.
 - **Measure, do not assert.** Every claim in these notes is traceable to a
   commit; where something is unknown the notes say so rather than filling the box.
 
