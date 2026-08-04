@@ -63,7 +63,13 @@
 
   /* Stations vs shortwave. Same segmented shape as Settings, so the two places
      in the app where you pick between modes look like the same idea. */
-  .railtabs{display:flex;gap:2px;padding:2px;margin:0 13px 6px;background:var(--fill);border-radius:7px}
+  /* Always occupies its space, even when there are no receivers nearby to offer.
+     Appearing and disappearing moved everything under it by 32px. */
+  .railtabs{
+    display:flex;gap:2px;padding:2px;margin:0 13px 6px;
+    background:var(--fill);border-radius:7px;min-height:30px;
+  }
+  .railtabs[hidden]{display:flex;visibility:hidden}
   .railtabs button{
     flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
     font:inherit;font-size:11px;font-weight:530;letter-spacing:-.002em;
@@ -338,7 +344,12 @@
     display:flex;flex-direction:column;min-height:0;
   }
   .placehead{flex:none;padding:0 18px 10px}
-  .placehead h2{margin:0;font-size:19px;font-weight:640;letter-spacing:-.018em;line-height:1.15}
+  /* One line. A long place name used to wrap and take the list with it, which
+     is the same flinch as the tags. */
+  .placehead h2{
+    margin:0;font-size:19px;font-weight:640;letter-spacing:-.018em;line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
   .placehead p{margin:2px 0 0;font-size:12px;color:var(--label2)}
   .wx{
     margin:7px 0 0;font-size:12px;color:var(--label2);
@@ -349,7 +360,25 @@
   .wx .sym{font-size:13px;color:var(--label)}
   .wx .t{color:var(--label);font-weight:510;font-variant-numeric:tabular-nums}
 
-  .chips{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 0}
+  /**
+   * One row, scrolled sideways — never wrapped.
+   *
+   * Wrapping was the main cause of the rail jumping as the globe turned. Every
+   * place carries a different number of genre tags, so the header was two rows
+   * tall over Lagos and one over Lusaka, and the whole list under it shifted by
+   * twenty-odd pixels each time the selection changed. On a spinning globe that
+   * is constant, and it reads as the interface flinching.
+   *
+   * A fixed-height row cannot do that. The tags that do not fit are still there,
+   * one flick to the right.
+   */
+  .chips{
+    display:flex;flex-wrap:nowrap;gap:5px;margin:9px 0 0;
+    height:23px;overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  .chips::-webkit-scrollbar{display:none}
+  .chips button{flex:none}
   .chips button{
     border:0;background:var(--fill);color:var(--label2);font:inherit;font-size:11px;
     padding:2.5px 8px;border-radius:999px;cursor:default;line-height:1.35;
@@ -861,7 +890,7 @@ function renderRailTabs(nearby) {
     b.textContent = label;
     b.setAttribute("aria-checked", String(railMode === mode));
     b.setAttribute("role", "radio");
-    b.onclick = () => { railMode = mode; renderStations(); };
+    b.onclick = () => { railMode = mode; renderStations(); syncTunerVisibility(); };
     tabs.append(b);
   };
   mk("stations", `${t("app.stations", "Stations")} ${selection.total ?? selection.channels.length}`);
@@ -896,6 +925,7 @@ function nearbyReceivers() {
 
 function renderStations() {
   const { place, channels } = selection;
+  syncTunerVisibility();
   // The globe read-out now opens with the selected place; without this it only
   // caught up on the next minute tick, so it showed the previous place for up to
   // sixty seconds after you moved.
@@ -2631,7 +2661,7 @@ function wfColour(db) {
 function tunerStart(rx, freq, mode, width) {
   tunerStop();
   tuneState = { host: rx.host, freq, mode, width: width || "normal" };
-  $("tuner").hidden = false;
+  syncTunerVisibility();
   paintDial();
 
   const cv = $("wf"), ctx = cv.getContext("2d");
@@ -2667,6 +2697,28 @@ function tunerStop() {
   wfSession = null;
   tuneState = null;
   if ($("tuner")) $("tuner").hidden = true;
+}
+
+/**
+ * The dial belongs to the Shortwave tab.
+ *
+ * It used to appear whenever a receiver session existed, which meant it hung
+ * above the *station* list too — a black spectrum panel and seven controls
+ * pushing the stations down, describing a radio the Stations tab has nothing to
+ * do with. Switching tabs is switching instruments; each one should show its
+ * own.
+ *
+ * The session keeps running underneath. Going back to Stations hides the dial,
+ * it does not hang up on the receiver.
+ */
+function syncTunerVisibility() {
+  const el = $("tuner");
+  // `sdrSel`, not `railMode`. The rail tabs are a *place's* two lists — its
+  // stations, and the receivers near it — and they stay on "stations" even after
+  // you open a receiver, because opening one replaces the whole rail. So the
+  // question is not which tab is selected, it is whether a receiver is what you
+  // are looking at.
+  if (el) el.hidden = !(tuneState && sdrSel);
 }
 
 function paintDial() {
