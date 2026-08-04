@@ -4,6 +4,8 @@
 
 *Aural* — of or relating to the ear, and the sense of hearing.
 
+![The globe, with Tokyo selected and a station playing](docs/media/01-hero.png)
+
 Open it and the Earth is there — real weather moving across it, the day/night line
 where it truly is, the ISS overhead, the actual planets behind. Click anywhere and
 hear what that place is listening to right now.
@@ -115,6 +117,12 @@ anyone built a platform. It still does.
 ---
 
 ## What it does
+
+![The shortwave view: what is transmitting this minute, ranked by whether the band is open](docs/media/02-shortwave.png)
+
+*Adachi, Tokyo — 628 of 1,191 scheduled broadcasts, on the bands that are open
+right now. Note Sound of Hope on 9540 kHz and CNR1 Firedrake on 9535: a jammer
+and its target, five kilohertz apart, both on the same list.*
 
 ### Listening
 
@@ -354,6 +362,12 @@ them.
 **Why a native app instead of a web page?** 47% of the most-played radio streams
 are served over plain `http://`. A page served over HTTPS cannot play them —
 mixed-content blocking kills them silently. A native shell has no such limit.
+
+![The layer inspector](docs/media/03-layers.png)
+
+*Everything the globe draws, and what it costs. Aircraft and WSPR are dimmed
+because they are off by default — both poll a volunteer service, so they are
+something you ask for rather than something you have to notice and switch off.*
 
 ## Project layout
 
