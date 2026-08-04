@@ -27,6 +27,9 @@ resolving before it is printed on anything.
 837 shortwave receivers whose owners leave them open to strangers. It is the
 most widely distributed live medium on Earth and the least visited.
 
+**The one-line version, and it should open the room:** *every consumer app is now
+a liability surface — this one has nothing to steal.*
+
 **Complication.** Discovery collapsed. The feed replaced the dial, and the feed
 is optimised for engagement, which means for tension. Meanwhile the thing that
 actually connects places — a signal you can hear from somewhere you have never

@@ -25,8 +25,19 @@ themselves are stream servers — you need a connection to hear audio, and that 
 true of every radio app there is. What is unusual here is that everything **around**
 the audio is yours already. See [docs/DECENTRALIZATION.md](docs/DECENTRALIZATION.md).
 
-Inspired by [radio.garden](https://radio.garden), started because Apple is winding
-down radio support in Shortcuts and Apple Music — and grown well past it.
+Inspired by [radio.garden](https://radio.garden) — Jonathan Puckey's, and the
+thing that kept pulling me back to Tokyo, Kenya, Iceland, South Africa. Started
+because Apple is winding down radio support in Shortcuts and Apple Music, and
+grown well past it.
+
+**The reason it has no backend is not thrift.** Everyone building with AI coding
+tools right now runs into the same wall: the fast part is the front end and the
+dangerous part is the back — secrets, breaches, data you did not mean to keep, a
+server you now have to defend. So this was built to answer that directly. The
+station catalogue is a public dataset. NASA gives away the Earth, NOAA the space
+weather, volunteers the receivers, and the chat rides other people's relays.
+**Nothing to breach, because nothing is held.** See
+[`docs/VISION.md`](docs/VISION.md).
 
 ```
 ┌────────────────────────────────┐
@@ -392,6 +403,7 @@ phase0/index.html      the original single-file prototype
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is next, what is refused, and why |
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
 | [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
+| [`docs/VISION.md`](docs/VISION.md) | Why this exists, in the maintainer's own account |
 
 ## Scripts
 
