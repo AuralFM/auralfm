@@ -27,35 +27,22 @@ const LIBS = [
    * jsep carries the WebGPU path, and the integrated GPUs this targets do not
    * benefit enough to justify doubling the runtime.
    */
+  /**
+   * Whisper, in the renderer — pinned to transformers 3.8.1.
+   *
+   * 4.x ships onnxruntime-web 1.26-dev, which cannot open the Whisper graphs on
+   * the Hub: every model and every dtype fails identically with
+   * "TransposeDQWeightsForMatMulNBits Missing required scale", including fp32,
+   * which is the tell that it is a runtime mismatch rather than a setting.
+   * 3.8.1 pins 1.22 instead.
+   *
+   * The WASM pair is taken from the transformers package rather than from
+   * onnxruntime-web, so the runtime and the loader can never drift apart across
+   * an npm update.
+   */
   ["@huggingface/transformers", "dist/transformers.web.min.js"],
-  /**
-   * The `jsep` runtime, which is what the bundle actually asks for.
-   *
-   * The plain 12 MB build looked like the right choice and is never loaded: even
-   * the non-WebGPU bundle dynamically imports `ort-wasm-simd-threaded.jsep.mjs`.
-   * The failure reads "no available backend found", which sounds like a missing
-   * capability rather than a missing file, and cost an hour.
-   */
-  ["onnxruntime-web", "dist/ort-wasm-simd-threaded.jsep.wasm"],
-  ["onnxruntime-web", "dist/ort-wasm-simd-threaded.jsep.mjs"],
-  /**
-   * The runtime itself, resolved by an import map in the page.
-   *
-   * `transformers.web.min.js` is not self-contained: it carries a bare
-   * `onnxruntime-web/webgpu` specifier, which a bundler would resolve and a
-   * browser cannot. An import map in popover.html points that name at this file
-   * instead, which is cheaper and clearer than adding a build step to a project
-   * that has deliberately never had one.
-   */
-  /**
-   * The plain WASM bundle, not the WebGPU one.
-   *
-   * Transformers.js imports `onnxruntime-web/webgpu`, and the import map points
-   * that name here instead. The WebGPU build wants the 25 MB `jsep` runtime;
-   * this one wants the 12 MB plain build, and the integrated GPUs this app
-   * targets get little from WebGPU anyway — an Iris Plus 645 is not going to
-   * outrun its own CPU on this.
-   */
+  ["@huggingface/transformers", "dist/ort-wasm-simd-threaded.jsep.wasm"],
+  ["@huggingface/transformers", "dist/ort-wasm-simd-threaded.jsep.mjs"],
   ["onnxruntime-web", "dist/ort.bundle.min.mjs"],
 ];
 

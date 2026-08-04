@@ -25,28 +25,44 @@
  * other without stalling the audio thread.
  */
 /**
- * STATUS: not working yet. Off by default, fails visibly, safe to ship.
+ * STATUS: it loads and runs. It is too slow to be live on this hardware.
  *
- * Everything up to the last step works: the library loads in the renderer under
- * `file://` (two bare specifiers resolved by an import map in popover.html), the
- * WASM backend initialises, and the weights download from Hugging Face.
+ * Pinned to @huggingface/transformers **3.8.1**, which pins onnxruntime-web
+ * 1.22. Version 4.2 pins 1.26, and 1.26 cannot open the Whisper graphs on the
+ * Hub at all — every model and every dtype failed identically with
+ * "TransposeDQWeightsForMatMulNBits Missing required scale", including fp32,
+ * which is the tell that it was a runtime mismatch rather than a setting.
+ * On 3.8.1 the pipeline builds in 22 seconds including the download.
  *
- * Session creation then fails, identically, on every combination tried:
+ * Then the measurement that decides the feature, on an Intel i5-8257U with
+ * Iris Plus 645 — six seconds of audio, three runs each, single-threaded WASM:
  *
- *     Can't create a session. ERROR_CODE: 1,
- *     qdq_actions.cc:137 TransposeDQWeightsForMatMulNBits Missing required scale
+ *     whisper-base   39.6s mean   RTF 6.61
+ *     whisper-tiny   15.5s mean   RTF 2.59
  *
- * Tried: onnx-community/whisper-base, Xenova/whisper-base, Xenova/whisper-tiny.en;
- * dtypes default, fp32, q8, q4; and both the plain and WebGPU onnxruntime
- * bundles. `fp32` failing with a *quantisation* error is the tell — this is a
- * version mismatch between the onnxruntime-web that ships with
- * @huggingface/transformers 4.2 and the ONNX graphs on the Hub, not a setting.
+ * Anything above 1.0 cannot keep up with live audio. Even `tiny` — which would
+ * be too inaccurate for radio anyway — is two and a half times too slow, and
+ * `small` would be worse than `base` by roughly another factor of three.
  *
- * Next thing to try is pinning an older transformers (3.x) against its matching
- * runtime, rather than any further permutation of models and dtypes.
+ * The obvious lever is closed: WASM threads need `SharedArrayBuffer`, which
+ * needs cross-origin isolation, which a `file://` page cannot have. Measured:
+ * `crossOriginIsolated` is false and `SharedArrayBuffer` is undefined, on four
+ * available cores.
  *
- * Nothing here runs unless the `captions` pref is switched on, and it is off by
- * default, so the app is unaffected.
+ * So there are three real routes, none of them a setting:
+ *
+ *   1. Serve the renderer from a custom protocol with COOP/COEP headers, which
+ *      unlocks threads — worth perhaps 2-3x, so `tiny` might just reach live and
+ *      `base` still would not.
+ *   2. Apple Silicon. The same WASM is several times faster per core there, and
+ *      this may simply work on an M-series machine.
+ *   3. Native whisper.cpp, which is the thing this approach was chosen to avoid.
+ *
+ * Whatever ships, it should **measure the machine before offering the feature**
+ * rather than let someone switch on captions and watch them arrive a minute
+ * late. The benchmark above is four lines and takes fifteen seconds.
+ *
+ * Off by default. Nothing here runs unless the `captions` pref is on.
  */
 (function (root) {
   const SAMPLE_RATE = 16000;      // what Whisper is trained on; not negotiable
