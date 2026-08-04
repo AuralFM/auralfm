@@ -106,6 +106,10 @@
       // sounds like a missing feature rather than a missing slash.
       T.env.backends.onnx.wasm.wasmPaths = new URL("./vendor/", document.baseURI).href;
       T.env.backends.onnx.wasm.numThreads = 1;   // renderer stays responsive
+      // `device: "wasm"` below is the only backend ever requested, which is why
+      // the vendored runtime is the plain build and not the `.jsep` one — JSEP
+      // is the WebGPU/WebNN provider and its extra 10 MB could never execute.
+      // See the note in scripts/vendor.mjs.
       const p = await T.pipeline("automatic-speech-recognition", MODELS[which] || MODELS.base, {
         dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
         device: "wasm",
