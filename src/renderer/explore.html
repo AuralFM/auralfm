@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+      content="default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src ws: wss:;">
 <title>Explore</title>
 <style>
   :root{
@@ -451,6 +451,34 @@
   #chatinput::placeholder{color:var(--label3)}
   #chatinput:disabled{opacity:.5}
 
+  /* The dial. */
+  #tuner{
+    flex:none;padding:9px 15px 4px;display:flex;flex-direction:column;gap:6px;
+    box-shadow:inset 0 -.5px 0 var(--line);
+  }
+  /* Time downward, frequency across, the tuned frequency dead centre — the
+     convention every radio has used since the first panadapter. */
+  #wf{
+    width:100%;height:88px;display:block;border-radius:6px;background:#05070c;
+    image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
+  }
+  .trow{display:flex;align-items:center;gap:4px}
+  .trow > button{
+    appearance:none;border:0;border-radius:6px;cursor:default;
+    background:var(--fill);color:var(--label2);
+    font:inherit;font-size:11px;padding:5px 0;flex:1;
+    transition:transform 80ms ease-out,color .12s ease-out;
+  }
+  .trow > button:hover{color:var(--label)}
+  .trow > button:active{transform:scale(.94)}
+  .tb{font-size:13px;line-height:1;max-width:40px}
+  #tfreq{
+    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;white-space:nowrap;color:var(--label);
+  }
+  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
+
   /* The cold open — what fills the rail before anything is selected. */
   #coldopen{padding:0;text-align:left}
   .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
@@ -485,7 +513,35 @@
    * the headlines get the entire window rather than whatever was left over.
    */
   @media (max-width: 1200px){
-    /* The cold open — what fills the rail before anything is selected. */
+    /* The dial. */
+  #tuner{
+    flex:none;padding:9px 15px 4px;display:flex;flex-direction:column;gap:6px;
+    box-shadow:inset 0 -.5px 0 var(--line);
+  }
+  /* Time downward, frequency across, the tuned frequency dead centre — the
+     convention every radio has used since the first panadapter. */
+  #wf{
+    width:100%;height:88px;display:block;border-radius:6px;background:#05070c;
+    image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
+  }
+  .trow{display:flex;align-items:center;gap:4px}
+  .trow > button{
+    appearance:none;border:0;border-radius:6px;cursor:default;
+    background:var(--fill);color:var(--label2);
+    font:inherit;font-size:11px;padding:5px 0;flex:1;
+    transition:transform 80ms ease-out,color .12s ease-out;
+  }
+  .trow > button:hover{color:var(--label)}
+  .trow > button:active{transform:scale(.94)}
+  .tb{font-size:13px;line-height:1;max-width:40px}
+  #tfreq{
+    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;white-space:nowrap;color:var(--label);
+  }
+  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
+
+  /* The cold open — what fills the rail before anything is selected. */
   #coldopen{padding:0;text-align:left}
   .colead{padding:10px 15px 2px;font-size:12px;line-height:1.5;color:var(--label2)}
   .colead b{color:var(--label);font-weight:590}
@@ -533,6 +589,34 @@
   }
   #chatinput::placeholder{color:var(--label3)}
   #chatinput:disabled{opacity:.5}
+
+  /* The dial. */
+  #tuner{
+    flex:none;padding:9px 15px 4px;display:flex;flex-direction:column;gap:6px;
+    box-shadow:inset 0 -.5px 0 var(--line);
+  }
+  /* Time downward, frequency across, the tuned frequency dead centre — the
+     convention every radio has used since the first panadapter. */
+  #wf{
+    width:100%;height:88px;display:block;border-radius:6px;background:#05070c;
+    image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
+  }
+  .trow{display:flex;align-items:center;gap:4px}
+  .trow > button{
+    appearance:none;border:0;border-radius:6px;cursor:default;
+    background:var(--fill);color:var(--label2);
+    font:inherit;font-size:11px;padding:5px 0;flex:1;
+    transition:transform 80ms ease-out,color .12s ease-out;
+  }
+  .trow > button:hover{color:var(--label)}
+  .trow > button:active{transform:scale(.94)}
+  .tb{font-size:13px;line-height:1;max-width:40px}
+  #tfreq{
+    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;white-space:nowrap;color:var(--label);
+  }
+  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
 
   /* The cold open — what fills the rail before anything is selected. */
   #coldopen{padding:0;text-align:left}
@@ -601,6 +685,25 @@
   <div class="stations">
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
+    </div>
+    <!-- The dial. Only while a receiver is playing; a stream has nothing to tune.
+         It lives here rather than in the menu-bar popover because a spectrum
+         display and seven controls do not belong in a window that exists to
+         show what is playing. -->
+    <div id="tuner" hidden>
+      <canvas id="wf" width="512" height="88"></canvas>
+      <div class="trow">
+        <button class="tb" data-hz="-coarse">&laquo;</button>
+        <button class="tb" data-hz="-fine">&lsaquo;</button>
+        <b id="tfreq">—</b>
+        <button class="tb" data-hz="+fine">&rsaquo;</button>
+        <button class="tb" data-hz="+coarse">&raquo;</button>
+      </div>
+      <div class="trow" id="bw">
+        <button data-w="narrow" data-i18n="sdr.narrow">Narrow</button>
+        <button data-w="normal" data-i18n="sdr.normal">Normal</button>
+        <button data-w="wide" data-i18n="sdr.wide">Wide</button>
+      </div>
     </div>
     <div class="railtabs" id="railtabs" role="radiogroup" hidden></div>
     <div class="secthead" id="placehead"></div>
@@ -1047,6 +1150,25 @@ async function toggleFav(ch) {
 
 // ── playback (observed, never performed here) ────────────────────────────────
 window.auralfm.onPlayerState((s) => {
+  /**
+   * When the dial goes away.
+   *
+   * Not simply "whenever the state is not a receiver" — that was the first
+   * version and it hid the dial instantly, because the popover publishes a
+   * cleared state while it is still connecting. The dial appeared and vanished
+   * before the first audio frame.
+   *
+   * The second attempt keyed on `playing`, which is worse in a quieter way: a
+   * weak receiver reports not-playing while the session is perfectly alive, so
+   * the dial vanished exactly when someone would reach for it.
+   *
+   * The signal that actually means "this session is over" is the channel no
+   * longer being a receiver — after one has been seen.
+   */
+  if (tuneState) {
+    if (s.channel?.sdr) tuneState.wasLive = true;
+    else if (tuneState.wasLive) tunerStop();
+  }
   playing = s.playing ? s.channel : null;
   document.body.classList.toggle("playing", !!s.playing);
   const bar = $("now");
@@ -2491,6 +2613,122 @@ async function paintColdOpen() {
   }
 }
 
+/**
+ * The dial.
+ *
+ * Explore owns the picture and the controls; the popover owns the only socket in
+ * the app that makes sound. So this window opens its *own* connection for the
+ * spectrum — which costs the receiver nothing extra, because the Kiwi's own
+ * client opens exactly these two sockets — and asks the popover to retune the
+ * audio by message.
+ *
+ * That split is the point of moving it here. A menu-bar popover exists to show
+ * what is playing; it had grown a spectrum display, four tuning buttons and
+ * three filter buttons, which is a receiver front panel wearing a player's
+ * clothes.
+ */
+let wfSession = null, tuneState = null;
+const WF_H = 88;
+let wfFloor = -120;
+
+/**
+ * dBm to colour, scaled to the band rather than to a constant.
+ *
+ * A fixed window looks reasonable and is nearly useless: a quiet evening sits
+ * inside about fifteen decibels, so everything renders one flat blue and a
+ * carrier ten dB above the noise is invisible. The floor tracks the tenth
+ * percentile of recent rows — the noise — and the scale runs 45 dB above it, so
+ * signals stand out by how far they rise above *their own* floor, which is the
+ * only measure comparable between bands.
+ */
+function wfColour(db) {
+  const t = Math.max(0, Math.min(1, (db - wfFloor) / 45));
+  if (t < 0.35) { const k = t / 0.35; return [0, Math.round(20 * k), Math.round(60 + 90 * k)]; }
+  if (t < 0.65) { const k = (t - 0.35) / 0.3; return [Math.round(30 * k), Math.round(20 + 180 * k), Math.round(150 - 60 * k)]; }
+  const k = (t - 0.65) / 0.35;
+  return [Math.round(30 + 225 * k), Math.round(200 + 40 * k), Math.round(90 - 90 * k)];
+}
+
+function tunerStart(rx, freq, mode, width) {
+  tunerStop();
+  tuneState = { host: rx.host, freq, mode, width: width || "normal" };
+  $("tuner").hidden = false;
+  paintDial();
+
+  const cv = $("wf"), ctx = cv.getContext("2d");
+  const W = cv.width;
+  ctx.fillStyle = "#05070c";
+  ctx.fillRect(0, 0, W, WF_H);
+  const img = ctx.createImageData(W, 1);
+  wfFloor = -120;                       // re-learn the floor for each receiver
+
+  wfSession = new Kiwi.KiwiWaterfall({
+    host: rx.host, freq, zoom: 10,
+    onRow: (row) => {
+      const sorted = Array.from(row).sort((a, b) => a - b);
+      wfFloor = wfFloor * 0.92 + (sorted[Math.floor(sorted.length * 0.1)] - 255) * 0.08;
+      ctx.drawImage(cv, 0, 0, W, WF_H - 1, 0, 1, W, WF_H - 1);
+      for (let x = 0; x < W; x++) {
+        // 1024 bins into 512 pixels: take the stronger of each pair, because a
+        // narrow carrier averaged with its neighbour disappears, and a carrier
+        // that disappears is the one thing this display exists to show.
+        const [r, g, b] = wfColour(Math.max(row[x * 2], row[x * 2 + 1]) - 255);
+        img.data[x * 4] = r; img.data[x * 4 + 1] = g; img.data[x * 4 + 2] = b; img.data[x * 4 + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      ctx.fillStyle = "rgba(255,255,255,0.30)";
+      ctx.fillRect(W / 2, 0, 1, 1);
+    },
+  });
+  wfSession.connect();
+}
+
+function tunerStop() {
+  wfSession?.stop();
+  wfSession = null;
+  tuneState = null;
+  if ($("tuner")) $("tuner").hidden = true;
+}
+
+function paintDial() {
+  if (!tuneState) return;
+  $("tfreq").textContent =
+    `${Number(tuneState.freq.toFixed(2))} kHz ${tuneState.mode.toUpperCase()}`;
+  for (const b of $("bw").children) {
+    b.setAttribute("aria-pressed", String(b.dataset.w === tuneState.width));
+  }
+  // The step is mode-dependent — 100 Hz on AM, 10 Hz on sideband — so the
+  // tooltips have to be, or they describe a radio we are not tuning.
+  const st = Kiwi.steps(tuneState.mode);
+  for (const b of document.querySelectorAll(".tb")) {
+    const hz = st[b.dataset.hz.slice(1)];
+    b.title = `${b.dataset.hz[0] === "-" ? "Down" : "Up"} ` +
+              `${Math.abs(hz) >= 1000 ? `${Math.abs(hz) / 1000} kHz` : `${Math.abs(hz)} Hz`}`;
+  }
+}
+
+/** Retune both halves: the picture here, the audio over there. */
+function retune(freq, width) {
+  if (!tuneState) return;
+  tuneState.freq = Math.min(30000, Math.max(1, +freq.toFixed(3)));
+  if (width) tuneState.width = width;
+  wfSession?.tune(tuneState.freq);
+  window.auralfm.transport({ action: "retune",
+    value: { freq: tuneState.freq, mode: tuneState.mode, width: tuneState.width } });
+  paintDial();
+}
+
+for (const b of document.querySelectorAll(".tb")) {
+  b.onclick = () => {
+    if (!tuneState) return;
+    const hz = Kiwi.steps(tuneState.mode)[b.dataset.hz.slice(1)];
+    retune(tuneState.freq + (b.dataset.hz[0] === "-" ? -hz : hz) / 1000);
+  };
+}
+for (const b of $("bw").children) {
+  b.onclick = () => { if (tuneState) retune(tuneState.freq, b.dataset.w); };
+}
+
 // ── real sky ─────────────────────────────────────────────────────────────────
 /**
  * Draw the actual sky — 5,044 stars to magnitude 6 and 89 constellation figures
@@ -3339,6 +3577,7 @@ async function selectReceiver(rx) {
       // nothing for it.
       window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc,
                                lat: rx.lat, lng: rx.lng, freq, mode, band: label, width });
+      tunerStart(rx, freq, mode, width);
       for (const sib of stationListEl.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
       el.setAttribute("aria-current", "true");
     };
@@ -3448,6 +3687,7 @@ async function selectReceiver(rx) {
 
 async function goToPlace(i, { play = false, fly = true } = {}) {
   sdrSel = null;                       // a place and a receiver are never both selected
+  tunerStop();                         // and a place has nothing to tune
   qEl.value = "";
   showingFavorites = false;
   $("favBtn").setAttribute("aria-pressed", "false");

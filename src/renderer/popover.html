@@ -197,40 +197,6 @@
     box-shadow:inset 0 .5px 0 var(--line);
   }
 
-  /* The tuner. Sits above the transport and only during a shortwave session,
-     because there is nothing to tune about a stream. */
-  #tuner{
-    flex:none;padding:8px 13px 2px;display:flex;flex-direction:column;gap:6px;
-    box-shadow:inset 0 .5px 0 var(--line);
-  }
-  /* The waterfall. Time runs downward, frequency across, the tuned frequency
-     dead centre — the convention every radio has used since the first panadapter,
-     and worth keeping because operators already read it fluently. */
-  #wf{
-    width:100%;height:96px;display:block;border-radius:6px;background:#05070c;
-    image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
-  }
-  #wf[hidden]{display:none}
-  [hidden]{display:none !important}
-  .trow{display:flex;align-items:center;gap:4px}
-  .trow > button{
-    appearance:none;border:0;border-radius:6px;cursor:default;
-    background:var(--fill);color:var(--label2);
-    font:inherit;font-size:11px;padding:5px 0;flex:1;
-    transition:transform 80ms ease-out,color .12s ease-out;
-  }
-  .trow > button:hover{color:var(--label)}
-  .trow > button:active{transform:scale(.94)}
-  /* The step buttons are targets, not labels — wider glyph, same footprint. */
-  .tb{font-size:13px;line-height:1;max-width:38px}
-  #tfreq{
-    flex:1;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;
-    letter-spacing:-.01em;white-space:nowrap;
-  }
-  /* aria-pressed is the state; the styling follows it rather than a second class
-     that could disagree with it. */
-  #bw button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
-  @media (prefers-reduced-motion: reduce){ .trow > button{transition:none} }
   #toggle{
     flex:none;width:34px;height:34px;border-radius:50%;border:0;cursor:default;
     background:var(--accent);color:var(--on-accent);font-size:15px;
@@ -278,23 +244,6 @@
 <div class="secthead" id="secthead" data-i18n="app.favorites">Favorites</div>
 <div class="list" id="list"></div>
 
-<!-- Only ever visible during a shortwave session; a stream has nothing to tune. -->
-<div id="tuner" hidden>
-  <canvas id="wf" width="512" height="96"></canvas>
-  <div class="trow">
-    <button class="tb" data-hz="-coarse" title="Down 1 kHz">&laquo;</button>
-    <button class="tb" data-hz="-fine" title="Down 100 Hz">&lsaquo;</button>
-    <b id="tfreq">—</b>
-    <button class="tb" data-hz="+fine" title="Up 100 Hz">&rsaquo;</button>
-    <button class="tb" data-hz="+coarse" title="Up 1 kHz">&raquo;</button>
-  </div>
-  <div class="trow" id="bw">
-    <button data-w="narrow" data-i18n="sdr.narrow">Narrow</button>
-    <button data-w="normal" data-i18n="sdr.normal">Normal</button>
-    <button data-w="wide" data-i18n="sdr.wide">Wide</button>
-  </div>
-</div>
-
 <div class="bar">
   <button id="toggle" disabled></button>
   <div class="now">
@@ -340,8 +289,13 @@ let sdrSession = null, audioCtx = null, sdrRx = null;
  * overwrite "Finding stream…" with "Receiver disconnected" — reporting the thing
  * we did as though something went wrong.
  */
+/**
+ * Frequency, in kHz — the unit shortwave is spoken and published in, and the
+ * only one that can show a hundred-hertz nudge (MHz to three decimals cannot).
+ */
+const fmtHz = (khz) => `${Number(khz.toFixed(2))} kHz`;
+
 function sdrStop() {
-  wfStop();
   if (!sdrSession) return;
   sdrSession.opts.onState = null;
   sdrSession.stop();
@@ -690,7 +644,6 @@ window.auralfm.onTuneSdr((rx) => {
         // s.freq, not rx.freq: after a nudge the two differ, and the status line
         // claiming the frequency you started on is worse than no readout at all.
         setStatus(`${fmtHz(s.freq ?? rx.freq)} ${(s.mode || rx.mode).toUpperCase()}${sig}`);
-        paintTuner();
       } else if (s.status === "error") {
         sdrEnded(`Receiver ${s.error}`, "err");
       } else if (s.status === "stopped" && sdrSession) {
@@ -700,173 +653,9 @@ window.auralfm.onTuneSdr((rx) => {
   });
   sdrSession.setVolume(audio.volume);
   sdrSession.connect();
-  wfStart(rx);                 // the Kiwi's own client opens both sockets too
   nowName.textContent = sdrRx.label;
-  paintTuner();
 });
 
-/**
- * The tuner.
- *
- * Two facts drove the shape. The AM filter was ±4900 Hz on a band whose
- * channels sit 5 kHz apart, so both neighbours and their carriers came in and
- * beat into a whistle — audible, never quite a station. And a broadcast that has
- * drifted, or a sideband voice, cannot be fixed by picking a different row in a
- * list. Neither is a default that can be got right for everyone: they are
- * controls, and they belong next to the signal meter that tells you whether
- * turning them helped.
- */
-/**
- * Frequency, in kHz.
- *
- * It was MHz to three decimals, which cannot show a hundred-hertz step: nudging
- * off 9780 to 9779.6 still read "9.780 MHz", so the fine control looked broken
- * while working perfectly. kHz is also the unit shortwave is spoken and
- * published in — it is how EiBi lists every one of these frequencies — so the
- * readout now matches both the source and the step size.
- */
-const fmtHz = (khz) => `${Number(khz.toFixed(2))} kHz`;
-
-/**
- * The waterfall.
- *
- * Everything else in this app tells you what a signal *is*. This is the first
- * thing that shows you what it looks like — the carrier you are tuned to, the
- * neighbour 5 kHz away that made us narrow the AM filter, the fifteen-second
- * stripes of FT8. It turns the bandwidth and fine-tune buttons from abstractions
- * into something you can aim.
- *
- * Drawn by scrolling the canvas down one pixel and painting the newest row at
- * the top, which is cheaper than keeping a history and redrawing it, and is what
- * makes the display feel like it is falling.
- */
-let wfSession = null;
-const WF_H = 96;
-
-/**
- * dBm to colour, scaled to the band rather than to a constant.
- *
- * A fixed −130…−40 window looks reasonable and is nearly useless: a quiet
- * evening on 31 m sits inside about fifteen of those ninety decibels, so the
- * whole display comes out one flat blue and a carrier ten dB above the noise is
- * invisible. Real receivers let the operator drag the floor for exactly this
- * reason.
- *
- * Instead the floor tracks the band — the tenth percentile of recent rows, which
- * is the noise — and the scale runs 45 dB above it. Signals then stand out by
- * how far they rise above *their own* noise floor, which is the thing that
- * actually matters and the only thing that is comparable between bands.
- */
-let wfFloor = -120;
-
-function wfColour(db) {
-  const t = Math.max(0, Math.min(1, (db - wfFloor) / 45));
-  if (t < 0.35) { const k = t / 0.35;      return [0, Math.round(20 * k), Math.round(60 + 90 * k)]; }
-  if (t < 0.65) { const k = (t - 0.35) / 0.3; return [Math.round(30 * k), Math.round(20 + 180 * k), Math.round(150 - 60 * k)]; }
-  const k = (t - 0.65) / 0.35;
-  return [Math.round(30 + 225 * k), Math.round(200 + 40 * k), Math.round(90 - 90 * k)];
-}
-
-function wfStart(rx) {
-  wfStop();
-  const cv = $("wf");
-  const ctx = cv.getContext("2d", { willReadFrequently: false });
-  const W = cv.width;
-  ctx.fillStyle = "#05070c";
-  ctx.fillRect(0, 0, W, WF_H);
-
-  const img = ctx.createImageData(W, 1);
-  wfFloor = -120;                 // re-learn the floor for each new receiver
-  wfSession = new Kiwi.KiwiWaterfall({
-    host: rx.host,
-    freq: rx.freq,
-    zoom: 10,
-    onRow: (row, meta) => {
-      // Track the noise floor from this row's own tenth percentile, eased so it
-      // follows the band without flinching at every burst of static.
-      const sorted = Array.from(row).sort((a, b) => a - b);
-      const p10 = sorted[Math.floor(sorted.length * 0.1)] - 255;
-      wfFloor = wfFloor * 0.92 + p10 * 0.08;
-
-      // Scroll everything down one pixel, then draw the new row on top.
-      ctx.drawImage(cv, 0, 0, W, WF_H - 1, 0, 1, W, WF_H - 1);
-      for (let x = 0; x < W; x++) {
-        // 1024 bins into 512 pixels: take the stronger of each pair, because a
-        // narrow carrier averaged with its neighbour disappears, and a carrier
-        // that disappears is the one thing this display exists to show.
-        const i = x * 2;
-        const v = Math.max(row[i], row[i + 1]);
-        const [r, g, b] = wfColour(v - 255);
-        img.data[x * 4] = r; img.data[x * 4 + 1] = g; img.data[x * 4 + 2] = b; img.data[x * 4 + 3] = 255;
-      }
-      ctx.putImageData(img, 0, 0);
-      // The centre line: where you are actually tuned.
-      ctx.fillStyle = "rgba(255,255,255,0.30)";
-      ctx.fillRect(W / 2, 0, 1, 1);
-    },
-  });
-  wfSession.connect();
-}
-
-function wfStop() {
-  wfSession?.stop();
-  wfSession = null;
-}
-
-/**
- * A shortwave session has ended, for whatever reason.
- *
- * Refusal and disconnection are different sentences and the same teardown, and
- * they were written out twice — which is how the transport once went on showing
- * a pause button for a receiver that had already hung up.
- */
-function sdrEnded(message, cls = "") {
-  wfStop();
-  live = false;
-  document.body.classList.remove("playing");
-  Icons.set(toggle, "play");
-  sdrRx = null;
-  sdrSession = null;
-  paintTuner();
-  setStatus(message, cls);
-}
-
-function paintTuner() {
-  const on = !!sdrSession;
-  $("tuner").hidden = !on;
-  if (!on) return;
-  const { freq, mode, width = "normal" } = sdrSession.opts;
-  $("tfreq").textContent = `${fmtHz(freq)} ${mode.toUpperCase()}`;
-  for (const b of $("bw").children) b.setAttribute("aria-pressed", String(b.dataset.w === width));
-  // The step is mode-dependent — 100 Hz on AM, 10 Hz on sideband — so the
-  // tooltips have to be too, or they describe a radio we are not tuning.
-  const st = Kiwi.steps(mode);
-  const label = (hz) => (Math.abs(hz) >= 1000 ? `${Math.abs(hz) / 1000} kHz` : `${Math.abs(hz)} Hz`);
-  for (const b of document.querySelectorAll(".tb")) {
-    const [sign, kind] = [b.dataset.hz[0], b.dataset.hz.slice(1)];
-    const hz = st[kind];
-    b.title = `${sign === "-" ? "Down" : "Up"} ${label(hz)}`;
-  }
-}
-
-for (const b of document.querySelectorAll(".tb")) {
-  b.onclick = () => {
-    if (!sdrSession) return;
-    const [sign, kind] = [b.dataset.hz[0], b.dataset.hz.slice(1)];
-    sdrSession.nudge((sign === "-" ? -1 : 1) * Kiwi.steps(sdrSession.opts.mode)[kind]);
-    // Keep the picture centred on where we actually are, or the marker lies.
-    wfSession?.tune(sdrSession.opts.freq);
-    paintTuner();
-  };
-}
-
-for (const b of $("bw").children) {
-  b.onclick = () => {
-    if (!sdrSession) return;
-    sdrSession.setWidth(b.dataset.w);
-    paintTuner();
-  };
-}
 
 // Hardware media keys, forwarded from main.
 // Listener count, when a presence server is configured. Silent otherwise.
@@ -880,6 +669,23 @@ window.auralfm.onListeners((n) => {
 window.auralfm.onTransport(({ action, value }) => {
   if (action === "toggle") togglePlay();
   else if (action === "volume") applyVolume(Math.max(0, Math.min(1, value)));
+  // The dial lives in Explore now; this window still owns the only socket that
+  // makes sound, so retuning arrives as a message rather than a button press.
+  else if (action === "retune" && sdrSession) {
+    sdrSession.tune(value.freq, value.mode || sdrSession.opts.mode, value.width);
+    if (sdrRx) {
+      // Once you tune off the band you arrived on, the band's name is no longer
+      // true — the transport read "FT8 · 40 m" while the status line underneath
+      // it read 567 kHz AM. The frequency is already on the status line, so the
+      // name falls back to the receiver, which stays true wherever you go.
+      const moved = Math.abs(sdrSession.opts.freq - (sdrRx.freq ?? value.freq)) > 0.001;
+      const where = sdrRx.loc || sdrRx.name;
+      sdrRx = { ...sdrRx, freq: sdrSession.opts.freq,
+                label: moved ? where : sdrRx.label };
+      nowName.textContent = sdrRx.label;
+    }
+    publish();
+  }
 });
 
 window.auralfm.onMediaKey((action) => {
