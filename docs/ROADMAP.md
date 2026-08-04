@@ -178,9 +178,16 @@ Nothing is decided. What is *true*:
   is a luxury and should be treated as one.
 - Palettes are already split free/premium in the code. That is the cheapest
   possible test and it costs nothing to run.
-- **The moment money is involved, three licences need re-checking**: the Noun
-  Project icon (bought, receipt required), TeleGeography (unanswered), and any
-  CC-BY-NC source that has quietly crept in.
+- **The moment money is involved, three licences need re-checking:**
+  - **The Noun Project icons.** #1654367 (`icon-line.svg`) is bought and the
+    certificate is in `assets/licenses/`. **#1654366 (`icon.svg`) is not** — the
+    a-la-carte receipt covers one icon, and the app ships two. Verified by
+    rendering both against the licensed original: the outlined glyph differs by
+    0.01%, the filled one by 41.58%. Buy it or drop it before any release.
+    Separately, Noun Project caps resale at **1,000 units per licence purchased**
+    (Terms §3.A) — irrelevant for a free app, directly relevant to a paid one.
+  - **TeleGeography** — still unanswered.
+  - **Any CC-BY-NC source** that has quietly crept in.
 - Sponsorship is the option most aligned with the position. `docs/SPONSORSHIP.md`
   has the playbook.
 
