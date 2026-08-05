@@ -418,6 +418,7 @@ phase0/index.html      the original single-file prototype
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
 | [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
 | [`docs/VISION.md`](docs/VISION.md) | Why this exists, in the maintainer's own account |
+| [`docs/DIRECTION.md`](docs/DIRECTION.md) | Where this is going, and the two proposals that were refused |
 | [`docs/LISTENING.md`](docs/LISTENING.md) | The critique this product has to answer, and the three ways it does |
 | [`docs/IDENTITY.md`](docs/IDENTITY.md) | The mark, the colour, and the icon measured against the system |
 | [`docs/BUSINESS.md`](docs/BUSINESS.md) | Free forever, and how support works without collecting anything |
