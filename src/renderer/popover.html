@@ -277,6 +277,7 @@ const listEl=$("list"), qEl=$("q"), headEl=$("secthead"), toggle=$("toggle"),
       nowName=$("nowName"), statusEl=$("status"), vol=$("vol");
 
 const audio = new Audio();
+let lastRssi = null;      // most recent S-meter reading, receivers only
 audio.preload = "none";
 
 let state = { favorites: [], vol: 0.8 };
@@ -338,6 +339,15 @@ function publish(){
     status: statusEl.textContent,
     playing: live,
     volume: audio.volume,
+    /**
+     * Signal strength, in dBm, and only ever for a receiver.
+     *
+     * Null for an internet stream on purpose. A stream either arrives or it does
+     * not; there is no analogue signal behind it to measure, and inventing a
+     * number so the indicator had something to do would be a lie in an app that
+     * does not tell them. The absence is the honest value.
+     */
+    rssi: sdrRx ? lastRssi : null,
   });
 }
 const persist=()=> window.auralfm.setState(state);
@@ -656,6 +666,10 @@ window.auralfm.onTuneSdr((rx) => {
           Icons.set(toggle, "pause");
           window.auralfm.mediaKeys(true);
         }
+        // Kept so the globe window's on-air dot can breathe with the signal —
+        // see publishState. The receiver sends this in every audio frame, so it
+        // is real measurement rather than anything inferred from the stream.
+        lastRssi = s.rssi;
         const sig = s.rssi == null ? "" : ` · ${Math.round(s.rssi)} dBm`;
         // s.freq, not rx.freq: after a nudge the two differ, and the status line
         // claiming the frequency you started on is worse than no readout at all.

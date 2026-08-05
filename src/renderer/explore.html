@@ -563,8 +563,40 @@
     padding:9px 7px 9px 16px;
     box-shadow:inset 0 .5px 0 var(--line);font-size:12px;overflow:hidden;
   }
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 2s ease-in-out infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  /**
+   * The on-air dot, and what it is actually telling you.
+   *
+   * For an internet stream it breathes steadily: the stream arrives or it does
+   * not, there is nothing underneath it to measure, and a jitter invented to
+   * look interesting would be the one dishonest pixel in an app whose whole
+   * argument is that the terminator is where the terminator really is.
+   *
+   * For a shortwave receiver it is driven by the S-meter, which the Kiwi sends
+   * in every audio frame. `--sig` runs 0 (buried in noise) to 1 (armchair copy),
+   * and it moves two things at once: how far the dot falls on each cycle, and
+   * how fast the cycle runs. A strong signal barely moves and looks like the
+   * stream. A weak one flickers and hurries, the way a fading path sounds.
+   *
+   * One keyframe set, not two, so there is no threshold where the indicator
+   * changes character — it is a continuum, because propagation is.
+   */
+  .dot{
+    width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;
+    animation:pulse var(--pulse-dur,2s) ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:var(--pulse-min,.45)}}
+
+  /* Receivers only. The irregular stops are the point: a sine wave reads as a
+     heartbeat, and a fading shortwave signal does not have a heartbeat. */
+  .dot.sig{animation-name:flutter;animation-timing-function:linear}
+  @keyframes flutter{
+    0%{opacity:1}      11%{opacity:var(--pulse-min,.45)}
+    18%{opacity:.92}   30%{opacity:calc(var(--pulse-min,.45) * .7)}
+    43%{opacity:1}     51%{opacity:var(--pulse-min,.45)}
+    62%{opacity:.8}    70%{opacity:calc(var(--pulse-min,.45) * .85)}
+    86%{opacity:1}     100%{opacity:var(--pulse-min,.45)}
+  }
+  @media (prefers-reduced-motion: reduce){ .dot{animation:none;opacity:1} }
   #play{
     flex:none;width:26px;height:26px;border-radius:50%;border:0;cursor:default;
     /* --on-accent, not a hardcoded dark: the popover's transport already used
@@ -1338,7 +1370,39 @@ async function toggleFav(ch) {
 }
 
 // ── playback (observed, never performed here) ────────────────────────────────
+/**
+ * Point the on-air dot at the signal.
+ *
+ * dBm in, a 0..1 quality out. The window is −105 to −55: below −105 a broadcast
+ * is in the noise and above −55 it is as good as it gets on shortwave, so
+ * anything outside that range has nothing left to say. Clamped rather than
+ * scaled, because the interesting resolution is all in the middle.
+ *
+ * The two outputs are deliberately linked. `--pulse-min` is how far the dot
+ * falls — near 1 it barely moves. `--pulse-dur` is how fast — a fading signal
+ * hurries. Together they read as "struggling" without anyone being told.
+ */
+function paintSignal(rssi) {
+  const dot = $("dot");
+  if (!dot) return;
+  if (rssi == null || !Number.isFinite(rssi)) {
+    // An internet stream. Steady, and no invented number.
+    dot.classList.remove("sig");
+    dot.style.removeProperty("--pulse-min");
+    dot.style.removeProperty("--pulse-dur");
+    dot.title = "";
+    return;
+  }
+  const q = Math.max(0, Math.min(1, (rssi + 105) / 50));
+  dot.classList.add("sig");
+  // Strong -> falls only to 0.88 and takes 2.6s. Weak -> falls to 0.12, 0.55s.
+  dot.style.setProperty("--pulse-min", (0.12 + q * 0.76).toFixed(3));
+  dot.style.setProperty("--pulse-dur", (0.55 + q * 2.05).toFixed(2) + "s");
+  dot.title = `Signal ${Math.round(rssi)} dBm`;
+}
+
 window.auralfm.onPlayerState((s) => {
+  paintSignal(s?.rssi);
   /**
    * When the dial goes away.
    *
@@ -2328,7 +2392,13 @@ async function initGlobe() {
     // The selected place has to be findable in a field of a thousand dots, so it
     // is drawn much larger than anything around it rather than merely paler.
     .pointRadius((d) => {
-      if (d.kind === "sdr") return (sdrSel && sdrSel.host === d.host) ? 0.7 : 0.28;
+      // 0.14, not 0.28. A station dot is 0.09 + sqrt(count) * 0.013, so a place
+      // with three stations draws at about 0.11 — the receivers were two and a
+      // half times bigger than the thing they sit among, which is why a click in
+      // dense western Europe landed on a receiver you were not aiming at. They
+      // still need to be findable; colour does that job, and size was doing it
+      // twice.
+      if (d.kind === "sdr") return (sdrSel && sdrSel.host === d.host) ? 0.7 : 0.14;
       return d.i === selection.placeIndex ? 0.8 : dotRadius(d);
     })
     .pointAltitude((d) =>
@@ -3568,6 +3638,22 @@ function paintChatHead() {
   who.textContent = near
     ? `${near} ${near === 1 ? t("chat.listener", "listening") : t("chat.listeners", "listening")}`
     : t("chat.alone", "nobody else yet");
+
+  /**
+   * Say what the number is not.
+   *
+   * "3 listening" invites the obvious wrong reading — that three people are
+   * using AuralFM. The relays can see far more than that, everywhere on Earth,
+   * and the difference between the two numbers is the whole shape of the
+   * network. It does not belong in the header, where it would compete with the
+   * count that actually describes this place, but leaving it unexplained is why
+   * the question keeps getting asked.
+   */
+  const everywhere = peers.length;
+  who.title = everywhere > near
+    ? `${near} in this cell · ${everywhere} visible to the relays right now, worldwide. ` +
+      `Only this cell's conversation is shown here.`
+    : `${near} in this cell. Nobody else is visible on the relays right now.`;
 }
 
 function paintChat(list) {
