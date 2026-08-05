@@ -710,10 +710,34 @@
   }
   /* Time downward, frequency across, tuned frequency dead centre — the
      convention every radio has used since the first panadapter. */
+  /**
+   * The waterfall, and the eighty-eight pixels of nothing that used to sit here.
+   *
+   * The canvas is a fixed height, so the moment the dial appears there is a
+   * black rectangle holding space for a spectrum that has not arrived — and it
+   * does not arrive quickly. The other end is a volunteer's BeagleBone reached
+   * over a WebSocket, so seconds is normal, and for those seconds the panel read
+   * as broken rather than busy.
+   *
+   * The space is kept, because collapsing and re-expanding it would shove the
+   * whole rail down the moment the first row landed. What changes is that it now
+   * says what it is doing. Dead space becomes a status line.
+   */
+  #wfwrap{position:relative}
   #wf{
     width:100%;height:88px;display:block;border-radius:7px;background:#05070c;
     image-rendering:pixelated;   /* one bin is one pixel; do not invent detail */
   }
+  #wfwait{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    gap:7px;font-size:11px;color:var(--label3);letter-spacing:.01em;pointer-events:none;
+  }
+  #wfwrap.waiting #wfwait{display:flex}
+  #wfwait::before{
+    content:"";width:5px;height:5px;border-radius:50%;background:currentColor;
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ #wfwait::before{animation:none} }
   .trow{display:flex;align-items:center;gap:5px}
   .trow > button{
     appearance:none;border:0;border-radius:7px;cursor:default;
@@ -896,7 +920,10 @@
          display and seven controls do not belong in a window that exists to
          show what is playing. -->
     <div id="tuner" hidden>
-      <canvas id="wf" width="512" height="88"></canvas>
+      <div id="wfwrap">
+        <canvas id="wf" width="512" height="88"></canvas>
+        <div id="wfwait" data-i18n="tuner.waiting">Listening for the spectrum…</div>
+      </div>
       <div class="trow">
         <button class="tb" data-hz="-coarse">&laquo;</button>
         <button class="tb" data-hz="-fine">&lsaquo;</button>
@@ -1100,7 +1127,22 @@ function renderRailTabs(nearby) {
     b.textContent = label;
     b.setAttribute("aria-checked", String(railMode === mode));
     b.setAttribute("role", "radio");
-    b.onclick = () => { railMode = mode; renderStations(); syncTunerVisibility(); };
+    b.onclick = () => {
+      // Belt and braces: the tabs are hidden in the favourites view, but a tab
+      // that switches the rail must never leave `showingFavorites` set — the
+      // flag also gates globe-follow and the empty state, so a stale `true`
+      // goes wrong in three places at once rather than one.
+      if (showingFavorites) {
+        showingFavorites = false;
+        $("favBtn").setAttribute("aria-pressed", "false");
+        headEl.hidden = false;
+        placeListEl.hidden = true;
+        stationListEl.hidden = false;
+      }
+      railMode = mode;
+      renderStations();
+      syncTunerVisibility();
+    };
     tabs.append(b);
   };
   mk("stations", `${t("app.stations", "Stations")} ${selection.total ?? selection.channels.length}`);
@@ -1541,6 +1583,13 @@ async function showFavorites() {
   headEl.hidden = true;
   stationListEl.hidden = true;
   placeListEl.hidden = false;
+  // The tabs count *this place's* stations and receivers, and favourites are
+  // not a place. Left visible they kept the previous place's numbers over a
+  // list those numbers do not describe — and clicking one rendered into
+  // stationListEl, which is hidden here, so the view appeared frozen until an
+  // unrelated click forced it back. Selecting any place calls renderRailTabs,
+  // which unhides them again.
+  $("railtabs").hidden = true;
   placeHeadEl.textContent = favorites.length
     ? `${favorites.length} favorite${favorites.length === 1 ? "" : "s"}`
     : "Favorites";
@@ -1554,8 +1603,35 @@ async function showFavorites() {
 }
 
 $("favBtn").onclick = () => {
-  if (showingFavorites) { showingFavorites = false; $("favBtn").setAttribute("aria-pressed","false"); loadPlaces(""); }
-  else showFavorites();
+  if (!showingFavorites) { showFavorites(); return; }
+  showingFavorites = false;
+  $("favBtn").setAttribute("aria-pressed", "false");
+  /**
+   * Go back to where you were, not to a browse list.
+   *
+   * Leaving favourites used to call `loadPlaces("")`, which drops you into the
+   * cold-start suggestions even though a place is still selected and the globe
+   * is still pointed at it. The rail and the planet disagreed, and the way out
+   * was to click some unrelated station to force a repaint — which is exactly
+   * how this was reported.
+   *
+   * With a place selected, restore it. Only fall back to browsing when there is
+   * genuinely nothing to go back to.
+   */
+  if (selection.placeIndex !== null) {
+    headEl.hidden = false;
+    placeListEl.hidden = true;
+    stationListEl.hidden = false;
+    // The favourites count belongs to the favourites view. It is not inside
+    // placelist, so hiding that leaves 22px of "6 favorites" sitting above the
+    // station list of a place it has nothing to do with.
+    placeHeadEl.textContent = "";
+    renderRailTabs(nearbyReceivers());
+    renderStations();
+    syncTunerVisibility();
+  } else {
+    loadPlaces("");
+  }
 };
 
 // ── markets ──────────────────────────────────────────────────────────────────
@@ -3039,9 +3115,13 @@ function tunerStart(rx, freq, mode, width) {
   const img = ctx.createImageData(W, 1);
   wfFloor = -120;                       // re-learn the floor for each receiver
 
+  // Held until the first row lands. The receiver is somebody's BeagleBone at the
+  // other end of a WebSocket, so this is seconds, not milliseconds.
+  $("wfwrap")?.classList.add("waiting");
   wfSession = new Kiwi.KiwiWaterfall({
     host: rx.host, freq, zoom: 10,
     onRow: (row) => {
+      $("wfwrap")?.classList.remove("waiting");
       const sorted = Array.from(row).sort((a, b) => a - b);
       wfFloor = wfFloor * 0.92 + (sorted[Math.floor(sorted.length * 0.1)] - 255) * 0.08;
       ctx.drawImage(cv, 0, 0, W, WF_H - 1, 0, 1, W, WF_H - 1);
@@ -3061,6 +3141,7 @@ function tunerStart(rx, freq, mode, width) {
 }
 
 function tunerStop() {
+  $("wfwrap")?.classList.remove("waiting");
   wfSession?.stop();
   wfSession = null;
   tuneState = null;

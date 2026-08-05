@@ -154,7 +154,24 @@
        the floating transport bar. */
     -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);
   }
-  .list::-webkit-scrollbar{width:0}
+  /**
+   * A scrollbar, but only when there is something to scroll to.
+   *
+   * This was `width:0` — the list was genuinely scrollable and looked like it
+   * ended. With six favourites the panel sizes to fit and nothing is hidden; go
+   * past what the screen allows and the window stops growing, at which point
+   * there is content below the fold and no indication of it. The mask fade
+   * hints, quietly, and a hint is not an affordance.
+   *
+   * Slim and translucent rather than a system bar: it appears against the
+   * content when the list overflows and reads as part of the panel.
+   */
+  .list::-webkit-scrollbar{width:6px}
+  .list::-webkit-scrollbar-thumb{
+    background:color-mix(in srgb, var(--label3) 55%, transparent);
+    border-radius:3px;
+  }
+  .list::-webkit-scrollbar-track{background:transparent}
 
   .row{
     display:flex;align-items:center;gap:9px;padding:3px 8px;border-radius:6px;
