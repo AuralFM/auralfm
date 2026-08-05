@@ -136,6 +136,98 @@ costs forcing a model. This is the shape that decision should take.
 
 ---
 
+## The decision, 4 August 2026
+
+**No backend. No server. No ads — not in the app, not on the site. Ever.** Not a
+default to be revisited; a constraint the product is built out of.
+
+**Support is donations only, and the app never knows.** No unlock, no badge, no
+tier, no state. Nothing is gathered from anyone, by anyone, at any point.
+
+That answers #15 and it has already cost something: the dormant palette paywall
+is deleted (see `src/palettes.js`). Three palettes carried `free: false` against
+a gate that was never switched on. It cannot be switched on now, because to gate
+anything you must know whether *this* person paid — and every way of knowing that
+means an account, a licence key tied to a purchase, or a server to ask.
+
+**A paywall is the one feature that cannot be built without collecting something.**
+That is the whole reason this is a clean decision rather than a sacrifice.
+
+---
+
+## Taking money without a backend, and without learning anything
+
+### x402 cannot do this
+
+Worth stating plainly, because it was the hoped-for answer. x402 is **server
+middleware**: a server receives a request, answers `402`, the client pays, the
+client retries. It is an excellent protocol and it is the wrong shape here —
+there is no server to answer, and nothing sold over HTTP to answer *for*.
+Adopting it means building the backend the whole product refuses.
+
+The instinct behind it is right though: *"no accounts or personal information
+needed"* is the only payment posture that does not contradict the privacy claim.
+That posture is achievable — just not through x402.
+
+### What actually works with zero infrastructure
+
+**A published address.** That is the entire mechanism. It goes in the About panel
+and on the site; people send to it or they do not. No server, no accounts, no
+database, nothing to breach, nothing to log. It is already compatible with every
+line of `docs/PRIVACY.md`.
+
+The choice of *which* address is where the real thinking is, and the ranking is
+not the obvious one:
+
+| | Infrastructure | Donor privacy |
+|---|---|---|
+| **Monero (XMR)** | None | **Private by protocol.** Sender, receiver and amount hidden on-chain. |
+| **Bitcoin on-chain** | None | **Poor — see below.** |
+| **Lightning (BOLT12 static offer)** | Needs a node | Good. No public ledger entry. |
+| **Nostr Zaps (NIP-57)** | Needs an LNURL endpoint | Good, and culturally exact. |
+
+**The counter-intuitive part, and it matters given the brief: a plain Bitcoin
+address is one of the *worst* options for donor anonymity.** The ledger is public
+and permanent. Publish one address and every donation to it is visible forever,
+along with the address it came from, and the running total is public. We would
+collect nothing — and we would have arranged for every supporter to be published.
+That is a strange outcome for a project whose whole claim is privacy, and it is
+worth refusing on those grounds rather than shipping it because it is the default.
+
+**Monero is the only option that is private by protocol *and* needs no
+infrastructure.** It is the honest answer to the brief as written. The costs are
+real: a smaller audience, delisting from some exchanges, and it reads as a
+political statement — which, for this project, may be a feature rather than a
+bug.
+
+**Zaps are the most interesting long-term.** The app already speaks Nostr, the
+community lives on a Nostr relay, and zaps are the native way that ecosystem
+sends value. Same rails end to end. The catch is NIP-57 needs an LNURL endpoint,
+so it needs a Lightning node — either self-run, which is real work, or custodial,
+which puts a third party in the middle who sees the payments and knows who we
+are. Permissible under our own rule (**the app must never depend on it** — node
+down means donations fail and the app does not notice), but it is infrastructure,
+and the brief says be militant.
+
+**Recommendation:** start with a Monero address and, if the Lightning work ever
+gets done, add zaps. Both live in About and on the site. Neither is ever
+mentioned in a way that implies you get something.
+
+### Two risks that come with a donation address
+
+- **Distribution rules.** Donations and crypto inside applications are
+  constrained on the App Store. Direct DMG distribution — which is where #4 and
+  #14 are heading anyway — avoids the question. Worth knowing before choosing a
+  channel, not after.
+- **An address in a shipped binary is a tamper target.** Someone who modifies the
+  app swaps the address and takes the money in our name. That raises the stakes
+  on code signing (#4) from "users cannot verify what they run" to "users cannot
+  verify where their money goes," and it is an argument for the canonical address
+  living in the signed repository and on the site, with the app pointing at it
+  rather than being the only place it appears.
+
+---
+
 ## 2. x402 — right philosophy, wrong layer, today
 
 [x402](https://x402.org/) revives HTTP 402: a server answers an unpaid request
