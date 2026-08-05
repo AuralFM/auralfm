@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<!--
+  The first thing anyone sees.
+
+  Deliberately the cheapest page in the app: no scripts beyond twenty lines, no
+  fonts, no images to decode, no preload. It has to be on screen before the
+  globe has done anything at all, which means it cannot depend on anything the
+  globe depends on.
+
+  Onyx and bone, because that is the brand and this is the one screen where
+  there is nothing else to look at.
+
+  It is not a progress bar and does not pretend to be. A fake bar that fills at
+  a made-up rate is the same lie as a jittering signal indicator — it says it
+  knows something it does not. The glyph breathes, which is honest about being
+  busy without claiming to know for how long.
+-->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';">
+<title>AuralFM</title>
+<style>
+  [hidden]{display:none !important}
+  html,body{margin:0;height:100%;overflow:hidden;background:transparent}
+  body{
+    display:flex;align-items:center;justify-content:center;
+    -webkit-app-region:drag;               /* it is a window; let it be moved */
+    -webkit-user-select:none;user-select:none;
+  }
+  /* No buttons here, but the rule is blanket for a reason: the moment one is
+     added inside a drag region it silently stops being clickable. Scoped under
+     `body` because that is the element carrying the drag. */
+  body button{-webkit-app-region:no-drag}
+
+  /* Onyx is not flat black. Same gradient as the app icon, so the splash and the
+     thing in the Dock are recognisably one object. */
+  #card{
+    width:100%;height:100%;border-radius:14px;
+    background:radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);
+    box-shadow:inset 0 .5px 0 rgba(233,226,212,.16);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  }
+  #mark{
+    width:96px;height:96px;color:#E9E2D4;
+    animation:breathe 2.4s ease-in-out infinite;
+  }
+  #mark svg{width:100%;height:100%;display:block}
+  @keyframes breathe{0%,100%{opacity:1}50%{opacity:.42}}
+  @media (prefers-reduced-motion: reduce){ #mark{animation:none} }
+  #name{
+    font:590 12px/1 -apple-system, system-ui, sans-serif;
+    letter-spacing:.14em;text-transform:uppercase;color:rgba(233,226,212,.42);
+  }
+</style>
+
+<div id="card">
+  <div id="mark"></div>
+  <div id="name">AuralFM</div>
+</div>
+
+<script>
+/**
+ * Put the mark on the splash.
+ *
+ * Inline, and fetched rather than pasted: one copy of the artwork lives in
+ * `assets/icon-line.svg`, and this is the cheapest page in the app so it does
+ * not get a second file to load.
+ *
+ * An `<img>` would not do. The file is drawn in `currentColor` precisely so it
+ * takes the palette, and an image element has no palette to take — it would
+ * render black on black.
+ *
+ * Nothing here is allowed to be a reason the app does not start. If the fetch
+ * fails the splash is onyx and a wordmark, which is a perfectly good splash.
+ */
+(async () => {
+  try {
+    const res = await fetch("../../assets/icon-line.svg");
+    if (res.ok) document.getElementById("mark").innerHTML = await res.text();
+  } catch { /* onyx and a wordmark is enough */ }
+})();
+</script>

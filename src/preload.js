@@ -88,6 +88,8 @@ contextBridge.exposeInMainWorld("auralfm", {
   onTransport: (fn) => ipcRenderer.on("player:transport", (_e, m) => fn(m)),
   reportOk: (id) => ipcRenderer.send("player:ok", id),
   nextStation: (ch, tried) => ipcRenderer.invoke("player:next", ch, tried),
+  // Told once, when the globe has actually painted. Reveals the window.
+  exploreReady: () => ipcRenderer.send("explore:ready"),
   publishState: (state) => ipcRenderer.send("player:state", state),
   onTune: (fn) => ipcRenderer.on("player:tune", (_e, ch) => fn(ch)),
   onPlayerState: (fn) => ipcRenderer.on("player:state", (_e, s) => fn(s)),

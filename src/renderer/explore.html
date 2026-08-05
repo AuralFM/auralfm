@@ -2614,6 +2614,21 @@ async function initGlobe() {
   setInterval(refreshSpace, 20 * 60000);
   applyLod(true);
   updateSun();
+
+  /**
+   * Tell main the globe is genuinely on screen, which reveals the window.
+   *
+   * Two frames, not one. The first is when three.js has been *told* about the
+   * points; the second is after it has drawn them. Revealing on the first shows
+   * a globe with no dots for about sixteen milliseconds, which is exactly the
+   * kind of flicker the splash exists to remove.
+   *
+   * Main also has a six-second fallback, so a throw anywhere above cannot leave
+   * someone staring at a logo.
+   */
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    window.auralfm.exploreReady?.();
+  }));
 }
 
 /**

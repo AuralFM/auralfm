@@ -174,9 +174,15 @@ function toggle() { win.isVisible() ? hide() : show(); }
 function openExplore() {
   if (explore && !explore.isDestroyed()) { explore.show(); explore.focus(); return; }
 
+  showSplash();
   explore = new BrowserWindow({
     width: 940, height: 640, minWidth: 760, minHeight: 460,
     title: "AuralFM",
+    // Hidden until the globe has actually painted. Without this the window
+    // appears instantly as a grey rectangle and you watch the app assemble
+    // itself — textures arriving, dots appearing, the sky replacing a flat
+    // colour. Nothing is faster this way; it simply stops being visible.
+    show: false,
     titleBarStyle: "hiddenInset",     // traffic lights over our own toolbar
     // No vibrancy or transparent backgroundColor here. On a packaged build this
     // combination broke GPU compositing — the window laid out correctly (DOM,
@@ -202,6 +208,69 @@ function openExplore() {
     explore?.webContents.send("globe:layers", layerState());
     explore?.webContents.send("prefs:changed", getPrefs());
   });
+
+  // Never let the splash strand the app: a renderer that throws before it
+  // reports ready would leave a breathing logo and nothing behind it, which is
+  // a worse failure than any amount of visible loading.
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(revealExplore, 6000);
+  explore.on("closed", () => { clearTimeout(revealTimer); closeSplash(); });
+}
+
+let revealTimer = null;
+
+/** Swap the splash for the finished window. Safe to call more than once. */
+function revealExplore() {
+  clearTimeout(revealTimer);
+  closeSplash();
+  if (explore && !explore.isDestroyed() && !explore.isVisible()) {
+    explore.show();
+    explore.focus();
+  }
+}
+
+// Sent by the renderer once the globe has drawn its first frame with points on
+// it. Registered here rather than inside openExplore so there is exactly one
+// handler for the lifetime of the app.
+ipcMain.on("explore:ready", revealExplore);
+
+/**
+ * The splash, which is a window and not a picture.
+ *
+ * Frameless, transparent and not resizable, so the rounded card in the page is
+ * the whole visible object. Centred on whichever display the pointer is on
+ * rather than the primary one — on a two-monitor desk the primary is often not
+ * the one being looked at.
+ */
+let splash = null;
+
+function showSplash() {
+  if (splash && !splash.isDestroyed()) return;
+  splash = new BrowserWindow({
+    width: 260, height: 260,
+    frame: false, transparent: true, resizable: false, movable: true,
+    alwaysOnTop: true, skipTaskbar: true, show: false,
+    backgroundColor: "#00000000",
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
+  });
+  splash.loadFile(path.join(__dirname, "renderer", "splash.html"));
+  splash.once("ready-to-show", () => {
+    if (!splash || splash.isDestroyed()) return;
+    const pt = screen.getCursorScreenPoint();
+    const wa = screen.getDisplayNearestPoint(pt).workArea;
+    splash.setBounds({
+      x: Math.round(wa.x + (wa.width - 260) / 2),
+      y: Math.round(wa.y + (wa.height - 260) / 2),
+      width: 260, height: 260,
+    });
+    splash.show();
+  });
+  splash.on("closed", () => { splash = null; });
+}
+
+function closeSplash() {
+  if (splash && !splash.isDestroyed()) splash.close();
+  splash = null;
 }
 
 /**
