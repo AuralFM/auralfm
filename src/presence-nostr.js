@@ -122,8 +122,35 @@ function directory() {
  * somebody cares about Rio, which the event says out loud anyway. It says
  * nothing about where that somebody is sitting.
  */
+/**
+ * Relays the user added by hand, tried before anything we chose for them.
+ *
+ * Set from main out of prefs. Kept separate from ANCHORS so the shipped list
+ * can change with an update without silently discarding somebody's own.
+ */
+let extraRelays = [];
+function setExtraRelays(urls) {
+  const clean = (Array.isArray(urls) ? urls : [])
+    .map((u) => String(u || "").trim())
+    // wss only. A ws:// relay would carry presence in clear over the network,
+    // which is a strange thing to opt into on the privacy path, and http(s)
+    // URLs are simply not relays.
+    .filter((u) => /^wss:\/\/[a-z0-9.-]+(:\d{1,5})?(\/\S*)?$/i.test(u) && u.length <= 200)
+    .slice(0, 8);
+  const changed = clean.join() !== extraRelays.join();
+  extraRelays = clean;
+  // Reconnect only if the set actually moved; this is called on every prefs
+  // change, most of which are palettes.
+  if (changed && here) {
+    for (const w of sockets) { try { w.close(); } catch {} }
+    sockets = [];
+    connect();
+  }
+  return extraRelays.slice();
+}
+
 function relaysFor(cell) {
-  const list = [...ANCHORS];
+  const list = [...extraRelays, ...ANCHORS];
   const dir = directory();
   if (!cell || !dir.length) return list;
   const c = ungeohash(cell);
@@ -134,7 +161,7 @@ function relaysFor(cell) {
     .sort((a, b) => a.km - b.km);
 
   for (const { url } of near) {
-    if (list.length >= ANCHORS.length + NEARBY) break;
+    if (list.length >= extraRelays.length + ANCHORS.length + NEARBY) break;
     if (!list.includes(url)) list.push(url);
   }
   return list;
@@ -559,6 +586,9 @@ const stats = () => ({
   connected: alive().length,
   peers: peers.size,
   messages: messages.length,
+  // Which of the dialled relays the user chose themselves, so Settings can say
+  // so rather than presenting one undifferentiated list.
+  extra: extraRelays.slice(),
   cell: here?.geohash || null,
   announcing: !!here,
   // The cell being read while browsing, if it is not the one being listened to.
@@ -567,7 +597,7 @@ const stats = () => ({
   viewing: viewing && viewing !== here?.geohash ? viewing : null,
 });
 
-module.exports = { join, leave, view, say, stats, geohash, ungeohash, sameCell,
+module.exports = { join, leave, view, say, stats, setExtraRelays, geohash, ungeohash, sameCell,
                    history: () => messages.slice(),
                    onPeers: (fn) => { onPeers = fn; },
                    onMessages: (fn) => { onMessages = fn; } };

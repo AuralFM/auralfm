@@ -43,6 +43,15 @@ const DEFAULTS = {
    * a lie for anyone who never opened Settings.
    */
   presence: false,
+  /**
+   * Nostr relays the listener added themselves, tried ahead of ours.
+   *
+   * Here rather than buried in state because it is a *choice about who this app
+   * talks to*, which is the kind of thing a privacy-first app should let someone
+   * see and change. Empty means the shipped anchors plus whatever is
+   * geographically near, which is what everyone gets today.
+   */
+  relays: [],
 };
 
 /**

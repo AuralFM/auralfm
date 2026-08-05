@@ -392,6 +392,9 @@ function setPrefs(patch) {
   save(st);
   broadcast("prefs:changed", st.prefs);
   if ("presence" in patch) syncNostrPresence();
+  // Applied before presence so a relay added in the same breath as switching
+  // presence on is dialled on the first connection rather than the second.
+  if ("relays" in patch) nostr.setExtraRelays(st.prefs.relays);
   // Menu labels are baked in at build time, so a language change means a rebuild.
   if ("language" in patch) buildMenu();
   return st.prefs;
@@ -469,6 +472,7 @@ function docText(name) {
  */
 function syncNostrPresence() {
   const on = getPrefs().presence === true;
+  nostr.setExtraRelays(getPrefs().relays || []);
   const ch = playerState.playing ? playerState.channel : null;
   if (!on || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
     nostr.leave();

@@ -87,6 +87,22 @@
   .pal .sw{display:flex;gap:3px;margin-bottom:6px}
   .pal .sw i{flex:1;height:14px;border-radius:3px}
   .pal .nm{display:block;font-size:11px;font-weight:530;letter-spacing:-.002em}
+  #relay-add{
+    flex:1;min-width:0;appearance:none;border:0;border-radius:6px;
+    background:var(--fill);color:var(--label);font:inherit;font-size:12px;padding:5px 8px;
+  }
+  #relay-add[aria-invalid="true"]{box-shadow:inset 0 0 0 1.5px var(--danger,#d1453b)}
+  #relay-btn{
+    flex:none;border:0;border-radius:6px;background:var(--fill-hi);color:var(--label);
+    font:inherit;font-size:12px;padding:5px 10px;cursor:default;
+  }
+  #relay-btn:hover{background:var(--label);color:var(--bg)}
+  #relaylist .row .tag{margin-left:auto;font-size:10px;color:var(--label3)}
+  #relaylist .row button{
+    flex:none;border:0;background:none;color:var(--label3);cursor:default;
+    font-size:14px;line-height:1;padding:0 2px;margin-left:6px;
+  }
+  #relaylist .row button:hover{color:var(--label)}
   .pal .tag{display:block;font-size:10px;color:var(--label2);margin-top:1px}
 
   .row .name b{display:block;font-weight:530}
@@ -258,6 +274,20 @@
       </div>
       <div class="row"><span class="name sub" id="presence-status"></span></div>
     </div>
+
+    <!-- Which relays this app is actually talking to, and the chance to change
+         them. An app that says it is decentralised should be able to show you
+         the list rather than ask you to take it on faith. -->
+    <div class="card" id="relaycard">
+      <div class="row"><span class="name sub" id="relay-head" data-i18n="set.relays">Relays</span></div>
+      <div id="relaylist"></div>
+      <div class="row">
+        <input id="relay-add" type="text" spellcheck="false" autocomplete="off"
+               placeholder="wss://relay.example.com" data-i18n-ph="set.relayAdd">
+        <button id="relay-btn" data-i18n="set.relayAddBtn">Add</button>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.relayHint">AuralFM picks relays near whatever you are listening to, from a public directory, plus a few well-known ones. Add your own and they are tried first. They are only ever asked for messages in the cell you are listening to or looking at — no relay is told where you are.</p>
     <p class="hint" data-i18n="set.presenceHint">Off by default, because it is the only thing here that sends anything. Switched on, while you are playing something, AuralFM announces the station's location — rounded to about 20 km — and its name, so other people running AuralFM can see a listener there. It never sends your location, and there is no account: the key is made when the app opens and thrown away when it closes. The messages use a kind relays are asked not to keep — widely honoured, though not something anyone can guarantee, which is why nothing in them is worth keeping.</p>
   </section>
 
@@ -429,6 +459,7 @@ $("#presence").addEventListener("click", () => set({ presence: !P.presence }));
  * will be at first.
  */
 async function paintPresence() {
+  paintRelays();
   const el = $("#presence-status");
   if (!P.presence) { el.textContent = ""; return; }
   const s = await window.auralfm.presenceStats();
@@ -439,6 +470,76 @@ async function paintPresence() {
     : (T["set.presenceIdle"] || "Waiting for something to play.");
 }
 setInterval(() => { if (!document.hidden) paintPresence(); }, 4000);
+
+/**
+ * The relays, listed.
+ *
+ * "Decentralised" is a claim, and a claim you cannot inspect is a slogan. This
+ * is the list the app is dialling right now, marked so you can tell which ones
+ * you chose and which we picked for you, with the connected ones distinguished
+ * from the ones that are refusing — because relays refuse constantly and a list
+ * that hid that would be flattering rather than true.
+ */
+async function paintRelays() {
+  const box = $("#relaylist"), card = $("#relaycard");
+  if (!box) return;
+  const s = P.presence ? await window.auralfm.presenceStats() : null;
+  const urls = s?.relayUrls || [];
+  const mine = new Set(s?.extra || []);
+  card.style.display = P.presence ? "" : "none";
+  if (!P.presence) return;
+
+  $("#relay-head").textContent =
+    `${T["set.relays"] || "Relays"} — ${s?.connected ?? 0}/${urls.length} ${T["set.relayConnected"] || "connected"}`;
+
+  box.innerHTML = "";
+  if (!urls.length) {
+    const r = document.createElement("div");
+    r.className = "row";
+    r.innerHTML = `<span class="name sub"></span>`;
+    r.querySelector(".sub").textContent = T["set.relayNone"] || "Nothing dialled yet — play something.";
+    box.append(r);
+    return;
+  }
+  for (const url of urls) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span class="name sub"></span><span class="tag"></span>`;
+    row.querySelector(".sub").textContent = url.replace(/^wss:\/\//, "");
+    const tag = row.querySelector(".tag");
+    if (mine.has(url)) {
+      tag.textContent = T["set.relayYours"] || "yours";
+      const x = document.createElement("button");
+      x.textContent = "×";
+      x.title = T["set.relayRemove"] || "Remove";
+      x.onclick = async () => {
+        await set({ relays: (P.relays || []).filter((u) => u !== url) });
+        paintRelays();
+      };
+      row.append(x);
+    }
+    box.append(row);
+  }
+}
+setInterval(() => { if (!document.hidden) paintRelays(); }, 6000);
+
+$("#relay-btn").addEventListener("click", async () => {
+  const input = $("#relay-add");
+  const url = input.value.trim();
+  // Checked here for the message, and again in presence-nostr because a
+  // renderer is not where a security rule belongs.
+  if (!/^wss:\/\/[a-z0-9.-]+(:\d{1,5})?(\/\S*)?$/i.test(url)) {
+    input.setAttribute("aria-invalid", "true");
+    input.placeholder = T["set.relayBad"] || "Must start with wss://";
+    input.value = "";
+    return;
+  }
+  input.removeAttribute("aria-invalid");
+  const next = [...new Set([...(P.relays || []), url])].slice(0, 8);
+  await set({ relays: next });
+  input.value = "";
+  paintRelays();
+});
 
 Icons.set($("#privacy"), "external");
 Icons.set($("#terms"), "external");
