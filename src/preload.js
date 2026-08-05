@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld("auralfm", {
   wspr: (band) => ipcRenderer.invoke("wspr:get", band),
   space: () => ipcRenderer.invoke("space:get"),
   presenceStats: () => ipcRenderer.invoke("presence:stats"),
+  // Read a cell while browsing. Never announces; see the handler in main.
+  presenceView: (lat, lon) => ipcRenderer.send("presence:view", lat, lon),
 
   // Captions runtime. `install` is the one call in this API that downloads
   // anything, and it only runs when captions are switched on.

@@ -417,9 +417,11 @@ function connect() {
       if (!g || !/^[0-9b-hjkmnp-z]{2,9}$/.test(g)) return;
 
       if (e.kind === CHAT_KIND) {
-        // Only the cell being listened to. Every other channel on the network is
-        // someone else's conversation.
-        if (!here || !sameCell(g, here.geohash)) return;
+        // The cell being listened to, or the one being looked at. Every other
+        // channel on the network is someone else's conversation.
+        const mine = here && sameCell(g, here.geohash);
+        const seen = viewing && sameCell(g, viewing);
+        if (!mine && !seen) return;
         if (!e.content || String(e.content).length > MAX_MESSAGE) return;
         record(e);
         return;
@@ -452,6 +454,47 @@ function connect() {
  * @param {number} lon
  * @param {string} label  what is playing, or a band name
  */
+/**
+ * The cell being *looked at*, which is not always the cell being listened to.
+ *
+ * With the lock off, sweeping the globe moves the place and the station list.
+ * The chat should move with them — that is the whole scanning metaphor — but
+ * *announcing* must not. Spinning the world would publish presence into dozens
+ * of cells a minute, which is a location trail, broadcast, at exactly the moment
+ * someone is browsing idly.
+ *
+ * So the two are split and only one of them ever speaks:
+ *
+ *   `here`    where we are listening. Announced. Can send.
+ *   `viewing` where we are looking. Read only. Never announced, never sent.
+ *
+ * Messages are kept for either. Nothing else changes: the subscription was
+ * already "everything, filter locally", precisely so no relay learns which cell
+ * we care about, and that stays true with two cells instead of one.
+ */
+let viewing = null;
+
+/**
+ * Look at a cell without joining it.
+ *
+ * Passing null goes back to hearing only the listening cell — which is what
+ * locking, or playing something, should do.
+ */
+function view(lat, lon) {
+  const cell = (Number.isFinite(lat) && Number.isFinite(lon)) ? geohash(lat, lon) : null;
+  if (cell === viewing) return;
+  viewing = cell;
+  // The log is per-cell, so moving the view has to clear what belonged to the
+  // last one — otherwise Lisbon's conversation appears under Tokyo's name.
+  messages.length = 0;
+  seenIds.clear();
+  onMessages([]);
+  emit();
+  // Re-ask, so a cell that is quiet right now still shows its recent history
+  // rather than looking dead until somebody speaks.
+  if (sockets.length) subscribe();
+}
+
 function join(lat, lon, label) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
   const cell = geohash(lat, lon);
@@ -486,6 +529,7 @@ function join(lat, lon, label) {
 
 function leave() {
   here = null;
+  viewing = null;
   clearInterval(beat);
   beat = null;
   for (const w of sockets) { try { w.close(); } catch {} }
@@ -517,9 +561,13 @@ const stats = () => ({
   messages: messages.length,
   cell: here?.geohash || null,
   announcing: !!here,
+  // The cell being read while browsing, if it is not the one being listened to.
+  // The renderer needs this to label the conversation honestly and to disable
+  // the composer — you cannot speak into a room you are not standing in.
+  viewing: viewing && viewing !== here?.geohash ? viewing : null,
 });
 
-module.exports = { join, leave, say, stats, geohash, ungeohash, sameCell,
+module.exports = { join, leave, view, say, stats, geohash, ungeohash, sameCell,
                    history: () => messages.slice(),
                    onPeers: (fn) => { onPeers = fn; },
                    onMessages: (fn) => { onMessages = fn; } };

@@ -1561,6 +1561,8 @@ let locked = false;
 
 function setLocked(on) {
   locked = on;
+  // Locking means the station owns everything again, including the room.
+  syncChatView();
   const b = $("lock");
   b.setAttribute("aria-pressed", on);
   Icons.set(b, on ? "lock" : "unlock");
@@ -2817,6 +2819,7 @@ function followCentre() {
   const maxDeg = 6 + pov.altitude * 26;
   if (near.dist > maxDeg) return;
   goToPlace(near.i, { fly: false });
+  syncChatView();          // the room moves with the place, read only
 }
 
 /** Great-circle nearest place, in degrees. A linear scan over 12k is sub-ms. */
@@ -3711,11 +3714,17 @@ function paintChatHead() {
    * Tehran and Prague. A true number under a false label is worse than no
    * number.
    */
-  const cell = myCell;
+  const cell = viewingCell || myCell;
   const near = cell ? peers.filter((p) => p.geohash && sameCell(p.geohash, cell)).length : 0;
-  where.textContent = playing?.place
-    ? `${t("chat.near", "Near")} ${playing.place}`
-    : t("chat.here", "Around here");
+  // Name the room actually on screen. While browsing that is the place under the
+  // globe, not the station playing in your ears, and labelling it wrong is worse
+  // than showing nothing — it would attribute strangers to a city they are not in.
+  const browsedPlace = viewingCell && selection.place ? selection.place.title : null;
+  where.textContent = browsedPlace
+    ? `${t("chat.near", "Near")} ${browsedPlace}`
+    : playing?.place
+      ? `${t("chat.near", "Near")} ${playing.place}`
+      : t("chat.here", "Around here");
   who.textContent = near
     ? `${near} ${near === 1 ? t("chat.listener", "listening") : t("chat.listeners", "listening")}`
     : t("chat.alone", "nobody else yet");
@@ -3781,6 +3790,8 @@ window.auralfm.onChat(paintChat);
  * The condition is now simply: presence is on, something is playing, and it has
  * a location.
  */
+let viewingCell = null;      // set while browsing a cell we are not listening to
+
 async function syncChat(prefs) {
   const want = !!(prefs?.presence === true && playing
                   && typeof playing.lat === "number" && typeof playing.lon === "number");
@@ -3790,12 +3801,51 @@ async function syncChat(prefs) {
   if (want) {
     try {
       paintChat(await window.auralfm.chatHistory());
-      myCell = (await window.auralfm.presenceStats())?.cell || null;
+      const st = await window.auralfm.presenceStats();
+      myCell = st?.cell || null;
+      viewingCell = st?.viewing || null;
     } catch { /* not up yet */ }
     paintChatHead();
   } else {
     myCell = null;
+    viewingCell = null;
   }
+}
+
+/**
+ * Point the conversation at whatever the globe is pointed at.
+ *
+ * With the lock off, sweeping the world already moves the place and the station
+ * list. This moves the room too, which is the scanning metaphor finished — but
+ * reading only. `presenceView` never announces and `say()` still guards on the
+ * cell we are actually listening to, so browsing cannot broadcast a location
+ * trail and cannot post into a room we are not standing in.
+ *
+ * Locking, or having nothing selected, hands the chat back to the station.
+ */
+async function syncChatView() {
+  if (!chatOn) return;
+  const p = (!locked && selection.place) ? selection.place : null;
+  window.auralfm.presenceView(p ? p.lat : null, p ? p.lon : null);
+  // Re-read rather than assume: main ignores the call entirely when presence is
+  // off, and the renderer should reflect what actually happened.
+  try {
+    const st = await window.auralfm.presenceStats();
+    viewingCell = st?.viewing || null;
+  } catch { /* leave the last known state */ }
+  paintChatHead();
+  paintComposer();
+}
+
+/** A room you are only looking at cannot be spoken into, and should say so. */
+function paintComposer() {
+  const input = $("chatinput");
+  if (!input) return;
+  const browsing = !!viewingCell;
+  input.disabled = browsing;
+  input.placeholder = browsing
+    ? t("chat.browsing", "Listening here would let you reply")
+    : t("chat.placeholder", "Say something to this place");
 }
 
 $("chatform").onsubmit = async (e) => {

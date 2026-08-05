@@ -753,6 +753,22 @@ ipcMain.handle("space:get", () => space.get());
 ipcMain.handle("presence:stats", () => nostr.stats());
 
 /**
+ * Look at a cell without joining it.
+ *
+ * Only ever a read. `nostr.say` still guards on the *listening* cell, so this
+ * cannot be turned into a way to post somewhere you are not, and nothing is
+ * announced — which is the point, because a presence beacon that followed the
+ * globe would publish a location trail while somebody browsed.
+ *
+ * Ignored entirely when presence is off, so browsing never quietly starts
+ * talking to relays for someone who switched the feature off.
+ */
+ipcMain.on("presence:view", (_e, lat, lon) => {
+  if (getPrefs().presence !== true) return;
+  nostr.view(lat, lon);
+});
+
+/**
  * The captions runtime — 11 MB of ONNX that is fetched rather than shipped.
  *
  * `status` is cheap and safe to poll; it hashes what is on disk so a truncated
