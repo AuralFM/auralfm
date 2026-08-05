@@ -25,7 +25,6 @@ const PALETTES = [
   {
     id: "onyx",
     name: "Onyx",
-    free: true,
     /**
      * The brand. Onyx and bone.
      *
@@ -49,7 +48,6 @@ const PALETTES = [
   {
     id: "onair",
     name: "On Air",
-    free: true,
     accent: "#30D158",      // systemGreen — where AuralFM started
     accentLight: "#248A3D",
     dot: "#5ef08a",
@@ -60,7 +58,6 @@ const PALETTES = [
   {
     id: "nightearth",
     name: "Night Earth",
-    free: true,
     // The blue of city lights seen from orbit, which is what the globe mostly is.
     accent: "#5AC8F5",
     accentLight: "#0071A4",
@@ -72,7 +69,6 @@ const PALETTES = [
   {
     id: "ember",
     name: "Ember",
-    free: true,
     // Terminator warmth — the band of sunrise the day/night shader already draws.
     accent: "#FF9F0A",
     accentLight: "#B25E00",
@@ -84,7 +80,6 @@ const PALETTES = [
   {
     id: "deepfield",
     name: "Deep Field",
-    free: false,
     accent: "#BF7FFF",
     accentLight: "#7A3BC4",
     dot: "#d6a8ff",
@@ -95,7 +90,6 @@ const PALETTES = [
   {
     id: "ionosphere",
     name: "Ionosphere",
-    free: false,
     // Aurora green over the polar night; the shortwave palette.
     accent: "#2AE8B0",
     accentLight: "#00795C",
@@ -107,7 +101,6 @@ const PALETTES = [
   {
     id: "shortwave",
     name: "Shortwave",
-    free: false,
     // Dial glow: the amber of a lit tuning scale on a valve receiver.
     accent: "#E8B04B",
     accentLight: "#8A5D00",
@@ -127,17 +120,26 @@ const DEFAULT_ID = "onyx";
 const byId = (id) => PALETTES.find((p) => p.id === id) || PALETTES[0];
 
 /**
- * What the user may actually apply.
+ * Every palette, available to everyone.
  *
- * Locked palettes are still listed — hiding them would make the picker look
- * complete when it is not — but they cannot be selected until #15 decides
- * whether AuralFM is monetised at all. Until then `unlocked` is simply true for
- * everything, so nothing is taken away from anyone while the question is open.
+ * Three of these used to carry `free: false` and show a "Supporter" tag — a
+ * paywall that was never switched on, waiting on #15 to decide whether the app
+ * was monetised. #15 is decided: it is not, and it cannot be.
+ *
+ * The reasoning is worth keeping, because it is not a pricing preference. To
+ * gate anything behind payment the app has to know whether *this* person paid,
+ * and every way of knowing that costs the thing the product is built on — an
+ * account, a licence key tied to a purchase, or a server to ask. The promise is
+ * that nothing is collected. A paywall is the one feature that cannot be built
+ * without collecting something.
+ *
+ * So support is a donation with nothing attached: no unlock, no badge, no state
+ * in the app at all. The app never learns that you gave, which is the point.
+ * A dormant paywall left in the source would contradict that in public.
  */
-function list(entitled = true) {
+function list() {
   return PALETTES.map((p) => ({
-    id: p.id, name: p.name, free: p.free,
-    unlocked: p.free || entitled,
+    id: p.id, name: p.name,
     swatch: [p.accent, p.dot, p.rx],
   }));
 }
