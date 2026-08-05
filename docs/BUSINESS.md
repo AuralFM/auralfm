@@ -213,12 +213,79 @@ and the brief says be militant.
 gets done, add zaps. Both live in About and on the site. Neither is ever
 mentioned in a way that implies you get something.
 
+### Distribution: not the App Store, and that settles most of this
+
+**AuralFM does not need the Mac App Store and should not use it.** Direct
+download from a website is the normal way serious Mac software ships — Buzz,
+Obsidian, Figma, every developer tool worth having.
+
+That retires a risk flagged earlier in this document. App Store rules about
+donations and in-app crypto are *App Store* rules. They have no bearing on a
+notarised app downloaded from a website, and Apple has no view whatsoever on
+what a developer's own site does.
+
+**What direct distribution still needs, and it is not the store:** the $99 Apple
+Developer Program, for a Developer ID certificate so the app can be **signed and
+notarised**. Notarisation is an automated malware scan, not a review — nobody at
+Apple looks at the business model, the content, or the donation page. That is
+#4, and it costs the same $99 whether or not the App Store is ever involved.
+
+Without it the app is not unusable, it is *distrusted*: macOS says it cannot
+verify the app is free of malware, and the user has to go into System Settings and
+approve it by hand. That friction has grown with every macOS release. For a
+product whose entire pitch is "there is nothing to steal here," instructing people
+to click past a security warning is the worst possible first impression.
+
+### Where the App Store constraint actually lands: iOS
+
+Desktop is free of all of this. **iOS is not**, and it is worth knowing now rather
+than discovering it later:
+
+- There is no direct distribution on iOS in the US. An iOS version means the App
+  Store, and therefore Apple's rules on donations and crypto **do** apply.
+- Apple reviews content. This app streams unfiltered live radio from anywhere on
+  Earth and carries an unmoderated public chat — precisely the combination that
+  gets flagged.
+- Electron does not go to iOS. An iOS version is a **rebuild**, not a port.
+
+Windows and Linux are the opposite: electron-builder already has the structure,
+so they are largely configuration plus testing. Linux is essentially free;
+Windows signing certificates are the only real friction.
+
+**Sequencing consequence:** desktop keeps every commitment in this document
+intact. Mobile is where they would first have to be argued for. That is a reason
+to make the desktop version excellent before touching iOS, not a reason to avoid
+iOS forever.
+
+### The website is not a violation — one thing on it could be
+
+A public website with a named owner does not contradict "collects nothing."
+That claim is about **the app not collecting anything from its users**, not about
+the project being anonymous. Signal has signal.org; nobody thinks that undermines
+Signal.
+
+**Being identifiable is an asset, not a leak.** Anonymity is the promise made to
+the *listener*. A developer nobody can name is a reason not to trust software,
+not a reason to trust it. Obsidian's founders are public, and it is part of why
+the model works.
+
+**Framer is fine, with one rule.** Its built-in analytics use no cookies and no
+persistent identifiers: IP and user-agent are hashed with a secret that rotates
+and is destroyed daily, purely to count unique visitors
+([Framer Help](https://www.framer.com/help/articles/how-framer-s-built-in-analytics-work/)).
+That is consistent with everything here.
+
+**The rule: built-in analytics only, and no third-party scripts. Ever.** Adding
+Google Analytics, a Meta pixel, an embedded video, or a chat widget puts trackers
+on the front door of a privacy application — and it happens by accident, because
+each one is a single toggle. This is the one place the website could genuinely
+betray the app, and it will not be dramatic when it does.
+
 ### Two risks that come with a donation address
 
-- **Distribution rules.** Donations and crypto inside applications are
-  constrained on the App Store. Direct DMG distribution — which is where #4 and
-  #14 are heading anyway — avoids the question. Worth knowing before choosing a
-  channel, not after.
+- ~~**Distribution rules.**~~ Resolved above: direct distribution, not the App
+  Store, so the store's rules on donations and crypto do not apply. The
+  constraint returns only on iOS.
 - **An address in a shipped binary is a tamper target.** Someone who modifies the
   app swaps the address and takes the money in our name. That raises the stakes
   on code signing (#4) from "users cannot verify what they run" to "users cannot
