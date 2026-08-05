@@ -40,18 +40,96 @@ That maps onto AuralFM almost without translation, because the constraint that
 makes Obsidian's model work is the same one we already have: the app is genuinely
 useful with nothing switched on and nobody logged in.
 
-What it would look like here, in rough order of how well each fits:
+### What Obsidian actually charges for
 
-| | Fit |
-|---|---|
-| **Voluntary supporter tier** | Best. Costs nothing to run, requires no account, breaks nothing. The Catalyst equivalent. |
-| **Premium palettes** | Already split free/paid in `src/palettes.js`. Cheapest possible test and it is already built. |
-| **Commercial licence** | Plausible later — bars, cafés, installations running it on a screen. Honest, and it is real usage. |
-| **A hosted anything** | Worst fit. The moment a paid feature needs our server, the position starts arguing with the pricing page. |
+Verified on [obsidian.md/pricing](https://obsidian.md/pricing), not from a stats
+blog:
 
-The discipline Obsidian keeps and we would have to keep: **the free app never
-gets worse to make the paid thing attractive.** That is the entire reason people
-trust them, and it is the same reason people would trust us.
+| | | Needs a server? |
+|---|---|---|
+| **Sync** | $4/mo annual, $5 monthly | **Yes** |
+| **Publish** | $8/mo per site annual, $10 monthly | **Yes** |
+| **Catalyst** | $25 one-time — beta access, badge, private channels | No |
+| **Commercial licence** | $50/user/year | No |
+
+And the detail that matters most, in their own words:
+
+> "You are **not *required*** to pay for a commercial license, however if you are
+> using Obsidian for work in an organization we encourage you to purchase a
+> commercial license to keep Obsidian independent and 100% user-supported."
+
+**The commercial licence is optional.** They turned an enforcement problem into a
+patronage appeal, which is both more honest and probably more effective. That
+corrects an earlier draft of this document, which had a commercial licence down
+as something to enforce later; Obsidian tried that and backed away from it.
+
+### The half we can copy, and the half we cannot
+
+Sort those four by what they need and the model splits cleanly in two:
+
+- **Two are optional paid services** — Sync and Publish. Both are servers. Both
+  are recurring. Between them they are almost certainly where the money is,
+  because they are the only two that bill every month.
+- **Two are patronage** — Catalyst and the commercial licence. Neither needs
+  infrastructure. Both are people choosing to pay for something they already have.
+
+**AuralFM can adopt the philosophy and only half the revenue model.** The
+subscription half requires exactly the thing the product refuses to build. That
+is not a reason to abandon the model — it is the reason to be clear-eyed about
+what it earns.
+
+So, ranked honestly:
+
+| | Fit | Realistic ceiling |
+|---|---|---|
+| **Supporter tier** (Catalyst-shaped) | Best. No account, no server, breaks nothing. | Low. See the arithmetic below. |
+| **Premium palettes** | Already built and split in `src/palettes.js`. Cheapest possible test. | Low, but free to run. |
+| **Optional "for work" licence** | Honest, patronage-framed, zero enforcement. | Low until anyone uses it at work. |
+| **A hosted anything** | Worst. The moment a paid feature needs our server, the position argues with the pricing page. | The only one that scales — which is the whole problem. |
+
+### The arithmetic nobody enjoys
+
+Voluntary payment in free software converts at roughly 1–5% of active users. At a
+$20 average and 2% conversion: 10,000 users is about $4,000 — a year. 100,000
+users is about $40,000. Not a salary.
+
+That is not an argument against doing it. It is an argument against expecting
+Obsidian's outcome from Obsidian's philosophy minus Obsidian's subscriptions.
+
+**Which surfaces the real fork, and it is a decision rather than an analysis:**
+
+1. **Public good with a supporter tier.** The app stays exactly what it claims,
+   money is a trickle, and the deck should say so plainly instead of gesturing at
+   a business model. This is the version that is fully consistent with everything
+   already written.
+2. **Find one optional service worth paying for** that does not weaken the app if
+   you decline it. Every candidate — sound-map hosting, a community relay, sync
+   of favourites — is a backend, so this route means amending the claim to "the
+   app has no backend" rather than dropping it, and being scrupulous about the
+   difference.
+
+Both are defensible. Only one of them is currently written down as the position,
+and it is the first. Choosing the second is fine and should be done deliberately,
+in daylight, not by drift.
+
+The discipline Obsidian keeps and we would have to keep either way: **the free app
+never gets worse to make the paid thing attractive.** That is the entire reason
+people trust them, and it is the same reason people would trust us.
+
+### On the numbers in the stats article
+
+Worth reading, and worth discounting. It is candid about its own limits, which is
+more than most: Obsidian **does not publicly disclose revenue**, there is **no
+known valuation**, and the user count is flagged "not official confirmation."
+
+The revenue figures it carries are a ~$2M ARR estimate from GetLatka and an
+unsourced $5M–$25M range. **A twelve-fold spread means nobody knows.** Do not
+carry either number into a deck.
+
+What is solid and useful: bootstrapped, no VC, founded 2020, a team under about
+twenty, and the pricing above. That combination is the actual lesson — a small
+independent team, no outside money, and a model that does not require growth to
+survive.
 
 Roadmap §4 already said monetisation was undecided and that the app has no server
 costs forcing a model. This is the shape that decision should take.
