@@ -62,6 +62,7 @@ const DOCS = [
   ["docs/IDENTITY.md",             "Identity"],
   ["docs/LISTENING.md",            "The Listening Problem"],
   ["docs/BUSINESS.md",             "Business"],
+  ["docs/COMMUNITY.md",            "Community"],
   ["docs/LEGAL-AND-SECURITY.md",   "Legal and Security"],
   ["docs/PRIVACY.md",              "Privacy"],
   ["docs/DECENTRALIZATION.md",     "Decentralization"],
