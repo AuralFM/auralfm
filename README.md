@@ -418,6 +418,12 @@ phase0/index.html      the original single-file prototype
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
 | [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
 | [`docs/VISION.md`](docs/VISION.md) | Why this exists, in the maintainer's own account |
+| [`docs/LISTENING.md`](docs/LISTENING.md) | The critique this product has to answer, and the three ways it does |
+| [`docs/IDENTITY.md`](docs/IDENTITY.md) | The mark, the colour, and the icon measured against the system |
+| [`docs/BUSINESS.md`](docs/BUSINESS.md) | Free forever, and how support works without collecting anything |
+| [`docs/LEGAL-AND-SECURITY.md`](docs/LEGAL-AND-SECURITY.md) | Regulatory exposure, licence obligations, and the security posture |
+| [`docs/COMMUNITY.md`](docs/COMMUNITY.md) | The Buzz community — channels, pinned posts, and the agent |
+| [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) | Full licence texts for everything shipped, vendored or fetched |
 
 ## Scripts
 
@@ -456,8 +462,36 @@ phase0/index.html      the original single-file prototype
 | Settings — appearance, contrast, dot size, language, palettes | ✅ |
 | User-added stations | ✅ |
 | Aircraft layer | ✅ |
+| Third-party licence notices, generated and shipped | ✅ |
+| Receiver list hardened against substitution | ✅ |
 | Code signing and notarisation | Needs an Apple Developer account |
 | Downloadable release | Blocked on signing |
+
+### What it costs, and what it will never cost
+
+**The app is free on every platform, forever. No limits, no sign-up, no paid
+tier, and no advertising — not in the app, not on the site.**
+
+There is nothing to buy because there is nothing that could be sold without
+breaking the promise. To put a feature behind a paywall the app would have to
+know whether *you* paid, and every way of knowing that means an account, a
+licence key tied to a purchase, or a server to ask. That is why the palette
+paywall that used to sit dormant in the source was deleted rather than switched
+on.
+
+Support, if it happens, is a donation that the application never learns about —
+handled entirely outside it, unlocking nothing. What it buys is the thing
+Obsidian describes better than we could: staying user-supported and **free from
+investor influence**. See [`docs/BUSINESS.md`](docs/BUSINESS.md).
+
+Distribution is direct download, never an app store, on desktop.
+
+### Where to find other people
+
+The community runs on **Buzz** at `auralfm.communities.buzz.xyz` — which is built
+on Nostr, the same protocol the app's own presence and chat already use. That is
+why it is there and not on Discord: the community and the product sit on the same
+rails. Four channels, described in [`docs/COMMUNITY.md`](docs/COMMUNITY.md).
 
 **The honest headline: nobody but the author can install this yet.** There is no
 signing and no release, so every feature above has an audience of one until those
@@ -531,8 +565,12 @@ can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Crypto prices: [Coinbase](https://www.coinbase.com)
 - Satellite imagery: [NASA GIBS](https://nasa-gibs.github.io/gibs-api-docs/) (VIIRS true colour)
 - Station genres and fallback streams: [radio-browser.info](https://www.radio-browser.info)
-- Globe icon by **emilegraphics** via [the Noun Project](https://thenounproject.com) —
-  see [`assets/ATTRIBUTION.md`](assets/ATTRIBUTION.md)
+- Globe icons by **emilegraphics** via [the Noun Project](https://thenounproject.com) —
+  two royalty-free licences purchased 4 August 2026, certificates in
+  `assets/licenses/`; see [`assets/ATTRIBUTION.md`](assets/ATTRIBUTION.md)
+
+Full licence texts for every library this app ships, vendors or downloads are in
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md), regenerated on every build.
 
 Personal project, not affiliated with or endorsed by any of the above.
 

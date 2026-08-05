@@ -59,6 +59,11 @@ const DATA = [
   ["NOAA Space Weather Prediction Center", "Public domain (US Government work)",
    "Solar flux and K-index."],
   ["WSPRnet / wspr.live", "Community published", "Propagation reports."],
+  ["radio.garden", "Referenced", "Station geography."],
+  ["adsb.lol", "Community published", "Aircraft positions."],
+  ["CelesTrak / SatNOGS", "Community published", "Orbital elements."],
+  ["The KiwiSDR operators", "Volunteered",
+   "837 receivers, on their hardware and their bandwidth, given away free. Not a licence — a debt."],
   ["Noun Project — emilegraphics", "Royalty-free, purchased",
    "Both globe icons. Certificates in `assets/licenses/`; see `assets/ATTRIBUTION.md`."],
 ];
