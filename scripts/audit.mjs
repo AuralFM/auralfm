@@ -14,6 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -292,6 +293,20 @@ console.log("\nshortwave schedule is current");
   sched.season === want
     ? pass(`${sched.season}, ${sched.entries.length} broadcasts, built ${sched.built}`)
     : fail("data/schedule.json", `season ${sched.season}, but it is now ${want} — run \`npm run schedule\``);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\nthird-party notices are current");
+// MIT requires the copyright notice to travel with the code, and this app
+// shipped five MIT libraries with none until scripts/notices.mjs was written.
+// The generator is the fix; this is what stops it rotting the next time a
+// dependency moves. It regenerates in memory and compares.
+{
+  const r = spawnSync(process.execPath, [R("scripts/notices.mjs"), "--check"],
+                      { cwd: ROOT, encoding: "utf8" });
+  const out = ((r.stdout || "") + (r.stderr || "")).trim();
+  if (r.status === 0) pass(out.replace(/^ok\s+/, "") || "THIRD-PARTY-NOTICES.md");
+  else fail("THIRD-PARTY-NOTICES.md", out || "notices --check failed");
 }
 
 console.log(failures ? `\n${failures} check(s) failed\n` : "\nall checks passed\n");

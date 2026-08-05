@@ -13,7 +13,7 @@
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
     "vendor": "node scripts/vendor.mjs && node scripts/lights.mjs",
     "postinstall": "node scripts/vendor.mjs",
-    "dist": "npm run vendor && npm run icons && electron-builder --mac",
+    "dist": "npm run vendor && npm run notices && npm run icons && electron-builder --mac",
     "check": "node scripts/crawl.mjs --check",
     "sky": "node scripts/sky.mjs",
     "audit": "node scripts/audit.mjs",
@@ -21,7 +21,8 @@
     "schedule": "node scripts/fetch-schedule.mjs",
     "lights": "node scripts/lights.mjs",
     "relays": "node scripts/relays.mjs",
-    "sync-kb": "node scripts/sync-kb.mjs"
+    "sync-kb": "node scripts/sync-kb.mjs",
+    "notices": "node scripts/notices.mjs"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -50,6 +51,7 @@
       "assets/generated/**/*",
       "assets/*.svg",
       "assets/ATTRIBUTION.md",
+      "THIRD-PARTY-NOTICES.md",
       "package.json",
       "data/stations.min.json",
       "data/sdr.min.json",

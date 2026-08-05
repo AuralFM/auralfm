@@ -207,10 +207,15 @@ function openExplore() {
 /**
  * About panel.
  *
- * Required rather than decorative: the globe icon is Noun Project CC BY, so the
- * credit has to appear wherever the app is distributed. It is also the right
- * place to state the privacy position plainly, because "collects nothing" is
- * only worth anything if it is said out loud where people can check it.
+ * Required rather than decorative. The credits have to appear wherever the app
+ * is distributed, and the full licence texts have to travel with the code — MIT
+ * says so in as many words. `THIRD-PARTY-NOTICES.md` carries those and ships in
+ * the bundle; this panel points at it, because a notices file nobody can find
+ * from inside the app is a file that satisfies nothing.
+ *
+ * It is also the right place to state the privacy position plainly, because
+ * "collects nothing" is only worth anything if it is said out loud where people
+ * can check it.
  */
 function showAbout() {
   app.setAboutPanelOptions({
@@ -226,7 +231,10 @@ function showAbout() {
       "Weather: Open-Meteo · ISS: wheretheiss.at\n" +
       "Orbits: Celestrak (TLEs) · Headlines: Google News\n" +
       "Markets: CoinGecko\n\n" +
-      "Globe icon by emilegraphics, the Noun Project (CC BY).",
+      "Globe icons by emilegraphics, the Noun Project — royalty-free licences\n" +
+      "purchased 4 Aug 2026.\n\n" +
+      "Full licence texts for everything this app ships, vendors or downloads\n" +
+      "are in THIRD-PARTY-NOTICES.md, beside the application.",
   });
   app.showAboutPanel();
 }
