@@ -187,6 +187,83 @@ The whole product is built on collecting nothing and you are part of that.
 
 ---
 
+## Where the agent actually runs, and what that costs
+
+Researched before setting one up, because it changes what the agent can be.
+
+**Agents run on your machine, not on the relay.** The relay is a shared event
+log; an agent connects to it as a client over a WebSocket, the same way a person
+does. With Claude Code as the harness, Claude Code is running on your Mac, using
+your tokens.
+
+**So the agent is only awake when your Mac is.** Close the laptop and it stops
+answering. Somebody asking a question at 3am gets silence, and to them that reads
+as broken rather than asleep.
+
+Two honest options. Either **say so in the agent's own description** — "answers
+when Melton's machine is on" — so nobody is surprised, or **do not run an agent
+at all until there is a reason to**. A community of four does not need one.
+
+**Workflows are the opposite, and this is the useful part.** They are YAML,
+triggered by a message, a reaction, a schedule or a webhook, and **the relay
+executes them independently**. They work whether or not you are online. Anything
+that has to be reliable belongs in a workflow, not an agent.
+
+### The security setting that actually matters
+
+A Claude Code agent sitting in a public channel is **an agent taking instructions
+from strangers.** That is prompt injection with the front door open — someone
+posts a message crafted to make it do something, and if the harness has
+filesystem or shell access on your Mac, "something" can be a great deal.
+
+**Give it no tools.** Read the channel, write a reply, nothing else. No file
+access, no shell, no network fetches, no ability to act. It answers questions
+about radio; it has no business touching anything.
+
+If Buzz's agent configuration does not let you restrict tools that tightly, do
+not run it in a public channel until it does.
+
+### MeshLLM, if it ever comes up
+
+Buzz can pool inference across machines. Worth knowing before enabling it:
+Block's own write-up says **"prompts and any data sent to another machine are
+visible to its owner, and you are trusting the results that come back."**
+
+For this project that is a hard no on sharing compute with anyone outside your
+own devices. It is not a flaw in MeshLLM — it is honest documentation — but a
+product built on collecting nothing should not be routing prompts through
+strangers' hardware.
+
+---
+
+## What to set up now, and what to leave alone
+
+Buzz has forums, canvases, workflows, an inbox, DMs, search and an audit log. For
+a community with no members yet, almost all of it is furniture.
+
+**Worth doing now:**
+
+- **One workflow: GitHub → #build.** A webhook that posts when an issue opens or
+  closes, or when a release ships. Always-on, zero maintenance, and it makes the
+  channel look alive between announcements. This is the single highest-value
+  thing on the list.
+- **The agent, with no tools**, if the always-on caveat is stated in its
+  description. Otherwise wait.
+
+**Leave alone until people arrive:**
+
+- **Forums.** Four channels for zero people is already generous. A forum is where
+  conversation goes to be organised, and there is no conversation yet.
+- **Canvases.** The shortwave primer is a pinned post. That is enough.
+- **Inbox and DMs.** Nothing to configure — they exist.
+- **Scheduled workflows.** Nothing recurring needs saying yet, and a bot posting
+  into an empty room is worse than an empty room.
+
+The rule here is the same one as everywhere else in this document: an empty
+feature is louder than a missing one.
+
+---
+
 ## What not to build
 
 **No `#general`.** It absorbs everything and then nothing has a home.
