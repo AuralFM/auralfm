@@ -377,6 +377,47 @@ on the front door of a privacy application — and it happens by accident, becau
 each one is a single toggle. This is the one place the website could genuinely
 betray the app, and it will not be dramatic when it does.
 
+### Polar.sh, considered
+
+Worth looking at, and the answer is *not yet* rather than *no*.
+
+[Polar](https://polar.sh/) is a **Merchant of Record** for software billing:
+subscriptions, usage billing, seats, and — the part that matters — *"We take on
+all the liability. Sales tax, VAT & chargebacks land on our name, not yours."*
+That is genuinely valuable and it is not something GitHub Sponsors does.
+
+The problem is the fee shape against a $5/month tier.
+
+| | Fee | On one $5 payment | On 400/month |
+|---|---|---|---|
+| **GitHub Sponsors** (personal accounts) | **0%** | $0.00 | **$2,000 kept** |
+| Polar Starter | 5% + $0.50 | $0.75 — **15%** | ~$1,700 kept |
+| Polar Pro ($20/mo) | 3.8% + $0.40 | $0.59 — **11.8%** | ~$1,744 kept |
+
+GitHub charges nothing on sponsorships from personal accounts — 100% reaches the
+developer. Polar's **flat $0.50 is the killer**: on a $5 transaction it is a tenth
+of the payment before the percentage is even applied. Its pricing is built for
+fewer, larger charges, and a $5 monthly tier is close to the worst case for it.
+At $250–300 a month on the target volume, that is $3,000+ a year.
+
+**What would change the answer**, and both are real:
+
+1. **If the tier is a sale rather than a donation.** A pure gift with nothing in
+   return is generally outside VAT's scope. Catalyst-style perks — early builds, a
+   badge, a private channel — arguably make it a *supply of services*, and then
+   VAT applies across dozens of jurisdictions and a Merchant of Record stops being
+   a convenience and starts being the reason you are compliant. This is a real
+   question about the tier as designed, and it belongs on the lawyer list beside
+   the Noun Project cap.
+2. **If the price shape changes.** The flat fee stops mattering at larger
+   amounts: 5% + $0.50 on a $25 annual is 7%, not 15%. A yearly tier or a venue
+   licence is a much better fit for Polar than a $5 month.
+
+**Recommendation:** GitHub Sponsors first, at 0%, with Ko-fi and crypto beside it.
+Revisit Polar when either the tax question is answered against us or there is a
+higher-priced tier for it to carry. Either way it is external to the app, so
+nothing about it touches the "collects nothing" claim.
+
 ### Two risks that come with a donation address
 
 - ~~**Distribution rules.**~~ Resolved above: direct distribution, not the App
