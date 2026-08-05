@@ -172,7 +172,15 @@ A radio nobody has is not more useful than a client nobody has.
 
 ## 4. Monetisation (#15)
 
-Nothing is decided. What is *true*:
+**The shape is now decided even though the price is not: Obsidian's model.** The
+app free, local, and accountless; anything paid an optional service you can
+decline without losing the product. It maps here almost without translation
+because the constraint that makes it work for Obsidian is one we already have —
+the app is genuinely useful with nothing switched on and nobody logged in. The
+discipline that comes with it: **the free app never gets worse to make the paid
+thing attractive.** Reasoning and the ranked options are in `docs/BUSINESS.md`.
+
+What is *true*:
 
 - The app has no server costs. There is no bill forcing a business model, which
   is a luxury and should be treated as one.
