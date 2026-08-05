@@ -170,7 +170,19 @@ A radio nobody has is not more useful than a client nobody has.
 
 ---
 
-## 4. Monetisation (#15)
+## 4. Monetisation — decided (#15)
+
+**Free app on every platform, forever. A $5/month supporter tier delivered
+entirely outside the application — early builds, a badge and a private channel in
+Buzz — plus a one-time option and an optional venue licence. Normal processor and
+crypto both. Direct download, never the App Store.**
+
+What is sold is the project's independence, not a feature. The app never learns
+that anyone paid, because nothing it does depends on knowing. Full reasoning and
+the arithmetic are in `docs/BUSINESS.md`.
+
+### The older notes, kept
+
 
 **The shape is now decided even though the price is not: Obsidian's model.** The
 app free, local, and accountless; anything paid an optional service you can

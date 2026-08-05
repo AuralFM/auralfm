@@ -196,7 +196,43 @@ costs forcing a model. This is the shape that decision should take.
 
 ---
 
-## The decision, 4 August 2026
+## The plan, decided 4 August 2026
+
+**The app is free on every platform, forever, with no limits and no sign-up.**
+macOS now; Windows and Linux later; iOS eventually. Free on all of them.
+
+**Support is a $5/month recurring supporter tier**, with a one-time option and an
+optional licence for venues and organisations. Recurring first, because one-time
+does not recur: $24k a year at $25 one-time needs ~960 *new* payers annually,
+forever, where ~400 monthly supporters simply holds. Obsidian could afford
+one-time; they have Sync and Publish carrying the recurring load and we will not.
+
+**Everything a supporter gets is delivered outside the app** — early builds via a
+download link, a badge and a private channel in Buzz. Exactly Obsidian's shape.
+The application itself never learns that anyone paid, because nothing it does
+depends on knowing. Someone pays, then tells us in the community: that is
+disclosure, not collection.
+
+**Payments go through a normal processor and crypto, both.** Crypto alone will
+not reach these numbers — the overlap between "loves a radio app" and "holds
+Monero" is small. A supporter choosing to have an account with a payment
+processor is their choice, made outside the app, and leaves the app untouched.
+
+**What is being sold is independence, not features.** Obsidian's own words for it
+are the right ones: staying "100% user-supported, free from investor influence."
+
+**Distribution is direct download, never the App Store** on desktop. Signed and
+notarised, which needs the $99 Developer Program (#4) — for the certificate, not
+for the store.
+
+**Still open:** whether the source is published under a restrictive licence
+(source-available) or not published at all. Either is defensible. Note that an
+Electron app is readable JavaScript regardless, so the choice is about granting a
+licence to fork — not about hiding anything.
+
+---
+
+## Why, in detail
 
 **No backend. No server. No ads — not in the app, not on the site. Ever.** Not a
 default to be revisited; a constraint the product is built out of.
