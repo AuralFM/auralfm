@@ -87,14 +87,74 @@ So, ranked honestly:
 | **Optional "for work" licence** | Honest, patronage-framed, zero enforcement. | Low until anyone uses it at work. |
 | **A hosted anything** | Worst. The moment a paid feature needs our server, the position argues with the pricing page. | The only one that scales — which is the whole problem. |
 
+### What Catalyst actually delivers — and why it changes everything
+
+Itemised from the pricing page:
+
+**Catalyst, $25 one-time**
+- Early access to beta versions
+- Community badges
+- Exclusive channels
+
+**Commercial licence, $50/user/year**
+- Support development
+- Become a featured organisation
+
+Look at what those six things have in common: **not one of them is delivered by
+the application.** Early builds are a download link. Badges and channels are
+Discord. "Featured organisation" is a logo on a web page.
+
+That is the unlock. The constraint that looked like a trap — the app must collect
+nothing, know nothing, and have no server — **does not touch a patronage tier at
+all**, because Obsidian's patronage tier does not touch the app either.
+
+AuralFM can copy it exactly, through Buzz instead of Discord, with the app
+staying completely inert. Someone pays, then *tells us* in the community. That is
+not collection, it is disclosure — they chose to say it, in a place they chose to
+join. The app never learns anything and never needs to.
+
+### Their framing is better than ours, and it is free to take
+
+> "Free without limits. No sign-up required. No strings attached."
+
+> "100% user-supported. Optional licenses help support the independent
+> development of Obsidian."
+
+> Catalyst "plays a vital role in helping Obsidian remain 100% user-supported,
+> **free from investor influence**."
+
+The last one is the whole pitch for patronage, and it is not about features. You
+are not buying early access. **You are buying the project's independence.** For a
+product whose entire argument is that it answers to nobody, that is the most
+honest thing it could sell.
+
 ### The arithmetic nobody enjoys
 
-Voluntary payment in free software converts at roughly 1–5% of active users. At a
-$20 average and 2% conversion: 10,000 users is about $4,000 — a year. 100,000
-users is about $40,000. Not a salary.
+The stated target is **$2–5k/month realistic, $10–20k/month good** — explicitly
+not millions. That is a patronage-sized ambition, which is the good news, because
+patronage is the only half of Obsidian's model available here.
 
-That is not an argument against doing it. It is an argument against expecting
-Obsidian's outcome from Obsidian's philosophy minus Obsidian's subscriptions.
+What it takes, at 2–5% conversion (the upper end is plausible for an enthusiast
+audience that likes the thing):
+
+| Mechanism | To reach $24k/yr | To reach $60k/yr |
+|---|---|---|
+| **$25 one-time** | ~960 payers **every year** | ~2,400 payers every year |
+| **$50/user/yr licence** | ~480 seats | ~1,200 seats |
+| **$5/month recurring** | **~400 supporters** | ~1,000 supporters |
+
+**One-time payment is the worst of the three and it is the one Obsidian uses.**
+It does not recur, so the treadmill never stops: 960 *new* payers every year,
+which at 3% conversion means roughly 32,000 new users a year, forever.
+
+**Four hundred people at $5 a month is a completely different proposition** — and
+it is far more achievable for a niche tool with a devoted following than 32,000
+new downloads annually. Recurring patronage is also the honest shape of what is
+being sold: independence is ongoing, not a one-time purchase.
+
+Recommendation: **recurring first, one-time as an option, licence for venues.**
+Do not copy Catalyst's one-time structure just because Obsidian used it; they had
+Sync and Publish carrying the recurring load, and we will not.
 
 **Which surfaces the real fork, and it is a decision rather than an analysis:**
 
@@ -419,3 +479,57 @@ free personal project and wake up the moment it is not:
 
 None of them block anything today. All of them block a paid product, and all of
 them are cheaper to settle before there is revenue than after.
+
+---
+
+## Source availability — and a fact about Electron
+
+The stated position is that AuralFM should **not** be open source, so it cannot
+be manipulated, with plugins possibly opening things up later. The concern is
+right. One technical fact changes what it can actually buy.
+
+**An Electron app is not closed source in any meaningful sense.** `app.asar` is a
+plain archive of JavaScript. `npx asar extract app.asar out/` takes about ten
+seconds and every line is readable. Nothing is compiled; minification is not
+protection. Whatever is decided, **anyone who wants to read this code will read
+it.**
+
+So "not open source" here means *not licensed openly and not published*. It does
+not mean hidden. Worth knowing before the decision rests on secrecy it will not
+get.
+
+**The actual defence against manipulation is code signing, not concealment.** A
+signed app that has been modified fails validation and macOS refuses it. That is
+#4 — the same $99 that unblocks distribution — and it is the only thing that
+prevents someone shipping a tampered AuralFM with a swapped donation address.
+
+### The tension worth naming
+
+Two arguments cut against staying fully closed:
+
+- **The audience.** The target is Hacker News, Reddit, the Nostr and bitchat
+  crowd. bitchat is open source. Buzz is open source. Nostr is open source. In
+  that ecosystem a closed binary is the outlier, and "where's the source?" is the
+  first reply, not the tenth.
+- **The claim.** "Collects nothing" is a promise someone has to be able to check.
+  It *is* checkable without source — any network monitor shows what the app talks
+  to — but source makes it trivial. Signal is open source precisely because a
+  privacy claim needs to be verifiable. Obsidian gets away with closed source
+  because your notes are local files you can inspect yourself; our equivalent
+  is that our traffic is inspectable, which is true but harder to demonstrate.
+
+### The middle path
+
+**Source-available, not open source.** Publish the code so it can be audited;
+licence it restrictively — no redistribution, no forks, no commercial use, all
+rights reserved. That buys verifiability and community goodwill without granting
+anyone the right to fork, rebrand or resell it. A lot of independent developers
+have landed here for exactly this reason.
+
+It is a genuine option rather than a compromise, and it costs nothing that
+closed source actually protects — because, again, the code is readable either
+way.
+
+**If the decision is to stay fully closed, that is fine and defensible** — but it
+should rest on "I do not want to grant a licence to fork," which is real, rather
+than on "I do not want people reading it," which is not achievable.
