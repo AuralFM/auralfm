@@ -340,6 +340,10 @@
     background:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent);
   }
   .layrow[aria-pressed="false"]{color:var(--label3)}
+  /* Cleared by the next paintLayers, which is the echo arriving. Deliberately
+     subtle: this is a quarter second, and anything louder would draw the eye to
+     the latency rather than away from it. */
+  .layrow.pending{background:var(--fill)}
   @media (prefers-reduced-motion: reduce){ .layrow,.laydot{transition:none} }
 
   /**
@@ -2862,6 +2866,66 @@ let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
                iss: true, flights: false, wspr: false, constellations: true,
                drift: true, statusBar: false };
 
+/**
+ * Show and hide the dots without rebuilding them.
+ *
+ * globe.gl merges every point into one geometry — 12,298 draw calls down to
+ * about three, which is why the globe is smooth at all. The price is that
+ * handing it a new set costs a merge, measured at **122ms of frame time** on a
+ * 2019 Intel Mac. That is the freeze people describe as the layer panel being
+ * broken.
+ *
+ * Emptying the set is cheap (~20ms); refilling it is not. So switching a layer
+ * off and on again used to cost a full merge on the way back, for data that had
+ * not changed at all.
+ *
+ * When both point layers go off, the group is hidden instead and the geometry
+ * kept. Turning them back on is then a boolean — free. A merge only happens
+ * when the set genuinely differs, which is when exactly one of the two changes.
+ */
+let pointsGroup = null;
+
+/** Find the object globe.gl parents its merged point mesh to. Cached. */
+function findPointsGroup() {
+  if (pointsGroup || !globe) return pointsGroup;
+  let best = null, bestVerts = -1;
+  globe.scene().traverse((o) => {
+    const v = o.geometry?.attributes?.position?.count || 0;
+    // The merged point mesh is the biggest thing parented to a plain Group that
+    // is not the globe sphere itself (which has no Group parent of its own).
+    if (v > bestVerts && o.type === "Mesh" && o.parent?.type === "Group") {
+      best = o.parent; bestVerts = v;
+    }
+  });
+  pointsGroup = best;
+  return pointsGroup;
+}
+
+function applyPointVisibility(prev) {
+  const want = layers.stations || layers.shortwave;
+  const had = prev.stations || prev.shortwave;
+  const setChanged = layers.stations !== prev.stations || layers.shortwave !== prev.shortwave;
+  const grp = findPointsGroup();
+
+  if (!want) {
+    // Hide, keep the geometry. Falls back to emptying if the group could not be
+    // found, which is correct but slower — never wrong, just not the fast path.
+    if (grp) grp.visible = false;
+    else globe.pointsData([]);
+    return;
+  }
+  if (grp) grp.visible = true;
+  // Coming back from both-off with nothing else changed: the geometry we kept is
+  // still right, so there is nothing to do.
+  if (!had && !layersDifferBeyondBoth(prev)) return;
+  if (setChanged) applyLod(true);
+}
+
+/** Did anything change other than the two point layers switching together? */
+function layersDifferBeyondBoth(prev) {
+  return (layers.stations !== prev.stations) !== (layers.shortwave !== prev.shortwave);
+}
+
 function applyLayers(next) {
   const prev = layers;
   layers = { ...layers, ...next };
@@ -2878,11 +2942,24 @@ function applyLayers(next) {
     sh.uniforms.dayNightOn.value = layers.dayNight ? 1 : 0;
   });
 
-  if (!layers.stations && !layers.shortwave) globe.pointsData([]);
-  else if (layers.stations !== prev.stations || layers.shortwave !== prev.shortwave) applyLod(true);
+  applyPointVisibility(prev);
 
-  if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
-  else paintOrbits();
+  /**
+   * Only when the orbits layer actually changed.
+   *
+   * This used to run on *every* layer change, and `paintOrbits` is the most
+   * expensive function in the file: 325ms of synchronous work plus another
+   * ~100ms of frame time, measured. Toggling station dots rebuilt the ISS
+   * ground track and its labels for no reason, which is where most of the
+   * "layers panel is laggy" came from — not from the points at all.
+   *
+   * The orbit data is kept fresh by its own timers (`tickISS` every 4s,
+   * `tickSatellites` every 30s), so nothing here needs to drive it.
+   */
+  if (layers.iss !== prev.iss) {
+    if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
+    else paintOrbits();
+  }
 
   globe.controls().autoRotate = layers.drift && !flying;
 
@@ -3416,9 +3493,21 @@ function paintLayers() {
     label.textContent = t(`layer.${id}`, id);
     b.append(dot, label);
     b.onclick = () => {
-      // Paint from the echo, not from the click: main owns this state and
-      // persists it, and a panel that updated optimistically would disagree
-      // with the menu the moment a write failed.
+      /**
+       * Acknowledge instantly, commit optimistically, let the echo correct it.
+       *
+       * Still painted from main's echo — main owns this state and a panel that
+       * lied about a failed write would be worse than a slow one. But the echo
+       * can be 100ms away and the work behind it another 120, and for that
+       * quarter second the row looked like it had ignored the click. It had not;
+       * it was waiting to be told what it already knew.
+       *
+       * So the dot moves now and `paintLayers` overwrites it a moment later with
+       * whatever actually happened. If the write fails the row flips back, which
+       * is the honest outcome and is visible rather than silent.
+       */
+      b.setAttribute("aria-pressed", String(!layers[id]));
+      b.classList.add("pending");
       window.auralfm.setLayers({ [id]: !layers[id] });
     };
     list.append(b);

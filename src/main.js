@@ -344,15 +344,24 @@ function layerState() {
   return out;
 }
 
+let menuRebuild = null;
+
 function setLayer(id, on) {
   const st = load();
   st.layers = { ...(st.layers || {}), [id]: on };
   save(st);
   explore?.webContents.send("globe:layers", layerState());
-  // The menu's checkmarks are built from this state, so they have to be rebuilt
-  // when it changes elsewhere — otherwise toggling a layer in the inspector
-  // leaves the menu showing the old answer.
-  buildMenu();
+  /**
+   * The menu's checkmarks come from this state, so they have to be rebuilt when
+   * it changes elsewhere — otherwise toggling a layer in the inspector leaves
+   * the menu showing the old answer.
+   *
+   * Coalesced, because rebuilding the entire application menu on every click is
+   * work nobody is looking at: the menu is not open while someone is using the
+   * inspector, and flipping four layers in a row rebuilt it four times.
+   */
+  clearTimeout(menuRebuild);
+  menuRebuild = setTimeout(buildMenu, 250);
 }
 
 /**
