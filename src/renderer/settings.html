@@ -16,6 +16,7 @@
     --line:rgba(233,226,212,.11);
     --bg:#0C0B0B; --card:rgba(233,226,212,.045);
     --accent:#E9E2D4; --on-accent:#12100F;
+    --edge-hi:rgba(247,244,238,.13); --edge-lo:rgba(0,0,0,.55);
     /* Motion tokens, same set as explore.html. */
     --ease-out:cubic-bezier(.23,1,.32,1);
     --ease-in-out:cubic-bezier(.77,0,.175,1);
@@ -25,11 +26,13 @@
   }
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
+      --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
       --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
       --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
       --line:rgba(23,21,20,.10);
       --bg:#F2EFE9; --card:rgba(252,250,246,.74);
       --accent:#2A2622; --on-accent:#F7F4EE;
+  --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
     }
   }
   /* Explicit override beats the system in both directions. */
@@ -145,7 +148,9 @@
   }
   section{margin-bottom:20px}
 
-  .card{background:var(--card);border-radius:9px;box-shadow:inset 0 0 0 .5px var(--line)}
+  /* A machined edge: light along the top, dark where it meets the ground. */
+  .card{background:var(--card);border-radius:9px;
+    box-shadow:inset 0 1px 0 var(--edge-hi), inset 0 0 0 .5px var(--edge-lo)}
   .row{
     display:flex;align-items:center;gap:12px;min-height:38px;padding:8px 12px;
   }

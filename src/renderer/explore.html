@@ -23,11 +23,18 @@
        failed stream mean the same thing whatever palette is chosen, so these
        must not follow the accent. They were systemGreen and systemRed. */
     --up:#35C46A; --down:#E0574A; --err:#E0574A;
+    /* Depth comes from these two, not from more blur. A machined edge catches
+       light along its top and goes dark where it meets what is behind it —
+       which is also the cheapest way to sit a panel over a live globe on an
+       integrated GPU. */
+    --edge-hi:rgba(247,244,238,.13); --edge-lo:rgba(0,0,0,.55);
   }
   /* System appearance, unless Settings has forced the other one. */
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --up:#1F7A4C; --down:#C4362B; --err:#C4362B;
+      --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
+      --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10); --pane:rgba(250,248,244,.60); --bg:#F2EFE9;
     --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
@@ -35,6 +42,7 @@
   }
   :root[data-theme="light"]{
     --up:#1F7A4C; --down:#C4362B; --err:#C4362B;
+    --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
     --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10); --pane:rgba(250,248,244,.60); --bg:#F2EFE9;
@@ -118,16 +126,29 @@
   .railtabs{
     display:flex;gap:2px;padding:2px;margin:0 13px 6px;
     background:var(--fill);border-radius:7px;min-height:30px;
+    position:relative;isolation:isolate;
   }
+  /* One pill that moves, rather than two backgrounds cross-fading. The
+     selection travels between the two tabs, which is what actually happened. */
+  .railtabs::before{
+    content:"";position:absolute;z-index:0;
+    top:2px;bottom:2px;left:2px;width:calc(50% - 3px);
+    border-radius:5px;background:var(--label);
+    transition:transform var(--dur-control) var(--ease-out);
+  }
+  .railtabs[data-sel="shortwave"]::before{transform:translateX(calc(100% + 2px))}
+  .railtabs.ghost::before{display:none}
+  @media (prefers-reduced-motion: reduce){ .railtabs::before{transition:none} }
   .railtabs.ghost{visibility:hidden}
   .railtabs button{
     flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
+    position:relative;z-index:1;
     font:inherit;font-size:11px;font-weight:530;letter-spacing:-.002em;
     padding:4px 8px;border-radius:5px;cursor:default;white-space:nowrap;
     transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .railtabs button:hover{background:var(--fill-hi);color:var(--label)}
-  .railtabs button[aria-checked="true"]{background:var(--label);color:var(--bg);font-weight:590}
+  .railtabs button[aria-checked="true"]{color:var(--bg);font-weight:590}
   .railtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
   /* A one-shot tint when a price moves, so the ticker reads as alive without
@@ -203,13 +224,17 @@
   .toolbar button:hover{background:var(--fill);color:var(--label)}
   .toolbar button[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
   .toolbar #q{
-    width:clamp(240px, 22vw, 520px);height:24px;padding:0 9px;border:0;border-radius:6px;
+    width:clamp(280px, 24vw, 560px);height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:box-shadow var(--dur-control) var(--ease-out),background var(--dur-control) var(--ease-out),width var(--dur-panel) var(--ease-out);
+    /* Focus no longer changes the width. It used to grow, which animated a
+       layout property in the one bar that also carries the live markets ticker
+       — so every frame of the grow relaid out prices that are already moving.
+       The field is simply the larger size now; focus is shown by the ring. */
+    transition:box-shadow var(--dur-control) var(--ease-out),background var(--dur-control) var(--ease-out);
   }
   .toolbar #q:focus{
-    width:clamp(300px, 26vw, 600px);background:var(--fill-hi);
+    background:var(--fill-hi);
     box-shadow:inset 0 0 0 .5px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent);
   }
   .toolbar #q::placeholder{color:var(--label2)}
@@ -345,10 +370,11 @@
   #layers{
     position:absolute;top:14px;right:14px;z-index:5;width:206px;
     padding:9px 8px 10px;border-radius:12px;
-    background:color-mix(in srgb, var(--bg) 82%, transparent);
-    -webkit-backdrop-filter:blur(22px) saturate(1.6);
-            backdrop-filter:blur(22px) saturate(1.6);
-    box-shadow:0 12px 40px rgba(0,0,0,.30), 0 0 0 .5px var(--line);
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter:blur(14px) saturate(1.35);
+            backdrop-filter:blur(14px) saturate(1.35);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo),
+               0 14px 36px rgba(0,0,0,.42);
   }
   .layhead{
     padding:2px 8px 7px;font-size:11px;font-weight:590;color:var(--label2);
@@ -427,10 +453,10 @@
     position:absolute;left:0;top:0;bottom:0;z-index:5;
     width:clamp(300px, 34%, 460px);
     display:flex;flex-direction:column;overflow:hidden;
-    background:color-mix(in srgb, var(--bg) 96%, transparent);
-    backdrop-filter:blur(30px) saturate(150%);
-    border-right:.5px solid var(--line);
-    box-shadow:2px 0 22px rgba(0,0,0,.20);
+    background:color-mix(in srgb, var(--bg) 97%, transparent);
+    backdrop-filter:blur(18px) saturate(1.35);
+    border-right:.5px solid var(--edge-lo);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 2px 0 26px rgba(0,0,0,.34);
     animation:newsin var(--dur-panel) var(--ease-drawer);
   }
   /* display:flex above beats the [hidden] attribute, so the panel stayed on
@@ -621,7 +647,16 @@
    * changes character — it is a continuum, because propagation is.
    */
   .dot{
-    width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;
+    width:6px;height:6px;border-radius:50%;flex:none;
+    /* Lit rather than filled. Apple's system colours are flat swatches; an
+       instrument's indicator is a lamp, so this is a hot core, a body and a
+       falloff, plus the light it throws. Derived from --accent, so it follows
+       whichever palette is on. */
+    background:radial-gradient(circle at 44% 36%,
+      color-mix(in srgb, var(--accent) 55%, #fff) 0%,
+      var(--accent) 52%,
+      color-mix(in srgb, var(--accent) 72%, #000) 100%);
+    box-shadow:0 0 5px 1px color-mix(in srgb, var(--accent) 42%, transparent);
     animation:pulse var(--pulse-dur,2s) ease-in-out infinite;
   }
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:var(--pulse-min,.45)}}
@@ -1199,6 +1234,7 @@ function renderRailTabs(nearby) {
   // never appeared at all.
   tabs.hidden = false;
   tabs.classList.toggle("ghost", !nearby.length);
+  tabs.dataset.sel = railMode;   // drives the sliding pill in CSS
   if (!nearby.length) return;
   const mk = (mode, label) => {
     const b = document.createElement("button");
@@ -1218,6 +1254,10 @@ function renderRailTabs(nearby) {
         stationListEl.hidden = false;
       }
       railMode = mode;
+      // Move the pill here rather than waiting for the re-render: the press
+      // should be answered in the same frame it happens, not after the list
+      // rebuilds behind it.
+      tabs.dataset.sel = mode;
       renderStations();
       syncTunerVisibility();
     };

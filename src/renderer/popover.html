@@ -12,6 +12,7 @@
     --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
     --fill:rgba(233,226,212,.08); --fill-hi:rgba(233,226,212,.13);
     --line:rgba(233,226,212,.11);
+    --edge-hi:rgba(247,244,238,.13); --edge-lo:rgba(0,0,0,.55);
     --accent:#E9E2D4;          /* bone — the brand, and the default palette */
     --bg:#0C0B0B;              /* onyx, same stop the icon and splash use */
     --err:#E0574A;             /* warmed off systemRed */
@@ -28,9 +29,11 @@
      in both directions, which is the whole point of an appearance override. */
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
+    --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
     --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10);
+    --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
     --accent:#2A2622;        /* onyx: the brand's light-mode accent */
     --err:#C4362B;
     --star:#8A6D1F;
