@@ -56,7 +56,7 @@ const MAX_OBJECTS = 8;                     // enough to feel inhabited, few enou
  *     ISS within a few kilometres of the truth, which is far finer than a dot
  *     on this globe. Silence is the worse answer.
  */
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
+const { UA } = require("./useragent");
 const BACKOFF_MIN = 5 * 60 * 1000;
 const BACKOFF_MAX = 6 * 60 * 60 * 1000;
 
@@ -93,7 +93,7 @@ async function loadTLEs() {
     const res = await fetch(TLE_URL, {
       // Celestrak asks clients to identify themselves and offer a way to be
       // contacted if they misbehave. That is a fair request to honour.
-      headers: { "User-Agent": "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)" },
+      headers: { "User-Agent": UA },
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

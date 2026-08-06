@@ -1,0 +1,4 @@
+{
+  "_comment": "Receivers to leave out of AuralFM, at the operator's request. See docs/RECEIVERS.md. Host only, no scheme, no port. The crawler drops these and the app never learns they existed.",
+  "hosts": []
+}

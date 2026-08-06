@@ -24,7 +24,7 @@ const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "data", "sdr.min.json");
 const SRC = "http://rx.linkfanel.net/kiwisdr_com.js";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
+const { UA } = require("../src/useragent.js");
 
 /**
  * The file is a JS assignment, not JSON, and it carries a trailing comma the
@@ -55,6 +55,25 @@ function gps(s) {
 const { hostFrom: host } = require("../src/sdr.js");
 
 /**
+ * Receivers whose operators have asked to be left out.
+ *
+ * These are volunteers. Somebody who does not want their radio in a piece of
+ * software they did not choose should not have to argue about it, and should
+ * not have to block us at the firewall to make it stop — that costs them work
+ * and costs everyone else the receiver.
+ *
+ * So: one line in `data/sdr-exclude.json`, and they are gone from the next
+ * build. No server, no request at runtime, no record in the app of who asked.
+ * The exclusion happens here, at crawl time, so an excluded host never reaches
+ * a shipped file.
+ */
+const EXCLUDE = new Set(
+  (JSON.parse(fs.readFileSync(new URL("../data/sdr-exclude.json", import.meta.url), "utf8")).hosts || [])
+    .map((h) => String(h).trim().toLowerCase())
+    .filter(Boolean),
+);
+
+/**
  * Operators decorate names heavily — block characters, emoji, the hardware
  * string, the frequency range. Keep something a list can show.
  */
@@ -69,10 +88,15 @@ function clean(name) {
 export function build(recs) {
   const out = [];
   const seen = new Set();
+  // Operators who have asked not to be listed. Checked here rather than in the
+  // app, so an excluded receiver never reaches a build at all — there is no
+  // shipped list of who opted out, and nothing to leak.
+  let excluded = 0;
   for (const r of recs) {
     if (r.status !== "active" || r.offline === "yes") continue;
     const g = gps(r.gps);
     const h = host(r.url);
+    if (h && EXCLUDE.has(h.toLowerCase())) { excluded++; continue; }
     if (!g || !h || seen.has(h)) continue;
     seen.add(h);
     out.push({
@@ -84,6 +108,12 @@ export function build(recs) {
       m: num(r.users_max) || 4,     // slots the operator publishes
       a: num(r.asl),                // metres above sea level
     });
+  }
+  // Say it out loud. An exclusion that happens silently is indistinguishable
+  // from a receiver that vanished, and the difference matters.
+  if (excluded) {
+    console.log(`sdr: ${excluded} receiver(s) excluded at the operator's request` +
+                ` — data/sdr-exclude.json`);
   }
   return out;
 }

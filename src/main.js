@@ -23,8 +23,7 @@ const path = require("node:path");
  * upgrades, everything. Set before any window exists, because the value is read
  * when a session is created.
  */
-app.userAgentFallback =
-  `AuralFM/${require("../package.json").version} (+https://github.com/meltonbell3/auralfm)`;
+app.userAgentFallback = require("./useragent").UA;
 const fs = require("node:fs");
 const catalog = require("./catalog");
 const resolver = require("./resolver");

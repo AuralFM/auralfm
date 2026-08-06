@@ -27,7 +27,7 @@
 const { cooldown } = require("./backoff");
 
 const API = "https://api.adsb.lol/v2";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
+const { UA } = require("./useragent");
 
 const MIN_GAP_MS = 12_000;      // aircraft move; a globe does not need faster
 const MAX_NM = 250;             // the endpoint's own ceiling

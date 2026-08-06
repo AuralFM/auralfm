@@ -67,6 +67,7 @@ const DOCS = [
   ["docs/LEGAL-AND-SECURITY.md",   "Legal and Security"],
   ["docs/PRIVACY.md",              "Privacy"],
   ["docs/DECENTRALIZATION.md",     "Decentralization"],
+  ["docs/RECEIVERS.md",            "For Receiver Operators"],
   ["docs/SPONSORSHIP.md",          "Sponsorship"],
   ["docs/TERMS.md",                "Terms"],
   ["docs/telegeography-request.md","TeleGeography Request"],

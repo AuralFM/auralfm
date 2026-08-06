@@ -22,7 +22,7 @@
 const { cooldown } = require("./backoff");
 
 const API = "https://db1.wspr.live/";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
+const { UA } = require("./useragent");
 
 /**
  * WSPR transmits on a two-minute cycle, so nothing new exists faster than that

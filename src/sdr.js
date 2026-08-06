@@ -45,7 +45,7 @@ const { cooldown } = require("./backoff");
  * was designed to do anyway.
  */
 const SRC = "http://rx.linkfanel.net/kiwisdr_com.js";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
+const { UA } = require("./useragent");
 const REFRESH_MS = 12 * 60 * 60 * 1000;
 const BUNDLE = path.join(__dirname, "..", "data", "sdr.min.json");
 

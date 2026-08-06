@@ -21,7 +21,7 @@ const { cooldown } = require("./backoff");
 const FLUX = "https://services.swpc.noaa.gov/products/summary/10cm-flux.json";
 const KP = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json";
 const SCALES = "https://services.swpc.noaa.gov/products/noaa-scales.json";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell3/auralfm)";
+const { UA } = require("./useragent");
 
 // The sun does not change fast. The K-index updates every minute but only
 // meaningfully every three hours, and flux is a daily figure.
