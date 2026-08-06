@@ -7,6 +7,24 @@
 
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme } = require("electron");
 const path = require("node:path");
+
+/**
+ * Identify this app to every server it touches, including the receivers.
+ *
+ * `docs/DECENTRALIZATION.md` rule 7 says to send a contactable User-Agent, and
+ * the Node-side fetches already do. The renderer did not: a browser WebSocket
+ * cannot set its own User-Agent header, so every connection to a volunteer's
+ * KiwiSDR was arriving labelled as Chrome. An operator watching their own logs
+ * could see the traffic and had no way to tell what it was or who to contact —
+ * which is the exact situation that ends with a receiver being firewalled
+ * rather than a maintainer being emailed.
+ *
+ * `userAgentFallback` covers the whole session: renderer fetches, WebSocket
+ * upgrades, everything. Set before any window exists, because the value is read
+ * when a session is created.
+ */
+app.userAgentFallback =
+  `AuralFM/${require("../package.json").version} (+https://github.com/meltonbell3/auralfm)`;
 const fs = require("node:fs");
 const catalog = require("./catalog");
 const resolver = require("./resolver");
