@@ -60,61 +60,41 @@ weather, volunteers the receivers, and the chat rides other people's relays.
 
 ---
 
-## Why this exists
+## Requirements
 
-I have been fascinated by radio communication for as long as I can remember —
-shortwave, CB, all of it. I have a vivid memory of my great-grandmother and
-grandfather listening to police scanners. For years my alarm for school was not
-an alarm at all; it was the radio coming on, and what came out of it was the Tom
-Joyner Show. That is the first thing I heard most mornings of my childhood.
+- macOS
+- [Node.js](https://nodejs.org) 18+ (developed on 24)
 
-Somewhere along the way radio stopped being the thing everyone shared and became
-something closer to underground. Meanwhile the platforms that replaced it got
-worse at the one job they took over: discovery. And the feeds got louder, more
-political, more exhausting — a wall of propaganda and tension with no obvious way
-through it.
+## Getting started
 
-Radio is a strange refuge from that. It is harder to fake. A station is a real
-transmitter in a real place, playing for people who are actually there, and you
-can hear the difference. The curation is human. The energy is honest. You can
-tell what a place sounds like at 3am.
+```bash
+git clone https://github.com/meltonbell3/auralfm.git
+cd auralfm
+npm install
+```
 
-[radio.garden](https://radio.garden) showed me what that could feel like. From
-Texas I could listen to what was on in Tokyo, or Iraq, or India. The connection
-only ran one way — nobody on the other end knew I was there — and it still meant
-something to me.
+The station catalog is **not** in the repo — it's generated, ~2.7 MB, and
+reproducible. Build it once (~50 minutes, one time):
 
-At the same time I was watching what Block and Jack Dorsey have been building
-toward for years, and what is happening around Nostr and decentralized systems
-generally. I think where society is heading, applications like these are going to
-matter more, not less.
+```bash
+npm run crawl     # radio.garden -> data/stations.json + stations.min.json
+npm run tags      # fold in radio-browser genre tags
+npm run crawl:sdr # kiwisdr -> data/sdr.min.json, the 837 receivers
+npm run icons     # rasterize assets/*.svg, and build build/icon.icns
+npm start         # run it
+```
 
-So this is the simple thing nobody thinks about, because it has always been
-there. Radio is overlooked precisely because it never left. AuralFM is an attempt
-to make it visible again: see the globe, see how enormous society is, see the
-thousands of stations and hundreds of shortwave receivers scattered across it —
-and then just listen. Connection by audio, with nothing in the middle that has to
-know who you are.
+`crawl:sdr` takes seconds — it is one request to an aggregate list, never to the
+receivers themselves. `crawl` is the slow one.
 
-### The name
+The globe opens on launch. Close it and AuralFM keeps playing from the menu bar —
+right-click the tray icon for **Open the Globe**, **About**, **Open at Login** and
+**Quit**.
 
-**Aural** — *of or relating to the ear, or the sense of hearing.* From the Latin
-*auris*, ear.
+### Just trying it out?
 
-I have been circling this idea for years under that word. An earlier version was
-going to be a live conversation app, built around the same frustration: the audio
-platforms that got big were shaped by what kept people on them, not by what was
-worth hearing, and the people making the thing got the least out of it.
-
-That app isn't this one. This one has no hosts, no rooms, no feed and nobody to
-monetise. But the thesis survived the change of form intact — **audio as
-connection, with no algorithm deciding what reaches you and no platform standing
-between you and the person transmitting.** Radio already worked that way before
-anyone built a platform. It still does.
-
-*— Melton Bell*
-
----
+`npm run crawl -- --limit 300` builds a usable catalog in about two minutes. The
+receiver bundle is committed, so shortwave works immediately either way.
 
 ## What it does
 
@@ -243,80 +223,6 @@ listeners appear as slow pulsing rings on the globe.
 Honest expectation: **inhabited, but quiet.** Hundreds announce presence; actual
 conversation is thin. It is a room with people in it rather than an empty one,
 which is a different and better problem.
-
-## The test this is built around
-
-There is a longer argument behind all of this, written up in
-[`docs/WHITEPAPER.md`](docs/WHITEPAPER.md) and at academic length in
-[`docs/thesis.md`](docs/thesis.md). The short version is one question, and it is
-worth asking of anything that calls itself decentralised:
-
-> **What does it cost to receive?**
-
-Not to publish, or to run a node, or to hold a key. What does it cost the person
-who is only listening?
-
-Shortwave is the reference case, because the answer there is *nothing*. Someone
-turning a dial in a room with no Wi-Fi produces no click, no dwell time, no
-profile assembling in the background. Not because a policy protects them —
-because there is physically nowhere for it to go.
-
-That is the bar this app is measured against, and it is why the awkward parts of
-the design are the way they are. No account, because an account is a place for a
-profile to accumulate. No recommendations, because a recommendation is somebody
-deciding what you should hear. A chat key that is generated when the app opens
-and thrown away when it closes, because a stable one would make you the same
-person twice.
-
-The uncomfortable half of the argument is that **decentralising the wires does
-not decentralise the ear.** You can replace every server with a relay and still
-build the same thing — still curate, still profile, still teach people what
-elsewhere is supposed to sound like before they hear it. The protocol is not the
-politics.
-
-Roshanak Kheshti's work on the world music industry is the sharpest version of
-that critique, and reading it changed three things here — including the copy rule
-that this README now follows: **never describe a place as a sound.** *"Hear what
-Lagos sounds like"* makes Lagos into texture for someone else's consumption.
-*"Hear what Lagos is listening to"* points at people who are already listening,
-already choosing, and who are not performing for you. See
-[`docs/LISTENING.md`](docs/LISTENING.md).
-
-## Requirements
-
-- macOS
-- [Node.js](https://nodejs.org) 18+ (developed on 24)
-
-## Getting started
-
-```bash
-git clone https://github.com/meltonbell3/auralfm.git
-cd auralfm
-npm install
-```
-
-The station catalog is **not** in the repo — it's generated, ~2.7 MB, and
-reproducible. Build it once (~50 minutes, one time):
-
-```bash
-npm run crawl     # radio.garden -> data/stations.json + stations.min.json
-npm run tags      # fold in radio-browser genre tags
-npm run crawl:sdr # kiwisdr -> data/sdr.min.json, the 837 receivers
-npm run icons     # rasterize assets/*.svg, and build build/icon.icns
-npm start         # run it
-```
-
-`crawl:sdr` takes seconds — it is one request to an aggregate list, never to the
-receivers themselves. `crawl` is the slow one.
-
-The globe opens on launch. Close it and AuralFM keeps playing from the menu bar —
-right-click the tray icon for **Open the Globe**, **About**, **Open at Login** and
-**Quit**.
-
-### Just trying it out?
-
-`npm run crawl -- --limit 300` builds a usable catalog in about two minutes. The
-receiver bundle is committed, so shortwave works immediately either way.
 
 ## Keyboard
 
@@ -456,8 +362,6 @@ phase0/index.html      the original single-file prototype
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
 | [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
 | [`docs/VISION.md`](docs/VISION.md) | Why this exists, in the maintainer's own account |
-| [`docs/WHITEPAPER.md`](docs/WHITEPAPER.md) | The argument, in the first person — and an audit of the long version |
-| [`docs/thesis.md`](docs/thesis.md) | The academic treatment: Kheshti, Joler and Newton in one frame |
 | [`docs/DIRECTION.md`](docs/DIRECTION.md) | Where this is going, and the two proposals that were refused |
 | [`docs/LISTENING.md`](docs/LISTENING.md) | The critique this product has to answer, and the three ways it does |
 | [`docs/IDENTITY.md`](docs/IDENTITY.md) | The mark, the colour, and the icon measured against the system |
@@ -593,6 +497,80 @@ can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
   Stooq and CNBC were all re-probed and all refuse. Crypto is genuinely live over
   Coinbase's keyless feed; equities light up only if you set `AURALFM_STOCK_KEY`.
 
+## Siri and Shortcuts
+
+AuralFM registers an `auralfm://` URL scheme, so any Shortcut that opens a URL can
+drive it — which is how you get "Hey Siri, play KEXP" back.
+
+| URL | Does |
+|---|---|
+| `auralfm://play?station=KEXP` | Play the best match for a station name |
+| `auralfm://play?place=Reykjavik` | Play the top station in a place |
+| `auralfm://pause` | Pause / resume |
+| `auralfm://next` | Next favorite |
+| `auralfm://open` | Open the popover |
+
+**Making a Shortcut:** Shortcuts → new shortcut → *Open URLs* → paste one of the
+above → name it "Play KEXP". Saying that name to Siri now runs it.
+
+Station and place names are matched with the same ranking the in-app search uses,
+so "kexp", "wwoz" and "new orleans" all work without being exact.
+## Why this exists
+
+I have been fascinated by radio communication for as long as I can remember —
+shortwave, CB, all of it. I have a vivid memory of my great-grandmother and
+grandfather listening to police scanners. For years my alarm for school was not
+an alarm at all; it was the radio coming on, and what came out of it was the Tom
+Joyner Show. That is the first thing I heard most mornings of my childhood.
+
+Somewhere along the way radio stopped being the thing everyone shared and became
+something closer to underground. Meanwhile the platforms that replaced it got
+worse at the one job they took over: discovery. And the feeds got louder, more
+political, more exhausting — a wall of propaganda and tension with no obvious way
+through it.
+
+Radio is a strange refuge from that. It is harder to fake. A station is a real
+transmitter in a real place, playing for people who are actually there, and you
+can hear the difference. The curation is human. The energy is honest. You can
+tell what a place sounds like at 3am.
+
+[radio.garden](https://radio.garden) showed me what that could feel like. From
+Texas I could listen to what was on in Tokyo, or Iraq, or India. The connection
+only ran one way — nobody on the other end knew I was there — and it still meant
+something to me.
+
+At the same time I was watching what Block and Jack Dorsey have been building
+toward for years, and what is happening around Nostr and decentralized systems
+generally. I think where society is heading, applications like these are going to
+matter more, not less.
+
+So this is the simple thing nobody thinks about, because it has always been
+there. Radio is overlooked precisely because it never left. AuralFM is an attempt
+to make it visible again: see the globe, see how enormous society is, see the
+thousands of stations and hundreds of shortwave receivers scattered across it —
+and then just listen. Connection by audio, with nothing in the middle that has to
+know who you are.
+
+### The name
+
+**Aural** — *of or relating to the ear, or the sense of hearing.* From the Latin
+*auris*, ear.
+
+I have been circling this idea for years under that word. An earlier version was
+going to be a live conversation app, built around the same frustration: the audio
+platforms that got big were shaped by what kept people on them, not by what was
+worth hearing, and the people making the thing got the least out of it.
+
+That app isn't this one. This one has no hosts, no rooms, no feed and nobody to
+monetise. But the thesis survived the change of form intact — **audio as
+connection, with no algorithm deciding what reaches you and no platform standing
+between you and the person transmitting.** Radio already worked that way before
+anyone built a platform. It still does.
+
+*— Melton Bell*
+
+---
+
 ## Credits
 
 - Station geography: [radio.garden](https://radio.garden)
@@ -615,21 +593,3 @@ Full licence texts for every library this app ships, vendors or downloads are in
 
 Personal project, not affiliated with or endorsed by any of the above.
 
-## Siri and Shortcuts
-
-AuralFM registers an `auralfm://` URL scheme, so any Shortcut that opens a URL can
-drive it — which is how you get "Hey Siri, play KEXP" back.
-
-| URL | Does |
-|---|---|
-| `auralfm://play?station=KEXP` | Play the best match for a station name |
-| `auralfm://play?place=Reykjavik` | Play the top station in a place |
-| `auralfm://pause` | Pause / resume |
-| `auralfm://next` | Next favorite |
-| `auralfm://open` | Open the popover |
-
-**Making a Shortcut:** Shortcuts → new shortcut → *Open URLs* → paste one of the
-above → name it "Play KEXP". Saying that name to Siri now runs it.
-
-Station and place names are matched with the same ranking the in-app search uses,
-so "kexp", "wwoz" and "new orleans" all work without being exact.
