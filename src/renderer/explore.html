@@ -645,6 +645,18 @@
     padding:9px 7px 9px 16px;
     box-shadow:inset 0 .5px 0 var(--line);font-size:12px;overflow:hidden;
   }
+  /* The two labels are the only things in the transport that can be any
+     length, so they are the only things allowed to shrink. Without this they
+     wrap at the minimum window size, the bar grows to two rows, and everything
+     in it looks broken -- measured at 760px, where both were 32px tall.
+     The name absorbs the shrinking because a truncated station name is still
+     readable and a truncated price is not. */
+  #nowName{flex:1 1 auto;min-width:0}
+  #nowStatus{flex:0 1 auto;min-width:0}
+  #nowName,#nowStatus{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* The prices keep their natural width and lose whole symbols instead. */
+  .markets{flex:0 0 auto}
+
   /**
    * The on-air dot, and what it is actually telling you.
    *
@@ -1867,24 +1879,43 @@ async function renderMarkets() {
  * `overflow:hidden` on its own resolves a narrow window by slicing a price down
  * the middle, and "SOL 73." reads as a rendering bug rather than as a choice.
  *
- * So measure, and hide from the end until what remains fits: SOL goes first,
- * then ETH, and BTC is the last to leave — the order the markup was already
- * built in. Costs one layout read per update, on three elements.
+ * Two stages, because losing a whole coin is a worse trade than losing its
+ * percentage. First try everything. If that does not fit, drop every 24h change
+ * and try again — that alone buys back about a third of the strip and keeps all
+ * three prices. Only if it still does not fit do whole symbols go, from the end:
+ * SOL first, then ETH, and BTC is the last to leave.
  */
 function fitMarkets() {
   const el = $("markets");
   if (!el || !el.children.length) return;
   const kids = [...el.children];
-  for (const k of kids) k.hidden = false;
+  const deltas = kids.map((k) => k.querySelector(".ch")).filter(Boolean);
+
   // `clientWidth` is the padding box; the strip's own left padding is inside it.
-  const room = el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft || 0);
+  const room = () => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft || 0);
   const gap = parseFloat(getComputedStyle(el).gap || 0);
+  const total = () => kids.reduce((n, k, i) =>
+    k.hidden ? n : n + k.getBoundingClientRect().width + (i ? gap : 0), 0);
+
+  for (const k of kids) k.hidden = false;
+  for (const d of deltas) d.hidden = false;
+
+  // Stage one: everything.
+  if (total() <= room() + 0.5) return;
+
+  // Stage two: the same prices without their 24h change.
+  for (const d of deltas) d.hidden = true;
+  if (total() <= room() + 0.5) return;
+
+  // Stage three: whole symbols, from the end. Never half of one — "SOL 73."
+  // reads as a rendering bug rather than as a choice — and once one has gone,
+  // everything after it goes too, because a gap in the middle of the strip
+  // looks like missing data.
   let used = 0;
+  const r = room();
   kids.forEach((k, i) => {
     const w = k.getBoundingClientRect().width + (i ? gap : 0);
-    // Once one has been dropped, everything after it goes too — a gap in the
-    // middle of the strip would look like missing data rather than a fit.
-    if (k.hidden || used + w > room + 0.5) { k.hidden = true; return; }
+    if (k.hidden || used + w > r + 0.5) { k.hidden = true; return; }
     used += w;
   });
   for (let i = 1; i < kids.length; i++) if (kids[i - 1].hidden) kids[i].hidden = true;

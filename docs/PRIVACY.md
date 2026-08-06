@@ -79,10 +79,35 @@ someone's antenna, and it is the same bargain the receiver's own web page offers
 
 ## Optional features that are off by default
 
-**Listener presence** is disabled unless you deliberately configure a server
-address. If you enable it, AuralFM sends a randomly generated per-session
-identifier and the station you are listening to, so listeners can be counted. The
-identifier is not tied to you and changes every time the app launches.
+**Listener presence** is off until you turn it on in Settings. It is the only
+thing in the app that sends anything, which is why it is off and why this section
+is the longest one here.
+
+With it on, and only while you are playing something, AuralFM announces:
+
+- the **station's** name, and
+- the **station's** location, rounded to a grid cell of roughly 20 km.
+
+It does not send your location. The coordinates announced are the transmitter's
+or the receiver's, not yours, and they are deliberately blunted: the cell is
+about 20 km across, so the announcement says "somewhere in this region" rather
+than naming a place.
+
+**There is no account, and no identifier that survives the app.** A signing key
+is generated when AuralFM opens and thrown away when it closes. Nothing links one
+session to the next, which means nothing can accumulate into a profile — not
+here, and not at any relay.
+
+**The messages ask not to be stored.** They are published as a type that relays
+are asked to forward and discard rather than retain. Most relays honour that.
+Nobody can guarantee that every relay does, which is the honest position, and it
+is why nothing in these messages is worth keeping in the first place.
+
+**Relays are chosen, not owned.** AuralFM picks public relays near the place you
+are listening to, from a public directory plus a few well-known ones, and you can
+add your own in Settings — yours are tried first. A relay is asked only for
+messages in the cell you are listening to or looking at. No relay is told where
+you are.
 
 ## Children
 

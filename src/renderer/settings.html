@@ -172,9 +172,12 @@
   }
   .row + .row{box-shadow:inset 0 .5px 0 var(--line)}
   .row .name{flex:1;min-width:0}
+  /* Aligned with the section heading above it, not with the card's inner
+     padding. h2 sits at 2px, so a hint at 14px read as a stray indent under
+     every section except About, which happens to have no hint. */
   .hint{
-    font-size:11px;line-height:1.35;color:var(--label2);
-    padding:2px 14px 9px;margin:0;
+    font-size:11px;line-height:1.4;color:var(--label2);
+    padding:4px 2px 9px;margin:0;max-width:52ch;
   }
 
   /* Segmented control — AppKit's shape, not a web radio group. */
@@ -314,8 +317,8 @@
         <button id="relay-btn" data-i18n="set.relayAddBtn">Add</button>
       </div>
     </div>
-    <p class="hint" data-i18n="set.relayHint">AuralFM picks relays near the place you listen to. It uses a public directory and a few well-known relays. Add your own relay and AuralFM tries it first. AuralFM asks a relay only for messages in the cell you listen to or look at. No relay learns where you are.</p>
-    <p class="hint" data-i18n="set.presenceHint">This setting is off by default, because it is the only thing here that sends anything. When you turn it on, AuralFM announces the station you play: its name, and its location rounded to about 20 km. AuralFM never sends your location. Other people who run AuralFM then see that a listener is there. There is no account: AuralFM makes a key when it opens, and throws that key away when it closes. AuralFM marks the messages with a kind that asks relays not to keep them. Most relays honour that request, but nobody can guarantee it, so nothing in these messages is worth keeping.</p>
+    <p class="hint" data-i18n="set.relayHint">Relays are the servers that carry the messages. AuralFM picks ones near the place you are listening to. Add your own and it tries those first. No relay is ever told where you are.</p>
+    <p class="hint" data-i18n="set.presenceHint">Off by default. When on, other people see that someone is listening to this station — never who, and never where you are. Your location is not sent. There is no account.</p>
   </section>
 
   <section>
