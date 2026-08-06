@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const catalog = require("./catalog");
@@ -190,10 +190,11 @@ function openExplore() {
     // blank grey rectangle. The popover still uses vibrancy; it is small,
     // frameless, and does not host a WebGL canvas.
     //
-    // Onyx rather than #1c1c1e, which was Apple's secondarySystemBackground. The
-    // page fades up from this colour on first reveal, so it has to be the same
-    // onyx the splash card uses or the fade starts on a grey flash.
-    backgroundColor: "#0C0B0B",
+    // Onyx rather than #1c1c1e, which was Apple's secondarySystemBackground.
+    // The page fades up from this colour on first reveal, so it must match the
+    // theme the page is about to paint in — a dark window under a light page
+    // means the fade starts on a dark flash, and vice versa.
+    backgroundColor: groundColour(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -219,6 +220,24 @@ function openExplore() {
   clearTimeout(revealTimer);
   revealTimer = setTimeout(revealExplore, 6000);
   explore.on("closed", () => { clearTimeout(revealTimer); closeSplash(); });
+}
+
+/**
+ * The colour a window shows before its page has painted.
+ *
+ * This is only visible for a moment, but it is visible: Explore fades its
+ * content up on first reveal, so for that fade's duration the window's own
+ * background is the backdrop. It has to agree with the theme the page will
+ * paint in, or the reveal begins with a flash of the opposite one.
+ *
+ * These two values are `--bg` from the renderers' token blocks. They are
+ * duplicated here because a BrowserWindow needs its colour before any
+ * stylesheet exists to ask.
+ */
+function groundColour() {
+  const pref = getPrefs().theme;
+  const dark = pref === "dark" || (pref !== "light" && nativeTheme.shouldUseDarkColors);
+  return dark ? "#0C0B0B" : "#F2EFE9";
 }
 
 let revealTimer = null;

@@ -48,20 +48,24 @@ const PALETTES = [
   {
     id: "onair",
     name: "On Air",
-    accent: "#30D158",      // systemGreen — where AuralFM started
-    accentLight: "#248A3D",
-    dot: "#5ef08a",
+    // Was #30D158, which is systemGreen exactly. Moved off it: deeper and less
+    // mint, so it still reads as a lit "on air" lamp without being Apple's.
+    accent: "#35C46A",
+    accentLight: "#1F8A4C",
+    dot: "#6EF08C",
     rx: "#ffb340",
     atmosphere: "#8ab4f8",
-    star: "#FFD60A",
+    star: "#F2C744",
   },
   {
     id: "nightearth",
     name: "Night Earth",
     // The blue of city lights seen from orbit, which is what the globe mostly is.
-    accent: "#5AC8F5",
-    accentLight: "#0071A4",
-    dot: "#7fd6ff",
+    // Was #5AC8F5, a neighbour of systemCyan. Deeper, closer to ocean at night
+    // than to a system tint.
+    accent: "#3C8FC7",
+    accentLight: "#12658F",
+    dot: "#7FCCF0",
     rx: "#ffcf70",
     atmosphere: "#6fa8ff",
     star: "#DCE7FF",
@@ -70,8 +74,9 @@ const PALETTES = [
     id: "ember",
     name: "Ember",
     // Terminator warmth — the band of sunrise the day/night shader already draws.
-    accent: "#FF9F0A",
-    accentLight: "#B25E00",
+    // Was #FF9F0A, which is systemOrange exactly.
+    accent: "#F0892E",
+    accentLight: "#A65A12",
     dot: "#ffc46b",
     rx: "#7ee0ff",          // inverted, so receivers stay unmistakably other
     atmosphere: "#ff9d6b",

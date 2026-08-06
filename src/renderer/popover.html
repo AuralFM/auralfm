@@ -9,38 +9,44 @@
   /* Colors follow AppKit's label/fill hierarchy and system palette so the panel
      reads as part of macOS rather than a web page pretending to be one. */
   :root{
-    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
-    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10);
-    --accent:#30D158;          /* systemGreen, dark */
-    --bg:#1c1c1e;
-    --err:#FF453A;             /* systemRed, dark   */
-    --star:#FFD60A;            /* systemYellow, dark*/
-    --on-accent:#00210F;
+    --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
+    --fill:rgba(233,226,212,.08); --fill-hi:rgba(233,226,212,.13);
+    --line:rgba(233,226,212,.11);
+    --accent:#E9E2D4;          /* bone — the brand, and the default palette */
+    --bg:#0C0B0B;              /* onyx, same stop the icon and splash use */
+    --err:#E0574A;             /* warmed off systemRed */
+    --star:#F5F0E4;
+    --on-accent:#12100F;
+    /* Motion tokens, same set as explore.html. */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-in-out:cubic-bezier(.77,0,.175,1);
+    --ease-drawer:cubic-bezier(.32,.72,0,1);
+    --dur-press:90ms; --dur-hover:.12s; --dur-control:.15s;
+    --dur-panel:.22s; --dur-reveal:.42s;
   }
   /* System appearance, unless Settings has forced the other one. Explicit wins
      in both directions, which is the whole point of an appearance override. */
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-    --line:rgba(0,0,0,.09);
-    --accent:#248A3D;        /* systemGreen dark-variant: legible on light glass */
-    --err:#D70015;
-    --star:#A16207;
-    --on-accent:#fff;
-    --bg:#f2f2f7;
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
+    --line:rgba(23,21,20,.10);
+    --accent:#2A2622;        /* onyx: the brand's light-mode accent */
+    --err:#C4362B;
+    --star:#8A6D1F;
+    --on-accent:#F7F4EE;
+    --bg:#F2EFE9;
     }
   }
   :root[data-theme="light"]{
-    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-    --line:rgba(0,0,0,.09);
-    --accent:#248A3D;        /* systemGreen dark-variant: legible on light glass */
-    --err:#D70015;
-    --star:#A16207;
-    --on-accent:#fff;
-    --bg:#f2f2f7;
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
+    --line:rgba(23,21,20,.10);
+    --accent:#2A2622;        /* onyx: the brand's light-mode accent */
+    --err:#C4362B;
+    --star:#8A6D1F;
+    --on-accent:#F7F4EE;
+    --bg:#F2EFE9;
   }
   /* A forced theme has to paint its own backdrop: the vibrancy material behind
      the window still follows the OS, so transparency would show the wrong one. */
@@ -48,10 +54,10 @@
   :root[data-theme="dark"] body,
   :root[data-contrast="more"] body{background:var(--bg)}
   :root[data-theme="dark"]{
-    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
-    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10);
-    --accent:#30D158; --err:#FF453A; --star:#FFD60A; --on-accent:#00210F; --bg:#1c1c1e;
+    --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
+    --fill:rgba(233,226,212,.08); --fill-hi:rgba(233,226,212,.13);
+    --line:rgba(233,226,212,.11);
+    --accent:#E9E2D4; --err:#E0574A; --star:#F5F0E4; --on-accent:#12100F; --bg:#0C0B0B;
   }
   /* Vibrancy is a real material here; if the user has asked for less of it,
      go frosty-solid rather than shipping unreadable text over a busy desktop. */
@@ -103,7 +109,7 @@
     from{opacity:0;transform:scale(.965) translateY(-6px);filter:blur(6px)}
     to  {opacity:1;transform:none;filter:none}
   }
-  body.entering{animation:materialize .26s cubic-bezier(.32,.72,0,1);transform-origin:top center}
+  body.entering{animation:materialize .26s var(--ease-drawer);transform-origin:top center}
   @media (prefers-reduced-motion: reduce){
     body.entering{animation:none}
     *{animation-duration:.01ms !important;transition-duration:.01ms !important}
@@ -121,11 +127,11 @@
     font:inherit;font-size:12px;font-weight:510;letter-spacing:-.002em;
     padding:6px 9px;cursor:default;text-align:left;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:background .13s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-control) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   #explore img{width:15px;height:15px;opacity:.95;flex:none}
   #explore span:first-of-type{flex:1}
-  #explore .chev{color:var(--label3);font-size:14px;line-height:1;transition:transform .16s ease-out}
+  #explore .chev{color:var(--label3);font-size:14px;line-height:1;transition:transform var(--dur-control) var(--ease-out)}
   #explore:hover{background:var(--fill-hi)}
   #explore:hover .chev{transform:translateX(2px)}
   #explore:active{transform:scale(.985)}
@@ -135,7 +141,7 @@
     width:100%;height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:box-shadow .15s ease-out,background .15s ease-out;
+    transition:box-shadow var(--dur-control) var(--ease-out),background var(--dur-control) var(--ease-out);
   }
   #q:focus{background:var(--fill-hi);box-shadow:inset 0 0 0 .5px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent)}
   #q::placeholder{color:var(--label2)}
@@ -175,11 +181,11 @@
 
   .row{
     display:flex;align-items:center;gap:9px;padding:3px 8px;border-radius:6px;
-    transition:background .12s ease-out;
+    transition:background var(--dur-hover) var(--ease-out);
   }
   .row:hover{background:var(--fill)}
   /* Feedback on press, not release. */
-  .row:active{background:var(--fill-hi);transform:scale(.988);transition:transform 90ms ease-out}
+  .row:active{background:var(--fill-hi);transform:scale(.988);transition:transform var(--dur-press) var(--ease-out)}
   /* Selection is accent-tinted, the way AppKit tints a selected row, rather than
      a neutral gray that reads as muddy over the material. */
   .row[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
@@ -196,7 +202,7 @@
   .star{
     flex:none;background:none;border:0;color:var(--label3);font-size:12px;
     padding:2px 3px;border-radius:4px;cursor:default;opacity:0;line-height:1;
-    transition:opacity .12s ease-out,color .12s ease-out,transform 90ms ease-out;
+    transition:opacity var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .row:hover .star{opacity:1}
   .star.on{opacity:1;color:var(--star)}
@@ -221,7 +227,7 @@
     flex:none;width:34px;height:34px;border-radius:50%;border:0;cursor:default;
     background:var(--accent);color:var(--on-accent);font-size:15px;
     display:grid;place-items:center;
-    transition:transform 90ms ease-out,opacity .15s ease-out;
+    transition:transform var(--dur-press) var(--ease-out),opacity var(--dur-control) var(--ease-out);
   }
   #toggle:active{transform:scale(.93)}
   #toggle:disabled{opacity:.28}
@@ -239,7 +245,7 @@
   #mute{
     flex:none;background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
     padding:3px 2px;border-radius:5px;cursor:default;
-    transition:color .12s ease-out,transform 90ms ease-out;
+    transition:color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   #mute:hover{color:var(--label)}
   #mute:active{transform:scale(.9)}

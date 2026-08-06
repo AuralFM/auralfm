@@ -7,31 +7,44 @@
 <title>Explore</title>
 <style>
   :root{
-    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
-    --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#0C0B0B;
-    --accent:#30D158; --star:#FFD60A; --on-accent:#04140c;
+    --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
+    --fill:rgba(233,226,212,.07); --fill-hi:rgba(233,226,212,.13);
+    --line:rgba(233,226,212,.11); --pane:rgba(30,27,25,.62); --bg:#0C0B0B;
+    --accent:#E9E2D4; --star:#F5F0E4; --on-accent:#12100F;
+    /* Motion. Named rather than retyped: the drawer curve below was already
+       hand-written at three call sites across three files. Values are not
+       retuned here -- ease-drawer is exactly what this app already used. */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-in-out:cubic-bezier(.77,0,.175,1);
+    --ease-drawer:cubic-bezier(.32,.72,0,1);
+    --dur-press:90ms; --dur-hover:.12s; --dur-control:.15s;
+    --dur-panel:.22s; --dur-reveal:.42s;
+    /* Semantic, and separate from --accent on purpose: a rising market and a
+       failed stream mean the same thing whatever palette is chosen, so these
+       must not follow the accent. They were systemGreen and systemRed. */
+    --up:#35C46A; --down:#E0574A; --err:#E0574A;
   }
   /* System appearance, unless Settings has forced the other one. */
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-    --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55); --bg:#f2f2f7;
-    --accent:#248A3D; --star:#A16207; --on-accent:#ffffff;
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
+    --line:rgba(23,21,20,.10); --pane:rgba(250,248,244,.60); --bg:#F2EFE9;
+    --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
     }
   }
   :root[data-theme="light"]{
-    --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-    --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-    --line:rgba(0,0,0,.09); --pane:rgba(255,255,255,.55); --bg:#f2f2f7;
-    --accent:#248A3D; --star:#A16207; --on-accent:#ffffff;
+    --up:#1F7A4C; --down:#C4362B; --err:#C4362B;
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
+    --line:rgba(23,21,20,.10); --pane:rgba(250,248,244,.60); --bg:#F2EFE9;
+    --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
   }
   :root[data-theme="dark"]{
-    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
-    --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#0C0B0B;
-    --accent:#30D158; --star:#FFD60A; --on-accent:#04140c;
+    --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
+    --fill:rgba(233,226,212,.07); --fill-hi:rgba(233,226,212,.13);
+    --line:rgba(233,226,212,.11); --pane:rgba(30,27,25,.62); --bg:#0C0B0B;
+    --accent:#E9E2D4; --star:#F5F0E4; --on-accent:#12100F;
   }
   /* Increased contrast follows the system setting until Settings overrides it. */
   @media (prefers-contrast: more){
@@ -87,13 +100,13 @@
      regression on exactly that hardware. */
   body{
     opacity:0;transform:scale(.994);
-    transition:opacity .42s cubic-bezier(.32,.72,0,1),transform .42s cubic-bezier(.32,.72,0,1);
+    transition:opacity var(--dur-reveal) var(--ease-drawer),transform var(--dur-reveal) var(--ease-drawer);
   }
   body.revealed{opacity:1;transform:none}
   /* Gentler, not gone: the fade still explains that the window arrived, but
      nothing moves. */
   @media (prefers-reduced-motion: reduce){
-    body{transform:none;transition:opacity .2s ease-out}
+    body{transform:none;transition:opacity var(--dur-panel) var(--ease-out)}
   }
 
   /* Stations vs shortwave. Same segmented shape as Settings, so the two places
@@ -111,7 +124,7 @@
     flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
     font:inherit;font-size:11px;font-weight:530;letter-spacing:-.002em;
     padding:4px 8px;border-radius:5px;cursor:default;white-space:nowrap;
-    transition:background .12s ease-out,color .12s ease-out;
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .railtabs button:hover{background:var(--fill-hi);color:var(--label)}
   .railtabs button[aria-checked="true"]{background:var(--label);color:var(--bg);font-weight:590}
@@ -119,8 +132,8 @@
 
   /* A one-shot tint when a price moves, so the ticker reads as alive without
      demanding attention. Fades over most of a second. */
-  @keyframes tickUp{from{color:#30D158}to{color:inherit}}
-  @keyframes tickDn{from{color:#FF453A}to{color:inherit}}
+  @keyframes tickUp{from{color:var(--up)}to{color:inherit}}
+  @keyframes tickDn{from{color:var(--down)}to{color:inherit}}
   .m .px.tick-up{animation:tickUp .9s ease-out}
   .m .px.tick-dn{animation:tickDn .9s ease-out}
   @media (prefers-reduced-motion: reduce){ .m .px.tick-up,.m .px.tick-dn{animation:none} }
@@ -145,12 +158,12 @@
   }
   .addst .acts button[type=submit]{background:var(--accent);color:var(--on-accent)}
   .addst .acts .cancel{background:var(--fill);color:var(--label2)}
-  .addst .err{font-size:11px;color:#FF453A;padding:1px 2px}
+  .addst .err{font-size:11px;color:var(--err);padding:1px 2px}
   .st .rm{
     appearance:none;background:none;border:0;color:var(--label3);font:inherit;font-size:15px;
     line-height:1;padding:2px 6px;cursor:default;border-radius:5px;
   }
-  .st .rm:hover{color:#FF453A;background:var(--fill)}
+  .st .rm:hover{color:var(--err);background:var(--fill)}
 
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overflow:hidden}
@@ -185,7 +198,7 @@
   .toolbar button{
     background:none;border:0;color:var(--label2);
     font-size:16px;line-height:1;padding:3px 6px;border-radius:6px;cursor:default;
-    transition:background .12s ease-out,color .12s ease-out;
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .toolbar button:hover{background:var(--fill);color:var(--label)}
   .toolbar button[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
@@ -193,7 +206,7 @@
     width:clamp(240px, 22vw, 520px);height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:box-shadow .15s ease-out,background .15s ease-out,width .18s ease-out;
+    transition:box-shadow var(--dur-control) var(--ease-out),background var(--dur-control) var(--ease-out),width var(--dur-panel) var(--ease-out);
   }
   .toolbar #q:focus{
     width:clamp(300px, 26vw, 600px);background:var(--fill-hi);
@@ -207,7 +220,7 @@
   .seg button{
     border:0;background:none;color:var(--label2);font:inherit;font-size:12px;
     padding:3px 11px;border-radius:5px;cursor:default;
-    transition:background .14s ease-out,color .14s ease-out;
+    transition:background var(--dur-control) var(--ease-out),color var(--dur-control) var(--ease-out);
   }
   .seg button[aria-selected="true"]{background:var(--pane);color:var(--label);box-shadow:0 .5px 1.5px rgba(0,0,0,.18)}
   .seg button:disabled{opacity:.4}
@@ -224,7 +237,7 @@
     width:100%;height:24px;padding:0 9px;border:0;border-radius:6px;
     background:var(--fill);color:var(--label);font:inherit;outline:none;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:box-shadow .15s ease-out,background .15s ease-out;
+    transition:box-shadow var(--dur-control) var(--ease-out),background var(--dur-control) var(--ease-out);
   }
   #q:focus{background:var(--fill-hi);box-shadow:inset 0 0 0 .5px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent)}
   #q::placeholder{color:var(--label2)}
@@ -254,10 +267,10 @@
 
   .place{
     display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:6px;
-    transition:background .12s ease-out;
+    transition:background var(--dur-hover) var(--ease-out);
   }
   .place:hover{background:var(--fill)}
-  .place:active{background:var(--fill-hi);transform:scale(.99);transition:transform 90ms ease-out}
+  .place:active{background:var(--fill-hi);transform:scale(.99);transition:transform var(--dur-press) var(--ease-out)}
   .place[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 16%,transparent)}
   .place[aria-selected="true"] .pn{color:var(--accent);font-weight:590}
   .pmeta{flex:1;min-width:0}
@@ -345,7 +358,7 @@
     display:flex;align-items:center;gap:9px;width:100%;
     padding:6px 8px;border:0;border-radius:7px;background:none;
     font:inherit;font-size:12.5px;cursor:default;text-align:left;
-    transition:background .12s ease-out,color .12s ease-out;
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .layrow:hover{background:var(--fill)}
   /* A dot rather than a checkbox: ten checkboxes read as a form, and this is a
@@ -353,7 +366,7 @@
   .laydot{
     flex:none;width:9px;height:9px;border-radius:50%;
     box-shadow:inset 0 0 0 1.5px var(--label3);
-    transition:background .15s ease-out,box-shadow .15s ease-out;
+    transition:background var(--dur-control) var(--ease-out),box-shadow var(--dur-control) var(--ease-out);
   }
   .layrow[aria-pressed="true"]{color:var(--label)}
   .layrow[aria-pressed="true"] .laydot{
@@ -383,7 +396,7 @@
     color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.85),0 0 22px rgba(0,0,0,.6);
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
     overflow:hidden;
-    transition:opacity .18s ease-out;
+    transition:opacity var(--dur-panel) var(--ease-out);
   }
   #caption[hidden]{display:none}
   #caption.fading{opacity:0}
@@ -418,7 +431,7 @@
     backdrop-filter:blur(30px) saturate(150%);
     border-right:.5px solid var(--line);
     box-shadow:2px 0 22px rgba(0,0,0,.20);
-    animation:newsin .22s cubic-bezier(.32,.72,0,1);
+    animation:newsin var(--dur-panel) var(--ease-drawer);
   }
   /* display:flex above beats the [hidden] attribute, so the panel stayed on
      screen no matter what — which is exactly why the close button looked dead.
@@ -435,7 +448,7 @@
     flex:none;width:26px;height:26px;display:grid;place-items:center;
     background:none;border:0;color:var(--label2);line-height:1;
     border-radius:6px;cursor:default;
-    transition:background .12s ease-out,color .12s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .newshead button:hover{background:var(--fill-hi);color:var(--label)}
   .newshead button:active{transform:scale(.9)}
@@ -461,7 +474,7 @@
   }
   .readopen:hover{background:var(--fill-hi)}
 
-  .story{padding:8px 8px;border-radius:7px;transition:background .12s ease-out}
+  .story{padding:8px 8px;border-radius:7px;transition:background var(--dur-hover) var(--ease-out)}
   .story:hover{background:var(--fill)}
   .story:active{background:var(--fill-hi)}
   .story .h{font-size:12.5px;line-height:1.35;letter-spacing:-.002em}
@@ -490,7 +503,7 @@
   .wx{
     margin:7px 0 0;font-size:12px;color:var(--label2);
     display:flex;align-items:center;gap:7px;min-height:16px;
-    opacity:0;transition:opacity .25s ease-out;
+    opacity:0;transition:opacity var(--dur-panel) var(--ease-out);
   }
   .wx.on{opacity:1}
   .wx .sym{font-size:13px;color:var(--label)}
@@ -519,7 +532,7 @@
     border:0;background:var(--fill);color:var(--label2);font:inherit;font-size:11px;
     padding:2.5px 8px;border-radius:999px;cursor:default;line-height:1.35;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:background .12s ease-out,color .12s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .chips button:hover{background:var(--fill-hi);color:var(--label)}
   .chips button:active{transform:scale(.94)}
@@ -530,10 +543,10 @@
 
   .st{
     display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;
-    transition:background .12s ease-out;
+    transition:background var(--dur-hover) var(--ease-out);
   }
   .st:hover{background:var(--fill)}
-  .st:active{background:var(--fill-hi);transform:scale(.994);transition:transform 90ms ease-out}
+  .st:active{background:var(--fill-hi);transform:scale(.994);transition:transform var(--dur-press) var(--ease-out)}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
   .st[aria-current="true"] .sn{color:var(--accent);font-weight:590}
   .smeta{flex:1;min-width:0}
@@ -542,7 +555,7 @@
   .star{
     flex:none;background:none;border:0;color:var(--label3);font-size:14px;
     padding:2px 4px;border-radius:4px;cursor:default;opacity:0;line-height:1;
-    transition:opacity .12s ease-out,color .12s ease-out,transform 90ms ease-out;
+    transition:opacity var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .st:hover .star{opacity:1}
   /* The accent, not `--star`. A favourite is the app's own mark and should wear
@@ -627,9 +640,9 @@
        the token, so in the light theme its glyph was white and this one was
        nearly black. Two play buttons, same app, different colours. */
     background:var(--accent);color:var(--on-accent);font-size:12px;
-    transition:background .15s ease-out,color .15s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-control) var(--ease-out),color var(--dur-control) var(--ease-out),transform var(--dur-press) var(--ease-out);
     display:grid;place-items:center;
-    transition:transform 90ms ease-out,opacity .15s ease-out;
+    transition:transform var(--dur-press) var(--ease-out),opacity var(--dur-control) var(--ease-out);
   }
   #play:active{transform:scale(.92)}
   /**
@@ -647,14 +660,14 @@
   .volwrap{flex:none;display:flex;align-items:center;gap:5px;margin-left:10px}
   #mute{
     background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
-    padding:2px;border-radius:4px;cursor:default;transition:color .12s ease-out;
+    padding:2px;border-radius:4px;cursor:default;transition:color var(--dur-hover) var(--ease-out);
   }
   #mute:hover{color:var(--label)}
   #vol{width:84px;accent-color:var(--accent)}
   #lock{
     flex:none;background:none;border:0;font-size:15px;line-height:1;cursor:default;
     padding:3px 5px;border-radius:5px;opacity:.55;
-    transition:background .12s ease-out,opacity .12s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-hover) var(--ease-out),opacity var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   #lock:hover{background:var(--fill);opacity:1}
   #lock:active{transform:scale(.9)}
@@ -767,7 +780,7 @@
     appearance:none;border:0;border-radius:7px;cursor:default;
     background:var(--fill);color:var(--label2);
     font:inherit;font-size:11.5px;font-weight:510;padding:6px 0;flex:1;
-    transition:background .12s ease-out,color .12s ease-out,transform 80ms ease-out;
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .trow > button:hover{background:var(--fill-hi);color:var(--label)}
   .trow > button:active{transform:scale(.95)}
@@ -794,7 +807,7 @@
   #nowStar{
     background:none;border:0;color:var(--label3);font-size:15px;line-height:1;
     padding:2px 4px;cursor:default;flex:none;
-    transition:color .12s ease-out,transform 90ms ease-out;
+    transition:color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   #nowStar:hover{color:var(--star)}
   #nowStar:active{transform:scale(.9)}
@@ -830,12 +843,12 @@
   .introdots{display:flex;gap:6px;margin:20px 0 16px}
   /* --fill-hi, not --fill: at 5% the unvisited dots were invisible, so the
      card looked like it had one step rather than four. */
-  .introdots span{width:6px;height:6px;border-radius:50%;background:var(--fill-hi);transition:background .2s ease-out}
+  .introdots span{width:6px;height:6px;border-radius:50%;background:var(--fill-hi);transition:background var(--dur-panel) var(--ease-out)}
   .introdots span.on{background:var(--accent)}
   .introacts{display:flex;align-items:center;gap:10px}
   .introacts button{
     appearance:none;border:0;border-radius:8px;font:inherit;font-size:13px;
-    padding:9px 16px;cursor:default;transition:transform 80ms ease-out;
+    padding:9px 16px;cursor:default;transition:transform var(--dur-press) var(--ease-out);
   }
   .introacts button:active{transform:scale(.97)}
   .introacts .ghost{background:none;color:var(--label3);padding-left:0}
@@ -2502,7 +2515,7 @@ async function initGlobe() {
   const raw = await window.auralfm.globePoints();      // [i, lon, lat, count]
   globePts = raw.map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
 
-  const accent = css("--accent") || "#30D158";
+  const accent = css("--accent") || "#E9E2D4";
   const el = $("globe");
 
   globe = Globe()(el)

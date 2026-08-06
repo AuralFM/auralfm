@@ -11,19 +11,25 @@
      the user says "ignore the system, do this instead", so a media query alone
      is not enough. The [data-theme] / [data-contrast] attributes on :root win. */
   :root{
-    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
-    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10);
-    --bg:#1c1c1e; --card:rgba(255,255,255,.05);
-    --accent:#30D158; --on-accent:#00210F;
+    --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
+    --fill:rgba(233,226,212,.08); --fill-hi:rgba(233,226,212,.13);
+    --line:rgba(233,226,212,.11);
+    --bg:#0C0B0B; --card:rgba(233,226,212,.045);
+    --accent:#E9E2D4; --on-accent:#12100F;
+    /* Motion tokens, same set as explore.html. */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-in-out:cubic-bezier(.77,0,.175,1);
+    --ease-drawer:cubic-bezier(.32,.72,0,1);
+    --dur-press:90ms; --dur-hover:.12s; --dur-control:.15s;
+    --dur-panel:.22s; --dur-reveal:.42s;
   }
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-      --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.50); --label3:rgba(0,0,0,.25);
-      --fill:rgba(0,0,0,.05); --fill-hi:rgba(0,0,0,.09);
-      --line:rgba(0,0,0,.09);
-      --bg:#f2f2f7; --card:rgba(255,255,255,.72);
-      --accent:#248A3D; --on-accent:#fff;
+      --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+      --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
+      --line:rgba(23,21,20,.10);
+      --bg:#F2EFE9; --card:rgba(252,250,246,.74);
+      --accent:#2A2622; --on-accent:#F7F4EE;
     }
   }
   /* Explicit override beats the system in both directions. */
@@ -35,11 +41,11 @@
     --accent:#248A3D; --on-accent:#fff;
   }
   :root[data-theme="dark"]{
-    --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
-    --fill:rgba(255,255,255,.09); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10);
-    --bg:#1c1c1e; --card:rgba(255,255,255,.05);
-    --accent:#30D158; --on-accent:#00210F;
+    --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.56); --label3:rgba(247,244,238,.30);
+    --fill:rgba(233,226,212,.08); --fill-hi:rgba(233,226,212,.13);
+    --line:rgba(233,226,212,.11);
+    --bg:#0C0B0B; --card:rgba(233,226,212,.045);
+    --accent:#E9E2D4; --on-accent:#12100F;
   }
   /* Increased contrast follows the system setting until it is forced on here. */
   @media (prefers-contrast: more){
@@ -78,7 +84,7 @@
     appearance:none;border:0;background:var(--fill);border-radius:8px;padding:8px 8px 7px;
     cursor:default;font:inherit;color:var(--label);text-align:left;
     box-shadow:inset 0 0 0 .5px var(--line);
-    transition:background .12s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .pal:hover{background:var(--fill-hi)}
   .pal:active{transform:scale(.98)}
@@ -156,7 +162,7 @@
     appearance:none;border:0;background:transparent;color:var(--label);
     font:inherit;font-size:12px;font-weight:500;letter-spacing:-.002em;
     padding:4px 11px;border-radius:5px;cursor:default;white-space:nowrap;
-    transition:background .12s ease-out,transform 90ms ease-out;
+    transition:background var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .seg button:hover{background:var(--fill-hi)}
   .seg button:active{transform:scale(.97)}
@@ -169,12 +175,12 @@
   .sw{
     appearance:none;flex:none;width:38px;height:22px;border-radius:11px;border:0;
     background:var(--fill);position:relative;cursor:default;
-    transition:background .18s ease-out;
+    transition:background var(--dur-panel) var(--ease-out);
   }
   .sw::after{
     content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
     background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);
-    transition:transform .18s cubic-bezier(.32,.72,0,1);
+    transition:transform var(--dur-panel) var(--ease-drawer);
   }
   .sw[aria-checked="true"]{background:var(--accent)}
   .sw[aria-checked="true"]::after{transform:translateX(16px)}
