@@ -24,7 +24,7 @@ resolving before it is printed on anything.
 ## 1. Summary (SCQA)
 
 **Situation.** Radio never went away. 38,342 stations broadcast right now, plus
-837 shortwave receivers whose owners leave them open to strangers. It is the
+around 800 shortwave receivers whose owners leave them open to strangers. It is the
 most widely distributed live medium on Earth and the least visited.
 
 **The one-line version, and it should open the room:** *every consumer app is now
@@ -81,7 +81,7 @@ Shipped and measurable today:
 | | |
 |---|---|
 | **Stations** | 38,342 across 12,296 places |
-| **Shortwave** | 837 borrowed KiwiSDR receivers, real tuning against 9,289 scheduled broadcasts, bandwidth and fine-tune controls |
+| **Shortwave** | Around 800 borrowed KiwiSDR receivers, real tuning against 9,289 scheduled broadcasts, bandwidth and fine-tune controls |
 | **The sky** | 5,044 stars, 89 named constellations, the ecliptic and zodiac, naked-eye planets computed live |
 | **The Earth** | Correct day/night terminator, live cloud cover, NASA city lights at 8192×4096 |
 | **Propagation** | WSPR arcs, solar flux, K-index — the ionosphere made visible |

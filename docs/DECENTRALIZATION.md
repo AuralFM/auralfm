@@ -65,10 +65,18 @@ because it is the only one of the three that is unqualified.
 
 ## 2. The find: 837 antennas that are not a CDN
 
-> **On the number.** It was 849 when this was written and it is 837 today. The
-> list moves week to week as people plug receivers in and take them down again,
-> which is not an inaccuracy to correct once — it is the actual texture of
-> volunteer infrastructure. Whatever `data/sdr.min.json` holds is the truth.
+> **On the number, and why this document keeps its.** 849 when this was written,
+> 837 in the shipped catalogue, 744 answering on the day this note was updated.
+> The list moves every week as people plug receivers in and take them down again.
+> That is not an inaccuracy to correct once — it is the actual texture of
+> volunteer infrastructure, and it is the more interesting fact.
+>
+> Everywhere else the number is now "around 800", because a precise figure that
+> drifts 20% is worth less than an approximate one that stays true. **This
+> document is the exception.** It is a dated record of a decision, and the
+> numbers in it are what was on the screen when that decision was made. Restating
+> them to match today's crawl would destroy the only thing a decision record is
+> for. `data/sdr.min.json` is always the live answer.
 
 
 There is exactly one form of radio in reach that is not somebody's stream server,

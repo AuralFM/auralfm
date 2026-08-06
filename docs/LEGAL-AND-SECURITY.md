@@ -91,7 +91,7 @@ bought 4 Aug 2026, with certificates in `assets/licenses/`. The live constraints
 there are the 1,000-unit resale cap and the non-exclusive licence, neither of
 which bites while the app is free.
 
-**Borrowed receivers.** The 837 KiwiSDRs belong to volunteers who left them open.
+**Borrowed receivers.** The KiwiSDRs belong to volunteers who left them open.
 There is no contract and no terms of service to breach, which is precisely why
 the etiquette matters more than the law: this project has already knocked three
 of them offline by over-probing. That is not a legal exposure. It is a

@@ -103,7 +103,7 @@ land, rather than a general firehose:
 | Where | Why it fits |
 |---|---|
 | **r/shortwave, r/amateurradio, r/RTLSDR** | The KiwiSDR feature is genuinely novel to them — most SDR software is not beautiful, and none of it is a globe. |
-| **The KiwiSDR forum** | Courtesy as much as promotion: 837 operators' receivers are in this. Tell them how the etiquette rules work. They will care. |
+| **The KiwiSDR forum** | Courtesy as much as promotion: their operators' receivers are in this. Tell them how the etiquette rules work. They will care. |
 | **Hacker News (Show HN)** | "Offline-first, no backend, collects nothing" plus a real globe is exactly this audience. Post the *why*, not the feature list. |
 | **r/macapps** | Native, free, no account. |
 | **Nostr** | Given where the project is pointed, being visible there is consistent rather than promotional. |

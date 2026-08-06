@@ -10,8 +10,8 @@ Open it and the Earth is there — real weather moving across it, the day/night 
 where it truly is, the ISS overhead, the actual planets behind. Click anywhere and
 hear what that place is listening to right now.
 
-**38,342 radio stations across 12,296 places in 227 countries, 837 shortwave
-receivers you can borrow, and the ionosphere drawn over the top of it.**
+**38,342 radio stations across 12,296 places in 227 countries, around 800
+shortwave receivers you can borrow, and the ionosphere drawn over the top of it.**
 
 The stations are streams. The shortwave receivers are somebody's actual antenna,
 in somebody's actual garden, and the signal reaches it off the ionosphere with no
@@ -79,7 +79,7 @@ reproducible. Build it once (~50 minutes, one time):
 ```bash
 npm run crawl     # radio.garden -> data/stations.json + stations.min.json
 npm run tags      # fold in radio-browser genre tags
-npm run crawl:sdr # kiwisdr -> data/sdr.min.json, the 837 receivers
+npm run crawl:sdr # kiwisdr -> data/sdr.min.json, the receiver list
 npm run icons     # rasterize assets/*.svg, and build build/icon.icns
 npm start         # run it
 ```
@@ -107,7 +107,8 @@ and its target, five kilohertz apart, both on the same list.*
 ### Listening
 
 - **Any station in the world** — 38,342 channels across 12,296 places in 227 countries.
-- **837 shortwave receivers.** Click an amber dot and you are listening to a real
+- **Around 800 shortwave receivers.** The count moves every week, because people
+  plug a receiver in and take it down again. Click an amber dot and you are listening to a real
   antenna in Trondheim, or Christoval, or a Cold War coastal fortress in Sweden.
   Bands are ordered by whether that path is likely open right now, because
   shortwave propagation depends on whether the path is in daylight — and the globe
@@ -246,7 +247,7 @@ BUILD TIME
    61,520 stations, 11,777 tags
 
   rx.kiwisdr.com ── receivers ────────> data/sdr.min.json      (98 KB)
-   837 shortwave sites, all with GPS
+   every listed shortwave site, all with GPS
 
 RUN TIME
   Search + Explore read the local bundles.       (no network)
@@ -299,7 +300,7 @@ volunteers. Each one gets a contactable `User-Agent`, a cache, and an exponentia
 backoff on failure. That discipline is not decorative — AuralFM once retried a
 failed Celestrak fetch every 30 seconds and got its IP blocked for a day, which
 is why `src/backoff.js` exists and why `npm run audit` checks that every polled
-service has a cooldown. The 837 shortwave receivers get stricter rules again:
+service has a cooldown. The shortwave receivers get stricter rules again:
 never auto-connect, one session at a time, never retry a refusal, never enumerate
 them.
 

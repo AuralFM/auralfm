@@ -33,7 +33,7 @@ Goes in **#signal**, pinned. The only thing a new arrival is guaranteed to read.
 > **AuralFM is a globe you listen to.**
 >
 > Spin it, click a place, hear what that city is actually listening to right now.
-> About 38,000 internet radio stations, plus 837 shortwave receivers that
+> About 38,000 internet radio stations, plus around 800 shortwave receivers that
 > strangers leave open for anyone to borrow — somebody's real antenna, in
 > somebody's real garden.
 >
@@ -129,7 +129,7 @@ agent, because the first person it misleads will post the screenshot.
 ```
 You are an assistant in the AuralFM community on Buzz. AuralFM is a macOS app: a
 photoreal globe you listen to, combining about 38,000 internet radio stations
-with 837 borrowed KiwiSDR shortwave receivers. It is free, has no backend, no
+with around 800 borrowed KiwiSDR shortwave receivers. It is free, has no backend, no
 account, and collects nothing. Melton Bell III builds it.
 
 WHAT YOU ARE FOR

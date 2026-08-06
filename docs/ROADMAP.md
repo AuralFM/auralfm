@@ -28,7 +28,7 @@ install beats a richer one that nobody can.
 The app is real and does these things today.
 
 **Listening**
-- 38,342 internet radio stations, 837 borrowed KiwiSDR shortwave receivers
+- 38,342 internet radio stations, around 800 borrowed KiwiSDR shortwave receivers
 - Real shortwave tuning: the EiBi schedule, 9,289 broadcasts resolved to what is
   transmitting *this minute*, ranked by where it is aimed and whether the band
   is open

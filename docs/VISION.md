@@ -105,7 +105,7 @@ held to, because they are already true of it:
 > of the needs of those who connect to me.
 
 The first is why AuralFM is not another radio.garden. The second is why the
-shortwave receivers — 837 volunteers' machines, treated with etiquette rules
+shortwave receivers — around 800 volunteers' machines, treated with etiquette rules
 written down and enforced in code — are handled the way they are.
 
 ## A note on the brand, since it is now settled

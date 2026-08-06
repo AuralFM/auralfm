@@ -450,7 +450,7 @@ exists to avoid.
 
 Two places it could genuinely fit later, both worth remembering:
 
-- **Paying the volunteers.** 837 KiwiSDR operators and a set of Nostr relay
+- **Paying the volunteers.** The KiwiSDR operators and a set of Nostr relay
   operators carry this app's load for free, and this project has already knocked
   three receivers offline by over-probing. Accountless, zero-fee micropayments to
   the people hosting the infrastructure is the most on-message use of x402 I can

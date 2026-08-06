@@ -72,7 +72,7 @@ same way a radio station's server sees your IP when you press play on a station.
 AuralFM connects only when you click a specific receiver, only to that one, and
 only one at a time. It never contacts a receiver in the background, never scans
 them to see who is free, and never retries one that refused — the list of who
-exists comes from a single aggregate file, not from asking 837 machines.
+exists comes from a single aggregate file, not from asking every machine on the list.
 
 **The operator can see they have a listener.** That is inherent to borrowing
 someone's antenna, and it is the same bargain the receiver's own web page offers.
