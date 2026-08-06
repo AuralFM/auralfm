@@ -244,6 +244,44 @@ Honest expectation: **inhabited, but quiet.** Hundreds announce presence; actual
 conversation is thin. It is a room with people in it rather than an empty one,
 which is a different and better problem.
 
+## The test this is built around
+
+There is a longer argument behind all of this, written up in
+[`docs/WHITEPAPER.md`](docs/WHITEPAPER.md) and at academic length in
+[`docs/thesis.md`](docs/thesis.md). The short version is one question, and it is
+worth asking of anything that calls itself decentralised:
+
+> **What does it cost to receive?**
+
+Not to publish, or to run a node, or to hold a key. What does it cost the person
+who is only listening?
+
+Shortwave is the reference case, because the answer there is *nothing*. Someone
+turning a dial in a room with no Wi-Fi produces no click, no dwell time, no
+profile assembling in the background. Not because a policy protects them —
+because there is physically nowhere for it to go.
+
+That is the bar this app is measured against, and it is why the awkward parts of
+the design are the way they are. No account, because an account is a place for a
+profile to accumulate. No recommendations, because a recommendation is somebody
+deciding what you should hear. A chat key that is generated when the app opens
+and thrown away when it closes, because a stable one would make you the same
+person twice.
+
+The uncomfortable half of the argument is that **decentralising the wires does
+not decentralise the ear.** You can replace every server with a relay and still
+build the same thing — still curate, still profile, still teach people what
+elsewhere is supposed to sound like before they hear it. The protocol is not the
+politics.
+
+Roshanak Kheshti's work on the world music industry is the sharpest version of
+that critique, and reading it changed three things here — including the copy rule
+that this README now follows: **never describe a place as a sound.** *"Hear what
+Lagos sounds like"* makes Lagos into texture for someone else's consumption.
+*"Hear what Lagos is listening to"* points at people who are already listening,
+already choosing, and who are not performing for you. See
+[`docs/LISTENING.md`](docs/LISTENING.md).
+
 ## Requirements
 
 - macOS
@@ -418,6 +456,8 @@ phase0/index.html      the original single-file prototype
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
 | [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
 | [`docs/VISION.md`](docs/VISION.md) | Why this exists, in the maintainer's own account |
+| [`docs/WHITEPAPER.md`](docs/WHITEPAPER.md) | The argument, in the first person — and an audit of the long version |
+| [`docs/thesis.md`](docs/thesis.md) | The academic treatment: Kheshti, Joler and Newton in one frame |
 | [`docs/DIRECTION.md`](docs/DIRECTION.md) | Where this is going, and the two proposals that were refused |
 | [`docs/LISTENING.md`](docs/LISTENING.md) | The critique this product has to answer, and the three ways it does |
 | [`docs/IDENTITY.md`](docs/IDENTITY.md) | The mark, the colour, and the icon measured against the system |

@@ -64,6 +64,8 @@ const DOCS = [
   ["docs/BUSINESS.md",             "Business"],
   ["docs/COMMUNITY.md",            "Community"],
   ["docs/DIRECTION.md",            "Direction"],
+  ["docs/WHITEPAPER.md",           "White Paper"],
+  ["docs/thesis.md",               "Thesis (long form)"],
   ["docs/LEGAL-AND-SECURITY.md",   "Legal and Security"],
   ["docs/PRIVACY.md",              "Privacy"],
   ["docs/DECENTRALIZATION.md",     "Decentralization"],

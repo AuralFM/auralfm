@@ -63,7 +63,13 @@ because it is the only one of the three that is unqualified.
 
 ---
 
-## 2. The find: 849 antennas that are not a CDN
+## 2. The find: 837 antennas that are not a CDN
+
+> **On the number.** It was 849 when this was written and it is 837 today. The
+> list moves week to week as people plug receivers in and take them down again,
+> which is not an inaccuracy to correct once — it is the actual texture of
+> volunteer infrastructure. Whatever `data/sdr.min.json` holds is the truth.
+
 
 There is exactly one form of radio in reach that is not somebody's stream server,
 and it happens to be the most romantic technology in the whole space.
@@ -82,9 +88,9 @@ their garden and hung it on the internet.
 
 | | |
 |---|---|
-| Receivers listed | **849** |
-| Active and online | **849** |
-| With usable GPS coordinates | **849** |
+| Receivers listed | **837** |
+| Active and online | **837** |
+| With usable GPS coordinates | **837** |
 | With a free slot at that moment | **807** |
 | Latitude span | −44° to +68° |
 | In the southern hemisphere | 100 |
@@ -117,8 +123,8 @@ the North Atlantic sky right now.
 
 - It is the **only** audio in the app that is not a stream server. It is the
   answer to *"but you still hit a server to hear anything."*
-- It is **already geolocated.** 849 points with GPS, ready for the globe.
-- It is **decentralised in the way that actually matters**: 849 private
+- It is **already geolocated.** 837 points with GPS, ready for the globe.
+- It is **decentralised in the way that actually matters**: 837 private
   individuals, no company, no single point of shutdown. Nobody can turn it off.
 - It is **the Marfa scenario, literally.** Marfa is high-desert West Texas — one
   of the quietest HF environments in North America, and the place people already
@@ -129,8 +135,8 @@ the North Atlantic sky right now.
 ### The constraint, and it is not optional
 
 Last night AuralFM got IP-rate-limited by Celestrak for retrying a failed fetch
-every 30 seconds. That was 8 objects and one free service. **KiwiSDR is 849
-hobbyists paying their own bandwidth, and the same carelessness would be 849 times
+every 30 seconds. That was 8 objects and one free service. **KiwiSDR is 837
+hobbyists paying their own bandwidth, and the same carelessness would be 837 times
 worse.** The protocol tells us the limits directly — the Swedish receiver reports:
 
 ```
@@ -151,7 +157,7 @@ Non-negotiable design rules, to be written into the code before the feature ship
   the publisher's cadence, not ours.
 - Send the contactable User-Agent we now send everywhere else.
 
-If we cannot commit to all seven, we should not ship it. Burning 849 volunteers to
+If we cannot commit to all seven, we should not ship it. Burning 837 volunteers to
 add a feature would be a worse outcome than not having the feature.
 
 ---
