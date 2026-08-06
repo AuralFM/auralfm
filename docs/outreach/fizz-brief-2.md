@@ -53,6 +53,13 @@ cat .../prompts/qsl.txt | buzz agents draft-create \
   --display-name "QSL" --system-prompt -
 ```
 
+> **Correction, 6 Aug.** `draft-create` takes only `--channel`,
+> `--display-name` and `--system-prompt`. There is no `--respond-to` on create —
+> it exists on `draft-update` only. So Skip and QSL land **owner-only**, which is
+> the furniture problem applied to the two agents that most need talking to.
+> Fix it in Desktop when saving ("Who can send instructions" → Anyone), or with a
+> follow-up `draft-update --respond-to anyone` once each agent exists.
+
 Report the new request IDs. If either returns an error rather than a request ID,
 quote the error verbatim — the first attempt returned IDs and the drafts still
 did not appear, so a silent success is the thing we are trying to distinguish
@@ -115,6 +122,7 @@ applying it by hand after this. Do not draft-update "Fizz".
 
 ## Report back
 
-A table: agent, action, request ID or error, and whether `--respond-to` was set.
+A table: agent, action, request ID or error, and whether `--respond-to` was set
+(create cannot set it; note that rather than leaving the column blank).
 Append to `/Users/mb3/.buzz/GUIDES/AURALFM_COMMUNITY_SETUP.md` under a new dated
 heading. Do not rewrite what is already there.
