@@ -64,6 +64,7 @@ const DOCS = [
   ["docs/BUSINESS.md",             "Business"],
   ["docs/COMMUNITY.md",            "Community"],
   ["docs/outreach/buzz-forum.md",  "Buzz Forum Library"],
+  ["docs/outreach/buzz-build.md",  "Buzz Build Plan"],
   ["docs/outreach/kiwisdr-forum-post.md", "KiwiSDR Forum Post"],
   ["docs/outreach/org-profile-README.md", "GitHub Org Page"],
   ["docs/DIRECTION.md",            "Direction"],
