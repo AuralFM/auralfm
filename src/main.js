@@ -189,7 +189,11 @@ function openExplore() {
     // canvas and WebGL context all healthy) but never painted, so it showed as a
     // blank grey rectangle. The popover still uses vibrancy; it is small,
     // frameless, and does not host a WebGL canvas.
-    backgroundColor: "#1c1c1e",
+    //
+    // Onyx rather than #1c1c1e, which was Apple's secondarySystemBackground. The
+    // page fades up from this colour on first reveal, so it has to be the same
+    // onyx the splash card uses or the fade starts on a grey flash.
+    backgroundColor: "#0C0B0B",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

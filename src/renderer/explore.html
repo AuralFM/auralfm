@@ -9,7 +9,7 @@
   :root{
     --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
     --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#1c1c1e;
+    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#0C0B0B;
     --accent:#30D158; --star:#FFD60A; --on-accent:#04140c;
   }
   /* System appearance, unless Settings has forced the other one. */
@@ -30,7 +30,7 @@
   :root[data-theme="dark"]{
     --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
     --fill:rgba(255,255,255,.08); --fill-hi:rgba(255,255,255,.14);
-    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#1c1c1e;
+    --line:rgba(255,255,255,.10); --pane:rgba(30,30,32,.55); --bg:#0C0B0B;
     --accent:#30D158; --star:#FFD60A; --on-accent:#04140c;
   }
   /* Increased contrast follows the system setting until Settings overrides it. */
@@ -75,6 +75,26 @@
    */
   [hidden]{display:none !important}
   :root{--rail:clamp(340px, 26vw, 900px)}
+
+  /* The first reveal.
+     The window is created hidden and shown only once the globe has painted, so
+     without this the launch ends in a hard cut: a 260px splash card is replaced
+     in one frame by a full window with a finished Earth in it. Fading the page
+     up from the window's own onyx makes the two surfaces read as one object
+     continuing rather than two objects swapping.
+     The window itself is never animated. Native opacity animation is expensive
+     on the Intel integrated GPU this app targets, and #35 was already a motion
+     regression on exactly that hardware. */
+  body{
+    opacity:0;transform:scale(.994);
+    transition:opacity .42s cubic-bezier(.32,.72,0,1),transform .42s cubic-bezier(.32,.72,0,1);
+  }
+  body.revealed{opacity:1;transform:none}
+  /* Gentler, not gone: the fade still explains that the window arrived, but
+     nothing moves. */
+  @media (prefers-reduced-motion: reduce){
+    body{transform:none;transition:opacity .2s ease-out}
+  }
 
   /* Stations vs shortwave. Same segmented shape as Settings, so the two places
      in the app where you pick between modes look like the same idea.
@@ -978,6 +998,44 @@
   <span class="markets" id="markets"></span>
 </div>
 
+<script>
+/**
+ * Reveal the page once the window is actually on screen.
+ *
+ * Deliberately its own script, above every other one, because `body` starts at
+ * `opacity:0` and a throw anywhere below must not be able to leave a permanently
+ * invisible window. Nothing here depends on the globe, the preload bridge, or
+ * any other file.
+ *
+ * The timing is the whole point. `explore:ready` fires when the globe has
+ * painted, but main only calls `show()` *after* receiving it — so adding the
+ * class there would run the fade while the window is still hidden and finish it
+ * before anyone saw it. A hidden BrowserWindow reports
+ * `document.visibilityState === "hidden"`, and showing it fires
+ * `visibilitychange`, which is the real signal.
+ */
+(() => {
+  let done = false;
+  const reveal = () => {
+    if (done) return;
+    done = true;
+    // One frame, so the browser has certainly observed the opacity:0 start
+    // state. Setting it in the same frame can skip the transition entirely.
+    requestAnimationFrame(() => document.body.classList.add("revealed"));
+  };
+
+  if (document.visibilityState === "visible") reveal();
+  else document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") reveal();
+  });
+
+  // The floor under everything. If the visibility signal never arrives — a
+  // platform that reports it differently, a window shown some other way — the
+  // page still appears. An unfaded window is a small disappointment; an
+  // invisible one is a broken app.
+  setTimeout(reveal, 4000);
+})();
+</script>
 <script src="astro.js"></script>
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
