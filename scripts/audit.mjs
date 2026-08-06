@@ -309,5 +309,31 @@ console.log("\nthird-party notices are current");
   else fail("THIRD-PARTY-NOTICES.md", out || "notices --check failed");
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\ndesign tokens are not bypassed");
+// Thirteen distinct corner radii had accumulated across the renderers before
+// they were collapsed onto a five-step scale. Nothing stops the fourteenth
+// except this: a literal radius is almost always someone reaching past the
+// scale rather than genuinely needing a new value.
+//
+// Two literals stay legal. `50%` is a circle, which is not a radius on the
+// scale, and `1px` is the meter bar, which is two pixels wide.
+{
+  const ALLOWED = new Set(["50%", "1px"]);
+  const offenders = [];
+  for (const { file, html } of renderers) {
+    const name = path.basename(file);
+    html.split("\n").forEach((line, i) => {
+      if (/--r-(sm|md|lg|xl|pill):/.test(line)) return;   // the scale itself
+      for (const m of line.matchAll(/border-radius:\s*([0-9]+(?:px|%))/g)) {
+        if (!ALLOWED.has(m[1])) offenders.push(`${name}:${i + 1} ${m[1]}`);
+      }
+    });
+  }
+  offenders.length
+    ? fail("corner radius", `off the scale — use var(--r-sm|md|lg|xl|pill): ${offenders.join(", ")}`)
+    : pass("every corner radius comes from the scale");
+}
+
 console.log(failures ? `\n${failures} check(s) failed\n` : "\nall checks passed\n");
 process.exit(failures ? 1 : 0);

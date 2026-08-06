@@ -50,6 +50,7 @@
       "src/**/*",
       "assets/generated/**/*",
       "assets/*.svg",
+      "assets/fonts/**/*",
       "assets/ATTRIBUTION.md",
       "THIRD-PARTY-NOTICES.md",
       "package.json",

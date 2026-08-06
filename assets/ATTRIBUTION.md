@@ -88,3 +88,25 @@ on 4 August 2026:
 The credit stays in the About panel regardless of what the licence compels. It
 costs nothing, it is true, and crediting the person who drew the thing is the
 right default.
+
+## Typefaces
+
+**Inter** — SIL Open Font License 1.1. Vendored at `assets/fonts/InterVariable.woff2`,
+licence at `assets/fonts/Inter-LICENSE.txt`. The OFL explicitly permits bundling
+and redistribution, including inside a shipped application, so this one is free
+of conditions we have to track.
+
+**TBJ Monodrip Inktrap** — Taboja Studio, licensed to Melton Bell III through
+Envato Elements on 6 August 2026, item licence `WBJ67S4UYL`.
+
+> **Not in this repository, and not in the app.** Envato Elements' licence says
+> plainly: *"You cannot incorporate or distribute the Font within an End
+> Product."* It permits *"incorporating text or a design created using a Font
+> into an End Product"* — so the typeface may be used to draw the wordmark,
+> headers and marketing artwork, and those **outlined or rasterised** results
+> may ship. The font file itself may not, and it must never be committed here:
+> the repository is MIT licensed, and MIT would purport to grant recipients
+> rights over a file we have no power to sublicense.
+>
+> The licence is also revocable and tied to an active subscription at the time
+> the end product is completed. Keep the certificate.

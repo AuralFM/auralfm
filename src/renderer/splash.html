@@ -20,6 +20,12 @@
       content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';">
 <title>AuralFM</title>
 <style>
+  :root{
+    /* Corner radii. Thirteen distinct values became five. Not one value for
+       everything -- a 2px meter bar and a floating panel genuinely differ --
+       but a scale, so nested corners stay concentric instead of arbitrary. */
+    --r-sm:5px; --r-md:7px; --r-lg:10px; --r-xl:14px; --r-pill:999px;
+  }
   [hidden]{display:none !important}
   html,body{margin:0;height:100%;overflow:hidden;background:transparent}
   body{
@@ -35,7 +41,7 @@
   /* Onyx is not flat black. Same gradient as the app icon, so the splash and the
      thing in the Dock are recognisably one object. */
   #card{
-    width:100%;height:100%;border-radius:14px;
+    width:100%;height:100%;border-radius:var(--r-xl);
     background:radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);
     box-shadow:inset 0 .5px 0 rgba(233,226,212,.16);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;

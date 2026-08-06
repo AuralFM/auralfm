@@ -3,10 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+      content="default-src 'none'; font-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <title>AuralFM</title>
 <style>
+  /* Inter, vendored. SIL Open Font License 1.1, which explicitly permits
+     bundling and redistribution — see assets/fonts/Inter-LICENSE.txt.
+     One variable file covers every weight the app uses.
+     The point is not that Inter beats SF on a Mac; it is that the app looks
+     like itself on Windows, Linux and Android too, where there is no SF. */
+  @font-face{
+    font-family:"Inter";
+    font-style:normal;
+    font-weight:100 900;
+    font-display:swap;
+    src:url("../../assets/fonts/InterVariable.woff2") format("woff2");
+  }
   :root{
+    /* Corner radii. Thirteen distinct values became five. Not one value for
+       everything -- a 2px meter bar and a floating panel genuinely differ --
+       but a scale, so nested corners stay concentric instead of arbitrary. */
+    --r-sm:5px; --r-md:7px; --r-lg:10px; --r-xl:14px; --r-pill:999px;
     --label:rgba(247,244,238,.94); --label2:rgba(247,244,238,.58); --line:rgba(233,226,212,.12);
     --bg:#0C0B0B; --code:rgba(233,226,212,.07); --accent:#E9E2D4;
   }
@@ -34,7 +50,7 @@
   html,body{margin:0;height:100%}
   body{
     background:var(--bg);color:var(--label);
-    font:14px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    font:14px/1.6 "Inter",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;cursor:default;
     display:flex;flex-direction:column;overflow:hidden;
   }
@@ -51,7 +67,7 @@
   em{color:var(--label2)}
   ul{padding-left:20px}
   hr{border:0;border-top:.5px solid var(--line);margin:22px 0}
-  code{background:var(--code);padding:1px 5px;border-radius:4px;font:12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+  code{background:var(--code);padding:1px 5px;border-radius:var(--r-sm);font:12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
   table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13px;display:block;overflow-x:auto}
   th,td{text-align:left;padding:6px 10px;border-bottom:.5px solid var(--line);vertical-align:top}
   th{font-weight:620;color:var(--label2);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
