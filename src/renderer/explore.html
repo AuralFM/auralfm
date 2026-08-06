@@ -1880,7 +1880,7 @@ function renderReader(list) {
     const p = document.createElement("div");
     p.className = "readnote";
     p.textContent = t("news.failed",
-      "This one will not open here — it is paywalled or needs a browser.");
+      "This article does not open in AuralFM. It needs a browser, or it needs a subscription.");
     const b = document.createElement("button");
     b.className = "readopen";
     b.textContent = t("news.open", "Open in browser");
@@ -3341,9 +3341,9 @@ const INTRO = [
     t: () => t("intro.3.title", "Shortwave is the strange one"),
     b: () => t("intro.3.body",
       "A shortwave signal bounces off the ionosphere and crosses oceans with nothing " +
-      "in between — no company, no cable. That is why the app shows you the daylight " +
-      "line, the solar weather and which bands are open: they decide what you can hear, " +
-      "and they change through the day."),
+      "in between: no company, no cable. This is why AuralFM shows the daylight line, " +
+      "the solar weather, and the open bands. These three decide what you hear. " +
+      "They change through the day."),
   },
   {
     // Named rather than described: the maintainer's note was that the three
@@ -3429,7 +3429,7 @@ window.auralfm.onCaption((m) => {
       el.textContent = t("cap.loading", "Loading the speech model…");
     } else if (m.status.state === "error") {
       el.hidden = false;
-      el.textContent = t("cap.error", "Captions unavailable for this station");
+      el.textContent = t("cap.error", "Captions are not available for this station");
       clearTimeout(capFade);
       capFade = setTimeout(() => { el.classList.add("fading"); }, 4000);
     } else if (m.status.state === "idle") {
@@ -3965,7 +3965,7 @@ $("chatform").onsubmit = async (e) => {
   else {
     // Never silently swallow it. If no relay took the message, the text stays
     // where the person typed it.
-    input.placeholder = t("chat.failed", "No relay reachable — not sent");
+    input.placeholder = t("chat.failed", "AuralFM cannot reach a relay. It did not send your message.");
     setTimeout(() => { input.placeholder = t("chat.placeholder", "Say something to this place"); }, 4000);
   }
 };
