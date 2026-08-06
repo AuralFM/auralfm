@@ -172,6 +172,11 @@ Non-negotiable design rules, to be written into the code before the feature ship
   after ninety seconds. Holding one while playing nothing is squatting, and the
   Kiwi's own thirty-minute limit is not a licence to use all thirty.
 
+Nine rules, but only seven of them are runtime code. The other two — the crawl
+cadence and the operator opt-out — are properties of the crawler, and they are
+listed here with the rest because a volunteer does not care which process
+protects them.
+
 If we cannot commit to all nine, we should not ship it. Burning 837 volunteers to
 add a feature would be a worse outcome than not having the feature.
 
@@ -347,7 +352,7 @@ needs a claim that would not hold up:
 ## 6. Sequence
 
 1. ~~**KiwiSDR receivers on the globe** (#24)~~ — **done**, 326c4a2. 837
-   receivers, all seven etiquette rules in the code, verified in the packaged
+   receivers, the seven runtime etiquette rules in the code, verified in the packaged
    build against Christoval TX, Trondheim, Siknäs, Bavaria, Örlygshöfn and
    South Australia. AuralFM now has audio that is not a stream server.
 2. ~~**Fix the language**~~ — done. "No backend of our own" replaces
