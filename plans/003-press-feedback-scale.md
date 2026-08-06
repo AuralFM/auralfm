@@ -1,6 +1,6 @@
 # 003 — One press-feedback scale for list rows
 
-- **Status**: TODO
+- **Status**: DONE — all three rows at scale(.97).
 - **Commit**: b6d5aea
 - **Severity**: MEDIUM
 - **Category**: 3 — Physicality & origin (with 7 — Cohesion)

@@ -185,7 +185,7 @@
   }
   .row:hover{background:var(--fill)}
   /* Feedback on press, not release. */
-  .row:active{background:var(--fill-hi);transform:scale(.988);transition:transform var(--dur-press) var(--ease-out)}
+  .row:active{background:var(--fill-hi);transform:scale(.97);transition:transform var(--dur-press) var(--ease-out)}
   /* Selection is accent-tinted, the way AppKit tints a selected row, rather than
      a neutral gray that reads as muddy over the material. */
   .row[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
@@ -210,10 +210,13 @@
   .star:active{transform:scale(.85)}
   .bars{flex:none;display:flex;gap:2px;align-items:flex-end;height:11px;width:8px;opacity:0}
   .row[aria-current="true"] .bars{opacity:1}
-  .bars i{width:2px;background:var(--accent);border-radius:1px;height:3px}
+  /* Scaled, not resized. The bars used to animate `height`, which is layout
+     on every frame of an infinite animation for as long as audio plays.
+     scaleY from the base is the same picture, on the compositor. */
+  .bars i{width:2px;background:var(--accent);border-radius:1px;height:11px;transform-origin:bottom;transform:scaleY(.27)}
   body.playing .row[aria-current="true"] .bars i{animation:eq .9s ease-in-out infinite}
   .bars i:nth-child(2){animation-delay:.15s}.bars i:nth-child(3){animation-delay:.3s}
-  @keyframes eq{0%,100%{height:3px}50%{height:11px}}
+  @keyframes eq{0%,100%{transform:scaleY(.27)}50%{transform:scaleY(1)}}
 
   .empty{padding:26px 20px;text-align:center;color:var(--label3);font-size:12px;line-height:1.65}
 

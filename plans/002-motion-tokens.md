@@ -1,6 +1,6 @@
 # 002 — Consolidate easing and duration into tokens
 
-- **Status**: TODO
+- **Status**: DONE — folded into the palette change. 71 call sites across three files.
 - **Commit**: b6d5aea
 - **Severity**: MEDIUM
 - **Category**: 7 — Cohesion & tokens

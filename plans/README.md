@@ -15,10 +15,12 @@ that is genuinely missing.
 
 | # | Title | Severity | Category | Files | Status |
 | --- | --- | --- | --- | --- | --- |
-| [001](001-splash-handoff-fade.md) | Fade the globe in when the splash hands off | MEDIUM | Missed opportunity | 1 | TODO |
-| [002](002-motion-tokens.md) | Consolidate easing and duration into tokens | MEDIUM | Cohesion & tokens | 3 | TODO |
-| [003](003-press-feedback-scale.md) | One press-feedback scale for list rows | MEDIUM | Physicality | 2 | TODO |
-| [004](004-eq-bars-scaley.md) | Drive the equaliser bars with transform, not height | MEDIUM | Performance | 2 | TODO |
+| [001](001-splash-handoff-fade.md) | Fade the globe in when the splash hands off | MEDIUM | Missed opportunity | 1 | DONE |
+| [002](002-motion-tokens.md) | Consolidate easing and duration into tokens | MEDIUM | Cohesion & tokens | 3 | DONE |
+| [003](003-press-feedback-scale.md) | One press-feedback scale for list rows | MEDIUM | Physicality | 2 | DONE |
+| [004](004-eq-bars-scaley.md) | Drive the equaliser bars with transform, not height | MEDIUM | Performance | 2 | DONE |
+
+All four are applied. Kept for the record of what was changed and why.
 
 ## Recommended order
 

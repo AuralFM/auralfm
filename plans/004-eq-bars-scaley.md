@@ -1,6 +1,6 @@
 # 004 — Drive the equaliser bars with transform, not height
 
-- **Status**: TODO
+- **Status**: DONE — verified in the CSSOM: keyframes carry no height.
 - **Commit**: b6d5aea
 - **Severity**: MEDIUM
 - **Category**: 5 — Performance
