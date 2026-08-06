@@ -42,20 +42,19 @@ and it currently spends none of it.
 - **001 is independent.** It can be done at any point, before or after the others.
 - **003 and 004 are independent of each other.**
 
-## Deliberately out of scope
+## Both out-of-scope findings were done anyway
 
-Two findings from the audit were not turned into plans:
+- **`#q` transitioned `width` on focus.** Resolved by deleting the width change
+  rather than engineering around it — an `<input>` cannot be scaled without
+  distorting its text, and the toolbar it sits in carries the live markets
+  ticker. The field is simply the larger size now.
+- **`tickUp` / `tickDn` hardcoded `#30D158` and `#FF453A`.** Now `var(--up)` and
+  `var(--down)`, new semantic tokens that are deliberately independent of
+  `--accent`: a rising market means the same thing whichever palette is on.
 
-- **`#q` transitions `width` on focus** (`src/renderer/explore.html:176`),
-  relaying out the toolbar that also holds the live markets ticker. The honest
-  fix is to delete the width transition rather than engineer around it, since an
-  `<input>` cannot be scaled without distorting its text. Low frequency —
-  focusing search — so it was ranked below the four above.
-- **`tickUp` / `tickDn` hardcode `#30D158` and `#FF453A`**
-  (`src/renderer/explore.html:102-103`), which are Apple's systemGreen and
-  systemRed. The effect is that the market ticker's up/down colours never follow
-  the user's chosen palette. This belongs with the palette work rather than with
-  motion, and should be picked up there.
+Also landed alongside these, from the design proposal rather than the audit: a
+sliding pill on the stations/shortwave control, the anodised panel edge, and
+lit-pair indicators.
 
 ## Not re-litigated
 
