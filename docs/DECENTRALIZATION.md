@@ -164,8 +164,11 @@ Non-negotiable design rules, to be written into the code before the feature ship
 - **Refresh the receiver list on the crawl schedule, not at runtime** — hourly is
   the publisher's cadence, not ours.
 - Send the contactable User-Agent we now send everywhere else.
+- **Give the slot back when you stop using it.** A paused receiver is released
+  after ninety seconds. Holding one while playing nothing is squatting, and the
+  Kiwi's own thirty-minute limit is not a licence to use all thirty.
 
-If we cannot commit to all seven, we should not ship it. Burning 837 volunteers to
+If we cannot commit to all eight, we should not ship it. Burning 837 volunteers to
 add a feature would be a worse outcome than not having the feature.
 
 ---

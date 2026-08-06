@@ -1618,6 +1618,23 @@ window.auralfm.onPlayerState((s) => {
     if (s.channel?.sdr) tuneState.wasLive = true;
     else if (tuneState.wasLive) tunerStop();
   }
+  // Pausing is not the same as leaving, but holding a receiver while paused is
+  // the same as squatting it. The Kiwi's own limit would free the slot after
+  // thirty minutes; for those thirty minutes someone else is told the receiver
+  // is full while we sit on it playing nothing.
+  //
+  // A grace period rather than an instant release, because reconnecting is also
+  // load and a quick pause-and-resume should not cost the operator a second
+  // handshake. Ninety seconds is long enough to answer the door.
+  if (tuneState && s.channel?.sdr) {
+    if (s.playing) { clearTimeout(idleRelease); idleRelease = null; }
+    else if (!idleRelease) {
+      idleRelease = setTimeout(() => {
+        idleRelease = null;
+        if (!playing) tunerStop();   // still paused — give the slot back
+      }, 90_000);
+    }
+  }
   playing = s.playing ? s.channel : null;
   document.body.classList.toggle("playing", !!s.playing);
   const bar = $("now");
@@ -3345,6 +3362,8 @@ async function paintColdOpen() {
  * clothes.
  */
 let wfSession = null, tuneState = null;
+/** Pending release of a paused receiver — see the player:state handler. */
+let idleRelease = null;
 const WF_H = 88;
 let wfFloor = -120;
 
@@ -3405,6 +3424,7 @@ function tunerStart(rx, freq, mode, width) {
 }
 
 function tunerStop() {
+  clearTimeout(idleRelease); idleRelease = null;
   $("wfwrap")?.classList.remove("waiting");
   wfSession?.stop();
   wfSession = null;
