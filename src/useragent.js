@@ -11,19 +11,21 @@
  * no persistent key, so there is nothing here to join sessions together with.
  * The header is a return address for the project, not a fingerprint for a user.
  *
- * There is deliberately no URL in it yet. It used to carry
- * `https://github.com/meltonbell3/auralfm`, which returns 404 to anyone who is
- * not the maintainer, because the repository is private. **A contact link that
- * does not resolve is worse than no contact link**: an operator who follows it
- * and lands on a 404 concludes the software is hiding, which is the opposite of
- * what the header exists to do.
+ * The URL is the organisation page, not a personal profile and not the
+ * application repository. This matters twice over. A GitHub organisation's
+ * profile README renders publicly even while every repository inside it is
+ * private, so operators get a real destination without the source being opened.
+ * And the name reaching hundreds of strangers' machines should be the
+ * project's rather than one person's.
  *
- * Put the URL back the moment one resolves publicly — a domain, or a public
- * organisation page. Not a personal profile: the name in a User-Agent reaching
- * hundreds of strangers' machines should be the project's, not one person's.
+ * It previously carried `github.com/meltonbell3/auralfm`, which returns 404 to
+ * anyone who is not the maintainer. **A contact link that does not resolve is
+ * worse than no contact link** — an operator who follows it and lands on a 404
+ * concludes the software is hiding, which is the opposite of the point. If the
+ * organisation page ever stops resolving, remove this rather than leave it.
  */
 const { version } = require("../package.json");
 
-const UA = `AuralFM/${version}`;
+const UA = `AuralFM/${version} (+https://github.com/auralfm)`;
 
 module.exports = { UA };
