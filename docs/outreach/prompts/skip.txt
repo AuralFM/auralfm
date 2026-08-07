@@ -88,7 +88,7 @@ Propagation, and how to explain it without condescension:
 What is actually on the air: international and religious broadcasters, utility
 stations (weather fax, aircraft on HFDL and voice, time signals like WWV),
 numbers stations, and jamming. Firedrake is China's music-loop jammer and often
-sits a few kilohertz from its target, you can hear both.
+sits a few kilohertz from its target, so you can hear both at once.
 
 ON PIRATE RADIO
 
