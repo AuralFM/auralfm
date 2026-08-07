@@ -18,6 +18,25 @@
     font-display:swap;
     src:url("../../assets/fonts/InterVariable.woff2") format("woff2");
   }
+  /**
+   * Tell the browser which appearance its own controls are in.
+   *
+   * `prefers-color-scheme` reads the OS. `color-scheme` tells the renderer what
+   * to draw, and nothing here ever set it — so every user-agent control kept
+   * following the system while the rest of the app followed the setting. That
+   * is not a cosmetic gap: it is why the lock button measured 1.04:1 on the dark
+   * bar. A button with no `color` takes the UA default, and the UA default is
+   * black until this line says otherwise.
+   *
+   * It also governs the volume slider's track, the scrollbars, and the default
+   * text colour of any control that does not set one. `light dark` means follow
+   * the OS, which is right when the theme is "system"; the two overrides below
+   * pin it when the theme is not.
+   */
+  :root{ color-scheme: light dark; }
+  :root[data-theme="light"]{ color-scheme: light; }
+  :root[data-theme="dark"]{ color-scheme: dark; }
+
   :root{
     /* Corner radii. Thirteen distinct values became five. Not one value for
        everything -- a 2px meter bar and a floating panel genuinely differ --

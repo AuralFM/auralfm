@@ -20,6 +20,11 @@
   }
   /* Colors follow AppKit's label/fill hierarchy and system palette so the panel
      reads as part of macOS rather than a web page pretending to be one. */
+  /* UA controls follow the app, not the OS. See explore.html for why. */
+  :root{ color-scheme: light dark; }
+  :root[data-theme="light"]{ color-scheme: light; }
+  :root[data-theme="dark"]{ color-scheme: dark; }
+
   :root{
     /* Corner radii. Thirteen distinct values became five. Not one value for
        everything -- a 2px meter bar and a floating panel genuinely differ --

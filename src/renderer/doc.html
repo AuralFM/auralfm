@@ -18,6 +18,11 @@
     font-display:swap;
     src:url("../../assets/fonts/InterVariable.woff2") format("woff2");
   }
+  /* UA controls follow the app, not the OS. See explore.html for why. */
+  :root{ color-scheme: light dark; }
+  :root[data-theme="light"]{ color-scheme: light; }
+  :root[data-theme="dark"]{ color-scheme: dark; }
+
   :root{
     /* Corner radii. Thirteen distinct values became five. Not one value for
        everything -- a 2px meter bar and a floating panel genuinely differ --

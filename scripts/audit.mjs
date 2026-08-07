@@ -354,12 +354,23 @@ console.log("\nlight theme agrees with itself");
   const drift = [];
   for (const { file, html } of renderers) {
     const name = path.basename(file);
-    const media = html.match(
-      /@media \(prefers-color-scheme: light\)\{\s*\n\s*:root:not\(\[data-theme="dark"\]\)\{([\s\S]*?)\n\s*\}/);
-    const explicit = html.match(/:root\[data-theme="light"\]\{([\s\S]*?)\n\s*\}/);
-    if (!media || !explicit) continue;          // not every renderer themes
-    const a = TOKENS(media[1]), b = TOKENS(explicit[1]);
+    // Every matching block, merged, not the first one. A theme's values are
+    // allowed to live in more than one rule -- `color-scheme` has its own
+    // one-liner -- and matching only the first made this compare a token block
+    // against a single declaration and report ninety false differences.
+    const all = (re) => {
+      const merged = {};
+      for (const m of html.matchAll(re)) Object.assign(merged, TOKENS(m[1]));
+      return merged;
+    };
+    const a = all(/@media \(prefers-color-scheme: light\)\{\s*\n\s*:root:not\(\[data-theme="dark"\]\)\{([\s\S]*?)\n\s*\}/g);
+    const b = all(/:root\[data-theme="light"\]\{([\s\S]*?)\n\s*\}/g);
+    if (!Object.keys(a).length || !Object.keys(b).length) continue;
+    // Tokens that exist only under an explicit theme are not drift: the motion
+    // and radius scales are appearance-independent and live in the base :root.
+    for (const k of Object.keys(b)) if (!(k in a) && !/^--(r-|ease|dur)/.test(k)) a[k] = a[k];
     for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if (/^--(r-|ease|dur|color-scheme)/.test(k)) continue;   // appearance-independent
       if ((a[k] ?? "") !== (b[k] ?? "")) {
         drift.push(`${name} ${k}: system=${a[k] ?? "absent"} explicit=${b[k] ?? "absent"}`);
       }
