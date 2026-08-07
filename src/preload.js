@@ -74,15 +74,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   // Read a cell while browsing. Never announces; see the handler in main.
   presenceView: (lat, lon) => ipcRenderer.send("presence:view", lat, lon),
 
-  // Captions runtime. `install` is the one call in this API that downloads
-  // anything, and it only runs when captions are switched on.
-  captionsRuntimeStatus: () => ipcRenderer.invoke("captions:runtimeStatus"),
-  installCaptionsRuntime: () => ipcRenderer.invoke("captions:installRuntime"),
-  onCaptionsRuntimeProgress: (fn) =>
-    ipcRenderer.on("captions:runtimeProgress", (_e, p) => fn(p)),
   onPeers: (fn) => ipcRenderer.on("presence:peers", (_e, list) => fn(list)),
-  caption: (msg) => ipcRenderer.send("caption:line", msg),
-  onCaption: (fn) => ipcRenderer.on("caption:line", (_e, m) => fn(m)),
   chatHistory: () => ipcRenderer.invoke("presence:history"),
   chatSay: (text, nick) => ipcRenderer.invoke("presence:say", text, nick),
   onChat: (fn) => ipcRenderer.on("presence:messages", (_e, list) => fn(list)),

@@ -303,20 +303,8 @@
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
 </div>
 
-<!-- Transformers.js ships a bare `onnxruntime-web/webgpu` specifier that expects
-     a bundler. An import map resolves it in the browser, which keeps this a
-     project with no build step. -->
-<!-- No import map here on purpose.
-     The runtime is downloaded to the user's application-support directory on
-     first use, so its path is not known when this file is written. captions.js
-     injects the map once it knows where the files landed — Chromium accepts an
-     import map appended after load as long as it precedes the first module
-     resolution, and the only module import in this app is the dynamic one
-     inside Captions.load(). Both names point at the same bundle: it exports
-     every symbol transformers reaches for under `onnxruntime-common`. -->
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
-<script src="captions.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const listEl=$("list"), qEl=$("q"), headEl=$("secthead"), toggle=$("toggle"),
@@ -581,7 +569,6 @@ audio.addEventListener("playing", () => {
   Icons.set(toggle, "pause");
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
-  syncCaptions();
 });
 audio.addEventListener("waiting", () => { if (!audio.paused) setStatus("Buffering…"); });
 audio.addEventListener("error", () => {
@@ -820,20 +807,6 @@ window.auralfm.onPrefs(async (p) => {
   await applyStrings();
   // Rows carry translated titles, so redraw whatever list is on screen.
   if (!qEl.value.trim()) showFavorites();
-
-  const was = capsWanted;
-  capsWanted = p.captions === true;
-  capsModel = p.captionModel || "base";
-  if (was !== capsWanted && current) {
-    // crossOrigin only takes effect on the next load, so the stream has to be
-    // restarted for the change to mean anything at all. Doing it silently would
-    // make the toggle look broken.
-    const c = current; stop(); play(c);
-  } else if (!capsWanted) {
-    Captions.stop(); capsOn = false;
-  } else {
-    syncCaptions();
-  }
 });
 
 window.auralfm.onShown(() => {

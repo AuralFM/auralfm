@@ -125,6 +125,13 @@ them on trust.
 
 ## Live captions (off by default)
 
+> **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
+> once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
+> on a project whose whole argument is that it runs on hardware people already
+> own. The design, the measurements and what would have to change are in
+> [`CAPTIONS.md`](CAPTIONS.md).
+
+
 Switching captions on changes three things, and all three are worth stating
 plainly.
 

@@ -73,6 +73,7 @@ const DOCS = [
   ["docs/DIRECTION.md",            "Direction"],
   ["docs/LEGAL-AND-SECURITY.md",   "Legal and Security"],
   ["docs/PRIVACY.md",              "Privacy"],
+  ["docs/CAPTIONS.md",             "Captions (removed)"],
   ["docs/DECENTRALIZATION.md",     "Decentralization"],
   ["docs/RECEIVERS.md",            "For Receiver Operators"],
   ["docs/SPONSORSHIP.md",          "Sponsorship"],

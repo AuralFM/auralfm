@@ -32,16 +32,6 @@ const DEFAULTS = {
    */
   introSeen: false,
   /**
-   * Live captions, and the model they use.
-   *
-   * Off by default for the same reason presence is: it is the second thing in
-   * this app that talks to a third party — Hugging Face, once, for weights — and
-   * the first that changes how audio is loaded. `crossOrigin` is only applied
-   * when this is on, so the default playback path is untouched.
-   */
-  captions: false,
-  captionModel: "base",   // base | small
-  /**
    * Presence is off, and has to stay off by default.
    *
    * Everything else in this app is a promise that nothing leaves the machine.

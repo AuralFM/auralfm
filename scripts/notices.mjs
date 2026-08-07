@@ -17,8 +17,6 @@
  *     asar by electron-builder.
  *   - **Vendored** — copied into `src/renderer/vendor` by `scripts/vendor.mjs`
  *     and shipped as files. These are the ones with no notice today.
- *   - **Fetched on demand** — the captions runtime, downloaded on first use.
- *     Not in the binary, still executed by the app, still ours to credit.
  *
  * Licence text is read from the package's own LICENSE file rather than
  * paraphrased from the `license` field. The field says "MIT"; the obligation is
@@ -44,8 +42,6 @@ const SHIPPED = [
   ["globe.gl",       "vendored", "The globe itself"],
   ["three",          "vendored", "3D rendering, inside globe.gl"],
   ["three-globe",    "vendored", "Earth textures and globe layers"],
-  ["onnxruntime-web", "fetched", "Runs the Whisper model, downloaded when captions are enabled"],
-  ["@huggingface/transformers", "fetched", "Whisper pipeline, downloaded when captions are enabled"],
 ];
 
 /** Data and imagery are not code and have their own obligations. */
@@ -84,61 +80,18 @@ function readPkg(name) {
   catch { return null; }
 }
 
-/**
- * Packages that publish no licence file, with the upstream text checked in here.
- *
- * `onnxruntime-web` ships `license: "MIT"` in its manifest and no LICENSE file
- * in the tarball. The obligation is to reproduce the copyright notice, and a
- * manifest field is not a copyright notice — so the text below was taken from
- * the repository the manifest points at, microsoft/onnxruntime, and is recorded
- * as such rather than silently generated. Verified against the upstream LICENSE.
- *
- * This is checked in rather than fetched at build time: a notices file that
- * needs the network to be correct is a notices file that will one day be wrong.
- */
-const UPSTREAM = {
-  "onnxruntime-web": {
-    from: "https://github.com/microsoft/onnxruntime/blob/main/LICENSE",
-    note: "The published npm package contains no licence file. This text is the " +
-          "upstream LICENSE from the repository named in its manifest.",
-    text: `MIT License
-
-Copyright (c) Microsoft Corporation
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.`,
-  },
-};
-
 function readLicence(name) {
   const dir = pkgDir(name);
   for (const f of LICENSE_NAMES) {
     const p = path.join(dir, f);
     try { if (fs.statSync(p).isFile()) return { text: fs.readFileSync(p, "utf8").trim() }; } catch {}
   }
-  const up = UPSTREAM[name];
-  return up ? { text: up.text, note: `${up.note} Source: ${up.from}` } : null;
+  return null;
 }
 
 const HOW = {
   bundled:  "Bundled in the application",
   vendored: "Vendored into `src/renderer/vendor`",
-  fetched:  "Downloaded on first use, when captions are enabled",
 };
 
 const entries = [];

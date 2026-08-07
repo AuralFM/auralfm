@@ -230,3 +230,11 @@ argument, not the parts that make money.
   network of receivers is *for*.
 - **Natal charts.** The astronomy is in; the astrology is a different product
   with a different truth claim.
+
+---
+
+> **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
+> once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
+> on a project whose whole argument is that it runs on hardware people already
+> own. The design, the measurements and what would have to change are in
+> [`CAPTIONS.md`](CAPTIONS.md).

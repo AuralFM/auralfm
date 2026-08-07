@@ -252,3 +252,11 @@ In order:
 3. Code signing and notarisation (#4).
 4. Add `npm audit` and a licence check to `npm run audit`.
 5. Read the privacy policy once more as a lawyer would, not as an engineer.
+
+---
+
+> **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
+> once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
+> on a project whose whole argument is that it runs on hardware people already
+> own. The design, the measurements and what would have to change are in
+> [`CAPTIONS.md`](CAPTIONS.md).

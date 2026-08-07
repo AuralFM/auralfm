@@ -35,7 +35,6 @@ const prefs = require("./prefs");
 const palettes = require("./palettes");
 const mine = require("./mystations");
 const i18n = require("./i18n");
-const captionsRuntime = require("./captions-runtime");
 const failures = require("./failures");
 const presence = require("./presence");
 const nostr = require("./presence-nostr");
@@ -795,8 +794,6 @@ function setMediaKeys(on) {
 }
 ipcMain.on("player:mediakeys", (_e, on) => setMediaKeys(!!on));
 ipcMain.on("player:transport", (_e, msg) => win?.webContents.send("player:transport", msg));
-// Captions are produced where the audio is and drawn where the globe is.
-ipcMain.on("caption:line", (_e, msg) => explore?.webContents.send("caption:line", msg));
 ipcMain.on("player:failed", (_e, id) => failures.markFailed(id));
 ipcMain.on("player:ok", (_e, id) => failures.markPlayed(id));
 ipcMain.handle("player:next", (_e, ch, tried) =>
@@ -952,6 +949,23 @@ ipcMain.handle("i18n:strings", () => getStrings());
 ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("palettes:list", () => palettes.list());
 ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
+ipcMain.handle("presence:history", () => nostr.history());
+// Returns false when there is nowhere to say it — nothing playing, presence off,
+// or no relay up. The renderer needs to know rather than assume it landed.
+ipcMain.handle("presence:say", (_e, text, nick) => nostr.say(text, nick));
+/**
+ * Explore asks, the popover plays — same rule as stations, so there is still
+ * exactly one thing in this app that makes sound.
+ */
+ipcMain.on("sdr:tune", (_e, rx) => {
+  win?.webContents.send("sdr:tune", rx);
+  // Deliberately does not show the popover. It used to, and that made the menu
+  // bar panel appear over whatever you were doing every single time you clicked
+  // a receiver -- which is not what a menu bar panel is for, and is not what
+  // tuning a station does. The popover needs to be alive to hold the audio, not
+  // visible; it is created hidden at launch and stays that way until somebody
+  // clicks the tray icon.
+});
 ipcMain.handle("app:version", () => app.getVersion());
 ipcMain.handle("geo:distance", (_e, aLat, aLon, bLat, bLon, units) =>
   geo.format(geo.haversine(aLat, aLon, bLat, bLon),
@@ -991,37 +1005,6 @@ ipcMain.on("presence:view", (_e, lat, lon) => {
   nostr.view(lat, lon);
 });
 
-/**
- * The captions runtime — 11 MB of ONNX that is fetched rather than shipped.
- *
- * `status` is cheap and safe to poll; it hashes what is on disk so a truncated
- * download reports as missing rather than as installed. `install` is the only
- * thing here that touches the network, it is idempotent, and progress goes back
- * to the window that asked so an 11 MB download is not a frozen toggle.
- */
-ipcMain.handle("captions:runtimeStatus", () => captionsRuntime.status(app.getPath("userData")));
-ipcMain.handle("captions:installRuntime", (e) =>
-  captionsRuntime.ensure(app.getPath("userData"), (p) => {
-    // The renderer may be gone by the time a slow download finishes.
-    if (!e.sender.isDestroyed()) e.sender.send("captions:runtimeProgress", p);
-  }));
-ipcMain.handle("presence:history", () => nostr.history());
-// Returns false when there is nowhere to say it — nothing playing, presence off,
-// or no relay up. The renderer needs to know rather than assume it landed.
-ipcMain.handle("presence:say", (_e, text, nick) => nostr.say(text, nick));
-/**
- * Explore asks, the popover plays — same rule as stations, so there is still
- * exactly one thing in this app that makes sound.
- */
-ipcMain.on("sdr:tune", (_e, rx) => {
-  win?.webContents.send("sdr:tune", rx);
-  // Deliberately does not show the popover. It used to, and that made the menu
-  // bar panel appear over whatever you were doing every single time you clicked
-  // a receiver -- which is not what a menu bar panel is for, and is not what
-  // tuning a station does two handlers below. The popover needs to be alive to
-  // hold the audio, not visible; it is created hidden at launch and stays that
-  // way until somebody clicks the tray icon.
-});
 // Headlines open in the real browser. AuralFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
 ipcMain.on("open:external", (_e, url) => {

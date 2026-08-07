@@ -124,6 +124,13 @@ now a design rule with a reason behind it, not a preference.
 
 ### Captions are the inversion, not a feature
 
+> **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
+> once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
+> on a project whose whole argument is that it runs on hardware people already
+> own. The design, the measurements and what would have to change are in
+> [`CAPTIONS.md`](CAPTIONS.md).
+
+
 This is the big one, and it reframes #30 entirely.
 
 Kheshti's industry withholds translation because the pleasure depends on not

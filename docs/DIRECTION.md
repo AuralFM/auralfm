@@ -221,3 +221,11 @@ What it changes is the ordering afterwards:
    asserted.
 4. **The knowledge base is a presentation project**, not a data one, and the
    relay-site detail is the piece to start with.
+
+---
+
+> **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
+> once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
+> on a project whose whole argument is that it runs on hardware people already
+> own. The design, the measurements and what would have to change are in
+> [`CAPTIONS.md`](CAPTIONS.md).
