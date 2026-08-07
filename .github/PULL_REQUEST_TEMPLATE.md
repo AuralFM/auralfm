@@ -7,3 +7,15 @@
 
 - [ ] Ran `npm start` and the change works in the real app
 - [ ] Checked light and dark appearance
+- [ ] `npm run audit` passes
+- [ ] There is an issue for this and it was discussed before I wrote code
+- [ ] No new dependencies, no tooling or framework changes, no large refactor
+- [ ] If it touches the shortwave receivers, it honours all nine commitments in
+      `docs/DECENTRALIZATION.md` and adds no automated or repeated connections
+- [ ] No em dashes, and no place described as a sound
+
+<!-- CONTRIBUTING.md explains why each of those is there. The short version:
+     this is one maintainer, and a pull request that arrives without discussion
+     usually duplicates work in progress or will be declined for a reason that
+     fits in one sentence. -->
+
