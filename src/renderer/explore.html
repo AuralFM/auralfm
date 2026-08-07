@@ -633,7 +633,11 @@
      in it looks broken -- measured at 760px, where both were 32px tall.
      The name absorbs the shrinking because a truncated station name is still
      readable and a truncated price is not. */
-  #nowName{flex:1 1 auto;min-width:0}
+  /* Shrink, never grow. `1 1 auto` let the station name absorb every spare
+     pixel in the bar, which pushed the volume and the ticker to the far right
+     and left the name floating in the middle of its own gap. Truncation only
+     ever needed the shrink half. */
+  #nowName{flex:0 1 auto;min-width:0}
   #nowStatus{flex:0 1 auto;min-width:0}
   #nowName,#nowStatus{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* The prices keep their natural width and lose whole symbols instead. */
@@ -705,21 +709,32 @@
     background:transparent;color:var(--accent);
     box-shadow:inset 0 0 0 1.5px var(--accent);
   }
-  .volwrap{flex:none;display:flex;align-items:center;gap:5px;margin-left:10px}
+  /* auto, not 10px. Two groups rather than eight items in a row: the controls
+     that act on this station stay with it on the left, and volume plus the
+     ticker are their own thing on the right. The gap between them is whatever
+     the window has spare. */
+  .volwrap{flex:none;display:flex;align-items:center;gap:5px;margin-left:auto}
   #mute{
     background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
     padding:2px;border-radius:var(--r-sm);cursor:default;transition:color var(--dur-hover) var(--ease-out);
   }
   #mute:hover{color:var(--label)}
   #vol{width:84px;accent-color:var(--accent)}
+  /* Colour, not opacity, and stated rather than inherited.
+     This set no `color` at all, so it took the user agent's button default,
+     which is black in both appearances. On the light bar that measured 4.6:1
+     and looked fine; on the dark one it was 1.04:1, which is a black icon on a
+     near-black bar. Melton could not see it and neither could anything else.
+     A resting opacity of .55 on top of a themed colour is the same trap one
+     step further on, so the resting state is a token and hover raises it. */
   #lock{
     flex:none;background:none;border:0;font-size:15px;line-height:1;cursor:default;
-    padding:3px 5px;border-radius:var(--r-sm);opacity:.55;
-    transition:background var(--dur-hover) var(--ease-out),opacity var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
+    padding:3px 5px;border-radius:var(--r-sm);color:var(--label2);
+    transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
-  #lock:hover{background:var(--fill);opacity:1}
+  #lock:hover{background:var(--fill);color:var(--label)}
   #lock:active{transform:scale(.9)}
-  #lock[aria-pressed="true"]{opacity:1;background:color-mix(in srgb,var(--accent) 24%,transparent)}
+  #lock[aria-pressed="true"]{color:var(--label);background:color-mix(in srgb,var(--accent) 24%,transparent)}
   .now b{font-weight:590}
   .now span{color:var(--label2)}
 
@@ -852,8 +867,12 @@
   }
   .conote{padding:2px 15px 8px;font-size:11px;color:var(--label3);line-height:1.45}
 
+  /* --label2, not --label3. At 30% the empty star measured 1.76:1 on the light
+     bar and 2.48:1 on the dark one, so it failed the 3:1 floor for a control in
+     both appearances rather than only one. A control nobody can see is not a
+     subtle control. */
   #nowStar{
-    background:none;border:0;color:var(--label3);font-size:15px;line-height:1;
+    background:none;border:0;color:var(--label2);font-size:15px;line-height:1;
     padding:2px 4px;cursor:default;flex:none;
     transition:color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
@@ -925,7 +944,10 @@
    * read-out and can afford to be small.
    */
   .markets{
-    flex:0 1 auto;min-width:0;margin-left:auto;display:flex;align-items:center;
+    /* No auto margin here. volwrap already carries it, and flexbox splits
+       free space evenly between every auto margin, which parked the volume
+       halfway across the bar instead of beside the prices. */
+    flex:0 1 auto;min-width:0;display:flex;align-items:center;
     gap:9px;padding-left:10px;overflow:hidden;
     max-width:calc(var(--rail) - 7px);
     font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
