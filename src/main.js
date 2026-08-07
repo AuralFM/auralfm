@@ -251,6 +251,27 @@ function openExplore() {
  * duplicated here because a BrowserWindow needs its colour before any
  * stylesheet exists to ask.
  */
+/**
+ * Tell macOS which appearance this app is in.
+ *
+ * The renderer has always honoured the preference: it sets `data-theme` on the
+ * root element and the CSS follows. But `nativeTheme.themeSource` was never
+ * touched, and that is the only thing macOS reads. So everything the page does
+ * not paint kept following the OS instead of the app -- the title bar, the
+ * traffic lights, the native menus, the file and message dialogs.
+ *
+ * On a dark Mac nobody noticed, because the OS and the app agreed by accident.
+ * Force light on a dark Mac and the page turns to warm paper under a black
+ * title bar, which is where this shows up.
+ *
+ * Setting it also makes `nativeTheme.shouldUseDarkColors` mean what
+ * `groundColour()` assumes it means: the app's appearance rather than the
+ * system's.
+ */
+function applyThemeSource(pref) {
+  nativeTheme.themeSource = pref === "light" || pref === "dark" ? pref : "system";
+}
+
 function groundColour() {
   const pref = getPrefs().theme;
   const dark = pref === "dark" || (pref !== "light" && nativeTheme.shouldUseDarkColors);
@@ -508,6 +529,7 @@ function setPrefs(patch) {
   const st = load();
   st.prefs = { ...getPrefs(), ...patch };
   save(st);
+  if ("theme" in patch) applyThemeSource(st.prefs.theme);
   broadcast("prefs:changed", st.prefs);
   if ("presence" in patch) syncNostrPresence();
   // Applied before presence so a relay added in the same breath as switching
@@ -998,6 +1020,11 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    // Before any window exists: a saved theme preference has to reach macOS
+    // before the first title bar is drawn, or the app launches in the system
+    // appearance and corrects itself only when the setting is next touched.
+    applyThemeSource(getPrefs().theme);
+
     // Standalone app with a menu bar companion: the globe is what people came
     // for, so it opens on launch rather than hiding behind an unlabelled tray
     // icon. The menu bar keeps every behaviour it had — it is now the thing that
