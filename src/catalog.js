@@ -43,7 +43,22 @@ function detectBand(title) {
 
 function norm(s) {
   // Fold accents so "Bogotá" matches "bogota" and "Köln" matches "koln".
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  //
+  // And fold the decimal comma onto the point, because a frequency is the one
+  // thing in a station name that is written differently depending on where you
+  // are standing. Most of the world writes 104,9; this catalogue mostly holds
+  // 104.9, and searching for the comma form used to return only the handful of
+  // stations that also spell it with a comma -- four results out of the sixteen
+  // thousand that carry a frequency at all. Brazil, Argentina, Mexico, Spain,
+  // Colombia and Chile are the six countries with the most frequencies in their
+  // names, and every one of them writes the comma.
+  //
+  // Applied here rather than at either call site so the haystack and the query
+  // are folded by the same rule. Only between digits: "Radio 1, 2 and 3" is not
+  // a frequency and keeps its comma.
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "")
+          .replace(/(\d),(\d)/g, "$1.$2")
+          .toLowerCase();
 }
 
 function load() {

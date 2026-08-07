@@ -381,5 +381,23 @@ console.log("\nlight theme agrees with itself");
     : pass("every renderer's two light blocks hold the same values");
 }
 
+// ── search folds the decimal comma ───────────────────────────────────────────
+// Two lines inside norm() carry this, and breaking them fails silently: search
+// keeps working, it just stops finding anything for most of the world. The six
+// countries with the most frequencies in their station names all write 104,9.
+{
+  console.log("\nsearch finds a frequency written either way");
+  const cat = await import("../src/catalog.js").then((m) => m.default ?? m);
+  if (!cat.load()) {
+    fail("catalog", "no bundle to search — run `npm run crawl`");
+  } else {
+    const ids = (q) => cat.search(q, 60).map((x) => x.id).join(",");
+    const bad = ["88.5", "101.1", "104.9"].filter((f) => ids(f) !== ids(f.replace(".", ",")));
+    bad.length
+      ? fail("decimal comma", `${bad.join(", ")} return different results with a comma`)
+      : pass("104.9 and 104,9 return the same stations");
+  }
+}
+
 console.log(failures ? `\n${failures} check(s) failed\n` : "\nall checks passed\n");
 process.exit(failures ? 1 : 0);
