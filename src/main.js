@@ -55,6 +55,20 @@ const space = require("./space");
 app.setName("AuralFM");
 
 /**
+ * Cap the HTTP cache.
+ *
+ * Chromium sizes its disk cache from free space, which on a large drive means
+ * hundreds of megabytes for an app whose entire job is streaming audio it never
+ * needs to read twice. Measured on the development machine before this line
+ * existed: 633 MB of HTTP cache, and 648 MB more in CacheStorage.
+ *
+ * 150 MB is generous for the globe textures and the schedule, which are the
+ * only things here worth keeping between launches. Must be set before the
+ * first session exists, which is why it is up here rather than in whenReady.
+ */
+app.commandLine.appendSwitch("disk-cache-size", String(150 * 1024 * 1024));
+
+/**
  * Carry data over from the GlobeFM name.
  *
  * Electron derives userData from the app name, so renaming moved the whole
