@@ -335,5 +335,40 @@ console.log("\ndesign tokens are not bypassed");
     : pass("every corner radius comes from the scale");
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\nlight theme agrees with itself");
+// Light lives in two blocks in every renderer: a prefers-color-scheme media
+// query, used when the theme is "system" on a light Mac, and a
+// [data-theme="light"] selector, used when light is chosen explicitly. They
+// have to hold identical values or the same setting looks different depending
+// on how you arrived at it.
+//
+// This has drifted three times. Twice a new token was added to one block only
+// and silently inherited the dark value; once an entire block was left on the
+// old Apple palette, so choosing Light gave a different app than a light Mac on
+// System. Cheaper to check than to notice.
+{
+  const TOKENS = (block) =>
+    Object.fromEntries([...block.matchAll(/(--[\w-]+):\s*([^;]+);/g)]
+      .map((m) => [m[1], m[2].trim()]));
+  const drift = [];
+  for (const { file, html } of renderers) {
+    const name = path.basename(file);
+    const media = html.match(
+      /@media \(prefers-color-scheme: light\)\{\s*\n\s*:root:not\(\[data-theme="dark"\]\)\{([\s\S]*?)\n\s*\}/);
+    const explicit = html.match(/:root\[data-theme="light"\]\{([\s\S]*?)\n\s*\}/);
+    if (!media || !explicit) continue;          // not every renderer themes
+    const a = TOKENS(media[1]), b = TOKENS(explicit[1]);
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if ((a[k] ?? "") !== (b[k] ?? "")) {
+        drift.push(`${name} ${k}: system=${a[k] ?? "absent"} explicit=${b[k] ?? "absent"}`);
+      }
+    }
+  }
+  drift.length
+    ? fail("light theme", `the two light blocks disagree — ${drift.join("; ")}`)
+    : pass("every renderer's two light blocks hold the same values");
+}
+
 console.log(failures ? `\n${failures} check(s) failed\n` : "\nall checks passed\n");
 process.exit(failures ? 1 : 0);

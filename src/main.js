@@ -137,6 +137,14 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      // This window holds the audio and, for shortwave, a live WebSocket to a
+      // volunteer's receiver kept open by a setInterval. Chromium throttles
+      // timers in hidden windows, and a throttled keepalive means the Kiwi
+      // drops us as a silent client. Tuning a receiver used to force this panel
+      // visible for exactly that reason. It is a small, mostly idle window, and
+      // not throttling it is cheaper than a menu bar panel that appears over
+      // your work uninvited.
+      backgroundThrottling: false,
     },
   });
 
@@ -940,7 +948,12 @@ ipcMain.handle("presence:say", (_e, text, nick) => nostr.say(text, nick));
  */
 ipcMain.on("sdr:tune", (_e, rx) => {
   win?.webContents.send("sdr:tune", rx);
-  if (!win?.isVisible()) show();
+  // Deliberately does not show the popover. It used to, and that made the menu
+  // bar panel appear over whatever you were doing every single time you clicked
+  // a receiver -- which is not what a menu bar panel is for, and is not what
+  // tuning a station does two handlers below. The popover needs to be alive to
+  // hold the audio, not visible; it is created hidden at launch and stays that
+  // way until somebody clicks the tray icon.
 });
 // Headlines open in the real browser. AuralFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
