@@ -39,8 +39,9 @@ error: unexpected argument '--agent' found
 An operator running a small fleet cannot hand a new agent its starting context.
 Every agent has to author its own memory on first run, which means the first run
 is the one run with no memory — exactly when a fresh agent knows least and is
-most likely to write something wrong into a `core` that `mem rm` then refuses to
-delete.
+most likely to write something wrong into `core`. `mem rm` refuses to tombstone
+`core`, so the only correction available is overwriting it, and there is no copy
+of what was there before.
 
 It also blocks the pattern Block's own post recommends. A Hive is described as a
 standing team that accumulates knowledge about how its operator works. There is
