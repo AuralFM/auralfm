@@ -14,7 +14,8 @@ trigger:
   emoji: wave
 enabled: true
 steps:
-  - action: send_dm
+  - id: dm-orientation
+    action: send_dm
     to: "{{trigger.author}}"
     text: |
       Welcome — someone just waved at you.
@@ -45,5 +46,6 @@ steps:
 
       Nobody will ask you for an email, a location, or a wallet address. If
       anything in this community ever does, it is not us.
-  - action: add_reaction
+  - id: ack-wave
+    action: add_reaction
     emoji: wave

@@ -12,7 +12,8 @@ trigger:
   emoji: bug
 enabled: true
 steps:
-  - action: send_dm
+  - id: dm-the-four-things
+    action: send_dm
     to: "{{trigger.author}}"
     text: |
       Thanks for reporting that. Four things make it fixable, and the first two

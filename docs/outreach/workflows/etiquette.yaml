@@ -11,7 +11,8 @@ trigger:
   emoji: radio
 enabled: true
 steps:
-  - action: send_message
+  - id: post-commitments
+    action: send_message
     text: |
       **On the shortwave receivers, since it just came up.**
 
