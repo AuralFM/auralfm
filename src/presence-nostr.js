@@ -36,6 +36,7 @@
  */
 
 const crypto = require("node:crypto");
+const { haversine } = require("./geo");
 const fs = require("node:fs");
 const path = require("node:path");
 const { schnorr } = require("@noble/curves/secp256k1.js");
@@ -165,15 +166,6 @@ function relaysFor(cell) {
     if (!list.includes(url)) list.push(url);
   }
   return list;
-}
-
-/** Great-circle kilometres. */
-function haversine(aLat, aLon, bLat, bLon) {
-  const r = Math.PI / 180, R = 6371;
-  const dLat = (bLat - aLat) * r, dLon = (bLon - aLon) * r;
-  const h = Math.sin(dLat / 2) ** 2 +
-            Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
 const BEAT_MS = 60_000;

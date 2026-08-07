@@ -7,6 +7,7 @@
 
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme } = require("electron");
 const path = require("node:path");
+const geo = require("./geo");
 
 /**
  * Identify this app to every server it touches, including the receivers.
@@ -877,6 +878,9 @@ ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("palettes:list", () => palettes.list());
 ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
 ipcMain.handle("app:version", () => app.getVersion());
+ipcMain.handle("geo:distance", (_e, aLat, aLon, bLat, bLon, units) =>
+  geo.format(geo.haversine(aLat, aLon, bLat, bLon),
+             geo.resolveUnits(units, app.getLocale())));
 
 // ── shortwave ────────────────────────────────────────────────────────────────
 // Only the aggregate list is served from here. An individual receiver is

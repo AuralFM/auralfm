@@ -542,6 +542,11 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .placehead p{margin:2px 0 0;font-size:12px;color:var(--label2)}
+  /* The hop reads as a measurement, so it gets the figures a measurement wants. */
+  .hop{
+    margin:5px 0 0;font-size:11px;color:var(--label3);
+    font-variant-numeric:tabular-nums slashed-zero;
+  }
   .wx{
     margin:7px 0 0;font-size:12px;color:var(--label2);
     display:flex;align-items:center;gap:7px;min-height:16px;
@@ -1023,7 +1028,7 @@
   </div>
 
   <div class="stations">
-    <div class="placehead" id="head" hidden><h2></h2><p></p><div class="wx" id="wx"></div>
+    <div class="placehead" id="head" hidden><h2></h2><p></p><div class="hop" id="hop" hidden></div><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
     </div>
     <!-- The dial. Only while a receiver is playing; a stream has nothing to tune.
@@ -1141,6 +1146,68 @@ const placeListEl=$("placelist"), stationListEl=$("stationlist"), qEl=$("q"),
  * switching views must never lose your place.
  */
 const selection = { placeIndex: null, place: null, channels: [] };
+
+/**
+ * Where you have been.
+ *
+ * Named `journey` rather than `history` because `window.history` is a real
+ * global and shadowing it is the kind of trap that costs somebody an afternoon.
+ *
+ * A stack rather than a "last place" field, because the interesting thing about
+ * listening across a globe is the route, not the previous stop. Back and
+ * forward behave the way a browser's do: going back does not truncate, going
+ * somewhere new from the middle does.
+ *
+ * Capped at 50. This exists to be walked, not archived, and an unbounded array
+ * of every place clicked in a session is a memory leak with a nice name.
+ *
+ * `travelling` guards the obvious trap: selectPlace is what pushes, and back
+ * and forward call selectPlace, so without it every step backwards would
+ * append itself and the stack would grow while you walked it.
+ */
+const journey = { stack: [], at: -1 };
+let travelling = false;
+
+function pushJourney(i, place) {
+  if (travelling) return;
+  if (journey.stack[journey.at]?.i === i) return;      // same place twice is not a journey
+  journey.stack.length = journey.at + 1;               // a new turn drops the forward path
+  journey.stack.push({ i, title: place.title, lat: place.lat, lon: place.lon });
+  if (journey.stack.length > 50) journey.stack.shift();
+  journey.at = journey.stack.length - 1;
+}
+
+async function travel(step) {
+  const to = journey.at + step;
+  if (to < 0 || to >= journey.stack.length) return;
+  travelling = true;
+  journey.at = to;
+  try { await goToPlace(journey.stack[to].i); }
+  finally { travelling = false; }
+  paintDistance();
+}
+
+/**
+ * How far the last hop was.
+ *
+ * Deliberately the distance from the previous place rather than from the
+ * listener: the app does not know where the listener is and is not going to
+ * find out. This measures the journey across the map, which is the thing that
+ * is actually happening.
+ */
+async function paintDistance() {
+  const el = $("hop");
+  if (!el) return;
+  const here = journey.stack[journey.at], prev = journey.stack[journey.at - 1];
+  if (!here || !prev) { el.textContent = ""; el.hidden = true; return; }
+  // Await, then check the stack has not moved. Two quick selections would
+  // otherwise race and paint the older answer over the newer one.
+  const at = journey.at;
+  const d = await window.auralfm.distance(prev.lat, prev.lon, here.lat, here.lon, prefs.units);
+  if (journey.at !== at) return;
+  el.textContent = `${d} from ${prev.title}`;
+  el.hidden = false;
+}
 let favorites = [];
 let playing = null;          // channel currently playing, per the popover
 let debounce = null, seq = 0;
@@ -1201,6 +1268,8 @@ async function selectPlace(i, { keepFilter = false } = {}) {
   selection.place = place;
   selection.channels = channels;
   selection.total = total;
+  pushJourney(i, place);
+  paintDistance();
   markPlaceSelection({ scroll: true });
   renderStations();
   renderChips();
@@ -3594,6 +3663,24 @@ $("introNext").onclick = () => {
   paintIntro();
 };
 $("introSkip").onclick = closeIntro;
+/**
+ * Walking the listening history.
+ *
+ * Cmd+[ and Cmd+] because that is what every Mac app means by back and forward,
+ * and a person who has used a browser already knows this without being told.
+ *
+ * Guarded on the text fields: the search box and the chat input both accept
+ * brackets, and a shortcut that eats a character while you type is worse than
+ * no shortcut.
+ */
+document.addEventListener("keydown", (e) => {
+  if (!e.metaKey || e.altKey || e.ctrlKey) return;
+  const el = document.activeElement;
+  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+  if (e.key === "[") { e.preventDefault(); travel(-1); }
+  else if (e.key === "]") { e.preventDefault(); travel(1); }
+});
+
 document.addEventListener("keydown", (e) => {
   if ($("intro").hidden) return;
   if (e.key === "Escape") { e.preventDefault(); closeIntro(); }

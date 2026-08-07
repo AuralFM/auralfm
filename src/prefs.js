@@ -17,6 +17,13 @@ const DEFAULTS = {
   language: "system",    // system | en | es
   palette: "onyx",       // see src/palettes.js
   /**
+   * Distance units for the listening history.
+   *
+   * "system" asks the operating system rather than inferring from a country
+   * list, because the two disagree for anyone who has ever moved.
+   */
+  units: "system",       // system | km | mi
+  /**
    * Whether the first-run walkthrough has been seen.
    *
    * Boolean rather than a version number on purpose: a tour that reappears

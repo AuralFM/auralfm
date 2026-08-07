@@ -19,6 +19,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { cooldown } = require("./backoff");
+const { haversine } = require("./geo");
 
 /**
  * The aggregate list, over cleartext HTTP.
@@ -214,14 +215,8 @@ const stats = () => ({ count: receivers.length, generated });
  * distance; the list is under a thousand entries so a sort is fine.
  */
 function nearest(lat, lng, limit = 8) {
-  const R = 6371, rad = Math.PI / 180;
   return receivers
-    .map((r, i) => {
-      const dLat = (r.lat - lat) * rad, dLng = (r.lng - lng) * rad;
-      const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLng / 2) ** 2;
-      return { ...r, i, km: Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(a)))) };
-    })
+    .map((r, i) => ({ ...r, i, km: Math.round(haversine(lat, lng, r.lat, r.lng)) }))
     .sort((a, b) => a.km - b.km)
     .slice(0, limit);
 }

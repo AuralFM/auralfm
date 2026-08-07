@@ -4,6 +4,21 @@ const { contextBridge, ipcRenderer } = require("electron");
 // renderer can reach — no filesystem, no network, no node. Both the popover and
 // the Explore window load this same bridge.
 contextBridge.exposeInMainWorld("auralfm", {
+  /**
+   * Great-circle distance between two places, already formatted.
+   *
+   * Over IPC rather than by requiring src/geo.js here. A preload that requires
+   * a local module fails *silently* in this configuration -- the module does
+   * not load, no error is logged anywhere, and `window.auralfm` simply never
+   * appears, taking all 76 of these with it. Found by checking the bridge at
+   * runtime rather than by trusting that the app still started.
+   *
+   * `units` is the preference, not the answer. "system" is resolved in main
+   * against the real locale rather than guessed from a country.
+   */
+  distance: (aLat, aLon, bLat, bLon, units) =>
+    ipcRenderer.invoke("geo:distance", aLat, aLon, bLat, bLon, units),
+
   // persistence
   getState: () => ipcRenderer.invoke("state:get"),
   setState: (state) => ipcRenderer.invoke("state:set", state),
