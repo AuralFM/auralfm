@@ -341,7 +341,7 @@
   .scroll::-webkit-scrollbar{width:0}
 
   .place{
-    display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:var(--r-md);
+    display:flex;align-items:baseline;gap:8px;padding:5px 10px;border-radius:var(--r-md);
     transition:background var(--dur-hover) var(--ease-out);
   }
   .place:hover{background:var(--fill)}
@@ -711,7 +711,12 @@
     flex:none;display:flex;flex-wrap:nowrap;align-items:center;gap:9px;
     /* 7px on the right, not 15: the markets strip is the last child, and 7px is
        the station rows' own inset — so the two right edges line up. */
-    padding:9px 7px 9px 16px;
+    /* Right padding is 7px of scroll gutter plus the 10px a row insets its
+       own content, so the last price lands on the same vertical line as a
+       station name and a place's station count. It was a bare 7px, which
+       put SOL ten pixels closer to the edge than anything above it. The
+       wide layout below already does this arithmetic; this one did not. */
+    padding:9px 17px 9px 16px;
     box-shadow:inset 0 .5px 0 var(--line);font-size:12px;overflow:hidden;
   }
   /* The two labels are the only things in the transport that can be any
@@ -837,7 +842,7 @@
     #play{width:30px;height:30px}
     #vol{width:110px}
     .st{padding:9px 12px}
-    .place{padding:7px 10px}
+    .place{padding:7px 12px}   /* 12px like .st, so both lists share an edge */
   }
   /* Headlines cross-fade one at a time rather than scrolling. A marquee fights
      prefers-reduced-motion and moving text is simply harder to read. */
