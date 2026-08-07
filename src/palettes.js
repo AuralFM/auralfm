@@ -127,26 +127,34 @@ const PALETTES = [
     star: "#F6E2EA",
   },
   {
-    id: "sferic",
-    name: "Sferic",
+    id: "tally",
+    name: "Tally",
     /**
-     * The crackle of distant lightning arriving on the low bands.
+     * The lamp outside a studio door that means on air, do not come in.
      *
-     * A sferic is a broadband pulse from a strike, and on shortwave you hear
-     * storms from thousands of kilometres away as a constant restless static.
-     * It is the sound of weather being audible, which is the whole reason this
-     * app draws cloud cover over the planet.
+     * It replaced a palette called Sferic, which was the right idea and the
+     * wrong colour. Lightning static is honestly blue-white, and blue-white put
+     * its accent nine degrees from Night Earth's with receiver dots four ΔE
+     * apart, which is below the point anyone can see a difference. A name that
+     * forces a collision is a name to drop rather than a colour to fudge.
      *
-     * Electric and cold, near white at the centre, because that is what a
-     * discharge looks like and it is the one palette here that should feel
-     * slightly unfriendly.
+     * Red was the only gap left on the wheel, and it is the one colour in
+     * broadcasting that already means something. Signal red rather than orange,
+     * which is Ember's.
+     *
+     * The receiver dots are lime, chosen by measuring rather than by taste. The
+     * obvious answer for a warm accent is a cold cyan, and that is exactly what
+     * Ember already does -- picking it here put the two dots 8 ΔE apart, which
+     * is the same collision this palette exists to fix, one axis over. Lime sits
+     * 34 from the nearest dot in use and 107 from this accent, the best of seven
+     * candidates on both counts. It is also the other lamp on a studio door.
      */
-    accent: "#7FE0FF",
-    accentLight: "#0A6E8C",
-    dot: "#AFEEFF",
-    rx: "#FFD07A",
-    atmosphere: "#6FC6E8",
-    star: "#EAFAFF",
+    accent: "#E04A3C",
+    accentLight: "#98281E",
+    dot: "#F27A6E",
+    rx: "#9FE86B",
+    atmosphere: "#C9564C",
+    star: "#FFE2DD",
   },
   {
     id: "shortwave",
