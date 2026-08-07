@@ -104,6 +104,51 @@ const PALETTES = [
     star: "#CFFFF2",
   },
   {
+    id: "greyline",
+    name: "Grey Line",
+    /**
+     * The band of twilight moving across the Earth, which the globe already
+     * draws as the terminator.
+     *
+     * It earns a palette more than most of these do: grey line is the forty
+     * minutes at dawn and dusk when the absorbing layer has collapsed and the
+     * reflecting one has not reformed, and paths open that exist at no other
+     * time. Listeners set alarms for it.
+     *
+     * Rose rather than orange, which is Ember's. Sunrise glow is warm and
+     * frontal; twilight is cooler and further round the limb, and the two
+     * should not be the same colour.
+     */
+    accent: "#D48CA6",
+    accentLight: "#8A4A63",
+    dot: "#E6A9C0",
+    rx: "#7FD6C2",          // held cold, so receivers stay unmistakably other
+    atmosphere: "#B992C6",
+    star: "#F6E2EA",
+  },
+  {
+    id: "sferic",
+    name: "Sferic",
+    /**
+     * The crackle of distant lightning arriving on the low bands.
+     *
+     * A sferic is a broadband pulse from a strike, and on shortwave you hear
+     * storms from thousands of kilometres away as a constant restless static.
+     * It is the sound of weather being audible, which is the whole reason this
+     * app draws cloud cover over the planet.
+     *
+     * Electric and cold, near white at the centre, because that is what a
+     * discharge looks like and it is the one palette here that should feel
+     * slightly unfriendly.
+     */
+    accent: "#7FE0FF",
+    accentLight: "#0A6E8C",
+    dot: "#AFEEFF",
+    rx: "#FFD07A",
+    atmosphere: "#6FC6E8",
+    star: "#EAFAFF",
+  },
+  {
     id: "shortwave",
     name: "Shortwave",
     // Dial glow: the amber of a lit tuning scale on a valve receiver.
