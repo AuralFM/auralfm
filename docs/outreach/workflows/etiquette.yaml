@@ -1,0 +1,43 @@
+# React 📻 to any message and the receiver commitments get posted in the channel.
+#
+# For the moment somebody proposes something that would poll the volunteers'
+# radios. Faster than typing it, and identical every time — which matters,
+# because this is the rule the project has already broken once.
+name: Post the receiver commitments
+description: >
+  React with 📻 and the nine commitments are posted in the channel.
+trigger:
+  on: reaction_added
+  emoji: radio
+enabled: true
+steps:
+  - action: send_message
+    text: |
+      **On the shortwave receivers, since it just came up.**
+
+      They belong to volunteers. One person's hardware, on one person's
+      bandwidth, given away free. Around 800 of them, and the number moves
+      weekly as people plug them in and take them down again.
+
+      What AuralFM commits to, and what anyone building anything against them
+      should match:
+
+      1. Never auto-connect. A receiver is only contacted on an explicit click.
+      2. One session at a time. Ever.
+      3. Respect capacity — a full receiver is greyed out, not attempted.
+      4. Never retry a refused receiver. Offer another instead.
+      5. Honour inactivity timeouts rather than defeating them with keepalives.
+      6. Refresh the list on a crawl schedule, never at runtime.
+      7. Send a contactable User-Agent.
+      8. Give the slot back when you stop listening — paused sessions release
+         after ninety seconds. The thirty-minute server limit is not a licence
+         to use all thirty.
+      9. Any operator can opt out with one email, and is dropped from the next
+         build.
+
+      **This project has already taken three receivers offline** by over-probing
+      them during development. That is why these are written down and checked by
+      the build rather than merely intended.
+
+      If you are planning anything automated against them: ask the operator
+      first. Every time.

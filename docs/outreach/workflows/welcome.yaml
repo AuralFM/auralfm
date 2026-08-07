@@ -1,0 +1,49 @@
+# Someone waves at a newcomer, and the newcomer gets oriented.
+#
+# There is no "member joined" trigger in Buzz — the trigger set is
+# message_posted, reaction_added, diff_posted, schedule and webhook. So this
+# fires on a human waving instead, which is better than it sounds: no false
+# positives, nobody gets greeted by a robot for saying "hi" in the wrong place,
+# and the welcome is only ever sent by someone who decided to send it.
+name: Welcome a newcomer
+description: >
+  React with 👋 to somebody's first message and they get a DM explaining where
+  they have landed. Any member can trigger it.
+trigger:
+  on: reaction_added
+  emoji: wave
+enabled: true
+steps:
+  - action: send_dm
+    to: "{{trigger.author}}"
+    text: |
+      Welcome — someone just waved at you.
+
+      **AuralFM is a globe you listen to.** Spin the Earth, click a place, hear
+      what it is listening to right now. About 38,000 internet radio stations,
+      plus around 800 shortwave receivers that strangers leave open for anyone
+      to borrow — somebody's real antenna, in somebody's real garden.
+
+      **There is no backend.** No account, no server of ours, nothing logging
+      what you played. This community runs on Nostr for the same reason the app
+      does.
+
+      Where things are:
+
+      - **#tuning** — what you found. This is the point.
+      - **#shortwave** — propagation, band openings, the deep end.
+      - **#build** — progress, and what broke.
+      - **#signal** — announcements, occasionally.
+      - **#library** — how radio actually works. Start with the pinned post
+        about borrowing somebody's antenna; it is the one rule that matters.
+
+      **The one thing worth reading before anything else:** the shortwave
+      receivers belong to volunteers. One person's hardware, one person's
+      bandwidth, given away free. Do not hammer them, do not leave a slot open
+      you are not using, and if a receiver is full, move on. That is the only
+      thing anyone here will ever be strict about.
+
+      Nobody will ask you for an email, a location, or a wallet address. If
+      anything in this community ever does, it is not us.
+  - action: add_reaction
+    emoji: wave
