@@ -290,6 +290,22 @@ function openExplore() {
  * `groundColour()` assumes it means: the app's appearance rather than the
  * system's.
  */
+/**
+ * Wear the chosen icon in the Dock.
+ *
+ * `app.dock.setIcon` is the whole mechanism and it only reaches the Dock. The
+ * icon Finder shows lives in the bundle's Info.plist, is read once when the
+ * bundle is registered, and cannot be changed by a running process. So this
+ * setting does exactly one visible thing, and the Settings copy says so rather
+ * than letting somebody wonder why Finder disagrees.
+ */
+function applyAppIcon(which) {
+  if (!app.dock) return;                       // not macOS
+  const file = path.join(__dirname, "..", "assets", "generated", `dock-${which || "onyx"}.png`);
+  const img = nativeImage.createFromPath(file);
+  if (!img.isEmpty()) app.dock.setIcon(img);   // a missing file leaves the default
+}
+
 function applyThemeSource(pref) {
   nativeTheme.themeSource = pref === "light" || pref === "dark" ? pref : "system";
 }
@@ -552,6 +568,7 @@ function setPrefs(patch) {
   st.prefs = { ...getPrefs(), ...patch };
   save(st);
   if ("theme" in patch) applyThemeSource(st.prefs.theme);
+  if ("appIcon" in patch) applyAppIcon(st.prefs.appIcon);
   broadcast("prefs:changed", st.prefs);
   if ("presence" in patch) syncNostrPresence();
   // Applied before presence so a relay added in the same breath as switching
@@ -1092,6 +1109,7 @@ if (!app.requestSingleInstanceLock()) {
     // before the first title bar is drawn, or the app launches in the system
     // appearance and corrects itself only when the setting is next touched.
     applyThemeSource(getPrefs().theme);
+    applyAppIcon(getPrefs().appIcon);
 
     // Standalone app with a menu bar companion: the globe is what people came
     // for, so it opens on launch rather than hiding behind an unlabelled tray

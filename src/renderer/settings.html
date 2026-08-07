@@ -100,6 +100,23 @@
   /* Palette picker: each option is its own swatch, because a list of names
      tells you nothing about what you are choosing. */
   .palettes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px}
+  /* Four across rather than three: the swatch is the real icon, so it has to be
+     big enough to tell apart, and four fills the row without a gap at the end. */
+  .appicons{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px}
+  .ico{
+    appearance:none;border:0;background:transparent;cursor:default;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:8px 4px;border-radius:var(--r-md);
+    transition:background var(--dur-hover) var(--ease-out);
+  }
+  .ico:hover{background:var(--fill)}
+  /* The icon is already a squircle; this only stops the PNG corners showing
+     through at the very edge. --r-xl is the panel radius and reads right at 46px. */
+  .ico img{width:46px;height:46px;display:block;border-radius:var(--r-xl)}
+  .ico .nm{font-size:11px;color:var(--label2)}
+  .ico[aria-checked="true"]{background:var(--fill-hi)}
+  .ico[aria-checked="true"] .nm{color:var(--label);font-weight:590}
+  .ico:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .pal{
     appearance:none;border:0;background:var(--fill);border-radius:var(--r-lg);padding:8px 8px 7px;
     cursor:default;font:inherit;color:var(--label);text-align:left;
@@ -266,6 +283,12 @@
   </section>
 
   <section>
+    <h2 data-i18n="set.appIcon">App icon</h2>
+    <div class="card"><div class="appicons" id="appicons"></div></div>
+    <p class="hint" data-i18n="set.appIconHint">Changes the icon in the Dock. The one Finder shows is fixed when the app is built and cannot be changed while it is running.</p>
+  </section>
+
+  <section>
     <h2 data-i18n="set.globe">Globe</h2>
     <div class="card">
       <div class="row">
@@ -366,6 +389,7 @@ function paint() {
   for (const b of $("#palettes").children) {
     b.setAttribute("aria-checked", String(b.querySelector(".nm").textContent === paletteName(P.palette)));
   }
+  paintAppIcons();
   for (const group of ["theme", "dotSize"]) {
     for (const b of $("#" + group).children) {
       b.setAttribute("aria-checked", String(b.dataset.v === P[group]));
@@ -481,6 +505,39 @@ async function paintPalettes() {
   }
 }
 
+/**
+ * The app icon picker.
+ *
+ * Deliberately its own section rather than a row inside Colour: the palette
+ * recolours what is drawn over the Earth, and this changes what sits in the
+ * Dock. Related, not the same thing, and neither follows light or dark.
+ *
+ * The swatch is the real 512px icon scaled down, not an approximation of it,
+ * because the whole question somebody is answering here is "which of these do I
+ * want to look at".
+ */
+const APP_ICONS = [
+  ["onyx",  "Onyx"],
+  ["bone",  "Bone"],
+  ["onair", "On Air"],
+  ["earth", "Earth"],
+];
+
+function paintAppIcons() {
+  const box = $("#appicons");
+  box.innerHTML = "";
+  for (const [id, name] of APP_ICONS) {
+    const b = document.createElement("button");
+    b.className = "ico";
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", String((P.appIcon || "onyx") === id));
+    b.innerHTML = `<img alt="" src="../../assets/generated/dock-${id}.png"><span class="nm"></span>`;
+    b.querySelector(".nm").textContent = name;
+    b.onclick = () => set({ appIcon: id });
+    box.append(b);
+  }
+}
+
 $("#presence").addEventListener("click", () => set({ presence: !P.presence }));
 
 /**
@@ -589,6 +646,7 @@ $("#terms").addEventListener("click", () => window.auralfm.openDoc("TERMS.md"));
   ]);
   P = prefs; T = strings; PALS = pals;
   await paintPalettes();
+  paintAppIcons();
   await paintMine();
 
   const sel = $("#language");

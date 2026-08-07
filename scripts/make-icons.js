@@ -21,6 +21,10 @@ const { execFileSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..");
 const ASSETS = path.join(ROOT, "assets");
+// The Earth variant paints with the texture three-globe gives the globe, read
+// from the vendored copy so the icon and the app can never disagree about it.
+const TEXTURES = require("node:url").pathToFileURL(
+  path.join(ROOT, "src", "renderer", "vendor")).href;
 const OUT = path.join(ASSETS, "generated");
 const ICONSET = path.join(ROOT, "build", "icon.iconset");
 const MAX = 1024;
@@ -61,11 +65,18 @@ const ICNS = [
 // macOS expects. It now composes the glyph onto a proper icon: rounded square,
 // Apple's margins, and the night-Earth palette the app itself uses.
 const JOBS = [
-  ["icon.svg",      "trayTemplate.png",    16, "template"],
-  ["icon.svg",      "trayTemplate@2x.png", 32, "template"],
-  ["icon.svg",      "favicon.png",         64, "app"],
-  ["icon-line.svg", "app-512.png",        512, "app"],
-  ["icon-line.svg", "app-1024.png",      1024, "app"],
+  ["icon.svg",      "trayTemplate.png",    16, "template", "onyx"],
+  ["icon.svg",      "trayTemplate@2x.png", 32, "template", "onyx"],
+  ["icon.svg",      "favicon.png",         64, "app",      "onyx"],
+  ["icon-line.svg", "app-512.png",        512, "app",      "onyx"],
+  ["icon-line.svg", "app-1024.png",      1024, "app",      "onyx"],
+  // The switchable set, chosen in Settings. 512 is what app.dock.setIcon wants.
+  // Nothing here replaces the bundle's own icon: that is fixed at build time,
+  // so Finder keeps showing the default while the Dock follows the setting.
+  ["icon.svg",      "dock-onyx.png",      512, "app",      "onyx"],
+  ["icon.svg",      "dock-bone.png",      512, "app",      "bone"],
+  ["icon.svg",      "dock-onair.png",     512, "app",      "onair"],
+  ["icon-line.svg", "dock-earth.png",     512, "app",      "earth"],
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -78,6 +89,43 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * shadow. Getting this wrong is the single most obvious way an icon reads as a
  * port rather than a Mac app.
  */
+/**
+ * The switchable icons.
+ *
+ * Two Noun Project marks were licensed, filled and outlined, and this is how
+ * they compose against the brand. The Earth is not the mark at all: it is the
+ * same texture the globe is wearing, so the thing in the Dock and the thing on
+ * screen are one object rather than an emblem of it.
+ *
+ * `body` fills the squircle, `glyph` colours the mark, `catch` is the top edge
+ * highlight. `texture` replaces the fill and drops the glyph entirely.
+ */
+const VARIANTS = {
+  onyx: {
+    body: "radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%)",
+    glyph: "#E9E2D4",
+    catch: "rgba(233,226,212,.16)",
+  },
+  bone: {
+    // Inverted. Bone is warm rather than white, so the onyx mark sits on it the
+    // way ink sits on paper instead of reading as a cut-out.
+    body: "radial-gradient(125% 125% at 26% 20%, #FBF9F5 0%, #EFE9DC 45%, #E2DACA 100%)",
+    glyph: "#1E1B19",
+    catch: "rgba(255,255,255,.55)",
+  },
+  onair: {
+    // The green the app uses for a live signal, deepened toward the edge so it
+    // reads as a lit object rather than a flat swatch.
+    body: "radial-gradient(125% 125% at 26% 20%, #4BD98A 0%, #35C46A 45%, #1B7A44 100%)",
+    glyph: "#F7F4EE",
+    catch: "rgba(255,255,255,.30)",
+  },
+  earth: {
+    texture: "earth-blue-marble.jpg",
+    catch: "rgba(255,255,255,.18)",
+  },
+};
+
 const SQUIRCLE = 824 / 1024;
 const GLYPH = 0.62;              // of the squircle — line art needs room to breathe
 
@@ -110,7 +158,7 @@ function squirclePath(box, n = 5) {
   return `M${pts[0]}L${pts.slice(1).join("L")}Z`;
 }
 
-function page(svg, size, style = "template") {
+function page(svg, size, style = "template", variant = "onyx") {
   if (style === "template") {
     return `<!doctype html><meta charset="utf-8">
       <style>
@@ -121,6 +169,7 @@ function page(svg, size, style = "template") {
       <div id="w">${svg}</div>`;
   }
 
+  const v = VARIANTS[variant] || VARIANTS.onyx;
   const box = Math.round(size * SQUIRCLE);
   const glyph = Math.round(box * GLYPH);
   const clip = squirclePath(box);
@@ -167,7 +216,9 @@ function page(svg, size, style = "template") {
       #s{
         width:${box}px;height:${box}px;
         clip-path:path("${clip}");
-        background:radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);
+        background:${v.texture
+          ? `url("${TEXTURES}/${v.texture}") 46% 42% / 300% no-repeat, #06121F`
+          : v.body};
         display:flex;align-items:center;justify-content:center;
       }
       /* The top edge catch-light, drawn inside the clip. It used to be an inset
@@ -176,13 +227,24 @@ function page(svg, size, style = "template") {
       #s::before{
         content:"";position:absolute;left:0;right:0;top:0;
         height:${Math.max(1, Math.round(box*0.004))}px;
-        background:rgba(233,226,212,.16);
+        background:${v.catch};
       }
       #s{position:relative}
-      #g{width:${glyph}px;height:${glyph}px;color:#E9E2D4;display:block;position:relative}
+      /* Day falling into night across the face, so the Earth variant is the same
+         object the app draws rather than a flat photograph of a map. */
+      ${v.texture ? `#s::after{content:"";position:absolute;inset:0;
+        /* Two things at once: a lit limb toward the top left, and the shadow
+           that falls away from it. Without the second the crop reads as a flat
+           photograph of a map, which is what the first attempt did. */
+        background:
+          radial-gradient(115% 115% at 28% 24%,
+            rgba(255,255,255,.22) 0%, rgba(255,255,255,.05) 26%, rgba(0,0,0,0) 46%),
+          radial-gradient(135% 135% at 30% 26%,
+            rgba(0,0,0,0) 34%, rgba(2,6,14,.55) 78%, rgba(1,3,8,.88) 100%);}` : ""}
+      #g{width:${glyph}px;height:${glyph}px;color:${v.glyph || "transparent"};display:block;position:relative}
       svg{width:100%;height:100%;display:block}
     </style>
-    <div id="c"><div id="d"><div id="s"><div id="g">${svg}</div></div></div></div>`;
+    <div id="c"><div id="d"><div id="s">${v.texture ? "" : `<div id="g">${svg}</div>`}</div></div></div>`;
 }
 
 app.whenReady().then(async () => {
@@ -214,9 +276,9 @@ app.whenReady().then(async () => {
   };
 
   try {
-    for (const [src, name, size, style] of JOBS) {
+    for (const [src, name, size, style, variant] of JOBS) {
       const svg = fs.readFileSync(path.join(ASSETS, src), "utf8");
-      fs.writeFileSync(tmp, page(svg, size, style));
+      fs.writeFileSync(tmp, page(svg, size, style, variant));
       await win.loadFile(tmp);
       await sleep(150);                       // let the SVG paint
       const shot = await win.webContents.capturePage({ x: 0, y: 0, width: size, height: size });

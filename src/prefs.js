@@ -17,6 +17,17 @@ const DEFAULTS = {
   language: "system",    // system | en | es
   palette: "onyx",       // see src/palettes.js
   /**
+   * Which app icon to wear.
+   *
+   * Nothing to do with light and dark. It is a choice, the way the palette is,
+   * and it follows nothing.
+   *
+   * Only the Dock icon changes. The one Finder shows is baked into the bundle
+   * at build time and cannot be swapped while the app is running, which is a
+   * macOS fact rather than a shortcut taken here.
+   */
+  appIcon: "onyx",       // onyx | bone | onair | earth
+  /**
    * Distance units for the listening history.
    *
    * "system" asks the operating system rather than inferring from a country
