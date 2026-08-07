@@ -221,6 +221,21 @@
   }
   .st .rm:hover{color:var(--err);background:var(--fill)}
 
+  /* A removed station, during the few seconds it can still be brought back.
+     Undo rather than a confirmation dialog because the thing being protected is
+     a URL somebody typed by hand, and a modal for a one-character button is
+     heavier than the action deserves. Nothing is actually deleted until the
+     window closes, so the station keeps its id and any favourite pointing at it
+     stays pointing at it — re-adding would mint a new id and quietly orphan it. */
+  .st.undo{opacity:.62}
+  .st.undo .sn{text-decoration:line-through;color:var(--label2)}
+  .st .undob{
+    appearance:none;background:none;border:0;font:inherit;font-size:11.5px;
+    color:var(--accent);padding:2px 6px;cursor:default;border-radius:var(--r-sm);
+    font-weight:590;letter-spacing:.004em;
+  }
+  .st .undob:hover{background:var(--fill)}
+
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;overflow:hidden}
   body{
@@ -1476,6 +1491,60 @@ function nearbyReceivers() {
 }
 
 /**
+ * Remove a station, but not yet.
+ *
+ * The delete is real and there is no server-side copy to get it back from: a
+ * station in this list is a stream URL somebody typed in by hand. It sat behind
+ * a one-character button with no friction at all, which is a stray click away
+ * from gone.
+ *
+ * The grace period is the friction, and it is better here than a confirmation
+ * dialog for two reasons. A modal to confirm a "−" is heavier than the action
+ * deserves, and more importantly nothing is deleted during the wait, so the
+ * station keeps its id. Deleting and re-adding would not: `mine.add` mints a
+ * fresh id, favourites are keyed by id, and an undo that silently unfavourites
+ * the thing it just restored is worse than no undo.
+ *
+ * If the window closes first the timer never fires and the station stays. That
+ * is the right way round for this to fail.
+ */
+const REMOVE_GRACE_MS = 6000;
+
+function armRemoval(el, ch) {
+  if (el.dataset.arming) return;
+  el.dataset.arming = "1";
+  el.classList.add("undo");
+  el.setAttribute("aria-live", "polite");
+  const keep = el.innerHTML;
+  el.innerHTML = "";
+  const name = document.createElement("span");
+  name.className = "smeta";
+  name.innerHTML = `<div class="sn"></div><div class="stags"></div>`;
+  name.querySelector(".sn").textContent = ch.title;
+  name.querySelector(".stags").textContent = t("mine.removed", "removed");
+  const undo = document.createElement("button");
+  undo.className = "undob";
+  undo.textContent = t("mine.undo", "Undo");
+  el.append(name, undo);
+
+  const commit = setTimeout(async () => {
+    await window.auralfm.mineRemove(ch.id);
+    await selectPlace(selection.placeIndex, { keepFilter: true });
+  }, REMOVE_GRACE_MS);
+
+  undo.onclick = (e) => {
+    e.stopPropagation();
+    clearTimeout(commit);
+    delete el.dataset.arming;
+    el.classList.remove("undo");
+    el.removeAttribute("aria-live");
+    el.innerHTML = keep;
+    // The restored markup is inert HTML; re-render so its buttons work again.
+    selectPlace(selection.placeIndex, { keepFilter: true });
+  };
+}
+
+/**
  * Say "yes, that one" before the network has agreed.
  *
  * The gap this fills is long: `playing` only becomes true once audio actually
@@ -1558,10 +1627,9 @@ function renderStations() {
       rm.className = "rm";
       rm.textContent = "−";
       rm.title = t("mine.remove", "Remove this station");
-      rm.onclick = async (e) => {
+      rm.onclick = (e) => {
         e.stopPropagation();
-        await window.auralfm.mineRemove(ch.id);
-        await selectPlace(selection.placeIndex, { keepFilter: true });
+        armRemoval(el, ch);
       };
       el.append(rm);
       el.querySelector(".sn").textContent = ch.title;
