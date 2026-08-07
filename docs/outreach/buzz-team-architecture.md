@@ -107,3 +107,32 @@ Set with `--provider` and `--model` on `agents draft-update`.
 Temporary project teams with one coordinator over a pool of cheap workers. There
 is no work here shaped like that, and a swarm with nothing to swarm on is
 overhead. Worth remembering for a migration or a large audit, not now.
+
+---
+
+## Two limits found when this was actually applied, 7 Aug
+
+**Effort is not settable, so only half the advice is implementable.** The post's
+sharpest point is that frontier models should run at *medium* effort, because max
+effort on a frontier model times out and burns tokens without a better answer.
+`agents draft-update` exposes `--runtime`, `--provider` and `--model`. There is
+no effort flag. So the tier assignment lands and the effort half does not, which
+means Skip, Logbook and Waterfall run frontier at whatever the harness default
+is. Worth revisiting if Buzz adds one.
+
+**`--provider` and `--model` are unvalidated free strings.** Neither prints
+`[possible values: ...]` the way `--respond-to` does. A wrong model string sets
+quietly and the agent inherits something nobody chose. Verified aliases for the
+`claude` runtime, tested against the CLI directly rather than assumed:
+`haiku`, `sonnet`, `opus`.
+
+**Agent memory cannot be written across agents.** `--agent <pubkey>` exists on
+`mem ls`, `mem get` and `mem hash`, and on none of `mem set`, `mem patch` or
+`mem rm`. `--owner` selects the *owner* pubkey, not the agent, so passing it
+writes the caller's own engram under a different owner rather than another
+agent's engram. An engram is keyed to the signing pubkey.
+
+Consequence: **an agent's memory can only be written by that agent.** Waterfall's
+and Preamp's slugs at `docs/outreach/mem/` are written and correct and cannot be
+installed from outside. They have to be pasted into those agents' own first
+sessions, or `mem set` needs an `--agent` flag it does not have.
