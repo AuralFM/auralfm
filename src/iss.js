@@ -9,6 +9,7 @@
  */
 
 const { cooldown } = require("./backoff");
+const { onEarth } = require("./geo");
 
 const PRIMARY = "https://api.wheretheiss.at/v1/satellites/25544";
 const FALLBACK = "http://api.open-notify.org/iss-now.json";
@@ -32,6 +33,9 @@ async function get() {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const j = await res.json();
+    // Throw rather than return: a primary that answers with nonsense should
+    // fall through to the fallback the same way one that does not answer does.
+    if (!onEarth(Number(j.latitude), Number(j.longitude))) throw new Error("iss: bad position");
     last = {
       at: Date.now(),
       data: {
@@ -50,11 +54,17 @@ async function get() {
     try {
       const res = await fetch(FALLBACK, { signal: AbortSignal.timeout(6000) });
       const j = await res.json();
+      const lat = Number(j.iss_position?.latitude);
+      const lng = Number(j.iss_position?.longitude);
+      // This one is plain HTTP: open-notify serves no HTTPS, so the reply is
+      // whatever the network handed back. A marker that cannot be somewhere
+      // impossible is the whole of what is worth defending here.
+      if (!onEarth(lat, lng)) return last.data;
       last = {
         at: Date.now(),
         data: {
-          lat: Number(j.iss_position.latitude),
-          lng: Number(j.iss_position.longitude),
+          lat,
+          lng,
           altKm: 420, kph: 27600, sunlit: null,
         },
       };

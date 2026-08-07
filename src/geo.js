@@ -63,4 +63,22 @@ function format(km, units) {
   return `${rounded.toLocaleString()} ${u}`;
 }
 
-module.exports = { haversine, resolveUnits, format, R_KM, KM_PER_MILE };
+/**
+ * Is this a coordinate that exists?
+ *
+ * The shape a bad or substituted feed takes is not usually a clever lie: it is
+ * NaN, a null that became zero, or a longitude of 400. Both live position feeds
+ * in this app come from somebody else's server, and one of them has no HTTPS at
+ * all, so the answer is checked rather than assumed.
+ *
+ * 0,0 is rejected on purpose. It is a real place in the Gulf of Guinea and
+ * nothing this app tracks is ever there, so in practice it means a parse that
+ * produced two zeroes.
+ */
+function onEarth(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng) &&
+         Math.abs(lat) <= 90 && Math.abs(lng) <= 180 &&
+         !(lat === 0 && lng === 0);
+}
+
+module.exports = { haversine, resolveUnits, format, onEarth, R_KM, KM_PER_MILE };

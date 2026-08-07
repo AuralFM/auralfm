@@ -19,7 +19,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { cooldown } = require("./backoff");
-const { haversine } = require("./geo");
+const { haversine, onEarth } = require("./geo");
 // The host check is shared with the news reader; see src/safehost.js for what
 // it rejects and, more usefully, what it does not.
 const { validHost } = require("./safehost");
@@ -77,9 +77,6 @@ function hostFrom(url) {
 }
 
 
-const onEarth = (lat, lng) =>
-  Number.isFinite(lat) && Number.isFinite(lng) &&
-  lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
 const expand = (rows) => rows.map(([h, n, l, lat, lng, m, a]) => ({
   host: h, name: n, loc: l, lat, lng, slots: m, asl: a,

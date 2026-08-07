@@ -302,7 +302,9 @@
   <button id="toggle" disabled></button>
   <div class="now">
     <div id="nowName" data-i18n="app.nothingPlaying">Nothing playing</div>
-    <div id="status" data-i18n="app.searchStation">Search for a station</div>
+    <!-- The player's own state, announced. Every transition a listener cares
+         about passes through here: finding, connecting, buffering, failed. -->
+    <div id="status" role="status" aria-live="polite" data-i18n="app.searchStation">Search for a station</div>
   </div>
   <button id="mute" title="Mute"></button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
@@ -376,6 +378,15 @@ function publish(){
   window.auralfm.publishState({
     channel: ch,
     status: statusEl.textContent,
+    /**
+     * Did it fail, or is it still trying?
+     *
+     * `playing` is false for both, which is why Explore could not tell them
+     * apart and had to treat an eleven-second connection and a dead stream as
+     * the same silence. The popover already knows: `fail` is the only caller
+     * that passes the "err" class.
+     */
+    error: statusEl.className === "err",
     playing: live,
     volume: audio.volume,
     /**

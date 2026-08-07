@@ -517,6 +517,35 @@
   .story:active{background:var(--fill-hi)}
   .story .h{font-size:12.5px;line-height:1.35;letter-spacing:-.002em}
   .story .m{font-size:11px;color:var(--label2);margin-top:3px}
+  /* Placeholder headlines.
+     Shaped rather than spelled: "Loading…" is one word where the answer will be
+     four rows, so the panel jumped when the fetch landed. These occupy the space
+     the real thing will take, at the real line heights, so nothing moves.
+     Deliberately only three — a promise of "about this much", not a claim about
+     how many headlines the country will have. */
+  .skel{padding:8px 8px;pointer-events:none}
+  .skel .h,.skel .m{border-radius:var(--r-sm);background:var(--fill-hi)}
+  /* Heights are the rendered line boxes, not the font sizes: 12.5px of type at
+     1.35 sets a 17px line, and 11px of type sets 13px. Measured against a real
+     story row, which comes out at 51px — using the font sizes gave 45px and the
+     list shuffled by six pixels a row when the headlines landed. */
+  .skel .h{height:17px;margin-bottom:5px}
+  .skel .m{height:13px;width:42%}
+  .skel:nth-child(1) .h{width:88%}
+  .skel:nth-child(2) .h{width:72%}
+  .skel:nth-child(3) .h{width:80%}
+  /* The sweep is what separates "loading" from "broken". Kept slow and low in
+     contrast so a panel of them does not strobe beside a spinning globe. */
+  .skel .h,.skel .m{
+    background-image:linear-gradient(90deg,transparent,var(--fill),transparent);
+    background-repeat:no-repeat;background-size:180px 100%;
+    animation:sweep 1.35s var(--ease-in-out) infinite}
+  .skel:nth-child(2) .h,.skel:nth-child(2) .m{animation-delay:.11s}
+  .skel:nth-child(3) .h,.skel:nth-child(3) .m{animation-delay:.22s}
+  @keyframes sweep{0%{background-position:-180px 0}100%{background-position:calc(100% + 180px) 0}}
+  @media (prefers-reduced-motion:reduce){
+    .skel .h,.skel .m{animation:none;background-image:none}
+  }
 
 
 
@@ -590,6 +619,30 @@
   }
   .st:hover{background:var(--fill)}
   .st:active{background:var(--fill-hi);transform:scale(.97);transition:transform var(--dur-press) var(--ease-out)}
+  /* A station you picked but that has not arrived yet. Streams routinely take
+     eight to eleven seconds to hand over first audio, and until this existed the
+     row you clicked looked exactly like the ones you did not: the only feedback
+     was four small words in the transport bar. On a slow connection that reads
+     as the app having ignored you. Same tint as playing, at half strength, so
+     the two never get confused. */
+  .st.pending{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+  .st.pending .sn{color:var(--label)}
+  .st.pending .bars{opacity:.55}
+  .st.pending .bars i{animation:pend 1.1s ease-in-out infinite}
+  .st.pending .bars i:nth-child(2){animation-delay:.14s}
+  .st.pending .bars i:nth-child(3){animation-delay:.28s}
+  @keyframes pend{0%,100%{transform:scaleY(.35);opacity:.5}50%{transform:scaleY(.7);opacity:1}}
+  @media (prefers-reduced-motion:reduce){
+    .st.pending .bars i{animation:none;transform:scaleY(.55)}
+  }
+  /* A failed stream says so in the colour the rest of the app uses for failure,
+     rather than in the same grey as "Connecting…". */
+  #nowStatus.err{color:var(--err)}
+  /* Present to assistive technology, absent to everything else. `display:none`
+     and `visibility:hidden` would take it out of the accessibility tree too,
+     which is the opposite of the point. */
+  .sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+          overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
   .st[aria-current="true"] .sn{color:var(--accent);font-weight:590}
   .smeta{flex:1;min-width:0}
@@ -1103,6 +1156,10 @@
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
+  <!-- Announced, not shown. The visible name and status are two separate
+       elements that change together, so a live region on either one alone would
+       say "Connecting…" without ever saying to what. This carries both. -->
+  <span id="nowSpoken" class="sronly" role="status" aria-live="polite"></span>
   <span class="volwrap">
     <button id="mute" title="Mute" data-i18n-title="ctl.mute"></button>
     <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume" data-i18n-title="ctl.volume">
@@ -1418,6 +1475,24 @@ function nearbyReceivers() {
     .slice(0, 12);
 }
 
+/**
+ * Say "yes, that one" before the network has agreed.
+ *
+ * The gap this fills is long: `playing` only becomes true once audio actually
+ * arrives, which for an internet stream is routinely eight to eleven seconds
+ * after the click. Cleared by the player-state handler on either outcome, so a
+ * row cannot stay pending once the answer is known.
+ */
+function markPending(id) {
+  for (const el of stationListEl.children) {
+    if (el.dataset?.id) el.classList.toggle("pending", el.dataset.id === id);
+  }
+}
+
+function clearPending() {
+  for (const el of stationListEl.children) el.classList?.remove("pending");
+}
+
 function renderStations() {
   const { place, channels } = selection;
   syncTunerVisibility();
@@ -1473,6 +1548,7 @@ function renderStations() {
     el.onclick = (e) => {
       if (e.target.closest(".star")) return;
       window.auralfm.tune(ch);           // an explicit pick always plays
+      markPending(ch.id);                // and says so now, not in eleven seconds
       if (locked) setLocked(true);       // and becomes the new locked station
     };
     el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
@@ -1729,11 +1805,17 @@ window.auralfm.onPlayerState((s) => {
   const bar = $("now");
   if (!s.channel) {
     bar.hidden = true;
+    clearPending();
     loadNews(null);
   } else {
     bar.hidden = false;
     $("nowName").textContent = s.channel.title;
     $("nowStatus").textContent = s.status || "";
+    $("nowStatus").classList.toggle("err", !!s.error);
+    const spoken = [s.channel.title, s.status].filter(Boolean).join(", ");
+    if ($("nowSpoken").textContent !== spoken) $("nowSpoken").textContent = spoken;
+    // Pending is over the moment there is an answer, either way.
+    if (s.playing || s.error) clearPending(); else markPending(s.channel.id);
     $("dot").style.display = s.playing ? "" : "none";
     Icons.set($("play"), s.playing ? "pause" : "play");
     if (typeof s.volume === "number") paintVolume(s.volume);
@@ -2073,9 +2155,13 @@ async function renderNewsPanel() {
     : country ? country
     : `${labels[newsSource]} · nothing selected`;
   const list = $("newslist");
-  list.innerHTML = `<div class="empty" style="padding:22px 12px">Loading…</div>`;
+  // aria-busy rather than a live region: a screen reader should be told the
+  // panel is working, not read three empty boxes.
+  list.setAttribute("aria-busy", "true");
+  list.innerHTML = `<div class="skel"><div class="h"></div><div class="m"></div></div>`.repeat(3);
 
   const items = await window.auralfm.news(country);
+  list.removeAttribute("aria-busy");
   if (!newsOpen) return;
   if (!items?.length) {
     list.innerHTML = `<div class="empty" style="padding:22px 12px">`
