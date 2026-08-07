@@ -17,6 +17,7 @@
  */
 
 const { cooldown } = require("./backoff");
+const { validUrl, safeFetch } = require("./safehost");
 
 const TTL_MS = 15 * 60 * 1000;
 const cache = new Map();          // country -> { at, items }
@@ -216,22 +217,29 @@ const stripTags = (html) => html
   .replace(/<(nav|header|footer|aside)\b[\s\S]*?<\/\1>/gi, "");
 
 async function read(url) {
-  if (!/^https?:\/\//i.test(String(url || ""))) return null;
+  // A scheme test is not a host check. This URL comes out of somebody else's RSS
+  // feed, and `^https?://` is perfectly happy with the loopback interface,
+  // RFC1918 space and a cloud metadata endpoint. Same check the receiver list
+  // gets, for the same reason: neither list is ours.
+  if (!validUrl(url)) return null;
   const hit = readCache.get(url);
   if (hit && Date.now() - hit.at < READ_TTL_MS) return hit.doc;
 
   let html;
   try {
-    const res = await fetch(url, {
+    // safeFetch follows redirects by hand and re-checks the host at every hop.
+    // `redirect: "follow"` validates nothing after the first one, so a permitted
+    // publisher could bounce the request anywhere and the check above would be
+    // decoration.
+    const res = await safeFetch(url, {
       // A plain browser UA: a number of publishers serve a stub to anything that
       // looks automated, and a stub extracts to nothing, which reads as a bug in
       // here rather than a decision over there.
       headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
                                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" },
-      redirect: "follow",
       signal: AbortSignal.timeout(12000),
     });
-    if (!res.ok) return null;
+    if (!res || !res.ok) return null;
     html = await res.text();
   } catch { return null; }
 

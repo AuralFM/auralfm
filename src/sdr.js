@@ -20,6 +20,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { cooldown } = require("./backoff");
 const { haversine } = require("./geo");
+// The host check is shared with the news reader; see src/safehost.js for what
+// it rejects and, more usefully, what it does not.
+const { validHost } = require("./safehost");
 
 /**
  * The aggregate list, over cleartext HTTP.
@@ -73,29 +76,6 @@ function hostFrom(url) {
   return port && port !== "80" ? `${u.hostname}:${port}` : u.hostname;
 }
 
-/**
- * Is this a plausible public receiver host?
- *
- * Rejects the shapes an injected list would use to make the app talk to
- * something it should not: loopback and link-local names, IP literals of any
- * kind (a real KiwiSDR in this list is a DNS name), RFC1918 space, embedded
- * credentials, and ports outside the range these things actually use.
- */
-function validHost(host) {
-  if (typeof host !== "string" || host.length > 255) return false;
-  if (/[@\s/\\?#]/.test(host)) return false;              // creds, paths, junk
-  const [name, port] = host.split(":");
-  if (port !== undefined) {
-    if (!/^\d{1,5}$/.test(port)) return false;
-    const n = +port;
-    if (n < 81 || n > 65535) return false;                 // 8073 and friends
-  }
-  if (!/^[a-z0-9.-]+$/i.test(name)) return false;
-  if (!name.includes(".") || name.startsWith(".") || name.endsWith(".")) return false;
-  if (/^\d+(\.\d+)*$/.test(name)) return false;            // any IPv4 literal
-  if (/(^|\.)(localhost|local|internal|home|lan|corp)$/i.test(name)) return false;
-  return true;
-}
 
 const onEarth = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) &&
