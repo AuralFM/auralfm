@@ -34,6 +34,7 @@ const markets = require("./markets");
 const prefs = require("./prefs");
 const palettes = require("./palettes");
 const mine = require("./mystations");
+const docs = require("./docs");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -826,6 +827,12 @@ ipcMain.handle("stream:resolve", (_e, ch) => {
   return resolver.resolve(ch);
 });
 ipcMain.handle("mine:list", () => mine.all().map(hydrateMine));
+// The documentation, read in the app rather than on GitHub. `docs.read` takes
+// an id and looks it up in its own allowlist, so no path from the renderer ever
+// reaches the filesystem.
+ipcMain.handle("docs:list", () => docs.list());
+ipcMain.handle("docs:read", (_e, id) => docs.read(id));
+
 ipcMain.handle("mine:add", (_e, input) => {
   const r = mine.add(input);
   if (r.ok) broadcast("mine:changed");

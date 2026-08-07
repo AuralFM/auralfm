@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld("auralfm", {
 
   // stations you added yourself
   mineList: () => ipcRenderer.invoke("mine:list"),
+  docsList: () => ipcRenderer.invoke("docs:list"),
+  docsRead: (id) => ipcRenderer.invoke("docs:read", id),
   mineAdd: (input) => ipcRenderer.invoke("mine:add", input),
   mineRemove: (id) => ipcRenderer.invoke("mine:remove", id),
   onMineChanged: (fn) => ipcRenderer.on("mine:changed", () => fn()),
