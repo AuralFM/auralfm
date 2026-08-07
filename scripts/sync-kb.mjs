@@ -67,6 +67,7 @@ const DOCS = [
   ["docs/outreach/buzz-library-extra.md", "Buzz Library — Reference Posts"],
   ["docs/outreach/buzz-build.md",  "Buzz Build Plan"],
   ["docs/outreach/buzz-team-architecture.md", "Buzz Team Architecture"],
+  ["docs/outreach/issues/buzz-mem-agent-flag.md", "Buzz Issue — mem agent flag"],
   ["docs/outreach/kiwisdr-forum-post.md", "KiwiSDR Forum Post"],
   ["docs/outreach/org-profile-README.md", "GitHub Org Page"],
   ["docs/DIRECTION.md",            "Direction"],
