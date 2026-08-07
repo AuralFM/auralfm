@@ -86,6 +86,49 @@ const pick = (item, tag) => {
  * would mean scraping publisher sites, which is both fragile and a licensing
  * problem: this hands off to the browser instead of pretending to be a reader.
  */
+/**
+ * Which publishers a reader can actually read.
+ *
+ * The feed is Google's aggregate, so it ranks by whatever Google ranks by, and
+ * a headline from a title nobody can open is worse than no headline: it is a
+ * promise the app cannot keep. Melton's users are across the globe, and a
+ * subscription to a New York newspaper is not a reasonable prerequisite for
+ * reading what happened today.
+ *
+ * So the list is reordered rather than filtered. Publishers anyone can read
+ * come first, unknown ones keep their place in the middle, and the ones behind
+ * a hard paywall sink to the bottom. Nothing is hidden -- a paywalled headline
+ * still says what happened, and pretending an outlet does not exist is its own
+ * kind of editorialising.
+ *
+ * "Open" here means readable without paying, not free of advertising and not
+ * neutral. Several are state-funded and it shows. That is a different argument
+ * and not one this sort should be making.
+ */
+const OPEN = [
+  "ap news", "associated press", "bbc", "al jazeera", "npr", "pbs",
+  "deutsche welle", "dw", "france 24", "rfi", "voa", "voice of america",
+  "euronews", "cbc", "abc.net.au", "abc news (au", "the guardian", "guardian",
+  "sky news", "cna", "channel newsasia", "the conversation", "propublica",
+  "reuters", "ansa", "efe", "kyodo", "yle", "nrk", "swissinfo", "rte",
+];
+
+/** Hard paywalls. Metered counts: a reader on their tenth article is stopped. */
+const PAYWALLED = [
+  "wall street journal", "wsj", "new york times", "nytimes", "financial times",
+  "the economist", "bloomberg", "washington post", "the times", "telegraph",
+  "nikkei", "le monde", "foreign policy", "the atlantic", "new yorker",
+  "wired", "business insider", "barron", "the information", "harvard business",
+];
+
+/** -1 open, 0 unknown, 1 paywalled. Lower sorts first. */
+function readability(source) {
+  const s = String(source || "").toLowerCase();
+  if (OPEN.some((n) => s.includes(n))) return -1;
+  if (PAYWALLED.some((n) => s.includes(n))) return 1;
+  return 0;
+}
+
 function parseItems(xml, limit) {
   const out = [];
   for (const item of xml.split("<item>").slice(1)) {
@@ -99,9 +142,15 @@ function parseItems(xml, limit) {
       link: pick(item, "link"),
       at: Date.parse(pick(item, "pubDate")) || null,
     });
-    if (out.length >= limit) break;
   }
-  return out;
+  // Read the whole feed, then order it, then trim. Stopping at `limit` while
+  // parsing would sort a slice Google chose rather than the feed itself, which
+  // is the thing being corrected.
+  return out
+    .map((item, i) => ({ item, i, rank: readability(item.source) }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .slice(0, limit)
+    .map((x) => x.item);
 }
 
 const parseTitles = (xml, limit) => parseItems(xml, limit).map((i) => i.title);
