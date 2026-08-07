@@ -3,7 +3,7 @@
 ## Why
 
 ## Verified how
-<!-- Screenshots, CDP output, stream URLs, counts — evidence, not "should work". -->
+<!-- Screenshots, CDP output, stream URLs, counts. Evidence, not "should work". -->
 
 - [ ] Ran `npm start` and the change works in the real app
 - [ ] Checked light and dark appearance

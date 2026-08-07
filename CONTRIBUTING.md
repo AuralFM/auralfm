@@ -33,8 +33,8 @@ attention as a new report and returns nothing.
 
 **Bug reports need four things**, and the first two answer most of them:
 
-1. Your macOS version, and Intel or Apple Silicon — Apple menu → About This Mac
-2. The app version — AuralFM → About AuralFM
+1. Your macOS version, and Intel or Apple Silicon. Apple menu, About This Mac
+2. The app version. AuralFM menu, About AuralFM
 3. What you did, in the order you did it
 4. What happened instead, and a screenshot if there is anything to see
 
@@ -48,8 +48,8 @@ attention as a new report and returns nothing.
   above the list says whether the higher bands are carrying.
 - **Captions are off and staying off.** They work and they are too slow to be
   usable on current hardware. That was measured, not assumed.
-- The app needs a connection for **audio**. Everything else — search, the globe,
-  12,296 places — works offline by design.
+- The app needs a connection for **audio**. Everything else, including search,
+  the globe and all 12,296 places, works offline by design.
 
 ## Before you open a pull request
 

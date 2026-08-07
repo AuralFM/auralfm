@@ -23,7 +23,7 @@ its standards for a good contributor has made a bad trade.
 
 - Harassment, in public or private. Sexualised language or imagery. Unwanted
   attention of any kind.
-- Insults, personal attacks, or attacks on someone's identity — race, gender,
+- Insults, personal attacks, or attacks on someone's identity: race, gender,
   sexuality, disability, nationality, religion, age, appearance, or anything
   else about who they are rather than what they said.
 - Publishing anyone's private information without their explicit permission.
@@ -36,9 +36,9 @@ its standards for a good contributor has made a bad trade.
 **The receiver operators are not participants here and are owed more, not less.**
 Around 800 people run the shortwave receivers this app borrows. They did not
 sign up for a software community and most do not know this exists. Anything that
-treats them as a resource rather than as people — proposals to scrape them, poll
-them, or work around an operator who has asked to be left alone — is a Code of
-Conduct matter, not only a technical one.
+treats them as a resource rather than as people, whether that is a proposal to
+scrape them, to poll them, or to work around an operator who has asked to be
+left alone, is a Code of Conduct matter and not only a technical one.
 
 **Nobody here asks for personal information.** Not your location, not your email,
 not a wallet address. The app is built on collecting nothing, and the community
@@ -63,5 +63,5 @@ which is the thing to avoid.
 Adapted from the [Contributor Covenant](https://www.contributor-covenant.org),
 version 2.1, and shaped by the governance model that
 [Blacksky Algorithms](https://github.com/blacksky-algorithms) publishes for
-community-run infrastructure — particularly its position that a maintainer's
+community-run infrastructure, particularly its position that a maintainer's
 limits are worth stating plainly rather than discovering through burnout.
