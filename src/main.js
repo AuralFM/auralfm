@@ -531,7 +531,7 @@ function openSettings() {
     resizable: false, minimizable: false, maximizable: false,
     title: "AuralFM Settings",
     titleBarStyle: "hiddenInset",
-    backgroundColor: "#1c1c1e",
+    backgroundColor: groundColour(),   // follows the theme, like Explore
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -558,7 +558,7 @@ function openDoc(name) {
     width: 720, height: 720,
     title: "AuralFM",
     titleBarStyle: "hiddenInset",
-    backgroundColor: "#1c1c1e",
+    backgroundColor: groundColour(),   // follows the theme, like Explore
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
