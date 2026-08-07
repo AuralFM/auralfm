@@ -631,13 +631,66 @@ function syncNostrPresence() {
 }
 
 // ── tray ──────────────────────────────────────────────────────────────────────
+/**
+ * The globe in the menu bar, and why it turns.
+ *
+ * The old icon was the licensed line mark: eight parallels inside a circle. At
+ * sixteen pixels those parallels sit one pixel apart and average into a grey
+ * disc, which is neither legible nor recognisable as anything. This is the
+ * glyph everyone already reads as a globe -- an outline, an equator, two
+ * meridians -- and it survives the size.
+ *
+ * It rotates only while something is playing, and that is the point rather than
+ * decoration: the menu bar tells you the app is making sound without you having
+ * to open anything. Idle, it holds frame zero and no timer exists.
+ *
+ * Twelve frames at 125ms is one turn every 1.5 seconds, and the work per tick
+ * is swapping an already-decoded 16px image. On the low-end hardware this app
+ * targets, that is cheaper than the globe it represents drawing a single frame.
+ */
+const TRAY_FRAMES = [];
+let trayFrame = 0, trayTimer = null;
+
+function loadTrayFrames() {
+  for (let i = 0; i < 12; i++) {
+    const img = nativeImage.createFromPath(
+      path.join(__dirname, "..", "assets", "tray", `globe-${String(i).padStart(2, "0")}.png`));
+    if (img.isEmpty()) return false;
+    // Template images are recoloured by macOS to match the menu bar, in both
+    // appearances and inverted while a menu is open. Without this they stay
+    // black and vanish on a dark menu bar.
+    img.setTemplateImage(true);
+    TRAY_FRAMES.push(img);
+  }
+  return true;
+}
+
+function spinTray(on) {
+  if (!tray || TRAY_FRAMES.length !== 12) return;
+  if (on && !trayTimer) {
+    trayTimer = setInterval(() => {
+      trayFrame = (trayFrame + 1) % 12;
+      tray.setImage(TRAY_FRAMES[trayFrame]);
+    }, 125);
+  } else if (!on && trayTimer) {
+    clearTimeout(trayTimer); clearInterval(trayTimer); trayTimer = null;
+    trayFrame = 0;
+    tray.setImage(TRAY_FRAMES[0]);        // always parked in the same place
+  }
+}
+
 function createTray() {
-  const icon = nativeImage.createFromPath(
-    path.join(__dirname, "..", "assets", "generated", "trayTemplate.png")
-  );
-  // Template images are recolored by macOS to match the menu bar (light/dark,
-  // and inverted while a menu is open). Without this the icon stays black.
-  icon.setTemplateImage(true);
+  // Fall back to the shipped mark if the frames are missing rather than
+  // starting with no tray icon at all, which would leave a menu bar app with
+  // nothing to click.
+  const icon = loadTrayFrames()
+    ? TRAY_FRAMES[0]
+    : (() => {
+        const i = nativeImage.createFromPath(
+          path.join(__dirname, "..", "assets", "generated", "trayTemplate.png"));
+        i.setTemplateImage(true);
+        return i;
+      })();
 
   tray = new Tray(icon);
   tray.setToolTip("AuralFM");
@@ -975,6 +1028,7 @@ ipcMain.on("player:tune", (_e, channel) => {
 /** The popover is the source of truth for playback; everyone else observes. */
 ipcMain.on("player:state", (_e, state) => {
   playerState = state;
+  spinTray(!!state.playing);
   // Presence is opt-in and no-ops entirely when unconfigured.
   if (state.playing && state.channel?.id) presence.join(state.channel.id);
   else presence.leave();

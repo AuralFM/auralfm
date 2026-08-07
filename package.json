@@ -49,6 +49,7 @@
     "files": [
       "src/**/*",
       "assets/generated/**/*",
+      "assets/tray/*.png",
       "assets/*.svg",
       "assets/fonts/**/*",
       "assets/ATTRIBUTION.md",
