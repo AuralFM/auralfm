@@ -1073,9 +1073,13 @@
 
 <div class="now" id="now" hidden>
   <button id="play" title="Play / pause" data-i18n-title="ctl.playPause"></button>
+  <!-- Order is the layout. The two controls that act on this station sit
+       together, then the on-air lamp sits against the name it describes. The
+       lamp used to fall between the lock and the star, which read as three
+       unrelated things rather than a pair and a label. -->
   <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation"></button>
-  <span class="dot" id="dot"></span>
   <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden></button>
+  <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
   <span class="volwrap">
@@ -4572,6 +4576,22 @@ function stationResultRow(ch) {
   el.querySelector(".pn").textContent = ch.title;
   el.querySelector(".pc").textContent = [ch.place, ch.country].filter(Boolean).join(" · ");
   el.onclick = async () => {
+    // Leaving the favourites view is part of picking from it. `showingFavorites`
+    // gates globe-follow and the chat panel, so a click that tuned a station but
+    // left the flag set played audio into a rail still showing the favourites
+    // list, with no chat for the place just travelled to. It took a second,
+    // unrelated interaction to clear the flag, which is why this read as needing
+    // two clicks.
+    //
+    // Same reset the rail tabs do. Search results reuse this row and are never
+    // in the favourites view, so the guard costs them nothing.
+    if (showingFavorites) {
+      showingFavorites = false;
+      $("favBtn").setAttribute("aria-pressed", "false");
+      headEl.hidden = false;
+      placeListEl.hidden = true;
+      stationListEl.hidden = false;
+    }
     const list = await window.auralfm.places(ch.place, 8);
     const hit = list.places.find((p) => p.title === ch.place && p.country === ch.country)
              || list.places[0];
