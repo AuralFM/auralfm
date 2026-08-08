@@ -611,35 +611,6 @@ function openSettings() {
 /** Interface strings for the resolved language, English-filled. */
 const getStrings = () => i18n.strings(getPrefs().language, app.getLocale());
 
-/**
- * Legal documents ship inside the app bundle, which means they live in the asar
- * archive — `shell.openPath` can't reach that, and a .md file has no reliable
- * handler anyway. So we render them ourselves in a plain reading window.
- */
-const docWins = new Map();
-function openDoc(name) {
-  const existing = docWins.get(name);
-  if (existing && !existing.isDestroyed()) { existing.show(); existing.focus(); return; }
-  const w = new BrowserWindow({
-    width: 720, height: 720,
-    title: "AuralFM",
-    titleBarStyle: "hiddenInset",
-    backgroundColor: groundColour(),   // follows the theme, like Explore
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  w.loadFile(path.join(__dirname, "renderer", "doc.html"), { query: { name } });
-  w.on("closed", () => docWins.delete(name));
-  docWins.set(name, w);
-}
-
-function docText(name) {
-  const file = path.join(__dirname, "..", "docs", name);
-  try { return fs.readFileSync(file, "utf8"); } catch { return ""; }
-}
 
 /**
  * Announce on Nostr, or stop.
@@ -834,6 +805,41 @@ ipcMain.handle("mine:list", () => mine.all().map(hydrateMine));
 // The documentation, read in the app rather than on GitHub. `docs.read` takes
 // an id and looks it up in its own allowlist, so no path from the renderer ever
 // reaches the filesystem.
+/**
+ * Errors, written down and kept here.
+ *
+ * A rolling local file in userData, capped so it can never grow without bound.
+ * There is deliberately no upload: "nothing that reports back" is the project's
+ * position and crash data is exactly the kind of exception that erodes one. If a
+ * user wants to send a report they can open the file and choose to.
+ */
+const ERR_LOG = path.join(app.getPath("userData"), "errors.log");
+const ERR_LOG_MAX = 256 * 1024;
+
+ipcMain.on("app:error", (_e, r) => {
+  const line = JSON.stringify({
+    at: new Date().toISOString(),
+    page: r?.page, where: r?.where, repeat: r?.repeat,
+    message: String(r?.message || "").slice(0, 500),
+    stack: String(r?.stack || "").slice(0, 2000),
+    version: app.getVersion(),
+  }) + "\n";
+  try {
+    // Truncate rather than rotate. Nobody is going to read errors.log.1, and a
+    // second file is a second thing to forget to clean up.
+    if (fs.existsSync(ERR_LOG) && fs.statSync(ERR_LOG).size > ERR_LOG_MAX) {
+      fs.writeFileSync(ERR_LOG, "");
+    }
+    fs.appendFileSync(ERR_LOG, line);
+  } catch { /* logging must never be the thing that breaks */ }
+  if (!app.isPackaged) console.error("renderer error:", r?.where, r?.message);
+});
+
+ipcMain.handle("app:errorLogPath", () => ERR_LOG);
+ipcMain.handle("app:errorLogRead", () => {
+  try { return fs.readFileSync(ERR_LOG, "utf8").slice(-ERR_LOG_MAX); } catch { return ""; }
+});
+
 ipcMain.handle("docs:list", () => docs.list());
 ipcMain.handle("docs:read", (_e, id) => docs.read(id));
 
@@ -967,12 +973,7 @@ ipcMain.handle("markets:get", () => markets.get());
 ipcMain.handle("prefs:get", () => getPrefs());
 ipcMain.handle("prefs:set", (_e, patch) => setPrefs(patch));
 ipcMain.on("settings:open", openSettings);
-ipcMain.on("doc:open", (_e, name) => {
-  if (["PRIVACY.md", "TERMS.md"].includes(name)) openDoc(name);
-});
 ipcMain.on("mail:open", () => shell.openExternal("mailto:meltonbell@icloud.com?subject=AuralFM"));
-ipcMain.handle("doc:text", (_e, name) =>
-  ["PRIVACY.md", "TERMS.md"].includes(name) ? docText(name) : "");
 ipcMain.handle("i18n:strings", () => getStrings());
 ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("palettes:list", () => palettes.list());

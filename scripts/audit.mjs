@@ -461,6 +461,26 @@ console.log("\nlight theme agrees with itself");
     : pass("--star branches on the theme in every renderer that sets it");
 }
 
+// ── nothing throws into the void ─────────────────────────────────────────────
+// Every renderer must load errors.js, and load it first. Before it existed there
+// was not one `error` or `unhandledrejection` listener in the app: fitHeight
+// threw on every call for two days, the menu bar panel silently stopped resizing
+// itself, and it was found by a person noticing a gap rather than by anything
+// reporting it.
+{
+  console.log("\nevery renderer catches its own errors");
+  const bad = [];
+  for (const f of fs.readdirSync(R("src/renderer")).filter((f) => f.endsWith(".html"))) {
+    const html = fs.readFileSync(R(`src/renderer/${f}`), "utf8");
+    const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
+    if (!scripts.includes("errors.js")) bad.push(`${f} does not load it`);
+    else if (scripts[0] !== "errors.js") bad.push(`${f} loads ${scripts[0]} first`);
+  }
+  bad.length
+    ? fail("error capture", bad.join("; "))
+    : pass("all renderers load errors.js before anything else");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

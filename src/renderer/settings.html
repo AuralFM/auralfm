@@ -434,6 +434,7 @@
   <div class="docbody" id="docbody" tabindex="0"></div>
 </div>
 
+<script src="errors.js"></script>
 <script src="icons.js"></script>
 <script>
 "use strict";
@@ -481,9 +482,9 @@ function translate() {
 async function set(patch) {
   Object.assign(P, patch);
   paint();
-  P = await window.auralfm.setPrefs(patch);
+  P = await guard("setPrefs", () => window.auralfm.setPrefs(patch), P);
   paint();
-  if ("language" in patch) { T = await window.auralfm.strings(); translate(); }
+  if ("language" in patch) { T = await guard("strings", () => window.auralfm.strings(), T); translate(); }
 }
 
 // Preferences can also change from outside this window — a second Settings
@@ -492,7 +493,7 @@ window.auralfm.onPrefs(async (next) => {
   const langChanged = next.language !== P.language;
   P = next;
   paint();
-  if (langChanged) { T = await window.auralfm.strings(); translate(); }
+  if (langChanged) { T = await guard("strings", () => window.auralfm.strings(), T); translate(); }
 });
 
 // Segmented controls: click, plus arrow keys for keyboard users, because a
@@ -531,7 +532,7 @@ $("#language").addEventListener("change", (e) => set({ language: e.target.value 
  * heading for a feature you have not used yet is just clutter.
  */
 async function paintMine() {
-  const list = await window.auralfm.mineList();
+  const list = await guard("mineList", () => window.auralfm.mineList(), []);
   const sec = $("#minesec"), box = $("#minelist");
   sec.hidden = !list.length;
   box.innerHTML = "";
@@ -558,7 +559,7 @@ async function paintMine() {
       const label = rm.textContent;
       rm.textContent = T["set.undo"] || "Undo";
       const commit = setTimeout(async () => {
-        await window.auralfm.mineRemove(st.id);
+        await guard("mineRemove", () => window.auralfm.mineRemove(st.id));
         paintMine();
       }, 6000);
       rm.onclick = () => { clearTimeout(commit); paintMine(); };
@@ -569,7 +570,7 @@ async function paintMine() {
 window.auralfm.onMineChanged(() => paintMine());
 
 async function paintPalettes() {
-  const list = await window.auralfm.palettes();
+  const list = await guard("palettes", () => window.auralfm.palettes(), []);
   const box = $("#palettes");
   box.innerHTML = "";
   for (const p of list) {
@@ -634,7 +635,7 @@ async function paintPresence() {
   paintRelays();
   const el = $("#presence-status");
   if (!P.presence) { el.textContent = ""; return; }
-  const s = await window.auralfm.presenceStats();
+  const s = await guard("presenceStats", () => window.auralfm.presenceStats(), null);
   if (!s) { el.textContent = ""; return; }
   el.textContent = s.announcing
     ? `${s.connected}/${s.relays} ${T["set.presenceRelays"] || "relays"} · ` +
@@ -655,7 +656,7 @@ setInterval(() => { if (!document.hidden) paintPresence(); }, 4000);
 async function paintRelays() {
   const box = $("#relaylist"), card = $("#relaycard");
   if (!box) return;
-  const s = P.presence ? await window.auralfm.presenceStats() : null;
+  const s = P.presence ? await guard("presenceStats", () => window.auralfm.presenceStats(), null) : null;
   const urls = s?.relayUrls || [];
   const mine = new Set(s?.extra || []);
   card.style.display = P.presence ? "" : "none";
@@ -731,8 +732,8 @@ $("#mail").addEventListener("click", () => window.auralfm.openMail());
 let DOCBODY = new Map();
 
 async function loadDocs() {
-  for (const d of (await window.auralfm.docsList()) || []) {
-    const doc = await window.auralfm.docsRead(d.id);
+  for (const d of (await guard("docsList", () => window.auralfm.docsList(), [])) || []) {
+    const doc = await guard("docsRead", () => window.auralfm.docsRead(d.id), null);
     if (doc) DOCBODY.set(d.id, doc);
   }
 }

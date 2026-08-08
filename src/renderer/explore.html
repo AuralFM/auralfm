@@ -539,6 +539,20 @@
      Deliberately only three — a promise of "about this much", not a claim about
      how many headlines the country will have. */
   .skel{padding:8px 8px;pointer-events:none}
+  /* The third state. A panel that can load and can be empty can also fail, and
+     until now failure looked exactly like loading: the skeletons stayed up for
+     ever because the rejection went nowhere. */
+  .failed{padding:20px 12px;text-align:center}
+  .failed p{font-size:12px;color:var(--label2);margin:0 0 10px;line-height:1.45}
+  .retry{
+    appearance:none;border:1px solid var(--line);background:var(--fill);
+    color:var(--label);font:inherit;font-size:12px;padding:5px 13px;
+    border-radius:var(--r-pill);cursor:default;
+    transition:background var(--dur-hover) var(--ease-out);
+  }
+  .retry:hover{background:var(--fill-hi)}
+  .retry:active{transform:scale(.97)}
+  .retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .skel .h,.skel .m{border-radius:var(--r-sm);background:var(--fill-hi)}
   /* Heights are the rendered line boxes, not the font sizes: 12.5px of type at
      1.35 sets a 17px line, and 11px of type sets 13px. Measured against a real
@@ -1225,6 +1239,7 @@
   setTimeout(reveal, 4000);
 })();
 </script>
+<script src="errors.js"></script>
 <script src="astro.js"></script>
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
@@ -2233,9 +2248,31 @@ async function renderNewsPanel() {
   list.setAttribute("aria-busy", "true");
   list.innerHTML = `<div class="skel"><div class="h"></div><div class="m"></div></div>`.repeat(3);
 
-  const items = await window.auralfm.news(country);
+  // A sentinel rather than null, because "the call failed" and "there is nothing
+  // here" are different answers and the panel should not say the same thing to
+  // both. Empty is a fact about the place; failed is a fact about the network,
+  // and only one of them is worth offering a button for.
+  const FAILED = Symbol("failed");
+  const items = await guard("news", () => window.auralfm.news(country), FAILED);
   list.removeAttribute("aria-busy");
   if (!newsOpen) return;
+
+  if (items === FAILED) {
+    list.textContent = "";
+    const box = document.createElement("div");
+    box.className = "failed";
+    box.setAttribute("role", "status");
+    const msg = document.createElement("p");
+    msg.textContent = t("news.unreachable", "Could not reach the headlines.");
+    const again = document.createElement("button");
+    again.className = "retry";
+    again.textContent = t("action.retry", "Try again");
+    again.onclick = () => loadNews(country);
+    box.append(msg, again);
+    list.append(box);
+    return;
+  }
+
   if (!items?.length) {
     list.innerHTML = `<div class="empty" style="padding:22px 12px">`
       + (country ? "No headlines for here." : "Headlines unavailable right now.")

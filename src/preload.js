@@ -46,8 +46,6 @@ contextBridge.exposeInMainWorld("auralfm", {
   setPrefs: (patch) => ipcRenderer.invoke("prefs:set", patch),
   onPrefs: (fn) => ipcRenderer.on("prefs:changed", (_e, p) => fn(p)),
   openSettings: () => ipcRenderer.send("settings:open"),
-  openDoc: (name) => ipcRenderer.send("doc:open", name),
-  docText: (name) => ipcRenderer.invoke("doc:text", name),
   strings: () => ipcRenderer.invoke("i18n:strings"),
   languages: () => ipcRenderer.invoke("i18n:languages"),
   palettes: () => ipcRenderer.invoke("palettes:list"),
@@ -55,6 +53,11 @@ contextBridge.exposeInMainWorld("auralfm", {
 
   // stations you added yourself
   mineList: () => ipcRenderer.invoke("mine:list"),
+  // Fire-and-forget on purpose: the reporter must not be able to reject and
+  // create the very unhandled rejection it exists to catch.
+  reportError: (r) => ipcRenderer.send("app:error", r),
+  errorLogPath: () => ipcRenderer.invoke("app:errorLogPath"),
+  errorLogRead: () => ipcRenderer.invoke("app:errorLogRead"),
   docsList: () => ipcRenderer.invoke("docs:list"),
   docsRead: (id) => ipcRenderer.invoke("docs:read", id),
   mineAdd: (input) => ipcRenderer.invoke("mine:add", input),
