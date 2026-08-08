@@ -121,6 +121,18 @@ contextBridge.exposeInMainWorld("auralfm", {
   onDms: (fn) => ipcRenderer.on("presence:dms", (_e, list) => fn(list)),
   onUnread: (fn) => ipcRenderer.on("presence:unread", (_e, n) => fn(n)),
 
+  /**
+   * The word filter, and reporting.
+   *
+   * `chatReport` opens an email draft and mutes the sender. It sends nothing —
+   * the person reads the draft and presses send, or does not.
+   */
+  filterList: () => ipcRenderer.invoke("filter:list"),
+  filterAdd: (term) => ipcRenderer.invoke("filter:add", term),
+  filterRemove: (term) => ipcRenderer.invoke("filter:remove", term),
+  filterReset: () => ipcRenderer.invoke("filter:reset"),
+  chatReport: (msg) => ipcRenderer.invoke("chat:report", msg),
+
   /** Contacts: favorite, verified, and a label only you ever see. */
   socialList: () => ipcRenderer.invoke("social:list"),
   socialGet: (pubkey) => ipcRenderer.invoke("social:get", pubkey),

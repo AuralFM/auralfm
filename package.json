@@ -65,6 +65,7 @@
       "assets/sky.json",
       "data/schedule.json",
       "data/relays.json",
+    "data/filter-default.json",
       "!**/*.js.map",
       "!**/*.d.ts",
       "!**/*.d.ts.map",

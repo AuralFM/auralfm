@@ -35,11 +35,14 @@ function paint() {
   $("#tips").setAttribute("aria-checked", String(P.tips !== false));
   $("#hidePreviews").setAttribute("aria-checked", String(P.hidePreviews === true));
   $("#durableIdentity").setAttribute("aria-checked", String(P.durableIdentity === true));
+  $("#filterChat").setAttribute("aria-checked", String(P.filterChat !== false));
+  $("#onlyKept").setAttribute("aria-checked", String(P.onlyKept === true));
   if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
   paintFingerprint();
   paintMuted();
   paintContacts();
+  paintFilter();
   $("#language").value = P.language;
 }
 
@@ -246,6 +249,64 @@ async function paintContacts() {
 }
 
 /**
+ * The word list.
+ *
+ * Every term is deletable, shipped ones included, and the list is shown in full
+ * rather than summarised as a count. A filter you cannot read is a filter you
+ * cannot trust, and this one decides what reaches you.
+ */
+async function paintFilter() {
+  const box = $("#filterlist");
+  const r = await guard("filterList", () => window.auralfm.filterList(), { terms: [], shipped: [] });
+  const terms = r.terms || [];
+  const shipped = new Set(r.shipped || []);
+  $("#filter-head").textContent = terms.length
+    ? `${T["set.filterList"] || "Word list"} — ${terms.length}`
+    : (T["set.filterList"] || "Word list");
+  box.textContent = "";
+  for (const term of terms) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const w = document.createElement("span");
+    w.className = "name sub";
+    w.textContent = term;
+    // Saying which came with the app and which somebody added themselves, so
+    // "Reset" is a predictable button rather than a surprise.
+    if (!shipped.has(term)) w.textContent += "  ·  " + (T["set.filterYours"] || "yours");
+    const x = document.createElement("button");
+    x.className = "link";
+    x.textContent = T["set.filterDel"] || "Remove";
+    x.onclick = async () => {
+      await guard("filterRemove", () => window.auralfm.filterRemove(term));
+      paintFilter();
+    };
+    row.append(w, x);
+    box.append(row);
+  }
+}
+
+async function addTerm() {
+  const el = $("#filterterm");
+  const v = el.value.trim();
+  if (!v) return;
+  await guard("filterAdd", () => window.auralfm.filterAdd(v));
+  el.value = "";
+  paintFilter();
+}
+$("#filteradd").addEventListener("click", addTerm);
+$("#filterterm").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); addTerm(); }
+});
+$("#filterreset").addEventListener("click", async () => {
+  if (!confirm(T["set.filterResetAsk"]
+    || "Put the word list back to the one AuralFM ships with? Your additions and removals are lost.")) return;
+  await guard("filterReset", () => window.auralfm.filterReset());
+  paintFilter();
+});
+$("#filterChat").addEventListener("click", () => set({ filterChat: P.filterChat === false }));
+$("#onlyKept").addEventListener("click", () => set({ onlyKept: P.onlyKept !== true }));
+
+/**
  * Turning the durable identity on and off.
  *
  * Off is the destructive direction, so that is the one that asks. Creating a key
@@ -267,6 +328,7 @@ $("#panic").addEventListener("click", async () => {
   const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
   P = await guard("prefs", () => window.auralfm.getPrefs(), P);
   paint(); paintMine(); paintPresence(); paintFingerprint(); paintMuted(); paintContacts();
+  paintFilter();
   alert((T["set.panicDone"] || "Erased.") + " " + (done || []).join(", "));
 });
 

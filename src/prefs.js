@@ -57,6 +57,35 @@ const DEFAULTS = {
    */
   durableIdentity: false,
   /**
+   * Hide messages containing terms on the word list. On by default.
+   *
+   * On rather than off because the chat is a public channel on relays nobody
+   * here controls, and a filter that ships switched off is a filter that exists
+   * for a review checklist rather than for a person. The list is editable and
+   * every term in it can be deleted — see [safety.js].
+   */
+  filterChat: true,
+  /**
+   * Show nothing from anyone who is not a mutual contact. Off by default.
+   *
+   * The strongest tool available in a design with no server, and the honest
+   * answer to determined abuse: a word list can be worked around in an
+   * afternoon, and being a stranger cannot. Off by default because switching it
+   * on turns an open channel into a closed one, which is the right choice for
+   * some people and the wrong default for a network whose whole appeal is
+   * hearing from somewhere you have never been.
+   */
+  onlyKept: false,
+  /**
+   * Whether the plain warning about what this channel is has been read.
+   *
+   * Shown once, the first time the chat appears. Not a legal disclaimer and not
+   * a EULA gate — a sentence saying nobody moderates this, because somebody
+   * arriving in an open relay channel expecting a moderated room has been
+   * misled by every other chat app they have used.
+   */
+  chatNoticeSeen: false,
+  /**
    * Whether the first-run introduction has been shown.
    *
    * A flag rather than a counter: it runs once, and Settings can put it back to

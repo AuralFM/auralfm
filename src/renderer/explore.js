@@ -3197,15 +3197,38 @@ function repaintLog() {
       who.classList.add("mutable");
       who.tabIndex = 0;
       who.setAttribute("role", "button");
-      who.title = t("chat.mute", "Mute this person");
-      const mute = async () => {
+      who.title = t("chat.mute", "Mute or report this person");
+      /**
+       * Click a name: mute, or mute and report.
+       *
+       * Two choices rather than one, because they are not the same act. Muting is
+       * about your window and takes effect now. Reporting is about the message
+       * and goes to a person who will read it later — and since there is no
+       * server, "later" is genuinely later. Reporting always mutes as well: a
+       * report that leaves somebody on screen has done nothing for the person who
+       * filed it.
+       */
+      const act = async () => {
         const label = m.nick || m.from;
-        if (!confirm(t("chat.muteAsk", `Mute ${label}? You will stop seeing their messages. This is only on this Mac.`)
-                       .replace("{who}", label))) return;
+        // Two questions rather than one dialog with three meanings. The first
+        // Cancel stops everything and the second declines the extra step —
+        // neither one does something on the way out, which a single confirm
+        // offering "OK reports, Cancel mutes" would.
+        if (!confirm(t("chat.muteAsk",
+          `Mute ${label}? You will stop seeing their messages. This is only on this Mac.`)
+          .replace("{who}", label))) return;
         await guard("muteAdd", () => window.auralfm.muteAdd(m.pubkey));
+        if (!confirm(t("chat.reportAsk",
+          "Also report this message? It opens an email draft with the message in it — nothing is sent until you send it."))) return;
+        await guard("chatReport", () => window.auralfm.chatReport({
+          pubkey: m.pubkey, text: m.text, at: m.at, geohash: m.geohash,
+        }));
+        systemLine(t("chat.reported",
+          "Muted, and an email draft is open. Nothing was sent automatically — AuralFM has no "
+          + "server, and it cannot delete this from the relays carrying it."));
       };
-      who.onclick = mute;
-      who.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mute(); } };
+      who.onclick = act;
+      who.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } };
     }
     // Mentions. BitChat uses @nickname to notify a specific person; here it only
     // marks the line, because there are no notifications to raise and a chat that
@@ -3318,6 +3341,7 @@ async function syncChat(prefs) {
       viewingCell = st?.viewing || null;
     } catch { /* not up yet */ }
     paintChatHead();
+    chatNotice();
   } else {
     myCell = null;
     viewingCell = null;
@@ -3350,6 +3374,30 @@ async function syncChatView() {
   } catch { /* leave the last known state */ }
   paintChatHead();
   paintComposer();
+}
+
+/**
+ * What this channel is, said once, the first time somebody sees it.
+ *
+ * Not a disclaimer and not a gate. Every other chat app a person has used has
+ * somebody behind it who can remove a message and suspend an account, so arriving
+ * here with that expectation is the reasonable thing to do — and it is wrong. The
+ * sentence is short and it says the true thing: nobody moderates this, and the
+ * tools are yours.
+ *
+ * In the log rather than in a modal, because a modal in front of a globe is an
+ * interruption and this is information, not a decision. It sits at the top of the
+ * conversation where somebody reading the room will read it.
+ */
+function chatNotice() {
+  if (prefs?.chatNoticeSeen) return;
+  systemLine(t("chat.notice",
+    "About this channel: it is a public conversation carried by relays AuralFM does not own. "
+    + "Nobody moderates it, and nothing can be deleted from somebody else's relay — not by you, "
+    + "and not by us. What you do control is your own window: click a name to mute or report, "
+    + "the word filter is on, and Settings can limit this to people you have kept. "
+    + "Triple-click the log to erase everything."));
+  window.auralfm.setPrefs({ chatNoticeSeen: true });
 }
 
 /** A room you are only looking at cannot be spoken into, and should say so. */
@@ -3496,6 +3544,26 @@ const COMMANDS = {
         "Read these to each other. If they match, mark them verified in Settings.",
         "A fingerprint sent over this chat proves nothing — anyone can type one.",
       ].filter(Boolean).join("\n"));
+    },
+  },
+  /**
+   * Report the last thing somebody said.
+   *
+   * There is nowhere to send a report to — no server, by design — so this
+   * composes an email to a published address with the evidence in it, mutes
+   * them, and lets the person press send or not. That is the whole mechanism,
+   * and it is deliberately not dressed up as more than it is.
+   */
+  "/report": {
+    hint: "/report <name> — mute them and draft a report",
+    run: async (rest) => {
+      const who = findPerson(rest, "/report");
+      if (!who) return;
+      await guard("muteAdd", () => window.auralfm.muteAdd(who.pubkey));
+      await guard("chatReport", () => window.auralfm.chatReport({
+        pubkey: who.pubkey, text: who.text, at: who.at, geohash: who.geohash,
+      }));
+      systemLine(`Muted ${name(who)}, and an email draft is open. Nothing was sent automatically.`);
     },
   },
   "/wipe": {

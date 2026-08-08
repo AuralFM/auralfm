@@ -556,6 +556,79 @@ console.log("\nlight theme agrees with itself");
     : pass("a fav tag with no words sends; an empty message with nothing in it does not");
 }
 
+// ── every chat channel goes through one funnel ────────────────────────────────
+// Muted, filtered and only-people-you-keep are three separate rules, and they
+// were briefly applied by hand at each send site — one `muted.filter()` per
+// channel, with nothing making a fourth channel remember to do the same. That is
+// how a safety rule ships covering two of three surfaces. `visible()` is the
+// funnel; nothing outside it may filter a chat list.
+{
+  console.log("\nevery chat channel is filtered in one place");
+  const src = fs.readFileSync(R("src/main.js"), "utf8");
+  const problems = [];
+  if (!/function visible\(list\)/.test(src)) problems.push("visible() is gone");
+  // Anything sending a chat payload has to hand it to visible() on the way.
+  for (const ch of ["presence:messages", "presence:notes", "presence:dms"]) {
+    const sends = [...src.matchAll(new RegExp(`"${ch}"\\s*,\\s*([^)\\n]*)`, "g"))].map((m) => m[1]);
+    for (const arg of sends) {
+      if (/\bvisible\(|\bclean\b/.test(arg)) continue;
+      problems.push(`${ch} is sent unfiltered: ${arg.trim().slice(0, 40)}`);
+    }
+  }
+  // The funnel itself is the only legitimate caller of muted.filter. Counted
+  // with comments stripped, because the paragraph above visible() explains the
+  // bug by naming the call and would otherwise fail its own check.
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const raw = [...code.matchAll(/muted\.filter\(/g)].length;
+  if (raw !== 1) problems.push(`muted.filter called ${raw}× outside comments — only visible() should`);
+  problems.length
+    ? fail("chat funnel", problems.join("; "))
+    : pass("messages, notes and private messages all pass through visible()");
+}
+
+// ── every data file the app reads is actually shipped ────────────────────────
+// `build.files` is an allowlist, so a new data file is absent from the package
+// unless somebody remembers to add it. filter-default.json was: the word filter
+// shipped reading a file that was not there, `defaults()` fell back to an empty
+// list, and the switch still said On. A safety feature that silently does
+// nothing is worse than one that is obviously missing.
+//
+// This checks the whole class rather than that one file — anything under data/
+// referenced from src/ has to be in the allowlist.
+{
+  console.log("\nevery data file src/ reads is in the build allowlist");
+  const pkg = JSON.parse(fs.readFileSync(R("package.json"), "utf8"));
+  const allow = new Set((pkg.build?.files || []).filter((f) => !f.startsWith("!")));
+  const wanted = new Set();
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.(js|mjs|cjs)$/.test(e.name)) continue;
+      const src = fs.readFileSync(full, "utf8");
+      for (const m of src.matchAll(/["'`](?:\.\.\/)*data["'`]\s*,\s*["'`]([\w.-]+\.json)["'`]/g)) {
+        wanted.add(`data/${m[1]}`);
+      }
+      for (const m of src.matchAll(/["'`]data\/([\w.-]+\.json)["'`]/g)) wanted.add(`data/${m[1]}`);
+    }
+  };
+  walk(R("src"));
+  const missing = [...wanted].filter((f) => {
+    if (allow.has(f)) return false;
+    // A directory glob covering it counts too.
+    return ![...allow].some((a) => a === "data/**/*" || a === "data/*");
+  });
+  // Present on disk, or the reference itself is the bug.
+  const absent = [...wanted].filter((f) => !fs.existsSync(R(f)));
+  const problems = [
+    ...missing.map((f) => `${f} is read but not in build.files`),
+    ...absent.map((f) => `${f} is read but does not exist`),
+  ];
+  problems.length
+    ? fail("data files", problems.join("; "))
+    : pass(`all ${wanted.size} data files read by src/ are shipped`);
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

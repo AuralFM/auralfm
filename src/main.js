@@ -39,6 +39,27 @@ const tips = require("./tips");
 const muted = require("./muted");
 const social = require("./social");
 const durable = require("./identity");
+const safety = require("./safety");
+
+/**
+ * Everything that reaches a renderer's chat goes through here.
+ *
+ * Three separate decisions — muted, filtered, strangers — applied in one place
+ * so they cannot drift apart. The bug this prevents is specific and was already
+ * live once in a smaller form: notes and private messages each got their own
+ * `muted.filter()` call, and any fourth channel added later would have quietly
+ * shipped without one. One funnel, and adding a channel means calling it.
+ *
+ * All of it runs in main, so a hidden message is never in a renderer at all.
+ */
+function visible(list) {
+  const p = getPrefs();
+  return safety.apply(muted.filter(list), {
+    filter: p.filterChat !== false,
+    onlyKept: p.onlyKept === true,
+    kept: (pk) => social.isMutual(pk),
+  });
+}
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -618,6 +639,11 @@ function setPrefs(patch) {
   // Applied before presence so a relay added in the same breath as switching
   // presence on is dialled on the first connection rather than the second.
   if ("relays" in patch) nostr.setExtraRelays(st.prefs.relays);
+  // Both change what is allowed through the funnel, so what is already on screen
+  // is now wrong. Repaint from main's copy rather than waiting for the next
+  // message — switching the filter on and watching nothing happen reads as a
+  // dead setting.
+  if ("filterChat" in patch || "onlyKept" in patch) refreshChat();
   /**
    * Switching the durable identity on mints the key; switching it off destroys
    * it, and destroying it is not reversible.
@@ -1022,9 +1048,14 @@ ipcMain.handle("panic:wipe", () => {
   // reach. Nothing to revoke and nobody to notify — anyone holding the
   // fingerprint simply finds that nothing answers to it any more.
   try { durable.forget(); done.push("durable identity"); } catch {}
+  // The added terms are a record of what somebody was trying not to see, which
+  // is personal even though the shipped list is not. "Erase everything" has to
+  // mean it.
+  try { safety.reset(); done.push("word list changes"); } catch {}
 
   const userData = app.getPath("userData");
-  for (const f of ["tips.json", "muted.json", "contacts.json", "identity.json", "errors.log"]) {
+  for (const f of ["tips.json", "muted.json", "contacts.json", "identity.json",
+                   "filter.json", "errors.log"]) {
     try { fs.rmSync(path.join(userData, f), { force: true }); done.push(f); } catch {}
   }
 
@@ -1050,13 +1081,13 @@ ipcMain.handle("mute:list", () => muted.list());
 ipcMain.handle("mute:add", (_e, pubkey) => {
   const ok = muted.add(String(pubkey || ""));
   // Repaint at once so the muted messages leave the window in the same gesture.
-  if (ok) broadcast("presence:messages", muted.filter(nostr.history()));
+  if (ok) broadcast("presence:messages", visible(nostr.history()));
   return ok;
 });
 
 ipcMain.handle("mute:remove", (_e, pubkey) => {
   const ok = muted.remove(String(pubkey || ""));
-  if (ok) broadcast("presence:messages", muted.filter(nostr.history()));
+  if (ok) broadcast("presence:messages", visible(nostr.history()));
   return ok;
 });
 
@@ -1066,11 +1097,11 @@ ipcMain.handle("mute:remove", (_e, pubkey) => {
  * All of it goes through here rather than being reachable from a renderer,
  * because all of it needs a private key and a renderer must never hold one.
  */
-ipcMain.handle("notes:history", () => muted.filter(nostr.noteHistory()));
+ipcMain.handle("notes:history", () => visible(nostr.noteHistory()));
 ipcMain.handle("notes:drop", (_e, text) => nostr.drop(text, getPrefs().nickname));
 
-ipcMain.handle("dm:history", () => muted.filter(nostr.dmHistory()));
-ipcMain.handle("dm:thread", (_e, pubkey) => muted.filter(nostr.thread(String(pubkey || ""))));
+ipcMain.handle("dm:history", () => visible(nostr.dmHistory()));
+ipcMain.handle("dm:thread", (_e, pubkey) => visible(nostr.thread(String(pubkey || ""))));
 ipcMain.handle("dm:send", (_e, pubkey, text) => {
   const to = String(pubkey || "");
   // Refusing to write to somebody you have muted. Not a technical limit — it is
@@ -1080,6 +1111,87 @@ ipcMain.handle("dm:send", (_e, pubkey, text) => {
   return nostr.dm(to, text);
 });
 ipcMain.handle("dm:read", (_e, pubkey) => nostr.markRead(String(pubkey || "")));
+
+/**
+ * The word filter.
+ *
+ * Every term is removable, including the shipped ones. A filter whose list you
+ * cannot see or change is a stranger's opinion about your window, and the whole
+ * argument of this app is that the window is yours.
+ */
+ipcMain.handle("filter:list", () => ({
+  terms: safety.terms(),
+  shipped: safety.defaults(),
+}));
+ipcMain.handle("filter:add", (_e, term) => {
+  const ok = safety.add(String(term || ""));
+  if (ok) refreshChat();
+  return ok;
+});
+ipcMain.handle("filter:remove", (_e, term) => {
+  const ok = safety.remove(String(term || ""));
+  if (ok) refreshChat();
+  return ok;
+});
+ipcMain.handle("filter:reset", () => { safety.reset(); refreshChat(); return safety.terms(); });
+
+/** Repaint every chat channel from main's copy, after a rule changed. */
+function refreshChat() {
+  broadcast("presence:messages", visible(nostr.history()));
+  broadcast("presence:notes", visible(nostr.noteHistory()));
+  broadcast("presence:dms", visible(nostr.dmHistory()));
+}
+
+/**
+ * Report somebody.
+ *
+ * With no server there is nothing to POST to, and standing one up to receive
+ * reports would be the backend this project exists without. So the report is an
+ * email the person chooses to send, composed for them with the evidence already
+ * in it, going to a published address — which is what guideline 1.2 asks for and
+ * is the only mechanism here that does not require becoming a host.
+ *
+ * Two things it deliberately does:
+ *
+ *   **It mutes them first.** A report that leaves somebody visible while you wait
+ *   for a reply has done nothing for the person who filed it. The mute is the
+ *   part that takes effect immediately; the email is the part that might matter
+ *   later.
+ *
+ *   **It sends nothing on its own.** It opens a draft. Nothing leaves this Mac
+ *   unless the person presses send, and they can read and cut every line of it
+ *   first — including the key and the quoted message.
+ */
+ipcMain.handle("chat:report", (_e, payload) => {
+  const p = payload && typeof payload === "object" ? payload : {};
+  const key = String(p.pubkey || "");
+  if (muted.isKey(key)) muted.add(key);
+  refreshChat();
+
+  const lines = [
+    "Reporting a message seen in AuralFM's place chat.",
+    "",
+    `Sender key: ${key || "(unknown)"}`,
+    `Place cell: ${String(p.geohash || "(unknown)")}`,
+    `Seen at:    ${new Date(Number(p.at) || Date.now()).toISOString()}`,
+    "",
+    "Message:",
+    String(p.text || "").slice(0, 1000),
+    "",
+    "--",
+    "Sent from AuralFM. Nothing was transmitted automatically — this draft was",
+    "composed locally and sent by hand. AuralFM has no server and cannot delete",
+    "this message from the relays that carry it; the sender is now muted on this",
+    "Mac.",
+  ];
+  const url = "mailto:meltonbell@icloud.com"
+    + "?subject=" + encodeURIComponent("AuralFM — reported chat message")
+    + "&body=" + encodeURIComponent(lines.join("\n"));
+  // mailto has practical length limits in some clients; the quote is already
+  // capped, and this is the belt to that braces.
+  shell.openExternal(url.slice(0, 8000));
+  return true;
+});
 
 ipcMain.handle("social:list", () => social.list());
 ipcMain.handle("social:get", (_e, pubkey) => social.get(String(pubkey || "")));
@@ -1268,7 +1380,7 @@ ipcMain.handle("i18n:strings", () => getStrings());
 ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("palettes:list", () => palettes.list());
 ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
-ipcMain.handle("presence:history", () => muted.filter(nostr.history()));
+ipcMain.handle("presence:history", () => visible(nostr.history()));
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.
 // The nickname comes from prefs unless the caller overrides it, so there is one
@@ -1435,6 +1547,7 @@ if (!app.requestSingleInstanceLock()) {
     tips.init(app.getPath("userData"));
     muted.init(app.getPath("userData"));
     social.init(app.getPath("userData"));
+    safety.init(app.getPath("userData"));
     durable.init(app.getPath("userData"));
     // Loaded only if the file is already there. Calling ensure() here would mint
     // a durable key on every first launch, which is the opposite of off by
@@ -1461,14 +1574,14 @@ if (!app.requestSingleInstanceLock()) {
     // bridge, so there is nothing in the DOM to hide and nothing to render by
     // accident later.
     nostr.onMessages((list) =>
-      explore?.webContents.send("presence:messages", muted.filter(list)));
+      explore?.webContents.send("presence:messages", visible(list)));
     // Notes and private messages go through the same mute filter, for the same
     // reason: somebody you have silenced is silenced everywhere, not only in the
     // channel where you happened to silence them.
     nostr.onNotes((list) =>
-      explore?.webContents.send("presence:notes", muted.filter(list)));
+      explore?.webContents.send("presence:notes", visible(list)));
     nostr.onDms((list) => {
-      const clean = muted.filter(list);
+      const clean = visible(list);
       explore?.webContents.send("presence:dms", clean);
       // The menu bar shows the count, so it has to hear about it too.
       win?.webContents.send("presence:unread", clean.filter((m) => m.unread).length);

@@ -267,7 +267,14 @@
      every section except About, which happens to have no hint. */
   .card.spaced{margin-top:10px}
   .link.danger{color:var(--err)}
-  #nickname{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
+  #nickname,#filterterm{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
+  #filterterm{text-align:left;width:180px}
+  #filterterm:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  /* The list is long enough to need a ceiling, and a card that grows past the
+     window is worse than one that scrolls. */
+  #filterlist{max-height:150px;overflow-y:auto}
+  #filterlist .row{padding-top:2px;padding-bottom:2px}
+  #filterlist .name{font-size:11.5px}
   #nickname:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   #fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.04em}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.03em}
@@ -460,6 +467,32 @@
       </div>
     </div>
     <p class="hint" data-i18n="set.durableHint">Off, every key is thrown away when you quit, and nobody can favorite or verify you — there is nothing lasting to point at. On, one key is saved on this Mac and used for private messages only; presence on the globe stays anonymous either way. The cost is real: anyone watching relays can tell that the identity written to on Tuesday was written to again on Friday. Switching this off destroys the key, and anyone holding your fingerprint will find nothing answers to it.</p>
+
+    <!-- The safety tools. There are no moderators on this network — bitchat has
+         none either — so everything here is control over your own window. -->
+    <div class="card spaced">
+      <div class="row">
+        <span class="name" id="filterChat-lbl" data-i18n="set.filterChat">Hide messages with words on the list</span>
+        <button class="sw" id="filterChat" role="switch" aria-checked="true"
+                aria-labelledby="filterChat-lbl"></button>
+      </div>
+      <div class="row">
+        <span class="name" id="onlyKept-lbl" data-i18n="set.onlyKept">Only show people you keep</span>
+        <button class="sw" id="onlyKept" role="switch" aria-checked="false"
+                aria-labelledby="onlyKept-lbl"></button>
+      </div>
+      <div class="row">
+        <span class="name sub" id="filter-head" data-i18n="set.filterList">Word list</span>
+        <button class="link" id="filterreset" data-i18n="set.filterReset">Reset</button>
+      </div>
+      <div class="row">
+        <input id="filterterm" type="text" maxlength="40" spellcheck="false" autocomplete="off"
+               placeholder="add a word" data-i18n-ph="set.filterAdd">
+        <button class="link" id="filteradd" data-i18n="set.filterAddDo">Add</button>
+      </div>
+      <div id="filterlist"></div>
+    </div>
+    <p class="hint" data-i18n="set.safetyHint">Nobody moderates this network — there is no server to run a moderator and no account to suspend, which is true of every app built this way. The word filter catches careless abuse, not determined abuse: a list cannot beat somebody who spaces out their letters. "Only people you keep" is the tool that actually holds, because being a stranger cannot be worked around. Reporting a message mutes the sender straight away and opens an email you choose whether to send.</p>
 
     <!-- Muting was one-way: you could silence somebody from the chat and then had
          no way to see who, or change your mind. -->
