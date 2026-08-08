@@ -42,18 +42,43 @@ const mainFiles = fs.readdirSync(R("src"))
 
 // ─────────────────────────────────────────────────────────────────────────────
 console.log("\nrenderer scripts parse");
-// A syntax error in an inline <script> fails silently: the whole block is
-// skipped, every global is undefined, and the window renders as a dead shell.
+// A syntax error in a renderer's script fails silently: the file is skipped,
+// every global it declared is undefined, and the window renders as a dead shell.
 // This shipped once and cost an evening.
+//
+// Parses the files each renderer references, now that the scripts are external.
+// That covers more than the old inline-block version did — the shared modules
+// (errors.js, icons.js, kiwi.js, astro.js) were never checked before, and a
+// renderer with no script at all is still caught, because it would reference
+// none.
 for (const { file, html } of renderers) {
-  const blocks = html.match(/<script>[\s\S]*?<\/script>/g) || [];
-  if (!blocks.length) { fail("has a script block", rel(file)); continue; }
+  const srcs = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
+  if (!srcs.length) { fail("references no script", rel(file)); continue; }
+  const missing = srcs.filter((s2) => !fs.existsSync(R(`src/renderer/${s2}`)));
+  if (missing.length) { fail(rel(file), `missing script: ${missing.join(", ")}`); continue; }
   try {
-    for (const b of blocks) new vm.Script(b.replace(/^<script>/, "").replace(/<\/script>$/, ""));
-    pass(rel(file));
+    for (const s2 of srcs) new vm.Script(fs.readFileSync(R(`src/renderer/${s2}`), "utf8"));
+    pass(`${rel(file)}  (${srcs.length} scripts)`);
   } catch (err) {
     fail(rel(file), err.message);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\nno renderer needs 'unsafe-inline' for scripts");
+// Every renderer's JavaScript lives in a file, so script-src can be 'self'
+// alone. Reintroducing an inline block would need 'unsafe-inline' back, and that
+// is the single most valuable directive in the policy.
+{
+  const loose = [];
+  for (const { file, html } of renderers) {
+    if (/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/.test(html)) loose.push(`${rel(file)} has an inline block`);
+    const m = html.match(/script-src[^;"]*/);
+    if (m && m[0].includes("unsafe-inline")) loose.push(`${rel(file)} still allows unsafe-inline`);
+    if (/\son(?:click|input|change|submit|keydown|load|error)\s*=\s*"/.test(html)) loose.push(`${rel(file)} has an inline handler attribute`);
+  }
+  loose.length ? fail("script-src", loose.join("; "))
+               : pass("script-src is 'self' everywhere, with no inline scripts or handlers");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -245,7 +270,9 @@ console.log("\nshipped files exist");
 // docs/ was outside the electron-builder files list, so the legal documents
 // opened to an empty window in the packaged app and nowhere else.
 const pkg = JSON.parse(fs.readFileSync(R("package.json"), "utf8"));
-const literals = pkg.build.files.filter((f) => !f.includes("*"));
+// Negations are exclusions, not files, so "does it exist" is the wrong question
+// — a `!` pattern is doing its job precisely when the path is absent.
+const literals = pkg.build.files.filter((f) => !f.includes("*") && !f.startsWith("!"));
 for (const f of literals) {
   // Ask git rather than guess. Everything in build.files that is generated is
   // also gitignored -- the crawl output, the sky, the icons -- so "does git

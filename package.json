@@ -43,7 +43,7 @@
   "build": {
     "appId": "com.meltonbell.auralfm",
     "productName": "AuralFM",
-    "copyright": "Copyright © 2026 Melton Bell",
+    "copyright": "Copyright \u00a9 2026 Melton Bell",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -63,7 +63,14 @@
       "docs/TERMS.md",
       "assets/sky.json",
       "data/schedule.json",
-      "data/relays.json"
+      "data/relays.json",
+      "!**/*.js.map",
+      "!**/*.d.ts",
+      "!**/*.d.ts.map",
+      "!**/*.ts",
+      "!node_modules/satellite.js/wasm-build/**",
+      "!node_modules/@noble/*/src/**",
+      "!assets/generated/app-1024.png"
     ],
     "mac": {
       "category": "public.app-category.music",
