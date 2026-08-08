@@ -196,6 +196,24 @@
   .docs .dochead button{-webkit-app-region:no-drag}
   .docs .dochead h3{margin:0;font-size:14px;font-weight:590;letter-spacing:-.01em;
                     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Help tag. Sized and timed like the system's, drawn like the app's.
+     `pointer-events:none` matters: a tag that can be hovered would sit under the
+     pointer, fire its own pointerout on the control beneath, and flicker. */
+  .helptag{
+    position:fixed;z-index:9000;pointer-events:none;
+    max-width:230px;padding:5px 9px;border-radius:var(--r-md);
+    background:var(--pane,rgba(30,27,25,.96));
+    color:var(--label);border:1px solid var(--line);
+    box-shadow:0 6px 20px rgba(0,0,0,.34);
+    font-size:11.5px;line-height:1.35;letter-spacing:.002em;
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    backdrop-filter:saturate(180%) blur(20px);
+    opacity:0;transform:translateY(-2px);
+    transition:opacity var(--dur-hover,.12s) var(--ease-out),
+               transform var(--dur-hover,.12s) var(--ease-out);
+  }
+  .helptag.on{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){ .helptag{transition:none} }
   .docback{appearance:none;background:none;border:0;color:var(--accent);
            font:inherit;font-size:13px;cursor:default;padding:3px 7px;
            border-radius:var(--r-sm);flex:none}
@@ -400,6 +418,19 @@
   </section>
 
   <section>
+    <h2 data-i18n="set.help">Help</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" data-i18n="set.tips">Help tags</span>
+        <button class="sw" id="tips" role="switch" aria-checked="true"></button>
+      </div>
+      <p class="hint" data-i18n="set.tipsHint">Short descriptions when you rest the pointer on a control. Turn this off and macOS shows its own instead.</p>
+      <div class="row">
+        <span class="name" data-i18n="set.replayTour">Show the introduction again</span>
+        <button class="link" id="replayTour" data-i18n="set.replay">Replay</button>
+      </div>
+    </div>
+
     <h2 data-i18n="set.about">About</h2>
     <div class="card">
       <div class="row">
@@ -435,6 +466,7 @@
 </div>
 
 <script src="errors.js"></script>
+<script src="tips.js"></script>
 <script src="icons.js"></script>
 <script src="settings.js"></script>
 </body>

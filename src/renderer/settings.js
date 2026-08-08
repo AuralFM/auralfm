@@ -12,6 +12,10 @@ const paletteName = (id) => (PALS.find((p) => p.id === id) || {}).name || "";
  */
 function paint() {
   const r = document.documentElement;
+  // Settings has help tags of its own, and it is also where they are turned off,
+  // so the switch has to take effect in this window immediately.
+  window.Tips?.setEnabled(P.tips !== false);
+  window.Tips?.adopt();
   if (P.theme === "system") r.removeAttribute("data-theme");
   else r.setAttribute("data-theme", P.theme);
   r.setAttribute("data-contrast", P.contrast === "more" ? "more" : "normal");
@@ -28,6 +32,7 @@ function paint() {
   }
   $("#contrast").setAttribute("aria-checked", String(P.contrast === "more"));
   $("#presence").setAttribute("aria-checked", String(P.presence === true));
+  $("#tips").setAttribute("aria-checked", String(P.tips !== false));
   paintPresence();
   $("#language").value = P.language;
 }
@@ -78,6 +83,14 @@ for (const group of ["theme", "dotSize"]) {
 
 $("#contrast").addEventListener("click", () =>
   set({ contrast: P.contrast === "more" ? "system" : "more" }));
+
+$("#tips").addEventListener("click", () => set({ tips: P.tips === false }));
+
+// Clears the "seen it" flag and reopens the globe, where the tour runs itself.
+$("#replayTour").addEventListener("click", async () => {
+  await guard("replayTour", () => window.auralfm.setPrefs({ tourSeen: false }));
+  window.auralfm.openExplore?.();
+});
 
 $("#language").addEventListener("change", (e) => set({ language: e.target.value }));
 

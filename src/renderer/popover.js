@@ -516,6 +516,10 @@ async function applyPalette() {
 }
 
 function applyPrefs(p) {
+  // Help tags follow the pref, and adopt() migrates any title= that arrived
+  // with a freshly rendered row.
+  window.Tips?.setEnabled(p?.tips !== false);
+  window.Tips?.adopt();
   const r = document.documentElement;
   if (!p.theme || p.theme === "system") r.removeAttribute("data-theme");
   else r.setAttribute("data-theme", p.theme);
@@ -535,6 +539,11 @@ async function applyStrings() {
     const v = T[el.dataset.i18nTitle];
     if (v) { el.title = v; el.setAttribute("aria-label", v); }
   }
+  // After translation, not before. adopt() moves `title` onto `data-tip` and
+  // removes it, and running it first captured the untranslated literal that the
+  // markup ships as a fallback — the Layers button showed "Layers" instead of
+  // "Choose what the globe shows".
+  window.Tips?.adopt();
   for (const el of document.querySelectorAll("[data-i18n-ph]")) {
     const v = T[el.dataset.i18nPh];
     if (v) el.placeholder = v;

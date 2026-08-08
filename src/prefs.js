@@ -11,6 +11,25 @@
  */
 
 const DEFAULTS = {
+  /**
+   * Help tags, on by default.
+   *
+   * On because somebody who has just opened a globe made of thirty-eight
+   * thousand radio stations has questions, and off because somebody who has used
+   * it for a month does not. When off, the `title` attributes go back on the
+   * elements, so the system's own help tags still work for anyone who wants
+   * them — off means "not ours", not "no help at all".
+   */
+  tips: true,
+  /**
+   * Whether the first-run introduction has been shown.
+   *
+   * A flag rather than a counter: it runs once, and Settings can put it back to
+   * false to run it again. Apple's guidance on onboarding is that a tour is the
+   * weakest way to teach an interface, so this one is three steps, skippable at
+   * every step, and never appears again on its own.
+   */
+  tourSeen: false,
   theme: "system",       // system | light | dark
   contrast: "system",    // system | more
   dotSize: "normal",     // normal | large

@@ -670,6 +670,54 @@
   /* Present to assistive technology, absent to everything else. `display:none`
      and `visibility:hidden` would take it out of the accessibility tree too,
      which is the opposite of the point. */
+  /* Help tag. Sized and timed like the system's, drawn like the app's.
+     `pointer-events:none` matters: a tag that can be hovered would sit under the
+     pointer, fire its own pointerout on the control beneath, and flicker. */
+  .helptag{
+    position:fixed;z-index:9000;pointer-events:none;
+    max-width:230px;padding:5px 9px;border-radius:var(--r-md);
+    background:var(--pane,rgba(30,27,25,.96));
+    color:var(--label);border:1px solid var(--line);
+    box-shadow:0 6px 20px rgba(0,0,0,.34);
+    font-size:11.5px;line-height:1.35;letter-spacing:.002em;
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    backdrop-filter:saturate(180%) blur(20px);
+    opacity:0;transform:translateY(-2px);
+    transition:opacity var(--dur-hover,.12s) var(--ease-out),
+               transform var(--dur-hover,.12s) var(--ease-out);
+  }
+  .helptag.on{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){ .helptag{transition:none} }
+  /* The introduction. A ring on the control being described, and a card that
+     never covers it — the sentence needs its subject visible. No dimming
+     backdrop: this is not modal, and the globe carries on turning behind it. */
+  .tourring{
+    position:fixed;z-index:8990;pointer-events:none;border-radius:var(--r-lg);
+    border:1.5px solid var(--accent);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent);
+    transition:all var(--dur-panel) var(--ease-drawer);
+  }
+  .tourcard{
+    position:fixed;z-index:9001;width:266px;padding:13px 14px 11px;
+    border-radius:var(--r-xl);background:var(--pane);border:1px solid var(--line);
+    box-shadow:0 14px 44px rgba(0,0,0,.42);
+    -webkit-backdrop-filter:saturate(180%) blur(24px);
+    backdrop-filter:saturate(180%) blur(24px);
+  }
+  .tourcard .tourh{font-size:13px;font-weight:590;letter-spacing:-.008em;margin-bottom:5px}
+  .tourcard p{font-size:12px;line-height:1.45;color:var(--label2);margin:0 0 11px}
+  .tourrow{display:flex;align-items:center;gap:8px}
+  .tourdots{font-size:8px;color:var(--label3);letter-spacing:2px;flex:1;line-height:1}
+  .tourskip,.tourgo{
+    appearance:none;border:0;font:inherit;font-size:12px;cursor:default;
+    padding:4px 11px;border-radius:var(--r-pill);
+  }
+  .tourskip{background:none;color:var(--label2)}
+  .tourskip:hover{color:var(--label)}
+  .tourgo{background:var(--accent);color:var(--on-accent);font-weight:590}
+  .tourgo:hover{filter:brightness(1.08)}
+  .tourgo:focus-visible,.tourskip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){ .tourring{transition:none} }
   .sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
           overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
@@ -1203,6 +1251,8 @@
 
 
 <script src="errors.js"></script>
+<script src="tips.js"></script>
+<script src="tour.js"></script>
 <script src="reveal.js"></script>
 <script src="astro.js"></script>
 <script src="icons.js"></script>

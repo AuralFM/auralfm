@@ -2304,6 +2304,12 @@ const dotRadius = (d) =>
   (0.09 + Math.sqrt(d.count) * 0.013) * (DOT_SCALE[prefs.dotSize] || 1);
 
 function applyPrefs(next) {
+  // Help tags follow the pref, and adopt() migrates any title= that arrived
+  // with a freshly rendered row.
+  window.Tips?.setEnabled(next?.tips !== false);
+  window.Tips?.adopt();
+  // Runs once, after the reveal, and only if it has never run.
+  window.Tour?.maybeStart(next);
   const prev = prefs;
   prefs = { ...prefs, ...next };
   const r = document.documentElement;
@@ -2357,6 +2363,11 @@ async function applyStrings() {
     const v = T[el.dataset.i18nTitle];
     if (v) { el.title = v; el.setAttribute("aria-label", v); }
   }
+  // After translation, not before. adopt() moves `title` onto `data-tip` and
+  // removes it, and running it first captured the untranslated literal that the
+  // markup ships as a fallback — the Layers button showed "Layers" instead of
+  // "Choose what the globe shows".
+  window.Tips?.adopt();
   for (const el of document.querySelectorAll("[data-i18n-ph]")) {
     const v = T[el.dataset.i18nPh];
     if (v) el.placeholder = v;
