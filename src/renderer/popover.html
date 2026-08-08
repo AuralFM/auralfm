@@ -428,12 +428,32 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
   fitHeight();
 }
 
-/** Ask main to size the window to the content, the way an AppKit popover does. */
+/**
+ * Ask main to size the window to the content, the way an AppKit popover does.
+ *
+ * Every part of the chrome is summed by selector, and a missing selector used to
+ * take the whole function with it: this read
+ * `document.querySelector("header").offsetHeight` and the header was removed when
+ * the "Explore the world" button went. `null.offsetHeight` threw on every call,
+ * so the window kept whatever height it last had and left 138px of dead space
+ * under the last favourite. Nothing surfaced -- the throw was inside a render
+ * path nobody was watching.
+ *
+ * So the parts are summed defensively now, and anything missing is reported once
+ * rather than silently costing the panel its sizing.
+ */
+const missingChrome = new Set();
 function fitHeight() {
-  const chrome = document.querySelector("header").offsetHeight
-    + document.querySelector(".searchwrap").offsetHeight
-    + headEl.offsetHeight
-    + document.querySelector(".bar").offsetHeight;
+  const partOf = (sel) => {
+    const el = document.querySelector(sel);
+    if (el) return el.offsetHeight;
+    if (!missingChrome.has(sel)) {
+      missingChrome.add(sel);
+      console.warn(`fitHeight: no ${sel} — the panel will size as if it were 0px tall`);
+    }
+    return 0;
+  };
+  const chrome = partOf(".searchwrap") + (headEl?.offsetHeight ?? 0) + partOf(".bar");
   // Sum the rows rather than reading listEl.scrollHeight: the list is flex-grown,
   // and scrollHeight never reports less than the box itself, so it would just
   // echo the current window height back and the panel would never shrink.
@@ -792,7 +812,14 @@ async function applyPalette() {
   const light = r.getAttribute("data-theme") === "light" ||
     (r.getAttribute("data-theme") !== "dark" && !matchMedia("(prefers-color-scheme: dark)").matches);
   r.style.setProperty("--accent", light ? pal.accentLight : pal.accent);
-  r.style.setProperty("--star", pal.star);
+  // In light theme the star follows the accent, not `palette.star`.
+  // Every palette's star is a near-white or a pale tint -- #F5F0E4, #DCE7FF,
+  // #FFE9B0 -- because it was chosen to sit on the night side of a globe. On the
+  // light background those measure 1.01 to 1.40:1, which is invisible: Melton
+  // could not find the favourite stars at all. accentLight is already designed
+  // for this background and clears the 3:1 floor WCAG sets for non-text UI in all
+  // nine palettes. Dark theme keeps the pale star, where it measures 12 to 18:1.
+  r.style.setProperty("--star", light ? pal.accentLight : pal.star);
 }
 
 function applyPrefs(p) {

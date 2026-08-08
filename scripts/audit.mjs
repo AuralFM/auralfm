@@ -441,6 +441,26 @@ console.log("\nlight theme agrees with itself");
     : pass("no British spellings in the English strings");
 }
 
+// ── the star survives the light theme ────────────────────────────────────────
+// Every palette's `star` is a near-white chosen to sit on the night side of a
+// globe, so on the light background they measure 1.01 to 1.40:1 -- invisible.
+// Both renderers must branch --star on the theme, the way they already do for
+// --accent. This is a structural check, not a contrast one: the measurement is
+// in the transcript, and what regresses is somebody simplifying the assignment.
+{
+  console.log("\nthe favourite star survives the light theme");
+  let bad = [];
+  for (const f of ["src/renderer/popover.html", "src/renderer/explore.html"]) {
+    const html = fs.readFileSync(R(f), "utf8");
+    const m = html.match(/setProperty\("--star",\s*([^)]+)\)/);
+    if (!m) continue;                       // renderer does not set it at all
+    if (!/light\s*\?/.test(m[1])) bad.push(`${f.split("/").pop()}: ${m[1].trim()}`);
+  }
+  bad.length
+    ? fail("star contrast", `--star is set without a light-theme branch — ${bad.join("; ")}`)
+    : pass("--star branches on the theme in every renderer that sets it");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
