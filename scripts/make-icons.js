@@ -120,9 +120,17 @@ const VARIANTS = {
     glyph: "#F7F4EE",
     catch: "rgba(255,255,255,.30)",
   },
+  // A globe, at the same size as the line-art glyph the other three use -- not
+  // the texture stretched across the whole tile. The first version filled the
+  // squircle with a flat equirectangular crop, which reads as a map of the world
+  // rather than as the object this app draws.
   earth: {
+    // Space, not a flat dark tile: the same night-sky.png the globe scene puts
+    // behind the Earth, so the icon and the app share one sky the way they
+    // already share one Earth.
+    sky: "night-sky.png",
     texture: "earth-blue-marble.jpg",
-    catch: "rgba(255,255,255,.18)",
+    catch: "rgba(255,255,255,.10)",
   },
 };
 
@@ -166,7 +174,9 @@ function page(svg, size, style = "template", variant = "onyx") {
         #w{width:${size}px;height:${size}px;color:#000}
         svg{width:100%;height:100%;display:block}
       </style>
-      <div id="w">${svg}</div>`;
+      <div id="w">${svg}</div>
+      <script>requestAnimationFrame(() => requestAnimationFrame(
+        () => { document.documentElement.dataset.ready = "1"; }));</script>`;
   }
 
   const v = VARIANTS[variant] || VARIANTS.onyx;
@@ -216,8 +226,8 @@ function page(svg, size, style = "template", variant = "onyx") {
       #s{
         width:${box}px;height:${box}px;
         clip-path:path("${clip}");
-        background:${v.texture
-          ? `url("${TEXTURES}/${v.texture}") 46% 42% / 300% no-repeat, #06121F`
+        background:${v.sky
+          ? `url("${TEXTURES}/${v.sky}") 50% 46% / 145% no-repeat, #04060B`
           : v.body};
         display:flex;align-items:center;justify-content:center;
       }
@@ -232,19 +242,61 @@ function page(svg, size, style = "template", variant = "onyx") {
       #s{position:relative}
       /* Day falling into night across the face, so the Earth variant is the same
          object the app draws rather than a flat photograph of a map. */
-      ${v.texture ? `#s::after{content:"";position:absolute;inset:0;
-        /* Two things at once: a lit limb toward the top left, and the shadow
-           that falls away from it. Without the second the crop reads as a flat
-           photograph of a map, which is what the first attempt did. */
+      /* The sphere.
+         A circle of texture is only a disc until it is lit, so the limb darkening
+         is what makes it read as round -- and it stays at the outer edge instead
+         of washing the face. The version this replaces laid two gradients at .55
+         and .88 opacity across the entire tile and buried the Earth completely.
+         Keep anything added here weak enough that the map still reads. */
+      ${v.texture ? `
+      #g{
+        border-radius:50%;overflow:hidden;position:relative;
+        background:url("${TEXTURES}/${v.texture}") 42% 48% / 232% no-repeat, #06121F;
+        /* The atmosphere. Three rings of the same blue at widening spreads: a
+           tight bright one on the limb, then two bleeding into the sky. Without
+           it the Earth is a ball pasted onto a starfield.
+
+           box-shadow is not clipped by overflow:hidden -- overflow clips
+           children, not shadows -- so the glow escapes the circle while the
+           texture inside stays clipped to it. An earlier attempt added
+           overflow:visible and a ::before to work around a problem that does not
+           exist, and lost the texture doing it. */
+        box-shadow:
+          0 0 ${Math.round(glyph*0.05)}px rgba(130,185,255,.55),
+          0 0 ${Math.round(glyph*0.15)}px rgba(85,145,230,.32),
+          0 0 ${Math.round(glyph*0.32)}px rgba(50,100,190,.18);
+      }
+      #g::after{
+        content:"";position:absolute;inset:0;border-radius:50%;
         background:
-          radial-gradient(115% 115% at 28% 24%,
-            rgba(255,255,255,.22) 0%, rgba(255,255,255,.05) 26%, rgba(0,0,0,0) 46%),
-          radial-gradient(135% 135% at 30% 26%,
-            rgba(0,0,0,0) 34%, rgba(2,6,14,.55) 78%, rgba(1,3,8,.88) 100%);}` : ""}
+          radial-gradient(circle at 33% 27%,
+            rgba(255,255,255,.20) 0%, rgba(255,255,255,.05) 20%, rgba(255,255,255,0) 44%),
+          radial-gradient(circle at 50% 50%,
+            rgba(0,0,0,0) 54%, rgba(2,10,24,.30) 85%, rgba(1,4,12,.60) 100%);
+      }` : ""}
       #g{width:${glyph}px;height:${glyph}px;color:${v.glyph || "transparent"};display:block;position:relative}
       svg{width:100%;height:100%;display:block}
     </style>
-    <div id="c"><div id="d"><div id="s">${v.texture ? "" : `<div id="g">${svg}</div>`}</div></div></div>`;
+    <div id="c"><div id="d"><div id="s"><div id="g">${v.texture ? "" : svg}</div></div></div></div>
+    <script>
+      /* Say when this frame is really ready.
+         The capture used to wait a flat 150ms, which is plenty for inline SVG and
+         not for a 1.4 MB JPEG, so the Earth variant was photographed before its
+         texture decoded. Signalled on a data attribute rather than a global,
+         because executeJavaScript runs in an isolated world and cannot see a
+         global set here -- the DOM is shared, so an attribute crosses. */
+      (async () => {
+        ${v.texture ? `try {
+          await Promise.all(${JSON.stringify(
+            [`${TEXTURES}/${v.texture}`, v.sky ? `${TEXTURES}/${v.sky}` : null].filter(Boolean)
+          )}.map(async (u) => {
+            const i = new Image(); i.src = u; await i.decode();
+          }));
+        } catch (e) { document.documentElement.dataset.texErr = String(e); }` : ""}
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        document.documentElement.dataset.ready = "1";
+      })();
+    </script>`;
 }
 
 app.whenReady().then(async () => {
@@ -257,17 +309,36 @@ app.whenReady().then(async () => {
     show: false, frame: false, transparent: true,
     backgroundColor: "#00000000",
     useContentSize: true,
-    webPreferences: { offscreen: true },
+    // Not offscreen. An offscreen renderer rasterizes the squircle, the
+    // gradients and the SVG glyph correctly but drops the Earth texture, so the
+    // Earth variant captured as flat #06121F while the same markup shown in a
+    // real window -- the icon picker in Settings -- painted it fine. A hidden
+    // ordinary window captures identically and does paint it.
+    webPreferences: {},
   });
 
   fs.mkdirSync(ICONSET, { recursive: true });
 
   const tmp = path.join(OUT, ".render.html");
+  const untilReady = async (win, ms = 8000) => {
+    const start = Date.now();
+    for (;;) {
+      if (await win.webContents.executeJavaScript(
+        "document.documentElement.dataset.ready === '1'")) return;
+      if (Date.now() - start > ms) {
+        const err = await win.webContents.executeJavaScript(
+          "document.documentElement.dataset.texErr || null");
+        throw new Error("icon never reported ready" + (err ? ": " + err : ""));
+      }
+      await sleep(40);
+    }
+  };
+
   const render = async (win, svgFile, size, style) => {
     const svg = fs.readFileSync(path.join(ASSETS, svgFile), "utf8");
     fs.writeFileSync(tmp, page(svg, size, style));
     await win.loadFile(tmp);
-    await sleep(150);
+    await untilReady(win);
     const shot = await win.webContents.capturePage({ x: 0, y: 0, width: size, height: size });
     const img = shot.getSize().width === size
       ? shot
@@ -280,7 +351,7 @@ app.whenReady().then(async () => {
       const svg = fs.readFileSync(path.join(ASSETS, src), "utf8");
       fs.writeFileSync(tmp, page(svg, size, style, variant));
       await win.loadFile(tmp);
-      await sleep(150);                       // let the SVG paint
+      await untilReady(win);
       const shot = await win.webContents.capturePage({ x: 0, y: 0, width: size, height: size });
       // capturePage returns device pixels, so on a Retina display this comes back
       // at 2x the requested size. Downscale to the exact pixel dimensions we asked
