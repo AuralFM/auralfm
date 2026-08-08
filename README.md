@@ -329,14 +329,14 @@ src/
   flights.js           aircraft near the view, capped         (main process)
   presence-nostr.js    optional presence over Nostr, no server(main process)
   mystations.js        stations you added yourself            (main process)
-  docs.js              in-app documentation, allowlisted     (main process)
+  docs.js              privacy/terms/licences, allowlisted   (main process)
   palettes.js          colour schemes
   i18n.js              interface strings, 5 languages
   backoff.js           shared failure cooldown
   renderer/
     popover.html       menu bar player — the only thing that makes sound
     explore.html       the globe
-    settings.html      appearance, colour, language, your stations, help
+    settings.html      appearance, colour, language, your stations
     kiwi.js            KiwiSDR protocol + IMA-ADPCM decoder
     astro.js           planetary positions (JPL elements)
 scripts/
@@ -352,25 +352,24 @@ phase0/index.html      the original single-file prototype
 
 ### Documents
 
-Eight documents are readable **inside the app**, under Settings → Help, with
-full-text search across all of them — the three marked ● below, plus
-[`docs/RECEIVERS.md`](docs/RECEIVERS.md),
-[`docs/CAPTIONS.md`](docs/CAPTIONS.md),
-[`CONTRIBUTING.md`](CONTRIBUTING.md),
-[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) and
-[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+Privacy, Terms and the open source licences are readable **inside the app**,
+under Settings → About. Nothing else here is. An earlier version put eight
+documents behind a Help section with a search box and that was the wrong
+content: somebody who has downloaded a radio app cannot contribute to it, there
+is nowhere in it to enforce a code of conduct, and a post-mortem on a removed
+feature is a decision record rather than help.
 
-That list is an allowlist in `src/docs.js` rather than a directory scan, because
-the strategy documents in this table live in the same folder and a glob cannot
-tell the difference between `RECEIVERS.md` and `BUSINESS.md`.
+The shipped list is an allowlist in `src/docs.js` rather than a directory scan,
+because the strategy documents below live in the same folder and a glob cannot
+tell the difference between `PRIVACY.md` and `BUSINESS.md`.
 
 | | |
 |---|---|
 | [`PLAN.md`](PLAN.md) | The full design record — what was measured, what was decided, why |
-| ● [`docs/DECENTRALIZATION.md`](docs/DECENTRALIZATION.md) | What "offline-first, no backend, collects nothing" can honestly carry, and what it cannot |
+| [`docs/DECENTRALIZATION.md`](docs/DECENTRALIZATION.md) | What "offline-first, no backend, collects nothing" can honestly carry, and what it cannot |
 | [`docs/PRODUCT.md`](docs/PRODUCT.md) | Positioning as a standalone app; what remains |
-| ● [`docs/PRIVACY.md`](docs/PRIVACY.md) | Everything stored locally, everything any third party sees |
-| ● [`docs/TERMS.md`](docs/TERMS.md) | Plain-language terms |
+| [`docs/PRIVACY.md`](docs/PRIVACY.md) | Everything stored locally, everything any third party sees |
+| [`docs/TERMS.md`](docs/TERMS.md) | Plain-language terms |
 | [`docs/SPONSORSHIP.md`](docs/SPONSORSHIP.md) | The sequence for funding this, and what it is and isn't worth |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is next, what is refused, and why |
 | [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |

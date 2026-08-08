@@ -184,8 +184,11 @@
   /* The documentation reader.
      A cover rather than a separate window: this is reading, and a second window
      to manage while you read is a worse deal than a back button. */
-  .docs{position:absolute;inset:0;background:var(--bg);z-index:20;display:none;
-        flex-direction:column}
+  /* 38px of headroom, the same spacer .titlebar gives the settings list. The
+     macOS traffic lights are drawn over web content in a hiddenInset window, so
+     without this the Back button sat underneath the close button. */
+  .docs{position:absolute;inset:0;padding-top:38px;background:var(--bg);z-index:20;
+        display:none;flex-direction:column}
   .docs.open{display:flex}
   .docs .dochead{flex:none;display:flex;align-items:center;gap:10px;
                  padding:10px 16px;border-bottom:1px solid var(--line);
@@ -218,12 +221,6 @@
   .docbody table{border-collapse:collapse;margin:0 0 12px;font-size:12.5px;width:100%}
   .docbody th,.docbody td{border:1px solid var(--line);padding:5px 8px;text-align:left}
   .docbody th{background:var(--fill);font-weight:590}
-  .docsearch{width:100%;appearance:none;border:0;background:var(--fill);
-             color:var(--label);font:inherit;font-size:12.5px;padding:7px 10px;
-             border-radius:var(--r-md);outline:none}
-  .docsearch::placeholder{color:var(--label3)}
-  .docsearch:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  .nodocs{font-size:12px;color:var(--label3);padding:8px 2px}
   .titlebar{height:38px;flex:none;-webkit-app-region:drag}
   /* See explore.html: blanket opt-out so a control added here later works. */
   .titlebar button,.titlebar input{-webkit-app-region:no-drag}
@@ -403,13 +400,6 @@
   </section>
 
   <section>
-    <h2 data-i18n="set.help">Help</h2>
-    <div class="card">
-      <div class="row"><input class="docsearch" id="docq" type="search"
-           placeholder="Search the documentation" data-i18n-ph="set.searchDocs"></div>
-      <div id="doclist"></div>
-    </div>
-
     <h2 data-i18n="set.about">About</h2>
     <div class="card">
       <div class="row">
@@ -423,6 +413,10 @@
       <div class="row">
         <span class="name" data-i18n="set.terms">Terms of Service</span>
         <button class="link" id="terms"></button>
+      </div>
+      <div class="row">
+        <span class="name" data-i18n="set.licences">Open source licences</span>
+        <button class="link" id="licences"></button>
       </div>
     </div>
     <p class="promise" data-i18n="set.promise">No servers. No accounts. No analytics. Nothing about what you listen to leaves this Mac.</p>
@@ -723,60 +717,22 @@ Icons.set($("#privacy"), "external");
 Icons.set($("#terms"), "external");
 
 $("#mail").addEventListener("click", () => window.auralfm.openMail());
-/* ── documentation ────────────────────────────────────────────────────────────
-   The writing in this repository was reachable only on GitHub, which is the
-   wrong place for the two audiences most likely to want it: somebody deciding
-   whether to trust the app, and the receiver operators it borrows from.
+/* ── documents ────────────────────────────────────────────────────────────────
+   Privacy, Terms and the licences, read in a panel instead of being handed to
+   whatever the OS opens .md files with.
 
-   Bodies are fetched once and kept, because searching titles alone finds
-   nothing useful -- "geohash" and "duty cycle" are in the prose, not the
-   headings. Eight documents is small enough that holding them costs nothing. */
-let DOCS = [], DOCBODY = new Map();
-
-const GROUPS = [["guide", "Guide"], ["legal", "Legal"], ["project", "Project"]];
+   There was a Help section here listing eight documents with a search box. It
+   was the wrong content: a person who has downloaded a radio app cannot
+   contribute to it, there is nowhere in it to enforce a code of conduct, and a
+   post-mortem on a removed feature is a decision record rather than help. Help
+   will mean how to use the app -- what shortwave is, what the bands do, how the
+   chat works -- and until that is written there is none. */
+let DOCBODY = new Map();
 
 async function loadDocs() {
-  DOCS = (await window.auralfm.docsList()) || [];
-  await Promise.all(DOCS.map(async (d) => {
+  for (const d of (await window.auralfm.docsList()) || []) {
     const doc = await window.auralfm.docsRead(d.id);
     if (doc) DOCBODY.set(d.id, doc);
-  }));
-  paintDocs("");
-}
-
-function paintDocs(query) {
-  const box = $("#doclist");
-  box.textContent = "";
-  const q = query.trim().toLowerCase();
-  const hits = DOCS.filter((d) => {
-    if (!q) return true;
-    if (d.title.toLowerCase().includes(q)) return true;
-    return (DOCBODY.get(d.id)?.text || "").toLowerCase().includes(q);
-  });
-  if (!hits.length) {
-    const none = document.createElement("div");
-    none.className = "nodocs";
-    none.textContent = (T["set.noDocs"] || "Nothing matches that.");
-    box.append(none);
-    return;
-  }
-  for (const [key, label] of GROUPS) {
-    const inGroup = hits.filter((d) => d.group === key);
-    if (!inGroup.length) continue;
-    for (const d of inGroup) {
-      const row = document.createElement("div");
-      row.className = "row";
-      const name = document.createElement("span");
-      name.className = "name";
-      name.textContent = d.title;
-      const open = document.createElement("button");
-      open.className = "link";
-      open.textContent = T["set.read"] || "Read";
-      open.onclick = () => openDocView(d.id);
-      row.append(name, open);
-      row.setAttribute("data-group", label);
-      box.append(row);
-    }
   }
 }
 
@@ -784,8 +740,8 @@ function openDocView(id) {
   const doc = DOCBODY.get(id);
   if (!doc) return;
   $("#doctitle").textContent = doc.title;
-  // The HTML is built in the main process from a fixed tag set with everything
-  // escaped first, so a document cannot contribute markup of its own.
+  // Built in the main process from a fixed tag set with everything escaped
+  // first, so a document cannot contribute markup of its own.
   $("#docbody").innerHTML = doc.html;
   $("#docs").classList.add("open");
   $("#docbody").scrollTop = 0;
@@ -798,7 +754,6 @@ function closeDocView() {
 }
 
 $("#docback").addEventListener("click", closeDocView);
-$("#docq").addEventListener("input", (e) => paintDocs(e.target.value));
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && $("#docs").classList.contains("open")) {
     e.preventDefault();
@@ -806,10 +761,9 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Privacy and Terms opened the raw Markdown in whatever the OS hands .md files
-// to. They are documents in the list now like the rest.
 $("#privacy").addEventListener("click", () => openDocView("privacy"));
 $("#terms").addEventListener("click", () => openDocView("terms"));
+$("#licences").addEventListener("click", () => openDocView("licences"));
 
 (async () => {
   const [prefs, strings, langs, version, pals] = await Promise.all([

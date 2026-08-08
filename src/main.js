@@ -434,6 +434,10 @@ const LAYERS = [
   // the bottom of the globe, which is where the maintainer asked for them. A
   // read-out that costs nothing and answers "where am I pointed" is a poor
   // candidate for something you have to discover in a menu.
+  // The pulsing rings for other people listening. This had no entry here at
+  // all, which meant the rings were the one thing on the globe you could not
+  // switch off: turning every layer off left them pulsing.
+  { id: "listeners",      key: "layer.listeners",      default: true },
   { id: "statusBar",      key: "layer.statusBar",      default: true },
 ];
 

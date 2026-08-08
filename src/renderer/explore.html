@@ -3298,7 +3298,7 @@ function nearestPlace(lat, lng) {
  */
 let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
                iss: true, flights: false, wspr: false, constellations: true,
-               drift: true, statusBar: false };
+               drift: true, listeners: true, statusBar: false };
 
 /**
  * Show and hide the dots without rebuilding them.
@@ -3390,6 +3390,7 @@ function applyLayers(next) {
    * The orbit data is kept fresh by its own timers (`tickISS` every 4s,
    * `tickSatellites` every 30s), so nothing here needs to drive it.
    */
+  if (layers.listeners !== prev.listeners) paintRings();
   if (layers.iss !== prev.iss) {
     if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
     else paintOrbits();
@@ -3882,7 +3883,7 @@ let layersOpen = false;
 
 const LAYER_ORDER = [
   "stations", "shortwave", "dayNight", "clouds",
-  "constellations", "iss", "flights", "wspr", "drift", "statusBar",
+  "constellations", "iss", "flights", "wspr", "listeners", "drift", "statusBar",
 ];
 
 function paintLayers() {
@@ -4530,7 +4531,12 @@ function paintRings() {
   if (!globe) return;
   const data = [];
   if (layers.iss && issAt) data.push({ ...issAt, kind: "iss" });
-  for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
+  // Gated like every other thing drawn on this globe. It was not, so somebody
+  // who turned all the layers off still had rings pulsing at them with nothing
+  // in the panel to explain what they were.
+  if (layers.listeners) {
+    for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
+  }
 
   globe
     .ringsData(data)
