@@ -38,6 +38,25 @@ const DEFAULTS = {
    */
   hidePreviews: false,
   /**
+   * Keep one identity across sessions, so people can favorite and verify you.
+   *
+   * **Off, and it should stay off unless somebody wants what it buys.** Every
+   * other key in this app is generated per area, per launch, and never written
+   * down, which is why presence here is not a location trail. This one is
+   * written to disk and does not change, so anyone watching relays can tell that
+   * the identity which received a message on Tuesday received another on Friday.
+   *
+   * What it buys is the only thing that cannot be had without it: a fingerprint
+   * worth comparing in person, and a favorite that still means something
+   * tomorrow. Verifying a key that expires in an hour is theatre.
+   *
+   * Scope is narrow on purpose. It is used for private messages only. Presence
+   * announcements keep using the ephemeral per-area keys, so turning this on does
+   * not put a stable key on the globe and does not make the places you listen to
+   * linkable to each other. See [identity.js] for the key's own handling.
+   */
+  durableIdentity: false,
+  /**
    * Whether the first-run introduction has been shown.
    *
    * A flag rather than a counter: it runs once, and Settings can put it back to

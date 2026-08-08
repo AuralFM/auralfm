@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -530,6 +531,29 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("state:set", problems.join("; "))
     : pass("state:set merges an allowlist, and prefs and layers are not in it");
+}
+
+// ── the favorite handshake can actually be sent ───────────────────────────────
+// wrap() refused an empty body, which is right for a chat message and wrong for
+// the favorite signal — that one is a `fav` tag and nothing else, deliberately.
+// So every favorite recorded its local half and silently never told the other
+// person, mutual status was unreachable for anybody, and nothing logged a thing.
+// Unit-testing wrap() in isolation would not have caught it; it returns null
+// entirely correctly for the arguments it was handed. It took a real envelope
+// through a real relay.
+{
+  console.log("\na bodiless private envelope still sends when it carries tags");
+  const priv = await import(pathToFileURL(R("src/nostr-private.js")).href)
+    .then((m) => m.default ?? m);
+  const { schnorr } = await import("@noble/curves/secp256k1.js");
+  const sk = schnorr.utils.randomSecretKey();
+  const to = Buffer.from(schnorr.getPublicKey(schnorr.utils.randomSecretKey())).toString("hex");
+  const problems = [];
+  if (!priv.wrap("", to, sk, [["fav", "1"]])) problems.push("a fav signal cannot be wrapped");
+  if (priv.wrap("", to, sk, [])) problems.push("an empty message with no tags is being sent");
+  problems.length
+    ? fail("favorite handshake", problems.join("; "))
+    : pass("a fav tag with no words sends; an empty message with nothing in it does not");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

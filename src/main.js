@@ -37,6 +37,8 @@ const mine = require("./mystations");
 const docs = require("./docs");
 const tips = require("./tips");
 const muted = require("./muted");
+const social = require("./social");
+const durable = require("./identity");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -616,6 +618,24 @@ function setPrefs(patch) {
   // Applied before presence so a relay added in the same breath as switching
   // presence on is dialled on the first connection rather than the second.
   if ("relays" in patch) nostr.setExtraRelays(st.prefs.relays);
+  /**
+   * Switching the durable identity on mints the key; switching it off destroys
+   * it, and destroying it is not reversible.
+   *
+   * Turning it off cannot be a soft toggle that leaves the file sitting there —
+   * "off" has to mean the key is gone, or the setting is a lie about what is on
+   * disk. The consequence is that anyone holding your fingerprint now holds a
+   * fingerprint of nothing, which is why Settings says so before it happens
+   * rather than after.
+   */
+  if ("durableIdentity" in patch) {
+    if (st.prefs.durableIdentity) durable.ensure();
+    else durable.forget();
+    // The inbox set just changed, so the envelope subscription has to be re-sent
+    // with the new key list or nothing would arrive until the next cell change.
+    nostr.resubscribeDms();
+    broadcast("presence:stats", nostr.stats());
+  }
   // Menu labels are baked in at build time, so a language change means a rebuild.
   if ("language" in patch) buildMenu();
   return st.prefs;
@@ -996,9 +1016,15 @@ ipcMain.handle("panic:wipe", () => {
   const done = [];
   try { nostr.leave(); nostr.forgetIdentities(); done.push("presence identities"); } catch {}
   try { muted.clear(); done.push("mute list"); } catch {}
+  try { social.clear(); done.push("contacts"); } catch {}
+  try { nostr.forgetDms(); done.push("private messages"); } catch {}
+  // The one key in this app that outlives a session, so the one the wipe has to
+  // reach. Nothing to revoke and nobody to notify — anyone holding the
+  // fingerprint simply finds that nothing answers to it any more.
+  try { durable.forget(); done.push("durable identity"); } catch {}
 
   const userData = app.getPath("userData");
-  for (const f of ["tips.json", "muted.json", "errors.log"]) {
+  for (const f of ["tips.json", "muted.json", "contacts.json", "identity.json", "errors.log"]) {
     try { fs.rmSync(path.join(userData, f), { force: true }); done.push(f); } catch {}
   }
 
@@ -1006,7 +1032,12 @@ ipcMain.handle("panic:wipe", () => {
   // the app does not restart into a first run it did not earn.
   try {
     const keep = load();
-    save({ prefs: { ...(keep.prefs || {}), presence: false }, layers: keep.layers || {} });
+    // durableIdentity goes false with it: the key has just been destroyed, and a
+    // preference still claiming to be on would silently mint a new one on the
+    // next launch — a fresh permanent identity nobody asked for, created by a
+    // wipe.
+    save({ prefs: { ...(keep.prefs || {}), presence: false, durableIdentity: false },
+           layers: keep.layers || {} });
     done.push("favourites and history");
   } catch {}
 
@@ -1027,6 +1058,76 @@ ipcMain.handle("mute:remove", (_e, pubkey) => {
   const ok = muted.remove(String(pubkey || ""));
   if (ok) broadcast("presence:messages", muted.filter(nostr.history()));
   return ok;
+});
+
+/**
+ * Location notes, private messages, contacts.
+ *
+ * All of it goes through here rather than being reachable from a renderer,
+ * because all of it needs a private key and a renderer must never hold one.
+ */
+ipcMain.handle("notes:history", () => muted.filter(nostr.noteHistory()));
+ipcMain.handle("notes:drop", (_e, text) => nostr.drop(text, getPrefs().nickname));
+
+ipcMain.handle("dm:history", () => muted.filter(nostr.dmHistory()));
+ipcMain.handle("dm:thread", (_e, pubkey) => muted.filter(nostr.thread(String(pubkey || ""))));
+ipcMain.handle("dm:send", (_e, pubkey, text) => {
+  const to = String(pubkey || "");
+  // Refusing to write to somebody you have muted. Not a technical limit — it is
+  // that a mute is a decision about a person, and a UI that lets you message
+  // someone whose replies you cannot see is a trap for the person who muted.
+  if (muted.has(to)) return false;
+  return nostr.dm(to, text);
+});
+ipcMain.handle("dm:read", (_e, pubkey) => nostr.markRead(String(pubkey || "")));
+
+ipcMain.handle("social:list", () => social.list());
+ipcMain.handle("social:get", (_e, pubkey) => social.get(String(pubkey || "")));
+
+/**
+ * Favorite somebody, and tell them.
+ *
+ * The signal is a private message with an empty body and a `fav` tag, so it
+ * arrives as a fact rather than as a line of chat. It only reaches them if
+ * something is connected — a favorite still records locally when it does not,
+ * because your own list should not depend on a relay being up.
+ */
+ipcMain.handle("social:favorite", (_e, pubkey, on) => {
+  const key = String(pubkey || "");
+  if (muted.has(key)) return false;
+  const ok = social.set(key, { favorite: !!on });
+  if (ok) {
+    nostr.dm(key, "", [["fav", on ? "1" : "0"]]);
+    broadcast("social:changed", social.list());
+  }
+  return ok;
+});
+
+/**
+ * Mark a key as verified, or not.
+ *
+ * Deliberately a plain setter with no cleverness behind it. This is the only
+ * claim in the app that means something about a human being — that you compared
+ * fingerprints with them and they matched — and the app inferring it from
+ * anything at all would make it worthless.
+ */
+ipcMain.handle("social:verify", (_e, pubkey, on) => {
+  const ok = social.set(String(pubkey || ""), { verified: !!on });
+  if (ok) broadcast("social:changed", social.list());
+  return ok;
+});
+
+ipcMain.handle("social:label", (_e, pubkey, label) => {
+  const ok = social.set(String(pubkey || ""), { label: String(label || "") });
+  if (ok) broadcast("social:changed", social.list());
+  return ok;
+});
+
+/** The fingerprint of any key, for reading aloud. Pure function, no state. */
+ipcMain.handle("social:fingerprint", (_e, pubkey) => {
+  const key = String(pubkey || "");
+  if (!social.isKey(key)) return null;
+  return { fingerprint: durable.fingerprint(key), readable: durable.readable(durable.fingerprint(key)) };
 });
 
 ipcMain.handle("docs:list", () => docs.list());
@@ -1333,6 +1434,12 @@ if (!app.requestSingleInstanceLock()) {
     // here rather than from the renderer.
     tips.init(app.getPath("userData"));
     muted.init(app.getPath("userData"));
+    social.init(app.getPath("userData"));
+    durable.init(app.getPath("userData"));
+    // Loaded only if the file is already there. Calling ensure() here would mint
+    // a durable key on every first launch, which is the opposite of off by
+    // default — the preference has to ask for it.
+    if (getPrefs().durableIdentity && durable.exists()) durable.ensure();
     tips.donate("appOpened");
 
     // Standalone app with a menu bar companion: the globe is what people came
@@ -1355,6 +1462,27 @@ if (!app.requestSingleInstanceLock()) {
     // accident later.
     nostr.onMessages((list) =>
       explore?.webContents.send("presence:messages", muted.filter(list)));
+    // Notes and private messages go through the same mute filter, for the same
+    // reason: somebody you have silenced is silenced everywhere, not only in the
+    // channel where you happened to silence them.
+    nostr.onNotes((list) =>
+      explore?.webContents.send("presence:notes", muted.filter(list)));
+    nostr.onDms((list) => {
+      const clean = muted.filter(list);
+      explore?.webContents.send("presence:dms", clean);
+      // The menu bar shows the count, so it has to hear about it too.
+      win?.webContents.send("presence:unread", clean.filter((m) => m.unread).length);
+    });
+    /**
+     * They favorited us. Authenticated inside the envelope — see the note in
+     * presence-nostr's takeDm — so this is a fact about a keyholder rather than
+     * a claim by a relay.
+     */
+    nostr.onFavorited((pubkey, on) => {
+      if (muted.has(pubkey)) return;      // a blocked person cannot become a contact
+      social.noteMutual(pubkey, on);
+      explore?.webContents.send("social:changed", social.list());
+    });
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();
     createWindow();

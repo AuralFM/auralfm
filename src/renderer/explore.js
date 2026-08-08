@@ -3133,18 +3133,59 @@ function paintChatHead() {
     : `${near} here`);
 }
 
+/**
+ * One timeline, three sources.
+ *
+ * Public messages, location notes and private messages all belong to the place
+ * you are looking at, and they arrive on three separate channels. The first
+ * version of this gave each one its own panel, which was wrong for a reason
+ * worth keeping: they are the same conversation. A note left this morning and a
+ * reply whispered privately an hour later read as one exchange, and splitting
+ * them into tabs makes the reader reassemble the order by hand.
+ *
+ * So they are held separately — each channel repaints its own cache — and merged
+ * by time on the way to the screen. Styling carries the difference, because the
+ * difference matters enormously: a note is public and permanent, a private
+ * message is neither.
+ */
+let noteCache = [];
+let dmCache = [];
+/** Everything main knows about the people here, keyed by pubkey. */
+let contacts = new Map();
+
 function paintChat(list) {
   // Kept so /mute can turn a name somebody typed into the key it belongs to.
   chatCache = Array.isArray(list) ? list.slice(-200) : [];
+  repaintLog();
+}
+
+function paintNotes(list) {
+  noteCache = Array.isArray(list) ? list.slice(0, 200) : [];
+  repaintLog();
+}
+
+function paintDms(list) {
+  dmCache = Array.isArray(list) ? list.slice(-200) : [];
+  repaintLog();
+}
+
+function repaintLog() {
   const log = $("chatlog");
   if (!log) return;
   // Only stick to the bottom if the reader is already there — yanking someone
   // away from a line they are reading is the classic chat-window sin.
   const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
   log.innerHTML = "";
-  for (const m of list) {
+
+  const merged = [
+    ...chatCache.map((m) => ({ ...m, sort: m.at || 0 })),
+    ...noteCache.map((m) => ({ ...m, kind: "note", sort: m.at || 0 })),
+    ...dmCache.map((m) => ({ ...m, kind: "dm", sort: m.at || 0 })),
+  ].sort((a, b) => a.sort - b.sort);
+
+  for (const m of merged) {
     const el = document.createElement("div");
-    el.className = "msg" + (m.mine ? " mine" : "");
+    el.className = "msg" + (m.mine ? " mine" : "") + (m.kind ? ` ${m.kind}` : "");
     const who = document.createElement("span");
     who.className = "who";
     // No nickname is the common case, and a truncated pubkey is at least true.
@@ -3173,6 +3214,30 @@ function paintChat(list) {
     if (mine && new RegExp(`@${mine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(m.text)) {
       el.classList.add("mention");
     }
+    /**
+     * What kind of line this is, said in words.
+     *
+     * A pin glyph and a padlock glyph would be quicker to scan and would tell a
+     * screen reader nothing, and the distinction being marked here is the whole
+     * safety property: public and permanent, versus encrypted to one person. So
+     * it is a short word, in the text, that every reader gets.
+     */
+    if (m.kind === "note" || m.kind === "dm") {
+      const tag = document.createElement("span");
+      tag.className = `msgkind ${m.kind}`;
+      tag.textContent = m.kind === "note"
+        ? t("chat.note", "note") : t("chat.private", "private");
+      el.prepend(tag);
+    }
+
+    // Contacts. A tick for somebody whose fingerprint you checked yourself, a
+    // star for somebody you keep. Both after the name, both with a real label —
+    // a bare glyph claiming "verified" would be the least honest thing here.
+    const c = m.pubkey && contacts.get(m.pubkey);
+    if (c?.verified) who.append(badge("✓", t("chat.verifiedWho", "fingerprint verified by you")));
+    if (c?.favorite) who.append(badge("★", c.mutual
+      ? t("chat.mutualWho", "kept, and they keep you") : t("chat.favWho", "kept by you")));
+
     el.append(who, document.createTextNode(m.text));
     // Everyone here from AuralFM is tuned in rather than standing there, and
     // some bitchat users are too. Say so, quietly.
@@ -3188,7 +3253,35 @@ function paintChat(list) {
   if (atBottom) log.scrollTop = log.scrollHeight;
 }
 
+/** A small mark after a name, with the words behind it available to everyone. */
+function badge(glyph, label) {
+  const b = document.createElement("span");
+  b.className = "badge";
+  b.textContent = ` ${glyph}`;
+  b.title = label;
+  b.setAttribute("aria-label", label);
+  b.setAttribute("role", "img");
+  return b;
+}
+
 window.auralfm.onChat(paintChat);
+window.auralfm.onNotes(paintNotes);
+window.auralfm.onDms((list) => {
+  paintDms(list);
+  /**
+   * Marking read on arrival, because the panel being open is what "read" means
+   * here. There is no notification and no badge to chase — the unread flag exists
+   * so the menu bar can show a count while the panel is shut, and the moment the
+   * log repaints with the message in it, that count is a lie.
+   */
+  if (!$("chat")?.hidden) {
+    for (const m of list) if (m.unread && !m.mine) window.auralfm.dmRead(m.with);
+  }
+});
+window.auralfm.onSocial((list) => {
+  contacts = new Map((list || []).map((c) => [c.pubkey, c]));
+  repaintLog();
+});
 
 /**
  * Show or hide the whole panel.
@@ -3213,6 +3306,12 @@ async function syncChat(prefs) {
   chatOn = want;
   if (want) {
     try {
+      // Contacts first, so the very first repaint already knows who is verified.
+      // Painting the log and then learning about badges makes them appear a beat
+      // late, which reads as a glitch on the one signal that must look solid.
+      contacts = new Map((await window.auralfm.socialList() || []).map((c) => [c.pubkey, c]));
+      noteCache = await window.auralfm.notesHistory() || [];
+      dmCache = await window.auralfm.dmHistory() || [];
       paintChat(await window.auralfm.chatHistory());
       const st = await window.auralfm.presenceStats();
       myCell = st?.cell || null;
@@ -3222,6 +3321,9 @@ async function syncChat(prefs) {
   } else {
     myCell = null;
     viewingCell = null;
+    // Notes belong to the place. Leaving it should not leave them on screen
+    // under whatever place comes next.
+    noteCache = [];
   }
 }
 
@@ -3268,9 +3370,9 @@ function paintComposer() {
  * shape for this: a chat box with one text field and no room for buttons, in an
  * app whose users are shortwave listeners already comfortable with terse syntax.
  *
- * Nothing here reaches a relay except /drop. The rest are local — which is the
- * point, because the useful commands in a room you cannot moderate are the ones
- * that change what *you* see.
+ * Four of these reach a relay — /drop, /msg, /fav and /me. The rest are local,
+ * and that is the point: the useful commands in a room you cannot moderate are
+ * the ones that change what *you* see.
  */
 const COMMANDS = {
   "/help": {
@@ -3298,13 +3400,102 @@ const COMMANDS = {
   "/mute": {
     hint: "/mute <name> — stop seeing somebody",
     run: async (rest) => {
-      const want = (rest || "").trim().toLowerCase();
-      if (!want) return systemLine("Who? /mute followed by the name shown beside a message.");
-      const hit = chatCache.find((m) => !m.mine && m.pubkey &&
-        ((m.nick || "").toLowerCase() === want || m.from.toLowerCase().startsWith(want)));
-      if (!hit) return systemLine(`Nobody called "${rest.trim()}" has said anything here.`);
-      await guard("muteAdd", () => window.auralfm.muteAdd(hit.pubkey));
-      systemLine(`Muted ${hit.nick || hit.from}. Settings can undo it.`);
+      const who = findPerson(rest, "/mute");
+      if (!who) return;
+      await guard("muteAdd", () => window.auralfm.muteAdd(who.pubkey));
+      systemLine(`Muted ${name(who)}. Settings can undo it.`);
+    },
+  },
+
+  /**
+   * Leave a note at this place — bitchat's /drop, and the only command here that
+   * publishes something relays keep.
+   *
+   * The warning is not decoration. Everything else this app sends is an
+   * ephemeral kind that relays are asked to forward and forget; a note is an
+   * ordinary kind-1 text note, stored and served to anyone who asks. It is
+   * signed by a key that will not exist after quit, so there is no way to
+   * publish the deletion request that would ask relays to drop it. "A day" is
+   * what the note asks for, not what anyone can enforce.
+   */
+  "/drop": {
+    hint: "/drop <note> — leave a note here for a day (public, permanent)",
+    run: async (rest) => {
+      const body = (rest || "").trim();
+      if (!body) return systemLine("Write the note: /drop the 40m band is busy after dark.");
+      if (!confirm(t("notes.ask",
+        "Leave this note on the relays?\n\nUnlike everything else AuralFM sends, a note is stored and public. "
+        + "It asks to expire in a day, but relays are not required to honour that, and it cannot be unsent."))) return;
+      const ok = await guard("noteDrop", () => window.auralfm.noteDrop(body), false);
+      systemLine(ok
+        ? "Note left here. Anyone tuning to this place will see it for a day."
+        : "Nothing was sent — no relay is connected, or nothing is playing.");
+    },
+  },
+  "/notes": {
+    hint: "notes left at this place",
+    run: async () => {
+      const list = await guard("notesHistory", () => window.auralfm.notesHistory(), []);
+      if (!list.length) return systemLine("No notes here. /drop leaves one.");
+      systemLine(list.map((n) => `${n.nick || n.from}: ${n.text}`).join("\n"));
+    },
+  },
+
+  /**
+   * A private message.
+   *
+   * Reaches whoever is visible in the room right now with no setup at all: their
+   * announced key is already on screen, and it is a perfectly good address for
+   * as long as they are there. It only reaches somebody *later* if both sides
+   * have switched on the durable identity in Settings — which is the honest
+   * shape of a system with no accounts in it.
+   */
+  "/msg": {
+    hint: "/msg <name> <words> — privately, encrypted",
+    run: async (rest) => {
+      const [first, ...words] = (rest || "").trim().split(" ");
+      const who = findPerson(first, "/msg");
+      if (!who) return;
+      const body = words.join(" ").trim();
+      if (!body) return systemLine(`Say something: /msg ${first} are you hearing this too?`);
+      const ok = await guard("dmSend", () => window.auralfm.dmSend(who.pubkey, body), false);
+      if (!ok) return systemLine("Not sent — no relay is connected, or they are muted.");
+      systemLine(`→ ${name(who)} (private): ${body}`);
+    },
+  },
+  "/fav": {
+    hint: "/fav <name> — keep somebody, and tell them",
+    run: (rest) => setFavorite(rest, true),
+  },
+  "/unfav": {
+    hint: "/unfav <name> — stop keeping somebody",
+    run: (rest) => setFavorite(rest, false),
+  },
+
+  /**
+   * Fingerprints, and the one thing in this app that means something about a
+   * person rather than a key.
+   *
+   * Printing both fingerprints and stopping is the whole design. The app cannot
+   * verify anybody — only two people looking at the same sixteen characters can
+   * do that, out loud, in person or on a call they already trust. Marking it
+   * verified afterwards is a separate deliberate act in Settings, because a
+   * confirm dialog in the middle of a chat is not a security practice.
+   */
+  "/verify": {
+    hint: "/verify <name> — compare fingerprints in person",
+    run: async (rest) => {
+      const who = findPerson(rest, "/verify");
+      if (!who) return;
+      const theirs = await guard("fp", () => window.auralfm.socialFingerprint(who.pubkey), null);
+      const mine = await guard("stats", () => window.auralfm.presenceStats(), null);
+      if (!theirs) return systemLine("No key to check.");
+      systemLine([
+        `${name(who)}: ${theirs.readable}`,
+        mine?.fingerprint ? `you: ${mine.fingerprint.match(/.{1,4}/g).join(" ")}` : null,
+        "Read these to each other. If they match, mark them verified in Settings.",
+        "A fingerprint sent over this chat proves nothing — anyone can type one.",
+      ].filter(Boolean).join("\n"));
     },
   },
   "/wipe": {
@@ -3312,6 +3503,39 @@ const COMMANDS = {
     run: () => { panicWipe(); },
   },
 };
+
+/** What to call somebody: their nickname if they chose one, else their key stub. */
+const name = (p) => p.nick || p.from || String(p.pubkey || "").slice(0, 8);
+
+/**
+ * Find the person a command is about.
+ *
+ * Matches a nickname exactly or a key stub by prefix, over everyone who has
+ * spoken here. Reports its own failure and returns null, so every caller is one
+ * line rather than five identical ones.
+ */
+function findPerson(rest, cmd) {
+  const want = String(rest || "").trim().toLowerCase();
+  if (!want) { systemLine(`Who? ${cmd} followed by the name shown beside a message.`); return null; }
+  const hit = chatCache.find((m) => !m.mine && m.pubkey &&
+    ((m.nick || "").toLowerCase() === want || m.from.toLowerCase().startsWith(want)));
+  if (!hit) { systemLine(`Nobody called "${String(rest).trim()}" has said anything here.`); return null; }
+  return hit;
+}
+
+async function setFavorite(rest, on) {
+  const who = findPerson(rest, on ? "/fav" : "/unfav");
+  if (!who) return;
+  const ok = await guard("socialFavorite", () => window.auralfm.socialFavorite(who.pubkey, on), false);
+  if (!ok) return systemLine("That did not work — they may be muted.");
+  systemLine(on
+    ? `Keeping ${name(who)}. They have been told, privately. It becomes mutual if they keep you back.`
+    : `No longer keeping ${name(who)}.`);
+  // The honest caveat, once, at the moment it matters: most keys out there are
+  // ephemeral, so a favorite usually will not survive the other side quitting.
+  if (on) systemLine("Most keys on this network are thrown away at quit, including ours by default. "
+    + "Settings → Privacy has a durable identity if you want this to last.");
+}
 
 /**
  * Erase everything, from here.

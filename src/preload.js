@@ -96,6 +96,39 @@ contextBridge.exposeInMainWorld("auralfm", {
   chatHistory: () => ipcRenderer.invoke("presence:history"),
   chatSay: (text, nick) => ipcRenderer.invoke("presence:say", text, nick),
   onChat: (fn) => ipcRenderer.on("presence:messages", (_e, list) => fn(list)),
+
+  /**
+   * Location notes. Text in, nothing else — the cell and the expiry are main's to
+   * decide, because a renderer choosing either could pin a note to a place the
+   * app is not in or to a day that never ends.
+   */
+  notesHistory: () => ipcRenderer.invoke("notes:history"),
+  noteDrop: (text) => ipcRenderer.invoke("notes:drop", text),
+  onNotes: (fn) => ipcRenderer.on("presence:notes", (_e, list) => fn(list)),
+
+  /**
+   * Private messages.
+   *
+   * Note what is absent: there is no way to ask for a key, sign anything, or
+   * encrypt anything. The renderer names a recipient and supplies words. Every
+   * private key stays on the other side of this bridge, which is the only reason
+   * a compromised renderer cannot impersonate anybody.
+   */
+  dmHistory: () => ipcRenderer.invoke("dm:history"),
+  dmThread: (pubkey) => ipcRenderer.invoke("dm:thread", pubkey),
+  dmSend: (pubkey, text) => ipcRenderer.invoke("dm:send", pubkey, text),
+  dmRead: (pubkey) => ipcRenderer.invoke("dm:read", pubkey),
+  onDms: (fn) => ipcRenderer.on("presence:dms", (_e, list) => fn(list)),
+  onUnread: (fn) => ipcRenderer.on("presence:unread", (_e, n) => fn(n)),
+
+  /** Contacts: favorite, verified, and a label only you ever see. */
+  socialList: () => ipcRenderer.invoke("social:list"),
+  socialGet: (pubkey) => ipcRenderer.invoke("social:get", pubkey),
+  socialFavorite: (pubkey, on) => ipcRenderer.invoke("social:favorite", pubkey, on),
+  socialVerify: (pubkey, on) => ipcRenderer.invoke("social:verify", pubkey, on),
+  socialLabel: (pubkey, label) => ipcRenderer.invoke("social:label", pubkey, label),
+  socialFingerprint: (pubkey) => ipcRenderer.invoke("social:fingerprint", pubkey),
+  onSocial: (fn) => ipcRenderer.on("social:changed", (_e, list) => fn(list)),
   tuneSdr: (rx) => ipcRenderer.send("sdr:tune", rx),
   onTuneSdr: (fn) => ipcRenderer.on("sdr:tune", (_e, rx) => fn(rx)),
   openMail: () => ipcRenderer.send("mail:open"),

@@ -34,10 +34,12 @@ function paint() {
   $("#presence").setAttribute("aria-checked", String(P.presence === true));
   $("#tips").setAttribute("aria-checked", String(P.tips !== false));
   $("#hidePreviews").setAttribute("aria-checked", String(P.hidePreviews === true));
+  $("#durableIdentity").setAttribute("aria-checked", String(P.durableIdentity === true));
   if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
   paintFingerprint();
   paintMuted();
+  paintContacts();
   $("#language").value = P.language;
 }
 
@@ -65,6 +67,11 @@ window.auralfm.onPrefs(async (next) => {
   paint();
   if (langChanged) { T = await guard("strings", () => window.auralfm.strings(), T); translate(); }
 });
+
+// Contacts change from the chat as well as from here — /fav, and an inbound
+// favorite signal from somebody keeping you back. Follow those rather than
+// showing a list that was true when the window opened.
+window.auralfm.onSocial(() => paintContacts());
 
 // Segmented controls: click, plus arrow keys for keyboard users, because a
 // radiogroup that only responds to the mouse is a radiogroup in name only.
@@ -157,14 +164,109 @@ async function paintFingerprint() {
   el.textContent = fp
     ? String(fp).match(/.{1,4}/g).slice(0, 4).join(" ")
     : (T["set.fingerprintNone"] || "not listening yet");
+
+  // The durable one, if it exists. Sixteen characters rather than the twelve
+  // shown above, because this is the one somebody will actually read to another
+  // person and rely on afterwards.
+  const dfp = s2?.durableFingerprint;
+  $("#durablefp").textContent = dfp
+    ? String(dfp).match(/.{1,4}/g).join(" ")
+    : (T["set.durableOff"] || "off — no lasting key exists");
 }
+
+/**
+ * Favorites and verification.
+ *
+ * Three independent facts per person and no attempt to summarise them into one
+ * status, because they mean different things: you kept them, they kept you back,
+ * and you checked their fingerprint face to face. Only the last one is a claim
+ * about a human being, and it is the only control here that is not a toggle of
+ * something the app already knows — it is a statement by the person clicking it.
+ */
+async function paintContacts() {
+  const box = $("#contactlist");
+  const list = await guard("socialList", () => window.auralfm.socialList(), []);
+  $("#contacts-head").textContent = list.length
+    ? `${T["set.contacts"] || "People you keep"} — ${list.length}`
+    : (T["set.contacts"] || "People you keep");
+  box.textContent = "";
+  if (!list.length) {
+    const r = document.createElement("div");
+    r.className = "row";
+    const t = document.createElement("span");
+    t.className = "name sub";
+    t.textContent = T["set.contactsNone"] || "Nobody yet. /fav <name> in the chat keeps somebody.";
+    r.append(t);
+    box.append(r);
+    return;
+  }
+  for (const c of list) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const who = document.createElement("span");
+    who.className = "name sub mono";
+    // The label they gave, then the key stub — which is what they saw in chat.
+    who.textContent = (c.label ? `${c.label} · ` : "") + c.pubkey.slice(0, 8)
+      + (c.mutual ? " ↔" : "") + (c.verified ? " ✓" : "");
+    // The two marks in the name are shorthand; this is what they actually claim.
+    who.title = [
+      c.mutual ? (T["set.mutualNote"] || "You keep each other.") : null,
+      c.verified ? (T["set.verifiedNote"] || "Fingerprint verified by you.") : null,
+    ].filter(Boolean).join(" ");
+
+    const verify = document.createElement("button");
+    verify.className = "link";
+    verify.textContent = c.verified
+      ? (T["set.unverify"] || "Unverify") : (T["set.verify"] || "Verify");
+    verify.onclick = async () => {
+      if (!c.verified) {
+        const fp = await guard("fp", () => window.auralfm.socialFingerprint(c.pubkey), null);
+        // The confirm carries the fingerprint, because "verify" with nothing to
+        // read is a button that manufactures trust out of a click.
+        if (!confirm((T["set.verifyAsk"]
+          || "Mark this person verified?\n\nOnly do this if you have read this fingerprint aloud with them, in person or on a call you already trust:\n\n")
+          + (fp?.readable || c.pubkey.slice(0, 16)))) return;
+      }
+      await guard("socialVerify", () => window.auralfm.socialVerify(c.pubkey, !c.verified));
+      paintContacts();
+    };
+
+    const drop = document.createElement("button");
+    drop.className = "link";
+    drop.textContent = c.favorite
+      ? (T["set.unfav"] || "Release") : (T["set.fav"] || "Keep");
+    drop.onclick = async () => {
+      await guard("socialFavorite", () => window.auralfm.socialFavorite(c.pubkey, !c.favorite));
+      paintContacts();
+    };
+
+    row.append(who, drop, verify);
+    box.append(row);
+  }
+}
+
+/**
+ * Turning the durable identity on and off.
+ *
+ * Off is the destructive direction, so that is the one that asks. Creating a key
+ * is reversible; destroying it is not, and anyone who wrote your fingerprint down
+ * has just lost the thing it pointed at.
+ */
+$("#durableIdentity").addEventListener("click", async () => {
+  const on = P.durableIdentity !== true;
+  if (!on && !confirm(T["set.durableOffAsk"]
+    || "Destroy your lasting identity?\n\nThe key is deleted from this Mac and cannot be recovered. "
+     + "Anyone who verified your fingerprint will find that nothing answers to it, and people who kept you will lose the link.")) return;
+  await set({ durableIdentity: on });
+  paintFingerprint();
+});
 
 $("#panic").addEventListener("click", async () => {
   if (!confirm(T["set.panicAsk"] ||
     "Erase favourites, listening history, the mute list and every key this session used? This cannot be undone.")) return;
   const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
   P = await guard("prefs", () => window.auralfm.getPrefs(), P);
-  paint(); paintMine(); paintPresence(); paintFingerprint(); paintMuted();
+  paint(); paintMine(); paintPresence(); paintFingerprint(); paintMuted(); paintContacts();
   alert((T["set.panicDone"] || "Erased.") + " " + (done || []).join(", "));
 });
 

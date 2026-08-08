@@ -773,6 +773,19 @@
   .msg.system{color:var(--label3);font-style:italic;white-space:pre-wrap}
   /* Somebody used your nickname. Marked, never announced. */
   .msg.mention{border-left:2px solid var(--accent);padding-left:6px;margin-left:-8px}
+  /* A location note, and a private message. The word carries the meaning; this
+     only makes the two scannable apart at a glance. Borders rather than fills so
+     a run of notes does not turn the log into blocks of colour. */
+  .msgkind{display:inline-block;margin-right:5px;padding:0 4px;border-radius:var(--r-sm);
+           font-size:9.5px;font-weight:640;letter-spacing:.04em;text-transform:uppercase;
+           vertical-align:1px}
+  .msgkind.note{border:1px solid var(--label3);color:var(--label2)}
+  .msgkind.dm{border:1px solid var(--accent);color:var(--accent)}
+  .msg.note{border-left:2px solid var(--label3);padding-left:6px;margin-left:-8px}
+  .msg.dm{border-left:2px solid var(--accent);padding-left:6px;margin-left:-8px}
+  /* A tick or a star after a name. Never the only carrier of its meaning — each
+     one ships an aria-label saying what it actually claims. */
+  .badge{font-size:10px;opacity:.8}
   .sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
           overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}

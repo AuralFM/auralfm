@@ -446,12 +446,35 @@
     </div>
     <p class="hint" data-i18n="set.privacyHint">A nickname is not an account — nothing verifies it, and it lasts as long as the key it travels with. Your key is different in every place you listen to, and none of them are saved.</p>
 
+    <!-- The one setting in this app that makes you trackable across sessions, so
+         it states the cost in the row itself rather than in a hint underneath. -->
+    <div class="card spaced">
+      <div class="row">
+        <span class="name" id="durableIdentity-lbl" data-i18n="set.durable">Keep one identity across sessions</span>
+        <button class="sw" id="durableIdentity" role="switch" aria-checked="false"
+                aria-labelledby="durableIdentity-lbl"></button>
+      </div>
+      <div class="row">
+        <span class="name sub" data-i18n="set.durableFp">Your lasting fingerprint</span>
+        <span class="name sub" id="durablefp">—</span>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.durableHint">Off, every key is thrown away when you quit, and nobody can favorite or verify you — there is nothing lasting to point at. On, one key is saved on this Mac and used for private messages only; presence on the globe stays anonymous either way. The cost is real: anyone watching relays can tell that the identity written to on Tuesday was written to again on Friday. Switching this off destroys the key, and anyone holding your fingerprint will find nothing answers to it.</p>
+
     <!-- Muting was one-way: you could silence somebody from the chat and then had
          no way to see who, or change your mind. -->
     <div class="card spaced">
       <div class="row"><span class="name sub" id="muted-head" data-i18n="set.muted">Muted</span></div>
       <div id="mutedlist"></div>
     </div>
+
+    <!-- Favorites and verification. Verified is a claim about a person, so it is
+         the only thing here the app will never set on somebody's behalf. -->
+    <div class="card spaced">
+      <div class="row"><span class="name sub" id="contacts-head" data-i18n="set.contacts">People you keep</span></div>
+      <div id="contactlist"></div>
+    </div>
+    <p class="hint" data-i18n="set.contactsHint">A tick means you compared fingerprints with this person yourself and they matched. Only you can set that, and only you should — read the sixteen characters aloud on a call or in person. A fingerprint somebody typed into the chat proves nothing.</p>
 
     <div class="card spaced">
       <div class="row">
