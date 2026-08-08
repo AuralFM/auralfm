@@ -769,6 +769,10 @@
   .msg .mutable{cursor:default}
   .msg .mutable:hover{text-decoration:underline;text-decoration-style:dotted}
   .msg .mutable:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:var(--r-sm)}
+  /* A line from the app, not a person. */
+  .msg.system{color:var(--label3);font-style:italic;white-space:pre-wrap}
+  /* Somebody used your nickname. Marked, never announced. */
+  .msg.mention{border-left:2px solid var(--accent);padding-left:6px;margin-left:-8px}
   .sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
           overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}

@@ -37,6 +37,7 @@ function paint() {
   if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
   paintFingerprint();
+  paintMuted();
   $("#language").value = P.language;
 }
 
@@ -104,6 +105,48 @@ $("#nickname").addEventListener("change", (e) =>
  * possible without an account. It changes when the place does, which is the
  * point, so it is re-read whenever presence stats are.
  */
+/**
+ * Who you have muted, and a way back.
+ *
+ * Shows the same eight characters the chat shows, because that is what somebody
+ * would recognise — they never saw the whole key. Unmuting is one click, and the
+ * list repaints from main rather than from a local copy, so it cannot drift.
+ */
+async function paintMuted() {
+  const box = $("#mutedlist");
+  const keys = await guard("muteList", () => window.auralfm.muteList(), []);
+  $("#muted-head").textContent = keys.length
+    ? `${T["set.muted"] || "Muted"} — ${keys.length}`
+    : (T["set.muted"] || "Muted");
+  box.textContent = "";
+  if (!keys.length) {
+    const r = document.createElement("div");
+    r.className = "row";
+    const t = document.createElement("span");
+    t.className = "name sub";
+    t.textContent = T["set.mutedNone"] || "Nobody. Click a name in the chat to mute them.";
+    r.append(t);
+    box.append(r);
+    return;
+  }
+  for (const key of keys) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const who = document.createElement("span");
+    who.className = "name sub mono";
+    who.textContent = key.slice(0, 8);
+    const un = document.createElement("button");
+    un.className = "link";
+    un.textContent = T["set.unmute"] || "Unmute";
+    un.onclick = async () => {
+      await guard("muteRemove", () => window.auralfm.muteRemove(key));
+      paintMuted();
+    };
+    row.append(who, un);
+    box.append(row);
+  }
+}
+
 async function paintFingerprint() {
   const s2 = await guard("presenceStats", () => window.auralfm.presenceStats(), null);
   const el = $("#fingerprint");
@@ -121,7 +164,7 @@ $("#panic").addEventListener("click", async () => {
     "Erase favourites, listening history, the mute list and every key this session used? This cannot be undone.")) return;
   const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
   P = await guard("prefs", () => window.auralfm.getPrefs(), P);
-  paint(); paintMine(); paintPresence(); paintFingerprint();
+  paint(); paintMine(); paintPresence(); paintFingerprint(); paintMuted();
   alert((T["set.panicDone"] || "Erased.") + " " + (done || []).join(", "));
 });
 

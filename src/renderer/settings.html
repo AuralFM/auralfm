@@ -270,6 +270,7 @@
   #nickname{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
   #nickname:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   #fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.04em}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.03em}
   .hint{
     font-size:11px;line-height:1.4;color:var(--label2);
     padding:4px 2px 9px;margin:0;
@@ -444,6 +445,13 @@
       </div>
     </div>
     <p class="hint" data-i18n="set.privacyHint">A nickname is not an account — nothing verifies it, and it lasts as long as the key it travels with. Your key is different in every place you listen to, and none of them are saved.</p>
+
+    <!-- Muting was one-way: you could silence somebody from the chat and then had
+         no way to see who, or change your mind. -->
+    <div class="card spaced">
+      <div class="row"><span class="name sub" id="muted-head" data-i18n="set.muted">Muted</span></div>
+      <div id="mutedlist"></div>
+    </div>
 
     <div class="card spaced">
       <div class="row">

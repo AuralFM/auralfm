@@ -3134,6 +3134,8 @@ function paintChatHead() {
 }
 
 function paintChat(list) {
+  // Kept so /mute can turn a name somebody typed into the key it belongs to.
+  chatCache = Array.isArray(list) ? list.slice(-200) : [];
   const log = $("chatlog");
   if (!log) return;
   // Only stick to the bottom if the reader is already there — yanking someone
@@ -3163,6 +3165,13 @@ function paintChat(list) {
       };
       who.onclick = mute;
       who.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mute(); } };
+    }
+    // Mentions. BitChat uses @nickname to notify a specific person; here it only
+    // marks the line, because there are no notifications to raise and a chat that
+    // pings is a chat that interrupts listening.
+    const mine = (prefs.nickname || "").trim();
+    if (mine && new RegExp(`@${mine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(m.text)) {
+      el.classList.add("mention");
     }
     el.append(who, document.createTextNode(m.text));
     // Everyone here from AuralFM is tuned in rather than standing there, and
@@ -3252,11 +3261,111 @@ function paintComposer() {
     : t("chat.placeholder", "Say something to this place");
 }
 
+/**
+ * Slash commands.
+ *
+ * BitChat's own instructions end with "type / for commands", and it is the right
+ * shape for this: a chat box with one text field and no room for buttons, in an
+ * app whose users are shortwave listeners already comfortable with terse syntax.
+ *
+ * Nothing here reaches a relay except /drop. The rest are local — which is the
+ * point, because the useful commands in a room you cannot moderate are the ones
+ * that change what *you* see.
+ */
+const COMMANDS = {
+  "/help": {
+    hint: "list these commands",
+    run: () => systemLine(Object.entries(COMMANDS)
+      .map(([k, v]) => `${k} — ${v.hint}`).join("\n")),
+  },
+  "/who": {
+    hint: "who else is here",
+    run: () => {
+      const n = peers.length;
+      systemLine(n
+        ? `${n} ${n === 1 ? "person" : "people"} visible on the relays right now.`
+        : "Nobody else is visible on the relays right now.");
+    },
+  },
+  "/clear": {
+    hint: "clear this log (local only)",
+    run: () => { $("chatlog").textContent = ""; systemLine("Cleared. Only here — the relays still have it."); },
+  },
+  "/me": {
+    hint: "/me is listening — sends as an action",
+    run: (rest) => rest ? { send: `* ${rest}` } : systemLine("Say what you are doing: /me is tuning around."),
+  },
+  "/mute": {
+    hint: "/mute <name> — stop seeing somebody",
+    run: async (rest) => {
+      const want = (rest || "").trim().toLowerCase();
+      if (!want) return systemLine("Who? /mute followed by the name shown beside a message.");
+      const hit = chatCache.find((m) => !m.mine && m.pubkey &&
+        ((m.nick || "").toLowerCase() === want || m.from.toLowerCase().startsWith(want)));
+      if (!hit) return systemLine(`Nobody called "${rest.trim()}" has said anything here.`);
+      await guard("muteAdd", () => window.auralfm.muteAdd(hit.pubkey));
+      systemLine(`Muted ${hit.nick || hit.from}. Settings can undo it.`);
+    },
+  },
+  "/wipe": {
+    hint: "erase everything, now",
+    run: () => { panicWipe(); },
+  },
+};
+
+/**
+ * Erase everything, from here.
+ *
+ * BitChat's triple-tap. Confirmed rather than instant, because on a desktop a
+ * stray triple-click on a panel is far likelier than on a phone logo, and an
+ * unrecoverable action that fires on a mis-click is a worse bug than not having
+ * the gesture.
+ */
+async function panicWipe() {
+  if (!confirm(t("chat.wipeAsk",
+    "Erase favorites, listening history, the mute list and every key this session used? This cannot be undone."))) return;
+  const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
+  $("chatlog").textContent = "";
+  systemLine(t("chat.wiped", "Erased.") + " " + (done || []).join(", "));
+}
+
+/** A line in the log from the app rather than from a person. */
+function systemLine(text) {
+  const log = $("chatlog");
+  const el = document.createElement("div");
+  el.className = "msg system";
+  el.textContent = text;
+  log.append(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+/** Newest messages, kept so /mute can resolve a name to a key. */
+let chatCache = [];
+
+/**
+ * Triple-click the log to wipe, which is BitChat's triple-tap.
+ *
+ * `detail` counts clicks in a native multi-click sequence, so this needs no
+ * timers of its own and matches whatever the system considers a triple-click.
+ */
+$("chatlog").addEventListener("click", (e) => { if (e.detail === 3) panicWipe(); });
+
 $("chatform").onsubmit = async (e) => {
   e.preventDefault();
   const input = $("chatinput");
-  const text = input.value.trim();
+  let text = input.value.trim();
   if (!text) return;
+
+  if (text.startsWith("/")) {
+    const [word, ...rest] = text.split(" ");
+    const cmd = COMMANDS[word.toLowerCase()];
+    input.value = "";
+    if (!cmd) return systemLine(`${word} is not a command. Try /help.`);
+    const out = await cmd.run(rest.join(" "));
+    if (!out || !out.send) return;
+    text = out.send;                     // /me rewrites rather than intercepts
+  }
+
   input.disabled = true;
   const sent = await window.auralfm.chatSay(text, null).catch(() => false);
   input.disabled = false;
