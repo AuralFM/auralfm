@@ -1,46 +1,51 @@
 /**
- * The introduction, once.
+ * The introduction.
  *
- * Apple's position on onboarding is that a tour is the weakest way to teach an
- * interface — the strong way is an interface that explains itself, which is what
- * the help tags are for. This exists because the globe is genuinely unusual:
- * nothing about a sphere covered in dots says "click a dot to hear that place",
- * and a person who does not discover that has not seen the app at all.
+ * Apple's TipKit guidance is that a tip teaches a new feature, reveals a hidden
+ * one, or shows a faster way — and that it should be quick, instructional and
+ * easy to remember. Not promotion, not error messages, not long instructions.
+ * Every step here is one sentence for that reason.
  *
- * So it is deliberately small. Three steps, each anchored to a control that is
- * actually on screen, skippable at every one of them, and it never appears
- * again on its own — Settings can replay it, nothing else will.
+ * A welcome card in the middle first, because arriving inside a walkthrough with
+ * no idea what the app is reads as an interruption. Then three tips, each beside
+ * the control it describes with an arrow pointing at it — never on top of it,
+ * because a card covering the thing it is explaining is the commonest way this
+ * pattern fails.
  *
- * It waits for the globe. Running while the window is still assembling would
- * point at controls that have not been laid out yet, and the arrow would be
- * aimed at the wrong place.
+ * Back as well as forward. A walkthrough you can only leave is one people leave.
  */
 (() => {
   const STEPS = [
     {
+      welcome: true,
+      title: "Welcome to AuralFM",
+      body: "A globe you listen to. Click anywhere to hear what that place is playing.",
+    },
+    {
       anchor: "#layersBtn",
-      title: "Everything on the globe is a layer",
-      body: "Weather, the day and night line, the ISS, shortwave receivers. Turn on what you want to see.",
+      title: "Globe layers",
+      body: "Weather, day and night, the ISS, shortwave receivers.",
     },
     {
       anchor: "#newsBtn",
-      title: "Headlines follow the station",
-      body: "Whatever you are listening to, this shows what is being reported where it is broadcasting from.",
+      title: "Headlines",
+      body: "What is being reported where your station broadcasts from.",
     },
     {
       anchor: "#favBtn",
-      title: "Keep the ones you like",
-      body: "The star beside any station saves it here, and to the menu bar.",
+      title: "Favorites",
+      body: "The star beside a station keeps it here and in the menu bar.",
     },
   ];
 
-  let i = 0, card = null, shade = null;
-
   const $ = (s) => document.querySelector(s);
 
+  let i = 0, card = null, ring = null, arrow = null, pending = false;
+
   function teardown(seen) {
-    card?.remove(); shade?.remove();
-    card = shade = null;
+    for (const n of [card, ring, arrow]) n?.remove();
+    card = ring = arrow = null;
+    pending = false;
     removeEventListener("keydown", onKey, true);
     removeEventListener("resize", position);
     if (seen) window.auralfm?.setPrefs?.({ tourSeen: true });
@@ -48,42 +53,91 @@
 
   function onKey(e) {
     if (e.key === "Escape") { e.preventDefault(); teardown(true); }
-    else if (e.key === "Enter" || e.key === "ArrowRight") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); go(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+  }
+
+  /** Centre the welcome card; park everything else off-screen. */
+  function centre() {
+    const c = card.getBoundingClientRect();
+    card.style.left = `${Math.round((innerWidth - c.width) / 2)}px`;
+    card.style.top = `${Math.round((innerHeight - c.height) / 2 - 20)}px`;
+    ring.hidden = true;
+    arrow.hidden = true;
+  }
+
+  /**
+   * Put the card beside its control, with the arrow between them.
+   *
+   * Below when there is room, above when there is not, and always clear of the
+   * control by the arrow's own height — the card must never cover the thing the
+   * sentence is about.
+   */
+  function beside(target) {
+    const GAP = 13;
+    const r = target.getBoundingClientRect();
+    const c = card.getBoundingClientRect();
+
+    const below = r.bottom + GAP + c.height < innerHeight - 12;
+    const top = below ? r.bottom + GAP : r.top - GAP - c.height;
+    let left = r.left + r.width / 2 - c.width / 2;
+    left = Math.max(12, Math.min(left, innerWidth - c.width - 12));
+
+    card.style.left = `${Math.round(left)}px`;
+    card.style.top = `${Math.round(top)}px`;
+
+    ring.hidden = false;
+    ring.style.left = `${Math.round(r.left - 5)}px`;
+    ring.style.top = `${Math.round(r.top - 5)}px`;
+    ring.style.width = `${Math.round(r.width + 10)}px`;
+    ring.style.height = `${Math.round(r.height + 10)}px`;
+
+    // The arrow is a rotated square, so half its diagonal is what sticks out.
+    arrow.hidden = false;
+    arrow.className = `tourarrow ${below ? "up" : "down"}`;
+    arrow.style.left = `${Math.round(r.left + r.width / 2 - 5)}px`;
+    arrow.style.top = `${Math.round(below ? top - 5 : top + c.height - 5)}px`;
   }
 
   function position() {
     if (!card) return;
-    const target = $(STEPS[i].anchor);
-    if (!target) return;
-    const r = target.getBoundingClientRect();
-    const c = card.getBoundingClientRect();
-    let left = r.left + r.width / 2 - c.width / 2;
-    left = Math.max(12, Math.min(left, innerWidth - c.width - 12));
-    let top = r.bottom + 12;
-    if (top + c.height > innerHeight - 12) top = Math.max(12, r.top - c.height - 12);
-    card.style.left = `${Math.round(left)}px`;
-    card.style.top = `${Math.round(top)}px`;
-    // The ring sits on the control being described, so the sentence has a subject.
-    shade.style.left = `${Math.round(r.left - 5)}px`;
-    shade.style.top = `${Math.round(r.top - 5)}px`;
-    shade.style.width = `${Math.round(r.width + 10)}px`;
-    shade.style.height = `${Math.round(r.height + 10)}px`;
+    const step = STEPS[i];
+    if (step.welcome) return centre();
+    const target = $(step.anchor);
+    if (target) beside(target);
   }
 
   function render() {
     const step = STEPS[i];
     card.innerHTML = "";
+    card.classList.toggle("welcome", !!step.welcome);
+
     const h = document.createElement("div");
     h.className = "tourh";
     h.textContent = step.title;
     const p = document.createElement("p");
     p.textContent = step.body;
+
     const row = document.createElement("div");
     row.className = "tourrow";
 
+    // Back is a chevron rather than a word: it is the smaller of the two
+    // choices and should read that way. Absent on the first step, where there
+    // is nowhere to go.
+    const back = document.createElement("button");
+    back.className = "tourback";
+    back.textContent = "‹";
+    back.setAttribute("aria-label", "Previous");
+    back.onclick = () => go(-1);
+    back.disabled = i === 0;
+
     const dots = document.createElement("span");
     dots.className = "tourdots";
-    dots.textContent = STEPS.map((_, n) => (n === i ? "●" : "○")).join(" ");
+    for (let n = 0; n < STEPS.length; n++) {
+      const d = document.createElement("i");
+      if (n === i) d.className = "on";
+      dots.append(d);
+    }
     dots.setAttribute("aria-label", `Step ${i + 1} of ${STEPS.length}`);
 
     const skip = document.createElement("button");
@@ -91,57 +145,65 @@
     skip.textContent = "Skip";
     skip.onclick = () => teardown(true);
 
-    const go = document.createElement("button");
-    go.className = "tourgo";
-    go.textContent = i === STEPS.length - 1 ? "Done" : "Next";
-    go.onclick = next;
+    const next = document.createElement("button");
+    next.className = "tourgo";
+    next.textContent = step.welcome ? "Show me" : (i === STEPS.length - 1 ? "Done" : "Next");
+    next.onclick = () => go(1);
 
-    row.append(dots, skip, go);
+    row.append(back, dots, skip, next);
     card.append(h, p, row);
     position();
-    go.focus();
+    next.focus();
   }
 
-  function next() {
-    i++;
-    if (i >= STEPS.length) return teardown(true);
+  function go(delta) {
+    const n = i + delta;
+    if (n < 0) return;
+    if (n >= STEPS.length) return teardown(true);
+    i = n;
     render();
   }
 
   function start() {
+    pending = false;
+    if (card) return;
     // A step whose control is missing would point at nothing.
-    if (!STEPS.every((s) => $(s.anchor))) return;
-    shade = document.createElement("div");
-    shade.className = "tourring";
+    if (!STEPS.every((s) => s.welcome || $(s.anchor))) return;
+    i = 0;
+    ring = document.createElement("div");
+    ring.className = "tourring";
+    arrow = document.createElement("div");
+    arrow.className = "tourarrow";
     card = document.createElement("div");
     card.className = "tourcard";
     card.setAttribute("role", "dialog");
-    card.setAttribute("aria-modal", "false");
     card.setAttribute("aria-label", "Introduction");
-    document.body.append(shade, card);
+    document.body.append(ring, arrow, card);
     addEventListener("keydown", onKey, true);
     addEventListener("resize", position);
     render();
   }
 
-  // Claimed the moment maybeStart is accepted, not when the card appears.
-  // applyPrefs runs more than once — on boot and again on every prefs:changed —
-  // and both calls cleared an `if (card)` guard while card was still null,
-  // because the card is created 700ms later. That rendered the tour twice, one
-  // card exactly on top of the other.
-  let claimed = false;
-
   window.Tour = {
+    /**
+     * Called on every prefs change, so it has to be idempotent while running and
+     * still able to start again afterwards.
+     *
+     * `pending` rather than a permanent latch. applyPrefs fires on boot and on
+     * every prefs:changed, and a once-only flag meant Settings could set
+     * tourSeen back to false and nothing happened until the app was restarted —
+     * which is exactly what Melton hit. The flag now covers only the gap between
+     * being asked and the card appearing.
+     */
     maybeStart(prefs) {
       if (!prefs || prefs.tourSeen) return;
-      if (claimed || card) return;
-      claimed = true;
-      // After the reveal, so the controls have their final positions.
-      const go = () => setTimeout(start, 700);
-      if (document.body.classList.contains("revealed")) go();
+      if (card || pending) return;
+      pending = true;
+      const soon = () => setTimeout(start, 500);
+      if (document.body.classList.contains("revealed")) soon();
       else {
         const obs = new MutationObserver(() => {
-          if (document.body.classList.contains("revealed")) { obs.disconnect(); go(); }
+          if (document.body.classList.contains("revealed")) { obs.disconnect(); soon(); }
         });
         obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
       }

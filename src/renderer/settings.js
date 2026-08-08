@@ -236,8 +236,13 @@ async function paintRelays() {
   card.style.display = P.presence ? "" : "none";
   if (!P.presence) return;
 
-  $("#relay-head").textContent =
-    `${T["set.relays"] || "Relays"} — ${s?.connected ?? 0}/${urls.length} ${T["set.relayConnected"] || "connected"}`;
+  // Counting to zero is worse than not counting. Before anything plays there are
+  // no relays to have, because they are chosen from the place you are listening
+  // to — so the heading is just "Relays" and the row underneath says why it is
+  // empty. Saying it in both places is what made this section confusing.
+  $("#relay-head").textContent = urls.length
+    ? `${T["set.relays"] || "Relays"} — ${s?.connected ?? 0}/${urls.length} ${T["set.relayConnected"] || "connected"}`
+    : (T["set.relays"] || "Relays");
 
   box.innerHTML = "";
   if (!urls.length) {

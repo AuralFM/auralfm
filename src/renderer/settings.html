@@ -265,6 +265,7 @@
   /* Aligned with the section heading above it, not with the card's inner
      padding. h2 sits at 2px, so a hint at 14px read as a stray indent under
      every section except About, which happens to have no hint. */
+  .card.spaced{margin-top:10px}
   .hint{
     font-size:11px;line-height:1.4;color:var(--label2);
     padding:4px 2px 9px;margin:0;
@@ -404,7 +405,10 @@
     <!-- Which relays this app is actually talking to, and the chance to change
          them. An app that says it is decentralised should be able to show you
          the list rather than ask you to take it on faith. -->
-    <div class="card" id="relaycard">
+    <!-- Its own card, and it needs the gap: presence status and relay status are
+         different facts, and pressed together they read as one confused
+         sentence. -->
+    <div class="card spaced" id="relaycard">
       <div class="row"><span class="name sub" id="relay-head" data-i18n="set.relays">Relays</span></div>
       <div id="relaylist"></div>
       <div class="row">
@@ -424,12 +428,12 @@
         <span class="name" data-i18n="set.tips">Help tags</span>
         <button class="sw" id="tips" role="switch" aria-checked="true"></button>
       </div>
-      <p class="hint" data-i18n="set.tipsHint">Short descriptions when you rest the pointer on a control. Turn this off and macOS shows its own instead.</p>
       <div class="row">
         <span class="name" data-i18n="set.replayTour">Show the introduction again</span>
         <button class="link" id="replayTour" data-i18n="set.replay">Replay</button>
       </div>
     </div>
+    <p class="hint" data-i18n="set.tipsHint">Short descriptions when you rest the pointer on a control. Turn this off and macOS shows its own instead.</p>
 
     <h2 data-i18n="set.about">About</h2>
     <div class="card">

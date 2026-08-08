@@ -641,7 +641,6 @@ function paintSignal(rssi) {
     dot.classList.remove("sig");
     dot.style.removeProperty("--pulse-min");
     dot.style.removeProperty("--pulse-dur");
-    dot.title = "";
     return;
   }
   const q = Math.max(0, Math.min(1, (rssi + 105) / 50));
@@ -649,7 +648,8 @@ function paintSignal(rssi) {
   // Strong -> falls only to 0.88 and takes 2.6s. Weak -> falls to 0.12, 0.55s.
   dot.style.setProperty("--pulse-min", (0.12 + q * 0.76).toFixed(3));
   dot.style.setProperty("--pulse-dur", (0.55 + q * 2.05).toFixed(2) + "s");
-  dot.title = `Signal ${Math.round(rssi)} dBm`;
+  // The dot already shows signal strength by how it breathes; a number in a
+  // help tag is a second, worse version of the same thing.
 }
 
 window.auralfm.onPlayerState((s) => {
@@ -798,9 +798,7 @@ function setLocked(on) {
   const b = $("lock");
   b.setAttribute("aria-pressed", on);
   Icons.set(b, on ? "lock" : "unlock");
-  b.title = on
-    ? "Locked — browsing won't change the station. Click a station to switch."
-    : "Lock this station while you browse";
+  b.title = on ? "Locked while you browse" : "Lock this station";
   window.auralfm.getState().then((st) => window.auralfm.setState({ ...(st || {}), locked: on }));
 }
 $("lock").onclick = () => setLocked(!locked);
@@ -943,9 +941,11 @@ async function renderMarkets() {
     ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(1)}%`;
     el.appendChild(wrap);
   }
-  el.title = hasStocks
-    ? "Crypto and equities · 24h change"
-    : "Crypto · 24h change. Equities need an API key (set AURALFM_STOCK_KEY).";
+  // No help tag. "BTC 65,016" is a price next to a symbol and needs no
+  // explanation, and the old one spent two lines on an environment variable that
+  // is a maintainer's concern rather than a listener's. The price itself is live
+  // off Coinbase's feed; only the percentage is the 24h change, which is what
+  // every ticker shows.
   fitMarkets();
 }
 
@@ -1862,9 +1862,10 @@ async function initGlobe() {
       const d = pickPoint(e);
       const hit = d && facing(d.lat, d.lng) ? d : null;
       el.style.cursor = hit ? "pointer" : "";
-      el.title = !hit ? "" : hit.kind === "sdr"
-        ? `${hit.loc || hit.name} · shortwave receiver`
-        : `${hit.label || ""} ${hit.count} station${hit.count === 1 ? "" : "s"}`.trim();
+      // Deliberately no tag on the globe. A label that follows the pointer across
+      // a sphere is not help, it is a readout appearing where nobody asked for
+      // one — and with a station locked it describes something you are not even
+      // listening to. What is under the pointer belongs on the status line.
     });
   });
 
@@ -3115,10 +3116,12 @@ function paintChatHead() {
    * the question keeps getting asked.
    */
   const everywhere = peers.length;
-  who.title = everywhere > near
-    ? `${near} in this cell · ${everywhere} visible to the relays right now, worldwide. ` +
-      `Only this cell's conversation is shown here.`
-    : `${near} in this cell. Nobody else is visible on the relays right now.`;
+  // No tag. This was two sentences explaining a number that is already on
+  // screen — a readout wearing a help tag, and the longest one in the app. Help
+  // tags describe how to use a control; this describes data.
+  who.setAttribute("aria-label", everywhere > near
+    ? `${near} here, ${everywhere} worldwide`
+    : `${near} here`);
 }
 
 function paintChat(list) {

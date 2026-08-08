@@ -688,36 +688,69 @@
   }
   .helptag.on{opacity:1;transform:none}
   @media (prefers-reduced-motion: reduce){ .helptag{transition:none} }
-  /* The introduction. A ring on the control being described, and a card that
-     never covers it — the sentence needs its subject visible. No dimming
-     backdrop: this is not modal, and the globe carries on turning behind it. */
+  /* The introduction.
+     A ring on the control, an arrow between, and the card clear of both — a card
+     covering the thing it explains is the commonest way this pattern fails. No
+     dimming backdrop: it is not modal and the globe keeps turning behind it. */
   .tourring{
     position:fixed;z-index:8990;pointer-events:none;border-radius:var(--r-lg);
     border:1.5px solid var(--accent);
-    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent);
     transition:all var(--dur-panel) var(--ease-drawer);
   }
+  /* A rotated square borrowing the card's own fill and border, so only the two
+     outward edges show and it reads as part of the card rather than a decoration
+     stuck to it. */
+  .tourarrow{
+    position:fixed;z-index:9002;pointer-events:none;width:10px;height:10px;
+    background:var(--pane);transform:rotate(45deg);
+    transition:all var(--dur-panel) var(--ease-drawer);
+  }
+  .tourarrow.up{border-left:1px solid var(--line);border-top:1px solid var(--line)}
+  .tourarrow.down{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
   .tourcard{
-    position:fixed;z-index:9001;width:266px;padding:13px 14px 11px;
+    position:fixed;z-index:9001;width:252px;padding:13px 14px 10px;
     border-radius:var(--r-xl);background:var(--pane);border:1px solid var(--line);
     box-shadow:0 14px 44px rgba(0,0,0,.42);
     -webkit-backdrop-filter:saturate(180%) blur(24px);
     backdrop-filter:saturate(180%) blur(24px);
+    transition:left var(--dur-panel) var(--ease-drawer),
+               top var(--dur-panel) var(--ease-drawer);
   }
-  .tourcard .tourh{font-size:13px;font-weight:590;letter-spacing:-.008em;margin-bottom:5px}
+  .tourcard.welcome{width:288px;text-align:center}
+  .tourcard .tourh{font-size:13.5px;font-weight:590;letter-spacing:-.01em;margin-bottom:4px}
+  .tourcard.welcome .tourh{font-size:16px;margin-bottom:6px}
   .tourcard p{font-size:12px;line-height:1.45;color:var(--label2);margin:0 0 11px}
-  .tourrow{display:flex;align-items:center;gap:8px}
-  .tourdots{font-size:8px;color:var(--label3);letter-spacing:2px;flex:1;line-height:1}
+  .tourrow{display:flex;align-items:center;gap:7px}
+  .tourcard.welcome .tourrow{justify-content:center}
+  .tourback{
+    appearance:none;background:none;border:0;color:var(--label2);font:inherit;
+    font-size:15px;line-height:1;cursor:default;padding:2px 6px;
+    border-radius:var(--r-sm);flex:none;
+  }
+  .tourback:hover:not(:disabled){background:var(--fill);color:var(--label)}
+  .tourback:disabled{opacity:0;pointer-events:none}   /* holds its space */
+  .tourdots{display:flex;align-items:center;gap:4px;flex:1}
+  .tourcard.welcome .tourdots{flex:none}
+  .tourdots i{
+    width:4px;height:4px;border-radius:50%;background:var(--label3);
+    transition:background var(--dur-hover) var(--ease-out);
+  }
+  .tourdots i.on{background:var(--accent)}
   .tourskip,.tourgo{
     appearance:none;border:0;font:inherit;font-size:12px;cursor:default;
-    padding:4px 11px;border-radius:var(--r-pill);
+    padding:4px 11px;border-radius:var(--r-pill);flex:none;
   }
   .tourskip{background:none;color:var(--label2)}
   .tourskip:hover{color:var(--label)}
   .tourgo{background:var(--accent);color:var(--on-accent);font-weight:590}
   .tourgo:hover{filter:brightness(1.08)}
-  .tourgo:focus-visible,.tourskip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  @media (prefers-reduced-motion: reduce){ .tourring{transition:none} }
+  .tourgo:focus-visible,.tourskip:focus-visible,.tourback:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .tourring,.tourarrow,.tourcard{transition:none}
+  }
   .sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
           overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
@@ -1155,7 +1188,7 @@
         <div class="newshead">
           <b id="newsplace">Headlines</b>
           <button id="newsSrc" title="Change source" data-i18n-title="ctl.changeSource"></button>
-          <button id="newsClose" title="Close" data-i18n-title="ctl.close">×</button>
+          <button id="newsClose">×</button>
         </div>
         <div class="newslist" id="newslist"></div>
       </aside>
@@ -1228,7 +1261,7 @@
 </div>
 
 <div class="now" id="now" hidden>
-  <button id="play" title="Play / pause" data-i18n-title="ctl.playPause"></button>
+  <button id="play"></button>
   <!-- Order is the layout. The two controls that act on this station sit
        together, then the on-air lamp sits against the name it describes. The
        lamp used to fall between the lock and the star, which read as three
@@ -1243,8 +1276,8 @@
        say "Connecting…" without ever saying to what. This carries both. -->
   <span id="nowSpoken" class="sronly" role="status" aria-live="polite"></span>
   <span class="volwrap">
-    <button id="mute" title="Mute" data-i18n-title="ctl.mute"></button>
-    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume" data-i18n-title="ctl.volume">
+    <button id="mute"></button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8">
   </span>
   <span class="markets" id="markets"></span>
 </div>
