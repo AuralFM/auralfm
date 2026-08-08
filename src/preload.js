@@ -84,6 +84,11 @@ contextBridge.exposeInMainWorld("auralfm", {
   presenceView: (lat, lon) => ipcRenderer.send("presence:view", lat, lon),
 
   onPeers: (fn) => ipcRenderer.on("presence:peers", (_e, list) => fn(list)),
+  // Muting. The renderer passes the full pubkey it received with the message;
+  // main validates it and owns the list.
+  muteList: () => ipcRenderer.invoke("mute:list"),
+  muteAdd: (pubkey) => ipcRenderer.invoke("mute:add", pubkey),
+  muteRemove: (pubkey) => ipcRenderer.invoke("mute:remove", pubkey),
   chatHistory: () => ipcRenderer.invoke("presence:history"),
   chatSay: (text, nick) => ipcRenderer.invoke("presence:say", text, nick),
   onChat: (fn) => ipcRenderer.on("presence:messages", (_e, list) => fn(list)),

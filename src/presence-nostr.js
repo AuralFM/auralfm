@@ -394,7 +394,12 @@ function record(evt, mine = false) {
     id: evt.id,
     at: (evt.created_at || 0) * 1000,
     geohash: g,
+    // Two forms on purpose. `from` is a label — eight characters is enough to
+    // tell two strangers apart in a list. `pubkey` is the identity, and muting
+    // has to key on all of it: eight hex characters is thirty-two bits, and
+    // grinding a key that collides with somebody's mute entry is trivial.
     from: String(evt.pubkey || "").slice(0, 8),
+    pubkey: String(evt.pubkey || ""),
     nick: (evt.tags || []).find((t) => t[0] === "n")?.[1]?.slice(0, 32) || null,
     // Someone posting into a cell they are not standing in — us, always, and
     // some of them. Worth showing rather than flattening.

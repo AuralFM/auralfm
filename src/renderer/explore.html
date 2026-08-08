@@ -764,6 +764,11 @@
   @media (prefers-reduced-motion: reduce){
     .tourring,.tourarrow,.tourcard{transition:none}
   }
+  /* A sender's name, when it belongs to somebody else. Underlined on hover only
+     — a chat log full of permanently underlined names reads as a page of links. */
+  .msg .mutable{cursor:default}
+  .msg .mutable:hover{text-decoration:underline;text-decoration-style:dotted}
+  .msg .mutable:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:var(--r-sm)}
   .sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
           overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}

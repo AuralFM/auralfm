@@ -36,6 +36,7 @@ const palettes = require("./palettes");
 const mine = require("./mystations");
 const docs = require("./docs");
 const tips = require("./tips");
+const muted = require("./muted");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -923,6 +924,28 @@ ipcMain.handle("tips:next", (_e, uptime) => {
 ipcMain.on("tips:retire", (_e, id, reason) =>
   tips.retire(String(id || ""), String(reason || "dismissed")));
 
+/**
+ * The mute list.
+ *
+ * Muting takes the eight-character label the renderer shows and resolves it to a
+ * full key through the messages main already has, because the renderer never
+ * holds a whole pubkey and should not have to.
+ */
+ipcMain.handle("mute:list", () => muted.list());
+
+ipcMain.handle("mute:add", (_e, pubkey) => {
+  const ok = muted.add(String(pubkey || ""));
+  // Repaint at once so the muted messages leave the window in the same gesture.
+  if (ok) broadcast("presence:messages", muted.filter(nostr.history()));
+  return ok;
+});
+
+ipcMain.handle("mute:remove", (_e, pubkey) => {
+  const ok = muted.remove(String(pubkey || ""));
+  if (ok) broadcast("presence:messages", muted.filter(nostr.history()));
+  return ok;
+});
+
 ipcMain.handle("docs:list", () => docs.list());
 ipcMain.handle("docs:read", (_e, id) => docs.read(id));
 
@@ -1061,7 +1084,7 @@ ipcMain.handle("i18n:strings", () => getStrings());
 ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("palettes:list", () => palettes.list());
 ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
-ipcMain.handle("presence:history", () => nostr.history());
+ipcMain.handle("presence:history", () => muted.filter(nostr.history()));
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.
 ipcMain.handle("presence:say", (_e, text, nick) => nostr.say(text, nick));
@@ -1222,6 +1245,7 @@ if (!app.requestSingleInstanceLock()) {
     // A launch is a launch whether or not a window renders, so it is donated
     // here rather than from the renderer.
     tips.init(app.getPath("userData"));
+    muted.init(app.getPath("userData"));
     tips.donate("appOpened");
 
     // Standalone app with a menu bar companion: the globe is what people came
@@ -1239,7 +1263,11 @@ if (!app.requestSingleInstanceLock()) {
     markets.start();        // live crypto feed; falls back to polling on its own
     presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
-    nostr.onMessages((list) => explore?.webContents.send("presence:messages", list));
+    // Filtered here, not in the renderer. A muted message never crosses the
+    // bridge, so there is nothing in the DOM to hide and nothing to render by
+    // accident later.
+    nostr.onMessages((list) =>
+      explore?.webContents.send("presence:messages", muted.filter(list)));
     if (presence.enabled()) console.log("presence: enabled");
     buildMenu();
     createWindow();

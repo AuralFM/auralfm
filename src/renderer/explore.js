@@ -3147,6 +3147,23 @@ function paintChat(list) {
     who.className = "who";
     // No nickname is the common case, and a truncated pubkey is at least true.
     who.textContent = (m.mine ? t("chat.you", "you") : (m.nick || m.from)) + "  ";
+    // The name is the mute control. Nothing else in a chat line identifies a
+    // person, so there is nowhere better to put it, and a separate button on
+    // every message would be a column of buttons nobody wants.
+    if (!m.mine && m.pubkey) {
+      who.classList.add("mutable");
+      who.tabIndex = 0;
+      who.setAttribute("role", "button");
+      who.title = t("chat.mute", "Mute this person");
+      const mute = async () => {
+        const label = m.nick || m.from;
+        if (!confirm(t("chat.muteAsk", `Mute ${label}? You will stop seeing their messages. This is only on this Mac.`)
+                       .replace("{who}", label))) return;
+        await guard("muteAdd", () => window.auralfm.muteAdd(m.pubkey));
+      };
+      who.onclick = mute;
+      who.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mute(); } };
+    }
     el.append(who, document.createTextNode(m.text));
     // Everyone here from AuralFM is tuned in rather than standing there, and
     // some bitchat users are too. Say so, quietly.
