@@ -99,13 +99,9 @@ use AuralFM after a change means you accept it.
 
 ## Governing law
 
-<!-- TODO(melton): fill in your state. This needs to be where you actually
-     live, and nobody can supply it but you. It is the state whose courts would
-     hear a dispute, so a wrong one is worse than none. -->
-
-These terms are governed by the laws of the State of **[YOUR STATE]** and the
-United States, without regard to conflict-of-laws rules. If a court finds any
-part of these terms unenforceable, the rest stays in force.
+These terms are governed by the laws of the State of Texas and the United States,
+without regard to conflict-of-laws rules. If a court finds any part of these terms
+unenforceable, the rest stays in force.
 
 ## Contact
 
