@@ -21,11 +21,13 @@
   const uptime = () => Math.round(performance.now() - START);
 
   let card = null, ring = null, arrow = null, showing = null, asked = false;
+  let retiredBy = null;      // the event that means this one is no longer needed
 
   const $ = (s) => document.querySelector(s);
 
   function close(reason) {
     if (showing) window.auralfm?.tipRetire?.(showing, reason);
+    retiredBy = null;
     for (const n of [card, ring, arrow]) n?.remove();
     card = ring = arrow = null;
     showing = null;
@@ -63,6 +65,7 @@
     if (!$(tip.anchor)) return;
 
     showing = tip.id;
+    retiredBy = tip.retiredBy || null;
     ring = document.createElement("div");
     ring.className = "tourring";
     arrow = document.createElement("div");
@@ -121,6 +124,10 @@
   let pending = null;
   function donate(id) {
     window.auralfm?.tipDonate?.(id);
+    // Doing the thing takes the tip down, not just out of the store. A card
+    // explaining the padlock while somebody is clicking the padlock is the tip
+    // being wrong in the most visible way available to it.
+    if (showing && id === retiredBy) close("actionPerformed");
     clearTimeout(pending);
     pending = setTimeout(ask, 2500);
   }

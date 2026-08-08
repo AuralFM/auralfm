@@ -795,9 +795,14 @@
     position:absolute;right:10px;top:50%;transform:translateY(-50%);
     display:flex;gap:2px;align-items:flex-end;height:12px;width:8px;opacity:0;
   }
-  /* The star shifts left only while something on this row is playing, which is
-     the one moment the indicator needs the space. */
-  .st[aria-current="true"] .star{margin-right:14px}
+  /* The star always clears the equaliser's column, not only while playing.
+     The bars are position:absolute at right:10px and the star sat in normal flow
+     at the row's edge, so on an idle row the two occupied the same eight pixels —
+     measured: star 901–923, bars 915–923. Nothing overlapped visibly, because an
+     idle row's bars are transparent, but it meant the favourite star of one row
+     appeared at the exact x-position of the playing indicator of another. Two
+     meanings, one column. The space is reserved permanently now. */
+  .st .star{margin-right:14px}
   .st[aria-current="true"] .bars{opacity:1}
   /* Scaled, not resized. The bars used to animate `height`, which is layout
      on every frame of an infinite animation for as long as audio plays.

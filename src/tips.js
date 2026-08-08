@@ -170,7 +170,19 @@ function shown(now = Date.now()) {
  * rather than at donation time so it also covers events donated before a tip
  * existed.
  */
-function next({ uptime = 0, now = Date.now(), frequency = DAY } = {}) {
+/**
+ * How long between tips.
+ *
+ * A day in normal use. `AURALFM_TIP_FREQUENCY` overrides it in milliseconds, so
+ * the four tips can be walked in one sitting without editing the constant and
+ * remembering to put it back — which is how a test value ends up shipping.
+ */
+function defaultFrequency() {
+  const n = Number(process.env.AURALFM_TIP_FREQUENCY);
+  return Number.isFinite(n) && n >= 0 ? n : DAY;
+}
+
+function next({ uptime = 0, now = Date.now(), frequency = defaultFrequency() } = {}) {
   const s = read();
   const n = (id) => (Array.isArray(s.events[id]) ? s.events[id].length : 0);
 
@@ -181,7 +193,12 @@ function next({ uptime = 0, now = Date.now(), frequency = DAY } = {}) {
     if (n(tip.retiredBy) > 0) continue;      // found it unaided
     if (uptime < tip.after) continue;
     if (!tip.rules(n)) continue;
-    return { id: tip.id, anchor: tip.anchor, title: tip.title, body: tip.body };
+    // retiredBy travels with the tip: the renderer needs it to take a visible
+    // card down the moment the person does the thing, which is TipKit's
+    // .actionPerformed. Retiring it in the store was only half the job — the card
+    // sat there congratulating somebody for a feature they had just used.
+    return { id: tip.id, anchor: tip.anchor, title: tip.title, body: tip.body,
+             retiredBy: tip.retiredBy };
   }
   return null;
 }
