@@ -22,7 +22,10 @@
     "lights": "node scripts/lights.mjs",
     "relays": "node scripts/relays.mjs",
     "sync-kb": "node scripts/sync-kb.mjs",
-    "notices": "node scripts/notices.mjs"
+    "notices": "node scripts/notices.mjs",
+    "dist:staging": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=staging",
+    "dist:beta": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=beta",
+    "dist:prod": "npm run audit && npm run dist"
   },
   "devDependencies": {
     "electron": "^38.0.0",

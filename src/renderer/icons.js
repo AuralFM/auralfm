@@ -66,6 +66,12 @@
 
     external:  SVG(`<path d="M14 5h5v5M19 5l-8.4 8.4"/>
                     <path d="M18 14.2V18a1.8 1.8 0 0 1-1.8 1.8H6A1.8 1.8 0 0 1 4.2 18V7.8A1.8 1.8 0 0 1 6 6h3.8"/>`),
+    // Opens something inside the app. The rows in About used `external`, which
+    // is an arrow leaving a box and a promise that the app is about to hand you
+    // to something else. It did, once — those buttons opened raw Markdown in
+    // whatever the OS uses for .md. They open a panel now, so they get the
+    // disclosure chevron that says so.
+    disclose:  SVG(`<path d="M9 5l7 7-7 7"/>`),
   };
 
   /**

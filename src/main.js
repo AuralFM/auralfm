@@ -994,7 +994,20 @@ ipcMain.on("sdr:tune", (_e, rx) => {
   // visible; it is created hidden at launch and stays that way until somebody
   // clicks the tray icon.
 });
-ipcMain.handle("app:version", () => app.getVersion());
+/**
+ * Version, and which channel built it.
+ *
+ * `buildChannel` is stamped into the packaged package.json by electron-builder
+ * at build time (see the dist:* scripts). It is absent in development and on a
+ * production build, which is the point: a tester should be able to read "beta"
+ * off the About panel without being asked which DMG they installed, and a
+ * release should say nothing extra.
+ */
+ipcMain.handle("app:version", () => {
+  let channel = null;
+  try { channel = require("../package.json").buildChannel || null; } catch { /* dev */ }
+  return { version: app.getVersion(), channel, dev: !app.isPackaged };
+});
 ipcMain.handle("geo:distance", (_e, aLat, aLon, bLat, bLon, units) =>
   geo.format(geo.haversine(aLat, aLon, bLat, bLon),
              geo.resolveUnits(units, app.getLocale())));

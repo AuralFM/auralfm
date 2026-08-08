@@ -331,9 +331,9 @@
   </section>
 
   <section>
-    <h2 data-i18n="set.colour">Colour</h2>
+    <h2 data-i18n="set.colour">Themes</h2>
     <div class="card"><div class="palettes" id="palettes"></div></div>
-    <p class="hint" data-i18n="set.colourHint">Colours the accent, the station and receiver dots, the atmosphere and the stars. The Earth itself is real satellite imagery and is never recoloured.</p>
+    <p class="hint" data-i18n="set.colourHint">Colors the accent, the station and receiver dots, the atmosphere and the stars. The Earth itself is real satellite imagery and is never recoloured.</p>
   </section>
 
   <section>
@@ -415,7 +415,7 @@
         <button class="link" id="terms"></button>
       </div>
       <div class="row">
-        <span class="name" data-i18n="set.licences">Open source licences</span>
+        <span class="name" data-i18n="set.licences">Open source licenses</span>
         <button class="link" id="licences"></button>
       </div>
     </div>
@@ -713,8 +713,9 @@ $("#relay-btn").addEventListener("click", async () => {
   paintRelays();
 });
 
-Icons.set($("#privacy"), "external");
-Icons.set($("#terms"), "external");
+Icons.set($("#privacy"), "disclose");
+Icons.set($("#terms"), "disclose");
+Icons.set($("#licences"), "disclose");   // was missing entirely
 
 $("#mail").addEventListener("click", () => window.auralfm.openMail());
 /* ── documents ────────────────────────────────────────────────────────────────
@@ -789,7 +790,12 @@ $("#licences").addEventListener("click", () => openDocView("licences"));
     sel.append(o);
   }
 
-  $("#ver").textContent = "AuralFM " + version;
+  // `version` is an object now: {version, channel, dev}. A release shows nothing
+  // but the number; anything else says what it is, so a bug report from a tester
+  // arrives with the channel already in it.
+  const v = typeof version === "string" ? { version } : (version || {});
+  const mark = v.dev ? " · development" : v.channel ? ` · ${v.channel}` : "";
+  $("#ver").textContent = "AuralFM " + (v.version || "") + mark;
   translate();
   paint();
   loadDocs();
