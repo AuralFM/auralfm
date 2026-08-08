@@ -785,7 +785,36 @@ function hydrateMine(s) {
 
 // ── ipc ───────────────────────────────────────────────────────────────────────
 ipcMain.handle("state:get", () => load());
-ipcMain.handle("state:set", (_e, state) => save(state));
+/**
+ * What a renderer is allowed to write.
+ *
+ * `state:set` used to take whatever it was handed and write the file. Every
+ * renderer that calls it does read-then-write-whole — the popover loads the
+ * entire saved state into a local object at start-up and persists all of it on
+ * every volume nudge — so anything main changed in between was overwritten by a
+ * copy that predated it. That is not a race that can be won by merging, because
+ * the renderer is *sending* the stale keys, not omitting them.
+ *
+ * So ownership rather than merging. These five belong to the renderers, and
+ * everything else in the file is main's: `prefs` has setPrefs, `layers` has
+ * setLayers, and neither is ever written through here. Keys outside this list are
+ * dropped rather than rejected — a renderer sending a stale `prefs` is not
+ * misbehaving, it is round-tripping something it was given.
+ *
+ * It closes a small hole as well. A renderer could previously rewrite every
+ * preference through state:set, bypassing the type checks in prefs.normalize.
+ */
+const RENDERER_KEYS = ["favorites", "vol", "lastChannel", "exploreView", "locked"];
+
+ipcMain.handle("state:set", (_e, incoming) => {
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return false;
+  const current = load();
+  const merged = { ...current };
+  for (const k of RENDERER_KEYS) {
+    if (k in incoming) merged[k] = incoming[k];
+  }
+  return save(merged);
+});
 ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
   // Push known-bad streams down rather than hiding them — a station that failed
   // last night may be fine now, and silently vanishing would be worse.

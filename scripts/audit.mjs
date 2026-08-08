@@ -508,6 +508,30 @@ console.log("\nlight theme agrees with itself");
     : pass("all renderers load errors.js before anything else");
 }
 
+// ── main owns its own state ──────────────────────────────────────────────────
+// Every renderer that calls state:set does read-then-write-whole, so any key it
+// does not own gets overwritten with a stale copy. The allowlist is what stops
+// that, and it also keeps prefs from being writable through a channel that does
+// not validate them.
+{
+  console.log("\nstate:set only accepts keys the renderers own");
+  const src = fs.readFileSync(R("src/main.js"), "utf8");
+  const list = src.match(/const RENDERER_KEYS = \[([^\]]*)\]/);
+  const handler = src.match(/ipcMain\.handle\("state:set"[\s\S]{0,400}?\n\}\);/);
+  const problems = [];
+  if (!list) problems.push("RENDERER_KEYS is gone");
+  else {
+    for (const owned of ["prefs", "layers"]) {
+      if (list[1].includes(`"${owned}"`)) problems.push(`${owned} is in RENDERER_KEYS but main owns it`);
+    }
+  }
+  if (!handler) problems.push("state:set handler not found");
+  else if (!/RENDERER_KEYS/.test(handler[0])) problems.push("state:set does not use the allowlist");
+  problems.length
+    ? fail("state:set", problems.join("; "))
+    : pass("state:set merges an allowlist, and prefs and layers are not in it");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
