@@ -203,7 +203,7 @@ const en = {
   "set.privacy": "Privacy Policy",
   "set.terms": "Terms of Service",
   "set.licences": "Open source licenses",
-  "set.promise": "No backend of our own. No accounts. No analytics. Nothing about what you listen to leaves this Mac.",
+  "set.promise": "No accounts. No analytics. Nothing about what you listen to leaves this Mac.",
 };
 
 const es = {
@@ -386,7 +386,7 @@ const es = {
   "set.privacy": "Política de privacidad",
   "set.terms": "Términos del servicio",
   "set.licences": "Licencias de código abierto",
-  "set.promise": "Sin servidor propio. Sin cuentas. Sin analíticas. Nada de lo que escuchas sale de este Mac.",
+  "set.promise": "Sin cuentas. Sin analíticas. Nada de lo que escuchas sale de este Mac.",
 };
 
 const fr = {
@@ -531,7 +531,7 @@ const fr = {
   "set.privacy": "Politique de confidentialité",
   "set.terms": "Conditions d'utilisation",
   "set.licences": "Licences open source",
-  "set.promise": "Aucun serveur à nous. Aucun compte. Aucune analyse. Rien de ce que vous écoutez ne quitte ce Mac.",
+  "set.promise": "Aucun compte. Aucune analyse. Rien de ce que vous écoutez ne quitte ce Mac.",
   "ctl.layers": "Calques",
   "menu.erase": "Tout effacer…",
   "erase.title": "Tout effacer sur ce Mac ?",
@@ -752,7 +752,7 @@ const de = {
   "set.privacy": "Datenschutzerklärung",
   "set.terms": "Nutzungsbedingungen",
   "set.licences": "Open-Source-Lizenzen",
-  "set.promise": "Kein eigener Server. Keine Konten. Keine Analyse. Nichts von dem, was du hörst, verlässt diesen Mac.",
+  "set.promise": "Keine Konten. Keine Analyse. Nichts von dem, was du hörst, verlässt diesen Mac.",
 };
 
 const pt = {
@@ -935,7 +935,7 @@ const pt = {
   "set.privacy": "Política de Privacidade",
   "set.terms": "Termos de Serviço",
   "set.licences": "Licenças de código aberto",
-  "set.promise": "Sem servidor próprio. Sem contas. Sem análise. Nada do que você ouve sai deste Mac.",
+  "set.promise": "Sem contas. Sem análise. Nada do que você ouve sai deste Mac.",
 };
 
 /**

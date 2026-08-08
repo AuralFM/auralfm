@@ -18,9 +18,16 @@ in somebody's actual garden, and the signal reaches it off the ionosphere with n
 company anywhere in the middle. That is the one part of this that is not a CDN.
 
 **Nothing in the middle.** A decentralized radio client: 38,342 stream endpoints,
-837 independently operated receivers and 309 relays, none of them ours. No server
-of ours sits in the path, there is nothing to sign into, nothing reports back, and
-nobody keeps a list of what you played.
+837 independently operated receivers and 309 relays, none of them ours. There is
+nothing to sign into, nothing reports back, and nobody keeps a list of what you
+played.
+
+*"No backend of our own" is retired as a slogan.* It was true and it was the wrong
+thing to lead with — a claim about our infrastructure rather than about what the
+app is for, and one that quietly ruled out anything needing a service later.
+What is worth saying is that the network is somebody else's on purpose: every
+transmitter, every receiver, every relay belongs to a person who is not us, and
+that is the point rather than an economy.
 
 Said precisely, because the precise version is the stronger one: the stations are
 somebody's stream servers, so hearing audio needs a connection — true of every
