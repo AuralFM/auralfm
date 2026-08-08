@@ -20,7 +20,6 @@ const en = {
   // app chrome
   "app.name": "AuralFM",
   "app.nothingPlaying": "Nothing playing",
-  "app.explore": "Explore the world",
   "app.favorites": "Favorites",
   "app.stations": "Stations",
   "app.searchStation": "Search for a station",
@@ -198,7 +197,6 @@ const en = {
 
 const es = {
   "app.nothingPlaying": "Nada en reproducción",
-  "app.explore": "Explora el mundo",
   "app.favorites": "Favoritos",
   "app.stations": "Emisoras",
   "app.searchStation": "Buscar una emisora",
@@ -371,7 +369,6 @@ const es = {
 
 const fr = {
   "app.nothingPlaying": "Aucune lecture",
-  "app.explore": "Explorer le monde",
   "app.favorites": "Favoris",
   "app.stations": "Stations",
   "app.searchStation": "Rechercher une station",
@@ -544,7 +541,6 @@ const fr = {
 
 const de = {
   "app.nothingPlaying": "Nichts läuft",
-  "app.explore": "Die Welt erkunden",
   "app.favorites": "Favoriten",
   "app.stations": "Sender",
   "app.searchStation": "Sender suchen",
@@ -717,7 +713,6 @@ const de = {
 
 const pt = {
   "app.nothingPlaying": "Nada tocando",
-  "app.explore": "Explorar o mundo",
   "app.favorites": "Favoritos",
   "app.stations": "Estações",
   "app.searchStation": "Buscar uma estação",
