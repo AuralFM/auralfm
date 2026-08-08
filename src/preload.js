@@ -58,6 +58,10 @@ contextBridge.exposeInMainWorld("auralfm", {
   reportError: (r) => ipcRenderer.send("app:error", r),
   errorLogPath: () => ipcRenderer.invoke("app:errorLogPath"),
   errorLogRead: () => ipcRenderer.invoke("app:errorLogRead"),
+  // Rule-based tips, on TipKit's model: donate what happened, ask what to show.
+  tipDonate: (id) => ipcRenderer.send("tips:donate", id),
+  tipNext: (uptime) => ipcRenderer.invoke("tips:next", uptime),
+  tipRetire: (id, reason) => ipcRenderer.send("tips:retire", id, reason),
   docsList: () => ipcRenderer.invoke("docs:list"),
   docsRead: (id) => ipcRenderer.invoke("docs:read", id),
   mineAdd: (input) => ipcRenderer.invoke("mine:add", input),

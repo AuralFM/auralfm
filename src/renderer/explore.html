@@ -748,6 +748,19 @@
   .tourgo:focus-visible,.tourskip:focus-visible,.tourback:focus-visible{
     outline:2px solid var(--accent);outline-offset:2px;
   }
+  /* A tip is the same object as a tour step — a sentence beside a control — so it
+     wears the same card. The only difference is that it can be closed and has
+     nowhere to go next, which is what the × and the single button say. */
+  .tourcard.tip{padding-right:26px}
+  .tourcard.tip .tourrow{justify-content:flex-end}
+  .tipx{
+    position:absolute;top:7px;right:7px;
+    appearance:none;background:none;border:0;color:var(--label3);
+    font:inherit;font-size:15px;line-height:1;cursor:default;
+    padding:2px 5px;border-radius:var(--r-sm);
+  }
+  .tipx:hover{background:var(--fill);color:var(--label)}
+  .tipx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   @media (prefers-reduced-motion: reduce){
     .tourring,.tourarrow,.tourcard{transition:none}
   }
@@ -1286,6 +1299,7 @@
 <script src="errors.js"></script>
 <script src="tips.js"></script>
 <script src="tour.js"></script>
+<script src="tipcard.js"></script>
 <script src="reveal.js"></script>
 <script src="astro.js"></script>
 <script src="icons.js"></script>

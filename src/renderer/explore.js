@@ -162,6 +162,7 @@ function markPlaceSelection({ scroll = false } = {}) {
 }
 
 async function selectPlace(i, { keepFilter = false } = {}) {
+  window.Tip?.donate("placeSelected");
   if (!keepFilter) filter = { band: null, tag: null };   // a new place starts unfiltered
   const res = await guard("placeChannels", () => window.auralfm.placeChannels(i, filter), null);
   if (!res) {
@@ -439,6 +440,7 @@ function renderStations() {
     el.onclick = (e) => {
       if (e.target.closest(".star")) return;
       window.auralfm.tune(ch);           // an explicit pick always plays
+      window.Tip?.donate("stationPlayed");
       markPending(ch.id);                // and says so now, not in eleven seconds
       if (locked) setLocked(true);       // and becomes the new locked station
     };
@@ -610,6 +612,9 @@ function openAddForm(row) {
 }
 
 async function toggleFav(ch) {
+  // Donated before the write, because the tip it retires is about the gesture
+  // rather than about the file having been saved.
+  if (!isFav(ch.id)) window.Tip?.donate("favoriteAdded");
   const state = (await window.auralfm.getState()) || {};
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   const i = favorites.findIndex((f) => f.id === ch.id);
@@ -801,7 +806,7 @@ function setLocked(on) {
   b.title = on ? "Locked while you browse" : "Lock this station";
   window.auralfm.getState().then((st) => window.auralfm.setState({ ...(st || {}), locked: on }));
 }
-$("lock").onclick = () => setLocked(!locked);
+$("lock").onclick = () => { setLocked(!locked); window.Tip?.donate("lockUsed"); };
 
 // ── favourites ───────────────────────────────────────────────────────────────
 let showingFavorites = false;
@@ -1175,7 +1180,10 @@ function renderReader(list) {
   list.append(b);
 }
 
-$("newsBtn").onclick = () => { newsOpen = !newsOpen; reading = null; renderNewsPanel(); };
+$("newsBtn").onclick = () => {
+  newsOpen = !newsOpen; reading = null; renderNewsPanel();
+  if (newsOpen) window.Tip?.donate("newsOpened");
+};
 $("newsClose").onclick = () => { newsOpen = false; reading = null; renderNewsPanel(); };
 $("newsSrc").onclick = () => {
   newsSource = NEWS_SOURCES[(NEWS_SOURCES.indexOf(newsSource) + 1) % NEWS_SOURCES.length];
@@ -2814,6 +2822,7 @@ function shiftForPanel(open) {
 
 $("layersBtn").onclick = () => {
   layersOpen = !layersOpen;
+  if (layersOpen) window.Tip?.donate("layersOpened");
   paintLayers();
   shiftForPanel(layersOpen);
 };
@@ -3786,6 +3795,7 @@ async function selectReceiver(rx) {
       // channel, and without a position a shortwave session was the only kind
       // that could not say where it was — so presence and chat quietly did
       // nothing for it.
+      window.Tip?.donate("shortwaveTuned");
       window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc,
                                lat: rx.lat, lng: rx.lng, freq, mode, band: label, width });
       tunerStart(rx, freq, mode, width);

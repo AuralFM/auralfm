@@ -35,6 +35,7 @@ const prefs = require("./prefs");
 const palettes = require("./palettes");
 const mine = require("./mystations");
 const docs = require("./docs");
+const tips = require("./tips");
 const i18n = require("./i18n");
 const failures = require("./failures");
 const presence = require("./presence");
@@ -875,6 +876,24 @@ ipcMain.handle("app:errorLogRead", () => {
   try { return fs.readFileSync(ERR_LOG, "utf8").slice(-ERR_LOG_MAX); } catch { return ""; }
 });
 
+/**
+ * Rule-based tips.
+ *
+ * The store lives in the state file, so main owns it. Donating is fire-and-forget
+ * — a tip that failed to record an event is not worth interrupting anyone over —
+ * and asking for the next one is a question, so it invokes.
+ */
+ipcMain.on("tips:donate", (_e, id) => tips.donate(String(id || "")));
+
+ipcMain.handle("tips:next", (_e, uptime) => {
+  const tip = tips.next({ uptime: Number(uptime) || 0 });
+  if (tip) tips.shown();
+  return tip;
+});
+
+ipcMain.on("tips:retire", (_e, id, reason) =>
+  tips.retire(String(id || ""), String(reason || "dismissed")));
+
 ipcMain.handle("docs:list", () => docs.list());
 ipcMain.handle("docs:read", (_e, id) => docs.read(id));
 
@@ -1170,6 +1189,11 @@ if (!app.requestSingleInstanceLock()) {
     // appearance and corrects itself only when the setting is next touched.
     applyThemeSource(getPrefs().theme);
     applyAppIcon(getPrefs().appIcon);
+
+    // A launch is a launch whether or not a window renders, so it is donated
+    // here rather than from the renderer.
+    tips.init(app.getPath("userData"));
+    tips.donate("appOpened");
 
     // Standalone app with a menu bar companion: the globe is what people came
     // for, so it opens on launch rather than hiding behind an unlabelled tray
