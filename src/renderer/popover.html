@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Tightened after live captions were removed. That feature downloaded a
+           model from HuggingFace and ran it under WebAssembly, so this line
+           carried 'wasm-unsafe-eval' and four hf.co origins in connect-src. The
+           feature has been gone for a while; the permissions had not. This CSP
+           line was the only remaining mention of huggingface, wasm or captions
+           anywhere in src/, so the window could still reach a third-party CDN and
+           execute WebAssembly for no reason at all.
+
+           What is left is what this window actually does: no fetch() calls at
+           all, WebSockets for KiwiSDR (which serves no wss, hence ws:), and
+           audio from wherever a station streams from, which is what media-src *
+           is for and why it cannot be narrowed. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; font-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; media-src *; connect-src 'self' ws: wss: https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://*.hf.co;">
+      content="default-src 'none'; font-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; media-src *; connect-src 'self' ws: wss:;">
 <title>AuralFM</title>
 <style>
   /* Inter, vendored. SIL Open Font License 1.1, which explicitly permits

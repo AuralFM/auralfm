@@ -616,7 +616,7 @@ function paintAppIcons() {
     b.className = "ico";
     b.setAttribute("role", "radio");
     b.setAttribute("aria-checked", String((P.appIcon || "onyx") === id));
-    b.innerHTML = `<img alt="" src="../../assets/generated/dock-${id}.png"><span class="nm"></span>`;
+    b.innerHTML = `<img alt="" width="44" height="44" src="../../assets/generated/dock-${id}.png"><span class="nm"></span>`;
     b.querySelector(".nm").textContent = name;
     b.onclick = () => set({ appIcon: id });
     box.append(b);
