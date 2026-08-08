@@ -1322,11 +1322,50 @@ let debounce = null, seq = 0;
 
 const isFav = (id) => favorites.some((f) => f.id === id);
 
+/**
+ * The third state, for any list that can be waited on.
+ *
+ * Loading and empty were the only two states these lists had. A rejected IPC
+ * left whatever was on screen before, which reads as the click having done
+ * nothing — the worst of the three, because there is no way to tell it from a
+ * slow network and nothing to press.
+ *
+ * Only for surfaces somebody is waiting on. The background polls — weather,
+ * clouds, flights, the ISS — are best-effort by design and degrade by drawing
+ * nothing; a retry button for a 4Hz tick would be noise.
+ */
+function failureInto(el, message, retry) {
+  el.textContent = "";
+  const box = document.createElement("div");
+  box.className = "failed";
+  box.setAttribute("role", "status");
+  const p = document.createElement("p");
+  p.textContent = message;
+  box.append(p);
+  if (retry) {
+    const again = document.createElement("button");
+    again.className = "retry";
+    again.textContent = t("action.retry", "Try again");
+    again.onclick = retry;
+    box.append(again);
+  }
+  el.append(box);
+}
+
 // ── places ───────────────────────────────────────────────────────────────────
 async function loadPlaces(query = "") {
   const my = ++seq;
-  const { total, places } = await window.auralfm.places(query, 400);
+  const res = await guard("places", () => window.auralfm.places(query, 400), null);
   if (my !== seq) return;
+  if (!res) {
+    placeListEl.hidden = false;
+    stationListEl.hidden = true;
+    placeHeadEl.textContent = "";
+    failureInto(placeListEl, t("places.unreachable", "Could not load places."),
+                () => loadPlaces(query));
+    return;
+  }
+  const { total, places } = res;
   placeHeadEl.textContent = `${total.toLocaleString()} places · most stations first`;
   placeListEl.hidden = false;
   stationListEl.hidden = true;
@@ -1370,7 +1409,15 @@ function markPlaceSelection({ scroll = false } = {}) {
 
 async function selectPlace(i, { keepFilter = false } = {}) {
   if (!keepFilter) filter = { band: null, tag: null };   // a new place starts unfiltered
-  const { place, channels, total } = await window.auralfm.placeChannels(i, filter);
+  const res = await guard("placeChannels", () => window.auralfm.placeChannels(i, filter), null);
+  if (!res) {
+    stationListEl.hidden = false;
+    placeListEl.hidden = true;
+    failureInto(stationListEl, t("stations.unreachable", "Could not load stations for this place."),
+                () => selectPlace(i, { keepFilter }));
+    return;
+  }
+  const { place, channels, total } = res;
   if (!place) return;
   selection.placeIndex = i;
   selection.place = place;
@@ -1396,7 +1443,8 @@ async function renderChips() {
   const el = $("chips");
   el.innerHTML = "";
   if (selection.placeIndex == null) return;
-  const facets = await window.auralfm.placeFacets(selection.placeIndex);
+  const facets = await guard("placeFacets",
+    () => window.auralfm.placeFacets(selection.placeIndex), null);
 
   const chip = (label, active, onClick) => {
     const b = document.createElement("button");
@@ -1798,7 +1846,7 @@ function openAddForm(row) {
     await selectPlace(selection.placeIndex, { keepFilter: true });
     // It exists now, so the globe should know: a place with no stations before
     // has a dot it did not have.
-    globePts = (await window.auralfm.globePoints())
+    globePts = (await guard("globePoints", () => window.auralfm.globePoints(), []))
       .map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
     applyLod(true);
     window.auralfm.tune(res.station);      // adding one is asking to hear it
@@ -4862,7 +4910,7 @@ function stationResultRow(ch) {
       placeListEl.hidden = true;
       stationListEl.hidden = false;
     }
-    const list = await window.auralfm.places(ch.place, 8);
+    const list = await guard("relatedPlaces", () => window.auralfm.places(ch.place, 8), null);
     const hit = list.places.find((p) => p.title === ch.place && p.country === ch.country)
              || list.places[0];
     if (hit) await goToPlace(hit.i);
@@ -5138,7 +5186,7 @@ document.addEventListener("keydown", (e) => {
   setInterval(paintColdOpen, 15 * 60_000);
   // Receivers before the globe, so the first point layer already carries them.
   try {
-    sdrPts = await window.auralfm.sdrPoints();
+    sdrPts = await guard("sdrPoints", () => window.auralfm.sdrPoints(), sdrPts || []);
   } catch { sdrPts = []; }
   try {
     await initGlobe();
