@@ -28,7 +28,7 @@
     "dist:prod": "npm run audit && npm run dist"
   },
   "devDependencies": {
-    "electron": "^38.0.0",
+    "electron": "^43.3.0",
     "electron-builder": "^26.15.3",
     "globe.gl": "^2.46.1"
   },
@@ -43,7 +43,7 @@
   "build": {
     "appId": "com.meltonbell.auralfm",
     "productName": "AuralFM",
-    "copyright": "Copyright \u00a9 2026 Melton Bell",
+    "copyright": "Copyright © 2026 Melton Bell",
     "directories": {
       "output": "dist",
       "buildResources": "build"
