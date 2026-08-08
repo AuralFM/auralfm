@@ -31,7 +31,7 @@
  *
  * Honest expectation: **it will be an empty room at first.** Querying the major
  * relays for geotagged notes returned five in seven days (see
- * docs/DECENTRALIZATION.md §3). This is seeding a convention, not joining a
+ * the decentralization notes in the vault). This is seeding a convention, not joining a
  * thriving one. It costs nothing when idle and shows nothing until people arrive.
  */
 

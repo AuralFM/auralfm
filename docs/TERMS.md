@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 2 August 2026**
+**Last updated: 7 August 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -43,21 +43,69 @@ To the maximum extent permitted by law, the author is not liable for any damages
 arising from your use of AuralFM, including loss of data, lost profits, or any
 indirect or consequential loss.
 
+## The chat
+
+AuralFM has an optional chat tied to the area you are listening to. It is off
+until you turn it on, there is no account, and nothing you send is stored by us —
+we run no server. Messages travel over public relays operated by other people,
+and **once sent, a message is out of our hands and cannot be recalled or
+deleted by us.**
+
+Because we operate no server, we cannot moderate what other people send. Treat
+anything you read there as coming from a stranger. Do not send anything you would
+mind a stranger keeping.
+
 ## Acceptable use
 
 Do not use AuralFM to infringe copyright, to redistribute or rebroadcast streams
-you have no right to, or to break the law where you are.
+you have no right to, to harass anyone through the chat, or to break the law
+where you are.
 
-## Licence
+## Who may use it
 
-The software is provided under the MIT licence included with the source. The
-globe icon is by emilegraphics via the Noun Project under CC BY and is **not**
-covered by that licence — see `assets/ATTRIBUTION.md`.
+AuralFM is for people aged 13 and over. It is not directed at children, it asks
+for no personal information from anyone, and it has no accounts, profiles, or
+advertising.
+
+## Ending this licence
+
+Your licence ends if you break these terms, and you can end it at any time by
+deleting the app. Nothing needs to be cancelled, because there is nothing to
+cancel: no account, no subscription, no record of you.
+
+## Your licence to use AuralFM
+
+You are given a personal, non-exclusive, non-transferable, revocable licence to
+install and use AuralFM on Macs you own or control, for free, for as long as
+these terms are kept.
+
+The software itself is **not open source**. You may not redistribute it, sell it,
+rent it, sublicence it, publish it, decompile or reverse-engineer it, or make
+derivative works from it, except where the law where you live gives you a right
+that cannot be signed away — in which case that right applies and nothing here
+limits it.
+
+AuralFM includes third-party open source components under their own licences.
+Those licences govern those components, they are reproduced in full in the app
+under **Settings → About → Open source licences**, and nothing above restricts
+any right they grant you. The globe icon is by emilegraphics via the Noun
+Project under CC BY and is likewise covered by its own terms — see
+`assets/ATTRIBUTION.md`.
 
 ## Changes
 
 These terms may change; the date at the top will change with them. Continuing to
 use AuralFM after a change means you accept it.
+
+## Governing law
+
+<!-- TODO(melton): fill in your state. This needs to be where you actually
+     live, and nobody can supply it but you. It is the state whose courts would
+     hear a dispute, so a wrong one is worse than none. -->
+
+These terms are governed by the laws of the State of **[YOUR STATE]** and the
+United States, without regard to conflict-of-laws rules. If a court finds any
+part of these terms unenforceable, the rest stays in force.
 
 ## Contact
 

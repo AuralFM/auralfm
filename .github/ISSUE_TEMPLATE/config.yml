@@ -4,5 +4,4 @@ contact_links:
     url: https://github.com/meltonbell3/auralfm/blob/main/docs/PRIVACY.md
     about: Everything stored locally, and everything any third party can see. Short and specific.
   - name: Why does it work this way?
-    url: https://github.com/meltonbell3/auralfm/blob/main/PLAN.md
     about: The design record — what was measured, what was decided, and why.

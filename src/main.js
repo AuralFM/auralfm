@@ -12,7 +12,7 @@ const geo = require("./geo");
 /**
  * Identify this app to every server it touches, including the receivers.
  *
- * `docs/DECENTRALIZATION.md` rule 7 says to send a contactable User-Agent, and
+ * The rule this follows: send a contactable User-Agent, because
  * the Node-side fetches already do. The renderer did not: a browser WebSocket
  * cannot set its own User-Agent header, so every connection to a volunteer's
  * KiwiSDR was arriving labelled as Chrome. An operator watching their own logs

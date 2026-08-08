@@ -17,29 +17,20 @@ The stations are streams. The shortwave receivers are somebody's actual antenna,
 in somebody's actual garden, and the signal reaches it off the ionosphere with no
 company anywhere in the middle. That is the one part of this that is not a CDN.
 
-**Offline-first. No backend of our own. Collects nothing.** The station catalogue
-lives on your machine; search, browse and the globe all work with the network
-unplugged. There is nothing to sign into, nothing that reports back, and nobody
-keeping a list of what you played.
+**Nothing in the middle.** A decentralized radio client: 38,342 stream endpoints,
+837 independently operated receivers and 309 relays, none of them ours. No server
+of ours sits in the path, there is nothing to sign into, nothing reports back, and
+nobody keeps a list of what you played.
 
-*Said precisely, because the precise version is the stronger one:* the stations
-themselves are stream servers — you need a connection to hear audio, and that is
-true of every radio app there is. What is unusual here is that everything **around**
-the audio is yours already. See [docs/DECENTRALIZATION.md](docs/DECENTRALIZATION.md).
+Said precisely, because the precise version is the stronger one: the stations are
+somebody's stream servers, so hearing audio needs a connection — true of every
+radio app there is. What is unusual is that everything **around** the audio is
+already on your machine. The catalogue is local, so search, browse and the globe
+all work with the network unplugged.
 
 Inspired by [radio.garden](https://radio.garden) — Jonathan Puckey's, and the
 thing that kept pulling me back to Tokyo, Kenya, Iceland, South Africa. Started
-because Apple is winding down radio support in Shortcuts and Apple Music, and
-grown well past it.
-
-**The reason it has no backend is not thrift.** Everyone building with AI coding
-tools right now runs into the same wall: the fast part is the front end and the
-dangerous part is the back — secrets, breaches, data you did not mean to keep, a
-server you now have to defend. So this was built to answer that directly. The
-station catalogue is a public dataset. NASA gives away the Earth, NOAA the space
-weather, volunteers the receivers, and the chat rides other people's relays.
-**Nothing to breach, because nothing is held.** See
-[`docs/VISION.md`](docs/VISION.md).
+because Apple is winding down radio support in Shortcuts and Apple Music.
 
 ```
 ┌────────────────────────────────┐
@@ -350,39 +341,6 @@ data/                  generated bundle (gitignored)
 phase0/index.html      the original single-file prototype
 ```
 
-### Documents
-
-Privacy, Terms and the open source licences are readable **inside the app**,
-under Settings → About. Nothing else here is. An earlier version put eight
-documents behind a Help section with a search box and that was the wrong
-content: somebody who has downloaded a radio app cannot contribute to it, there
-is nowhere in it to enforce a code of conduct, and a post-mortem on a removed
-feature is a decision record rather than help.
-
-The shipped list is an allowlist in `src/docs.js` rather than a directory scan,
-because the strategy documents below live in the same folder and a glob cannot
-tell the difference between `PRIVACY.md` and `BUSINESS.md`.
-
-| | |
-|---|---|
-| [`PLAN.md`](PLAN.md) | The full design record — what was measured, what was decided, why |
-| [`docs/DECENTRALIZATION.md`](docs/DECENTRALIZATION.md) | What "offline-first, no backend, collects nothing" can honestly carry, and what it cannot |
-| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Positioning as a standalone app; what remains |
-| [`docs/PRIVACY.md`](docs/PRIVACY.md) | Everything stored locally, everything any third party sees |
-| [`docs/TERMS.md`](docs/TERMS.md) | Plain-language terms |
-| [`docs/SPONSORSHIP.md`](docs/SPONSORSHIP.md) | The sequence for funding this, and what it is and isn't worth |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is next, what is refused, and why |
-| [`docs/DECK.md`](docs/DECK.md) | The pitch narrative, on SCQA |
-| [`docs/INTERFACE.md`](docs/INTERFACE.md) | Where the interface outgrew its plan, and what to do about it |
-| [`docs/VISION.md`](docs/VISION.md) | Why this exists, in the maintainer's own account |
-| [`docs/DIRECTION.md`](docs/DIRECTION.md) | Where this is going, and the two proposals that were refused |
-| [`docs/LISTENING.md`](docs/LISTENING.md) | The critique this product has to answer, and the three ways it does |
-| [`docs/IDENTITY.md`](docs/IDENTITY.md) | The mark, the colour, and the icon measured against the system |
-| [`docs/BUSINESS.md`](docs/BUSINESS.md) | Free forever, and how support works without collecting anything |
-| [`docs/LEGAL-AND-SECURITY.md`](docs/LEGAL-AND-SECURITY.md) | Regulatory exposure, licence obligations, and the security posture |
-| [`docs/COMMUNITY.md`](docs/COMMUNITY.md) | The Buzz community — channels, pinned posts, and the agent |
-| [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) | Full licence texts for everything shipped, vendored or fetched |
-
 ## Scripts
 
 | Command | What it does |
@@ -399,63 +357,6 @@ tell the difference between `PRIVACY.md` and `BUSINESS.md`.
 | `npm run lights` | Fetch NASA Black Marble and build the city-lights texture |
 | `npm run audit` | Pre-flight checks for the traps this codebase has fallen into |
 | `npm run check` | Report how stale the station catalogue is |
-
-## Status
-
-| | State |
-|---|---|
-| Player, menu bar shell, catalogue, search, favourites | ✅ |
-| Explore — list and globe | ✅ |
-| Day/night, live clouds, real sky, planets, ISS | ✅ |
-| Shortwave receivers, aviation HF, 31 bands | ✅ |
-| Real shortwave tuning from the EiBi schedule | ✅ |
-| Waterfall, bandwidth and fine tuning | ✅ |
-| City lights, named constellations, ecliptic and zodiac | ✅ |
-| WSPR propagation arcs, space weather | ✅ |
-| Presence and geohash chat over Nostr, off by default | ✅ |
-| First-run walkthrough | ✅ |
-| Drawn icon set — no emoji, no font dependency | ✅ |
-| Waterfall spectrum, dial in the main window | ✅ |
-| Live captions | Runs, but too slow to be live on 2019 Intel — see below |
-| Settings — appearance, contrast, dot size, language, palettes | ✅ |
-| User-added stations | ✅ |
-| Aircraft layer | ✅ |
-| Third-party licence notices, generated and shipped | ✅ |
-| Receiver list hardened against substitution | ✅ |
-| Code signing and notarisation | Needs an Apple Developer account |
-| Downloadable release | Blocked on signing |
-
-### What it costs, and what it will never cost
-
-**The app is free on every platform, forever. No limits, no sign-up, no paid
-tier, and no advertising — not in the app, not on the site.**
-
-There is nothing to buy because there is nothing that could be sold without
-breaking the promise. To put a feature behind a paywall the app would have to
-know whether *you* paid, and every way of knowing that means an account, a
-licence key tied to a purchase, or a server to ask. That is why the palette
-paywall that used to sit dormant in the source was deleted rather than switched
-on.
-
-Support, if it happens, is a donation that the application never learns about —
-handled entirely outside it, unlocking nothing. What it buys is the thing
-Obsidian describes better than we could: staying user-supported and **free from
-investor influence**. See [`docs/BUSINESS.md`](docs/BUSINESS.md).
-
-Distribution is direct download, never an app store, on desktop.
-
-### Where to find other people
-
-The community runs on **Buzz** at `auralfm.communities.buzz.xyz` — which is built
-on Nostr, the same protocol the app's own presence and chat already use. That is
-why it is there and not on Discord: the community and the product sit on the same
-rails. Four channels, described in [`docs/COMMUNITY.md`](docs/COMMUNITY.md).
-
-**The honest headline: nobody but the author can install this yet.** There is no
-signing and no release, so every feature above has an audience of one until those
-land — and both need an Apple Developer account rather than any more code. A
-quieter app ten people can install would be worth more than a richer one nobody
-can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Known limits
 
@@ -478,7 +379,7 @@ can. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
   addition was reasonable; the accumulation was not. The dial has moved out of
   the popover and the ticker and prices out of the transport bar — see
   [#29](https://github.com/meltonbell3/auralfm/issues/29) and
-  [`docs/INTERFACE.md`](docs/INTERFACE.md) for what is left: rail structure, and
+  the interface notes in the vault for what is left: rail structure, and
   a layer inspector before the next map layer lands rather than after.
 - **No spam defence in chat.** We share a public channel with anyone. bitchat
   uses optional proof-of-work; we implement none. Fine at this traffic,
@@ -528,62 +429,6 @@ above → name it "Play KEXP". Saying that name to Siri now runs it.
 
 Station and place names are matched with the same ranking the in-app search uses,
 so "kexp", "wwoz" and "new orleans" all work without being exact.
-## Why this exists
-
-I have been fascinated by radio communication for as long as I can remember —
-shortwave, CB, all of it. I have a vivid memory of my great-grandmother and
-grandfather listening to police scanners. For years my alarm for school was not
-an alarm at all; it was the radio coming on, and what came out of it was the Tom
-Joyner Show. That is the first thing I heard most mornings of my childhood.
-
-Somewhere along the way radio stopped being the thing everyone shared and became
-something closer to underground. Meanwhile the platforms that replaced it got
-worse at the one job they took over: discovery. And the feeds got louder, more
-political, more exhausting — a wall of propaganda and tension with no obvious way
-through it.
-
-Radio is a strange refuge from that. It is harder to fake. A station is a real
-transmitter in a real place, playing for people who are actually there, and you
-can hear the difference. The curation is human. The energy is honest. You can
-tell what a place sounds like at 3am.
-
-[radio.garden](https://radio.garden) showed me what that could feel like. From
-Texas I could listen to what was on in Tokyo, or Iraq, or India. The connection
-only ran one way — nobody on the other end knew I was there — and it still meant
-something to me.
-
-At the same time I was watching what Block and Jack Dorsey have been building
-toward for years, and what is happening around Nostr and decentralized systems
-generally. I think where society is heading, applications like these are going to
-matter more, not less.
-
-So this is the simple thing nobody thinks about, because it has always been
-there. Radio is overlooked precisely because it never left. AuralFM is an attempt
-to make it visible again: see the globe, see how enormous society is, see the
-thousands of stations and hundreds of shortwave receivers scattered across it —
-and then just listen. Connection by audio, with nothing in the middle that has to
-know who you are.
-
-### The name
-
-**Aural** — *of or relating to the ear, or the sense of hearing.* From the Latin
-*auris*, ear.
-
-I have been circling this idea for years under that word. An earlier version was
-going to be a live conversation app, built around the same frustration: the audio
-platforms that got big were shaped by what kept people on them, not by what was
-worth hearing, and the people making the thing got the least out of it.
-
-That app isn't this one. This one has no hosts, no rooms, no feed and nobody to
-monetise. But the thesis survived the change of form intact — **audio as
-connection, with no algorithm deciding what reaches you and no platform standing
-between you and the person transmitting.** Radio already worked that way before
-anyone built a platform. It still does.
-
-*— Melton Bell*
-
----
-
 ## Credits
 
 - Station geography: [radio.garden](https://radio.garden)
