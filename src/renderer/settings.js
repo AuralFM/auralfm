@@ -33,7 +33,10 @@ function paint() {
   $("#contrast").setAttribute("aria-checked", String(P.contrast === "more"));
   $("#presence").setAttribute("aria-checked", String(P.presence === true));
   $("#tips").setAttribute("aria-checked", String(P.tips !== false));
+  $("#hidePreviews").setAttribute("aria-checked", String(P.hidePreviews === true));
+  if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
+  paintFingerprint();
   $("#language").value = P.language;
 }
 
@@ -85,6 +88,42 @@ $("#contrast").addEventListener("click", () =>
   set({ contrast: P.contrast === "more" ? "system" : "more" }));
 
 $("#tips").addEventListener("click", () => set({ tips: P.tips === false }));
+
+$("#hidePreviews").addEventListener("click", () => set({ hidePreviews: P.hidePreviews !== true }));
+
+// On blur rather than on every keystroke: a nickname is written to disk and
+// broadcast to both windows, and doing that per character is a lot of churn for
+// a field somebody types once.
+$("#nickname").addEventListener("change", (e) =>
+  set({ nickname: e.target.value.trim().slice(0, 32) }));
+
+/**
+ * The fingerprint of the key in use here.
+ *
+ * Shown so two people can compare it out of band — the only verification
+ * possible without an account. It changes when the place does, which is the
+ * point, so it is re-read whenever presence stats are.
+ */
+async function paintFingerprint() {
+  const s2 = await guard("presenceStats", () => window.auralfm.presenceStats(), null);
+  const el = $("#fingerprint");
+  // The fingerprint, not the key. BitChat compares SHA-256 fingerprints rather
+  // than raw public keys, and four groups of four is what a person can read
+  // aloud to somebody else without losing their place.
+  const fp = s2?.fingerprint;
+  el.textContent = fp
+    ? String(fp).match(/.{1,4}/g).slice(0, 4).join(" ")
+    : (T["set.fingerprintNone"] || "not listening yet");
+}
+
+$("#panic").addEventListener("click", async () => {
+  if (!confirm(T["set.panicAsk"] ||
+    "Erase favourites, listening history, the mute list and every key this session used? This cannot be undone.")) return;
+  const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
+  P = await guard("prefs", () => window.auralfm.getPrefs(), P);
+  paint(); paintMine(); paintPresence(); paintFingerprint();
+  alert((T["set.panicDone"] || "Erased.") + " " + (done || []).join(", "));
+});
 
 // Clears the "seen it" flag and reopens the globe, where the tour runs itself.
 $("#replayTour").addEventListener("click", async () => {

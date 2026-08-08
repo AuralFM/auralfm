@@ -228,16 +228,59 @@ function ungeohash(hash) {
 
 const hex = (b) => Buffer.from(b).toString("hex");
 
-// Fresh identity per launch. Never persisted, never asked for.
-let sk = null, pk = null;
-const identity = () => {
-  if (!sk) { sk = schnorr.utils.randomSecretKey(); pk = hex(schnorr.getPublicKey(sk)); }
-  return { sk, pk };
-};
+/**
+ * A separate identity for every place, and none of them persisted.
+ *
+ * One key per launch was already better than most: nothing is stored, nothing is
+ * asked for, and closing the app ends the identity. But within a session the same
+ * key signed from every geohash visited, which leaves a trail on relays nobody
+ * asked to publish — this key heard Reykjavik, then Lagos, then Tokyo, in that
+ * order, on that evening. A listening history assembled by someone else.
+ *
+ * BitChat solves it with ephemeral keys per geohash area and so does this. Cell 4
+ * geohashes are about twenty kilometres, so the identity changes when the place
+ * does and never spans two of them.
+ *
+ * Capped, because a long session touching many places would otherwise hold keys
+ * for all of them. Oldest first — the current cell is always the most recently
+ * used, so it is never the one dropped.
+ */
+const MAX_IDENTITIES = 64;
+const identities = new Map();     // geohash -> { sk, pk }
 
-/** NIP-01 event id: sha256 over a canonical array. Order is part of the spec. */
+function identity(geohash) {
+  const cell = String(geohash || "~");
+  let id = identities.get(cell);
+  if (id) {
+    // Re-inserted so Map iteration order stays least-recently-used first.
+    identities.delete(cell);
+    identities.set(cell, id);
+    return id;
+  }
+  const sk = schnorr.utils.randomSecretKey();
+  id = { sk, pk: hex(schnorr.getPublicKey(sk)) };
+  identities.set(cell, id);
+  while (identities.size > MAX_IDENTITIES) {
+    identities.delete(identities.keys().next().value);
+  }
+  return id;
+}
+
+/** Every pubkey this run has used, so a message can be recognised as ours. */
+const mineKeys = () => new Set([...identities.values()].map((i) => i.pk));
+
+/** Throw all of them away. Nothing to erase on disk — they were never written. */
+function forgetIdentities() { identities.clear(); }
+
+/**
+ * NIP-01 event id: sha256 over a canonical array. Order is part of the spec.
+ *
+ * Signs with the key belonging to the event's own `g` tag, so the identity is
+ * always the one for the place being posted to.
+ */
 function sign(evt) {
-  const { sk: k, pk: p } = identity();
+  const cell = (evt.tags || []).find((t) => t[0] === "g")?.[1] || null;
+  const { sk: k, pk: p } = identity(cell);
   const serial = JSON.stringify([0, p, evt.created_at, evt.kind, evt.tags, evt.content]);
   const id = crypto.createHash("sha256").update(serial).digest();
   return { ...evt, pubkey: p, id: hex(id), sig: hex(schnorr.sign(id, k)) };
@@ -430,13 +473,22 @@ function connect() {
       // bandwidth is spent instead.
       subscribe(w);
       announce(w);          // this relay only; the others already have it
-    };
+    };    /**
+     * Everything in here is a stranger's relay describing an event, so nothing in
+     * here may be trusted to have the shape it claims. A throw used to reach the
+     * main process with no listener above it, which is how a malformed event became
+     * a dialog box with a stack trace in it.
+     */
     w.onmessage = (m) => {
+      try {
       let d;
       try { d = JSON.parse(m.data); } catch { return; }
       if (d[0] !== "EVENT" || !d[2]) return;
       const e = d[2];
-      if (e.pubkey === pk) return;                 // our own, echoed back
+      // Our own, echoed back. Every key this run has used, not one — there is a
+      // key per place now, and comparing against a single `pk` stopped compiling
+      // the moment that changed.
+      if (mineKeys().has(e.pubkey)) return;
       const g = (e.tags || []).find((t) => t[0] === "g")?.[1];
       if (!g || !/^[0-9b-hjkmnp-z]{2,9}$/.test(g)) return;
 
@@ -464,7 +516,13 @@ function connect() {
         at: Date.now(),
       });
       emit();
+    
+      } catch (err) {
+        // One bad event is not worth a reconnect, let alone a crash.
+        console.error('presence: dropped a malformed relay event —', err.message);
+      }
     };
+
     w.onerror = () => { /* a relay refusing us is normal, see the note above */ };
     w.onclose = () => { sockets = sockets.filter((s) => s !== w); };
   }
@@ -588,6 +646,19 @@ const stats = () => ({
   extra: extraRelays.slice(),
   cell: here?.geohash || null,
   announcing: !!here,
+  /**
+   * The key in use for the place currently being announced, and its fingerprint.
+   *
+   * BitChat's whitepaper defines the stable identity as the SHA-256 fingerprint
+   * of the Noise static key, and shows the first characters for out-of-band
+   * comparison. Same idea here, over the per-area key — with the difference that
+   * this one changes when the place does and was never written to disk.
+   */
+  pubkey: here ? identity(here.geohash).pk : null,
+  fingerprint: here
+    ? crypto.createHash("sha256").update(identity(here.geohash).pk).digest("hex").slice(0, 16)
+    : null,
+  areas: identities.size,
   // The cell being read while browsing, if it is not the one being listened to.
   // The renderer needs this to label the conversation honestly and to disable
   // the composer — you cannot speak into a room you are not standing in.
@@ -597,4 +668,4 @@ const stats = () => ({
 module.exports = { join, leave, view, say, stats, setExtraRelays, geohash, ungeohash, sameCell,
                    history: () => messages.slice(),
                    onPeers: (fn) => { onPeers = fn; },
-                   onMessages: (fn) => { onMessages = fn; } };
+                   onMessages: (fn) => { onMessages = fn; }, forgetIdentities, mineKeys, identities};

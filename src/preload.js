@@ -86,6 +86,10 @@ contextBridge.exposeInMainWorld("auralfm", {
   onPeers: (fn) => ipcRenderer.on("presence:peers", (_e, list) => fn(list)),
   // Muting. The renderer passes the full pubkey it received with the message;
   // main validates it and owns the list.
+  // Panic wipe. Invoked so the caller knows it finished, and broadcast so every
+  // window drops what it is holding.
+  panicWipe: () => ipcRenderer.invoke("panic:wipe"),
+  onPanicWiped: (fn) => ipcRenderer.on("panic:wiped", () => fn()),
   muteList: () => ipcRenderer.invoke("mute:list"),
   muteAdd: (pubkey) => ipcRenderer.invoke("mute:add", pubkey),
   muteRemove: (pubkey) => ipcRenderer.invoke("mute:remove", pubkey),

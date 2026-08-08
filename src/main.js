@@ -879,6 +879,29 @@ ipcMain.handle("mine:list", () => mine.all().map(hydrateMine));
  * position and crash data is exactly the kind of exception that erodes one. If a
  * user wants to send a report they can open the file and choose to.
  */
+/**
+ * The main process needs a boundary too.
+ *
+ * errors.js covers the renderers, and that felt like the job was done. It was
+ * not: a throw in main has no listener, so Electron shows its own dialog — a grey
+ * box with a stack trace and an OK button, which is the least reassuring thing a
+ * shipped app can put in front of somebody. Melton hit exactly that when a
+ * relay's message handler threw.
+ *
+ * What this does and does not do:
+ *
+ *   **It does not quit.** Most of what reaches here is one subsystem failing on
+ *   somebody else's data — a relay sending something unexpected, a poll returning
+ *   a shape that changed. The globe, the audio and every other subsystem are
+ *   fine, and taking the app down would be a worse outcome than the bug.
+ *
+ *   **It does not tell the user.** They cannot act on a stack trace. It goes to
+ *   the same errors.log the renderers use, so there is one place to look.
+ *
+ *   **It stops if it cannot stop.** Ten of the same fault in a minute means
+ *   something is looping rather than glitching, and a log growing without bound
+ *   is its own problem.
+ */
 const ERR_LOG = path.join(app.getPath("userData"), "errors.log");
 const ERR_LOG_MAX = 256 * 1024;
 
@@ -900,6 +923,29 @@ ipcMain.on("app:error", (_e, r) => {
   } catch { /* logging must never be the thing that breaks */ }
   if (!app.isPackaged) console.error("renderer error:", r?.where, r?.message);
 });
+
+{
+  const recent = new Map();
+  const note = (where, err) => {
+    const key = `${where}|${err?.message || err}`;
+    const n = (recent.get(key) || 0) + 1;
+    recent.set(key, n);
+    setTimeout(() => recent.delete(key), 60_000);
+    if (n > 10) return;                       // looping, not glitching
+    console.error(`main ${where}:`, err?.stack || err);
+    try {
+      if (fs.existsSync(ERR_LOG) && fs.statSync(ERR_LOG).size > ERR_LOG_MAX) fs.writeFileSync(ERR_LOG, "");
+      fs.appendFileSync(ERR_LOG, JSON.stringify({
+        at: new Date().toISOString(), page: "main", where,
+        message: String(err?.message || err).slice(0, 500),
+        stack: String(err?.stack || "").slice(0, 2000),
+        version: app.getVersion(), repeat: n,
+      }) + "\n");
+    } catch { /* logging must never be the thing that breaks */ }
+  };
+  process.on("uncaughtException", (err) => note("uncaughtException", err));
+  process.on("unhandledRejection", (reason) => note("unhandledRejection", reason));
+}
 
 ipcMain.handle("app:errorLogPath", () => ERR_LOG);
 ipcMain.handle("app:errorLogRead", () => {
@@ -931,6 +977,43 @@ ipcMain.on("tips:retire", (_e, id, reason) =>
  * full key through the messages main already has, because the renderer never
  * holds a whole pubkey and should not have to.
  */
+/**
+ * Panic wipe.
+ *
+ * BitChat's triple-tap, which throws everything away at once. Worth having for
+ * the same reason it has one: somebody may need this app to stop describing them
+ * immediately, and hunting through a settings panel is not that.
+ *
+ * What it clears, and it is deliberately everything: favourites and listening
+ * history, the presence identities for every place visited (in memory only —
+ * they were never written), the mute list, the tip bookkeeping, and the error
+ * log. Preferences survive, because appearance is not a record of anybody.
+ *
+ * Presence is left off afterwards. Turning it back on is a decision, and a wipe
+ * is not the moment to make it on somebody's behalf.
+ */
+ipcMain.handle("panic:wipe", () => {
+  const done = [];
+  try { nostr.leave(); nostr.forgetIdentities(); done.push("presence identities"); } catch {}
+  try { muted.clear(); done.push("mute list"); } catch {}
+
+  const userData = app.getPath("userData");
+  for (const f of ["tips.json", "muted.json", "errors.log"]) {
+    try { fs.rmSync(path.join(userData, f), { force: true }); done.push(f); } catch {}
+  }
+
+  // The state file is rewritten rather than deleted, so preferences survive and
+  // the app does not restart into a first run it did not earn.
+  try {
+    const keep = load();
+    save({ prefs: { ...(keep.prefs || {}), presence: false }, layers: keep.layers || {} });
+    done.push("favourites and history");
+  } catch {}
+
+  broadcast("panic:wiped");
+  return done;
+});
+
 ipcMain.handle("mute:list", () => muted.list());
 
 ipcMain.handle("mute:add", (_e, pubkey) => {
@@ -1087,7 +1170,11 @@ ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
 ipcMain.handle("presence:history", () => muted.filter(nostr.history()));
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.
-ipcMain.handle("presence:say", (_e, text, nick) => nostr.say(text, nick));
+// The nickname comes from prefs unless the caller overrides it, so there is one
+// authoritative answer to "who am I" rather than a renderer remembering to pass
+// one. It was passing null, so the nickname pref had no effect at all.
+ipcMain.handle("presence:say", (_e, text, nick) =>
+  nostr.say(text, nick ?? getPrefs().nickname));
 /**
  * Explore asks, the popover plays — same rule as stations, so there is still
  * exactly one thing in this app that makes sound.

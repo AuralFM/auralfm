@@ -22,6 +22,22 @@ const DEFAULTS = {
    */
   tips: true,
   /**
+   * The name other listeners see, if you want one.
+   *
+   * Empty by default, which shows eight characters of a public key instead —
+   * true, and anonymous. A nickname is a choice to be recognisable, and it is not
+   * an account: nothing verifies it, two people can pick the same one, and it
+   * lasts exactly as long as the key it travels with.
+   */
+  nickname: "",
+  /**
+   * Hide message text until the chat panel is open.
+   *
+   * BitChat has this for shoulder-surfing, and it applies here for the same
+   * reason: the panel sits over a globe somebody may be showing to a room.
+   */
+  hidePreviews: false,
+  /**
    * Whether the first-run introduction has been shown.
    *
    * A flag rather than a counter: it runs once, and Settings can put it back to

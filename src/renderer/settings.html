@@ -266,6 +266,10 @@
      padding. h2 sits at 2px, so a hint at 14px read as a stray indent under
      every section except About, which happens to have no hint. */
   .card.spaced{margin-top:10px}
+  .link.danger{color:var(--err)}
+  #nickname{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
+  #nickname:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  #fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.04em}
   .hint{
     font-size:11px;line-height:1.4;color:var(--label2);
     padding:4px 2px 9px;margin:0;
@@ -422,6 +426,33 @@
   </section>
 
   <section>
+    <h2 data-i18n="set.privacy2">Privacy</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" data-i18n="set.nickname">Nickname</span>
+        <input id="nickname" type="text" maxlength="32" spellcheck="false"
+               autocomplete="off" placeholder="Anonymous" data-i18n-ph="set.nicknamePh">
+      </div>
+      <div class="row">
+        <span class="name" id="hidePreviews-lbl" data-i18n="set.hidePreviews">Hide message text until opened</span>
+        <button class="sw" id="hidePreviews" role="switch" aria-checked="false"
+                aria-labelledby="hidePreviews-lbl"></button>
+      </div>
+      <div class="row">
+        <span class="name sub" data-i18n="set.fingerprint">Your key here</span>
+        <span class="name sub" id="fingerprint">—</span>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.privacyHint">A nickname is not an account — nothing verifies it, and it lasts as long as the key it travels with. Your key is different in every place you listen to, and none of them are saved.</p>
+
+    <div class="card spaced">
+      <div class="row">
+        <span class="name" data-i18n="set.panic">Erase everything now</span>
+        <button class="link danger" id="panic" data-i18n="set.panicDo">Erase</button>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.panicHint">Favourites, listening history, the mute list and every key this session used. Appearance settings stay. This cannot be undone.</p>
+
     <h2 data-i18n="set.help">Help</h2>
     <div class="card">
       <div class="row">
