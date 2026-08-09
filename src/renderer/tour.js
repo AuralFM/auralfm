@@ -15,11 +15,40 @@
  * Back as well as forward. A walkthrough you can only leave is one people leave.
  */
 (() => {
+  /**
+   * Five steps, two of them centred.
+   *
+   * This used to be four, and there was a second onboarding surface as well — a
+   * modal `#intro` overlay with five slides of its own. They ran at the same time
+   * on a real first launch, stacked on each other, and both marked themselves
+   * seen after about twenty seconds without anyone touching either one. Nobody
+   * saw it because it only reproduces with no prior state, which the one machine
+   * running this app has never had.
+   *
+   * The overlay is gone. Two of its slides taught something nothing else did and
+   * are folded in here:
+   *
+   *   **The centre is the selection.** Not guessable. The globe looks like a map
+   *   you click, and it is also a dial you turn — whatever ends up under the
+   *   middle becomes the selection. Somebody who never learns that thinks the app
+   *   is a list with a decorative Earth attached.
+   *
+   *   **Nothing is collected.** The app's own position, and the last step rather
+   *   than the first: it means more once you have seen what the thing does than as
+   *   an assertion before anything has happened.
+   *
+   * The rest of the overlay's content was already covered better elsewhere. "Two
+   * kinds of dot" is the `shortwave` tip, which waits until somebody has played
+   * five stations — a far better moment for "that amber one is a real antenna"
+   * than a modal in the first ten seconds. "Three buttons and a search box" is
+   * what the three anchored steps below already point at.
+   */
   const STEPS = [
     {
       welcome: true,
       title: "Welcome to AuralFM",
-      body: "A globe you listen to. Click anywhere to hear what that place is playing.",
+      body: "A globe you listen to. Spin it — whatever sits under the middle "
+          + "becomes the selection. Click a dot to hear that place.",
     },
     {
       anchor: "#layersBtn",
@@ -35,6 +64,13 @@
       anchor: "#favBtn",
       title: "Favorites",
       body: "The star beside a station keeps it here and in the menu bar.",
+    },
+    {
+      welcome: true,
+      title: "Nothing is collected",
+      body: "No account, and no server of ours. The station list is already on "
+          + "this Mac, so the globe and search work with the network unplugged. "
+          + "Nothing reports what you played.",
     },
   ];
 
@@ -147,7 +183,11 @@
 
     const next = document.createElement("button");
     next.className = "tourgo";
-    next.textContent = step.welcome ? "Show me" : (i === STEPS.length - 1 ? "Done" : "Next");
+    // Last step wins over centred. The closing card is also a `welcome` card, so
+    // checking welcome first labelled the final button "Show me" — an invitation
+    // to look at something that is not there.
+    next.textContent = i === STEPS.length - 1 ? "Done"
+                     : (step.welcome ? "Show me" : "Next");
     next.onclick = () => go(1);
 
     row.append(back, dots, skip, next);

@@ -1107,50 +1107,6 @@
   #nowStar:active{transform:scale(.9)}
   #nowStar.on{color:var(--star)}
   /* First run. */
-  #intro{
-    position:fixed;inset:0;z-index:60;display:grid;place-items:center;
-    background:rgba(6,8,12,.62);
-    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
-  }
-  #intro[hidden]{display:none}
-  .introcard{
-    width:min(430px,calc(100vw - 56px));
-    /* --bg, not --pane: the pane token is deliberately translucent for panels
-       that sit over the globe, and a *modal* card that lets the planet through
-       is unreadable. The first version used a --panel token that has never
-       existed, so the card had no background at all and the body text sat
-       directly on a blurred Earth. */
-    background:var(--bg);border-radius:var(--r-xl);padding:26px 26px 20px;
-    box-shadow:0 22px 70px rgba(0,0,0,.42),0 0 0 .5px var(--line);
-  }
-  .introstep{
-    font-size:11px;font-weight:590;letter-spacing:.04em;text-transform:uppercase;
-    color:var(--accent);margin-bottom:9px;
-  }
-  .introcard h2{
-    margin:0 0 9px;font-size:19px;font-weight:640;letter-spacing:-.014em;
-    color:var(--label);line-height:1.25;
-  }
-  /* Deliberately short: a wall of text on first run gets skipped, and a skipped
-     tour is worse than no tour, because it also spent the goodwill. */
-  .introcard p{margin:0;font-size:13px;line-height:1.55;color:var(--label2)}
-  .introdots{display:flex;gap:6px;margin:20px 0 16px}
-  /* --fill-hi, not --fill: at 5% the unvisited dots were invisible, so the
-     card looked like it had one step rather than four. */
-  .introdots span{width:6px;height:6px;border-radius:50%;background:var(--fill-hi);transition:background var(--dur-panel) var(--ease-out)}
-  .introdots span.on{background:var(--accent)}
-  .introacts{display:flex;align-items:center;gap:10px}
-  .introacts button{
-    appearance:none;border:0;border-radius:var(--r-lg);font:inherit;font-size:13px;
-    padding:9px 16px;cursor:default;transition:transform var(--dur-press) var(--ease-out);
-  }
-  .introacts button:active{transform:scale(.97)}
-  .introacts .ghost{background:none;color:var(--label3);padding-left:0}
-  .introacts .ghost:hover{color:var(--label2)}
-  /* The accent is a mid-tone in both themes, so white reads on it either way —
-     and --on-accent, like --panel, was never defined. */
-  .introacts .primary{margin-left:auto;background:var(--accent);color:#fff;font-weight:590}
-  @media (prefers-reduced-motion: reduce){ .introacts button,.introdots span{transition:none} }
 
   /**
    * The prices.
@@ -1238,18 +1194,6 @@
   <!-- First run. Radio, shortwave and ham are genuinely unfamiliar to most
        people now, and an interface that assumes otherwise is a large part of
        why this technology reads as inaccessible rather than merely old. -->
-  <div id="intro" hidden role="dialog" aria-modal="true" aria-labelledby="introTitle">
-    <div class="introcard">
-      <div class="introstep" id="introStep"></div>
-      <h2 id="introTitle"></h2>
-      <p id="introBody"></p>
-      <div class="introdots" id="introDots"></div>
-      <div class="introacts">
-        <button class="ghost" id="introSkip"></button>
-        <button class="primary" id="introNext"></button>
-      </div>
-    </div>
-  </div>
 
   <div class="stations">
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="hop" id="hop" hidden></div><div class="wx" id="wx"></div>

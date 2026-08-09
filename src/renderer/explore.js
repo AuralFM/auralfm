@@ -2627,108 +2627,7 @@ for (const b of $("bw").children) {
  * shortwave actually is, and that nothing is being collected — which is the one
  * promise worth making before someone starts rather than after.
  */
-const INTRO = [
-  {
-    t: () => t("intro.1.title", "The globe is the interface"),
-    b: () => t("intro.1.body",
-      "Spin it. Whatever sits under the middle becomes the selection, so browsing " +
-      "the world and browsing the stations are the same gesture. Click a dot to listen."),
-  },
-  {
-    t: () => t("intro.2.title", "Two kinds of dot"),
-    b: () => t("intro.2.body",
-      "Most dots are radio stations streaming over the internet — 38,342 of them. " +
-      "The other colour is a shortwave receiver: someone's real antenna, in someone's " +
-      "real garden, that they have left open for strangers to use."),
-  },
-  {
-    t: () => t("intro.3.title", "Shortwave is the strange one"),
-    b: () => t("intro.3.body",
-      "A shortwave signal bounces off the ionosphere and crosses oceans with nothing " +
-      "in between: no company, no cable. This is why AuralFM shows the daylight line, " +
-      "the solar weather, and the open bands. These three decide what you hear. " +
-      "They change through the day."),
-  },
-  {
-    // Named rather than described: the maintainer's note was that the three
-    // glyphs top-right are not self-evident, and a drawn icon set buys
-    // consistency at the cost of the recognition an emoji borrows for free.
-    // Naming them once is cheaper than redrawing them until they explain
-    // themselves.
-    t: () => t("intro.tools.title", "Three buttons and a search box"),
-    b: () => t("intro.tools.body",
-      "Top right, left to right: headlines for the place you are looking at, the layer " +
-      "inspector for what the globe draws, and your favourites. The search box takes a " +
-      "city, a country or a station name."),
-  },
-  {
-    t: () => t("intro.4.title", "Nothing is collected"),
-    b: () => t("intro.4.body",
-      "There is no account and no server of ours. The station list is already on your " +
-      "machine, so search and the globe work with the network unplugged. Nothing " +
-      "reports what you played."),
-  },
-];
 
-let introAt = 0;
-
-function paintIntro() {
-  const step = INTRO[introAt];
-  $("introStep").textContent = `${introAt + 1} / ${INTRO.length}`;
-  $("introTitle").textContent = step.t();
-  $("introBody").textContent = step.b();
-  $("introDots").innerHTML = INTRO
-    .map((_, i) => `<span class="${i === introAt ? "on" : ""}"></span>`).join("");
-  $("introNext").textContent = introAt === INTRO.length - 1
-    ? t("intro.start", "Start listening") : t("intro.next", "Next");
-  $("introSkip").textContent = t("intro.skip", "Skip");
-}
-
-function closeIntro() {
-  $("intro").hidden = true;
-  // Written once, on the way out, whichever way it is dismissed. Skipping is a
-  // legitimate answer and has to count as having seen it.
-  window.auralfm.setPrefs({ introSeen: true });
-  qEl?.focus();
-}
-
-function openIntro() {
-  introAt = 0;
-  paintIntro();
-  $("intro").hidden = false;
-  $("introNext").focus();
-}
-
-$("introNext").onclick = () => {
-  if (introAt >= INTRO.length - 1) return closeIntro();
-  introAt++;
-  paintIntro();
-};
-$("introSkip").onclick = closeIntro;
-/**
- * Walking the listening history.
- *
- * Cmd+[ and Cmd+] because that is what every Mac app means by back and forward,
- * and a person who has used a browser already knows this without being told.
- *
- * Guarded on the text fields: the search box and the chat input both accept
- * brackets, and a shortcut that eats a character while you type is worse than
- * no shortcut.
- */
-document.addEventListener("keydown", (e) => {
-  if (!e.metaKey || e.altKey || e.ctrlKey) return;
-  const el = document.activeElement;
-  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
-  if (e.key === "[") { e.preventDefault(); travel(-1); }
-  else if (e.key === "]") { e.preventDefault(); travel(1); }
-});
-
-document.addEventListener("keydown", (e) => {
-  if ($("intro").hidden) return;
-  if (e.key === "Escape") { e.preventDefault(); closeIntro(); }
-  else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); $("introNext").click(); }
-  else if (e.key === "ArrowLeft" && introAt > 0) { e.preventDefault(); introAt--; paintIntro(); }
-});
 
 
 /** Real-time factor of the last measurement, for the audit and for #30. */
@@ -4374,9 +4273,6 @@ document.addEventListener("keydown", (e) => {
 
   await loadPlaces("");
   paintColdOpen();
-  // After the globe is up, so the first thing behind the card is the thing the
-  // card is about.
-  if (!prefs.introSeen) openIntro();
   // The night moves. Repaint on the hour so a window left open overnight is not
   // still offering places where the sun came up hours ago.
   setInterval(paintColdOpen, 15 * 60_000);
