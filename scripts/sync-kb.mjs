@@ -122,10 +122,85 @@ const closedCount = quiet("gh", ["issue", "list", "--state", "closed", "--limit"
                                  "--json", "number", "--jq", "length"]);
 const openCount = issues ? issues.split("\n").filter(Boolean).length : 0;
 
-const links = DOCS
-  .filter(([rel]) => fs.existsSync(path.join(REPO, rel)))
-  .map(([, title]) => `- [[${PROJECT} — ${title}]]`)
-  .join("\n");
+/**
+ * The Notes index, built by walking the vault rather than from DOCS.
+ *
+ * It used to list DOCS, which meant the hub advertised five notes out of
+ * thirty-seven and every hand-written note was invisible from the one page
+ * meant to be the way in. Worse, the hub is itself a mirror — so regenerating
+ * it would silently *shrink* a list somebody had extended by hand.
+ *
+ * Walking the folder also forces an honest classification, because three
+ * different kinds of note live here and they want opposite things from a reader:
+ *
+ *   **mirror** — stamped, and its repo source still exists. Edit the repo.
+ *   **native** — no stamp. The vault is the only copy. Edit it here.
+ *   **stale**  — stamped, but the repo file it names is gone. These are the
+ *                dangerous ones: the header tells you to edit a file that does
+ *                not exist and warns of an overwrite that will never come, while
+ *                the note is in fact the canonical copy. Reported, never
+ *                silently rewritten. `--adopt` converts them to native.
+ *
+ * Alphabetical within each group. A curated running order would be a second
+ * hardcoded list, which is the thing this replaces.
+ */
+const adopt = process.argv.includes("--adopt");
+const hubFile = `${PROJECT} — Command Center.md`;
+
+const notes = { mirror: [], native: [], stale: [] };
+for (const file of fs.readdirSync(dest).sort()) {
+  if (!file.endsWith(".md") || file === hubFile) continue;
+  const full = path.join(dest, file);
+  let text;
+  try {
+    if (!fs.statSync(full).isFile()) continue;
+    text = fs.readFileSync(full, "utf8");
+  } catch { continue; }
+
+  const name = file.replace(/\.md$/, "");
+  if (!text.startsWith(STAMP)) { notes.native.push({ name }); continue; }
+
+  const src = text.match(/Mirrored from `([^`]+)`/)?.[1] || null;
+  if (src && fs.existsSync(path.join(REPO, src))) notes.mirror.push({ name, src });
+  else notes.stale.push({ name, src, full, text });
+}
+
+// Adopting is a content rewrite on somebody's notes, so it happens only when
+// asked for by name. The stamp and the "edit the repo" warning come off; the
+// title, the rule and the body stay exactly as they were.
+let adopted = 0;
+if (adopt) {
+  for (const n of notes.stale) {
+    const body = n.text
+      .replace(new RegExp(`^${STAMP}\\n`), "")
+      .replace(/^> Mirrored from [^\n]*\n> \*\*Edit the repo[^\n]*\n\n/m, "");
+    fs.writeFileSync(n.full, body);
+    notes.native.push({ name: n.name });
+    adopted++;
+  }
+  notes.stale.length = 0;
+  notes.native.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const group = (rows) => rows.map((r) => `- [[${r.name}]]`
+  + (r.src ? ` · \`${r.src}\`` : "")).join("\n");
+
+const links = [
+  notes.mirror.length
+    ? `### Mirrored from the repo\n\nEdit the source, not the note.\n\n${group(notes.mirror)}`
+    : null,
+  notes.native.length
+    ? `### Written in the vault\n\nThe vault is the only copy. Edit them here.\n\n${group(notes.native)}`
+    : null,
+  notes.stale.length
+    ? `### ⚠️ Stale mirrors (${notes.stale.length})\n\n`
+      + "Each of these carries a generated header naming a repo file that no longer\n"
+      + "exists — so it tells you to edit something that is gone, and warns of an\n"
+      + "overwrite that will never happen. They are the canonical copy now. Run\n"
+      + "`npm run sync-kb -- --adopt` to drop the false header and keep the content.\n\n"
+      + notes.stale.map((r) => `- [[${r.name}]] · was \`${r.src || "unknown"}\``).join("\n")
+    : null,
+].filter(Boolean).join("\n\n");
 
 const hub = `${STAMP}
 # 📻 ${PROJECT} — Command Center
@@ -184,8 +259,9 @@ convention — no account, no server of ours.
 
 ---
 
-*This note is generated. Edit \`scripts/sync-kb.mjs\` in the repo, or add your own
-notes to this folder under a different filename — the sync leaves those alone.*
+*This note is generated. The Notes index above is built by walking this folder, so
+a note you add here appears on the next sync without touching the script — and
+nothing hand-written is ever overwritten.*
 `;
 
 const hubPath = path.join(dest, `${PROJECT} — Command Center.md`);
@@ -199,3 +275,12 @@ if (fs.existsSync(hubPath) && !fs.readFileSync(hubPath, "utf8").startsWith(STAMP
 
 console.log(`\n${dest}`);
 console.log(`  ${written} written, ${skipped} missing, ${protectedCount} left alone`);
+console.log(`  index: ${notes.mirror.length} mirrored, ${notes.native.length} vault-native`
+  + (notes.stale.length ? `, ${notes.stale.length} STALE` : "")
+  + (adopted ? ` (${adopted} adopted)` : ""));
+if (notes.stale.length) {
+  console.log("\n  Stale mirrors name a repo file that no longer exists. They are the");
+  console.log("  canonical copy now but say otherwise. Fix with:");
+  console.log("      npm run sync-kb -- --adopt\n");
+  for (const n of notes.stale) console.log(`      ${n.name}  (was ${n.src || "unknown"})`);
+}
