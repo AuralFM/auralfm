@@ -18,7 +18,8 @@ a lawyer, and they are marked.
 | Divulging intercepted communications (47 U.S.C. §605) | **Low** | Broadcast, amateur and distress traffic are explicitly exempt, and the app never publishes what it hears. |
 | Station data licensing | **None** | Radio Browser data is public domain. |
 | Streaming other people's audio | **Low** | The app is a client. The station holds the licence, as with any browser. |
-| Open-source notice compliance | **Fixed** | `THIRD-PARTY-NOTICES.md` credits all seven bundled and vendored packages with full licence texts, ships in the app, and `npm run audit` fails if it is stale or if a dependency is uncredited. |
+| Open-source notice compliance | **Mostly fixed** | `THIRD-PARTY-NOTICES.md` credits eight packages with full licence texts, ships in the app, and is audit-checked. **Chromium's own notice still does not ship** — see below. |
+| Copyleft creeping into a proprietary app | **Fixed** | `npm run audit` walks the production tree, the vendored bundle and Electron, and fails on any licence outside a permissive allowlist. 51 packages, all MIT/ISC/Apache-2.0/BSD/0BSD/Unlicense. |
 | **What licence AuralFM itself is under** | **Fixed** | `LICENSE` granted MIT while `docs/TERMS.md` — shipped — forbade redistribution. Resolved 8 August 2026 in favour of the terms: proprietary. Audit-checked across all four statements. Not lawyer-reviewed. |
 | **Cleartext receiver list over HTTP** | **Real, unfixed** | The KiwiSDR list is fetched over `http://` and cannot be fetched over HTTPS. |
 | Unmoderated public chat | **Medium** | No hosting liability, but an App Store age rating problem. |
@@ -125,7 +126,7 @@ components. `npm run audit` asserts all four statements still agree.
 Replacing a licence grant is exactly where wording matters, and it should be
 checked before the app reaches anyone outside a private circle.
 
-### Third-party notice compliance: fixed
+### Third-party notice compliance: the npm tree is covered
 
 The app bundles **@noble/curves, @noble/ciphers, @noble/hashes and satellite.js**
 and vendors **globe.gl, three.js and three-globe**. Every one is MIT, which is
@@ -143,12 +144,42 @@ Two audit checks guard it: the notices file must not be stale, and every runtime
 dependency must be credited. The second exists because `@noble/ciphers` shipped
 uncredited and `@noble/hashes` was required directly while undeclared.
 
-### Still open: nothing checks a dependency's licence
+### Dependency licences: now checked
 
-Nothing verifies that a *new* dependency is MIT-or-similar. GPL-3.0 was refused
-once — Meshtastic, #28 — on judgement rather than on a rule. An SPDX allow-list
-in `npm run audit` would make that automatic, and it is the cheapest remaining
-item in this document.
+`npm run audit` walks what actually ships — the production dependency tree, the
+vendored `globe.gl` bundle (a UMD file with its subtree inlined) and Electron —
+and fails on any licence outside a permissive allowlist: MIT, MIT-0, ISC,
+BSD-2-Clause, BSD-3-Clause, Apache-2.0, 0BSD, CC0-1.0, Unlicense, BlueOak-1.0.0,
+Python-2.0. SPDX expressions are evaluated properly: `(MIT OR GPL-3.0)` passes
+because MIT can be chosen, `(MIT AND GPL-3.0)` fails because both apply. A
+package with no `license` field fails.
+
+An allowlist rather than a denylist, so a licence nobody has considered stops the
+build and gets a decision instead of sailing through. Deliberate acceptances go in
+an `EXCEPTIONS` map with the reason; it is empty today.
+
+51 packages, all permissive. GPL-3.0 was refused once — Meshtastic, #28 — on
+somebody remembering to look. That is now a control rather than a habit.
+
+### Still open: Chromium's notice does not ship
+
+Electron bundles Chromium, whose BSD-3-Clause requires the copyright notice and
+disclaimer to be reproduced in binary redistributions. Verified 8 August 2026:
+**the app bundle and the DMG contain zero licence files.** Electron's own MIT
+notice is now in `THIRD-PARTY-NOTICES.md`; Chromium's is not.
+
+The notice lives at `node_modules/electron/dist/LICENSES.chromium.html` and is
+**19 MB** — about 6% of the installed app. That size is why this is a decision
+rather than a fix already applied. Three options:
+
+1. Ship it as-is. Unambiguously compliant, ~19 MB.
+2. Ship the Chromium BSD-3-Clause notice alone and link the full third-party set
+   to a versioned upstream URL. Much smaller; whether a link satisfies "provided
+   with the distribution" is exactly the kind of question for a lawyer.
+3. Ship it in the DMG beside the app rather than inside the bundle. Compliant on
+   first receipt, gone once the app is dragged to Applications.
+
+Option 1 is the safe one. Nothing is compliant today.
 
 ---
 

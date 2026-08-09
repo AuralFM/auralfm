@@ -44,6 +44,11 @@ const SHIPPED = [
   ["globe.gl",       "vendored", "The globe itself"],
   ["three",          "vendored", "3D rendering, inside globe.gl"],
   ["three-globe",    "vendored", "Earth textures and globe layers"],
+  // The runtime itself. Its MIT notice was missing from every build: the app
+  // bundle and the DMG contained no licence file at all, and this file did not
+  // mention Electron. Chromium's own notice is a separate, unresolved item —
+  // see the note printed below.
+  ["electron",       "runtime",  "Chromium and Node, the runtime the app is built on"],
 ];
 
 /** Data and imagery are not code and have their own obligations. */
@@ -94,6 +99,7 @@ function readLicence(name) {
 const HOW = {
   bundled:  "Bundled in the application",
   vendored: "Vendored into `src/renderer/vendor`",
+  runtime:  "The application runtime",
 };
 
 const entries = [];

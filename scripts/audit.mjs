@@ -45,6 +45,7 @@
  *   every data file src/ reads is shipped ... the word filter read a file not packaged
  *   third-party notices are current ......... five MIT libraries with no notice
  *   every import is declared and credited ... @noble/hashes required but undeclared
+ *   every shipped licence is permissive ..... nothing stopped a copyleft dependency
  *   the project states one licence .......... see below
  *   shortwave schedule is current ........... a season's schedule going stale
  *
@@ -60,10 +61,21 @@
  * preamble, docs/TERMS.md and package.json — because this is a legal claim that
  * reaches every user, and the failure mode was silent for months.
  *
- * What it deliberately does **not** do: verify that a *dependency's* licence is
- * MIT-or-similar. Nothing checks that yet. GPL-3.0 was refused once (#28) on
- * judgement rather than on a rule, and an SPDX allow-list would make that
- * automatic. Adjacent, cheap, and still open.
+ * A second check covers the other direction: what *dependencies* are licensed
+ * under. It walks what actually ships — the production tree, the vendored
+ * globe.gl bundle (a UMD file with its subtree inlined) and Electron — and fails
+ * on anything outside a permissive allowlist. SPDX expressions are evaluated, so
+ * `(MIT OR GPL-3.0)` passes and `(MIT AND GPL-3.0)` does not, and a missing
+ * `license` field fails. An allowlist rather than a denylist, so an unfamiliar
+ * licence stops the build and gets a decision.
+ *
+ * Not recursed into Electron's own npm dependencies: @electron/get and friends
+ * are install-time download helpers and are never packaged. Walking them would
+ * let the pass message claim they ship.
+ *
+ * Neither check verifies that Chromium's BSD-3-Clause notice ships. It does not —
+ * the bundle and the DMG contain no licence file at all, and the notice is 19 MB.
+ * That is a decision, recorded in docs/LEGAL-AND-SECURITY.md, not a check.
  */
 
 import { execFileSync } from "node:child_process";
@@ -781,6 +793,107 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("licence", problems.join("; "))
     : pass("LICENSE, TERMS, the notices preamble and package.json all say proprietary");
+}
+
+// ── every licence that ships is one we can ship ───────────────────────────────
+// AuralFM is proprietary. Bundling a copyleft dependency would either force the
+// source open or make distribution unlawful, and until now nothing checked:
+// GPL-3.0 was refused once (Meshtastic, #28) on somebody remembering to look.
+// That is not a control, it is a habit — and habits do not survive a late night
+// and an `npm install` that fixes the bug.
+//
+// An allowlist rather than a denylist, deliberately. A new licence nobody has
+// considered should stop the build and get a decision, not sail through because
+// it was not on a list of known-bad ones.
+{
+  console.log("\nevery licence that ships is on the allowlist");
+
+  // Permissive and proprietary-compatible. Anything else needs an exception with
+  // a reason, below.
+  const ALLOW = new Set([
+    "MIT", "MIT-0", "ISC", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0",
+    "0BSD", "CC0-1.0", "Unlicense", "BlueOak-1.0.0", "Python-2.0",
+  ]);
+
+  /**
+   * Deliberate acceptances, each with the reason it is safe here.
+   *
+   * Empty today, and that is the point: it should stay short, and every entry
+   * should be a decision somebody made on purpose rather than a hole.
+   */
+  const EXCEPTIONS = {
+    // "some-package": "MPL-2.0 — file-level copyleft, and we do not modify it",
+  };
+
+  /** SPDX expressions: OR needs one allowed operand, AND needs all of them. */
+  const allowed = (expr) => {
+    if (!expr || typeof expr !== "string") return false;
+    const e = expr.trim().replace(/^\((.*)\)$/, "$1").trim();
+    if (ALLOW.has(e)) return true;
+    if (/\sOR\s/i.test(e)) return e.split(/\s+OR\s+/i).some((x) => allowed(x));
+    if (/\sAND\s/i.test(e)) return e.split(/\s+AND\s+/i).every((x) => allowed(x));
+    return false;
+  };
+
+  /** Node's own resolution: nearest node_modules first, then upward. */
+  const findPkg = (name, fromDir) => {
+    let dir = fromDir;
+    for (let hops = 0; hops < 20; hops++) {
+      const p = path.join(dir, "node_modules", ...name.split("/"), "package.json");
+      if (fs.existsSync(p)) return p;
+      const up = path.dirname(dir);
+      if (up === dir || !dir.startsWith(ROOT)) break;
+      dir = up;
+    }
+    return null;
+  };
+
+  const shipped = new Map();      // "name@version" -> record
+  const problems = [];
+
+  const walk = (name, fromDir, why, deep = true) => {
+    const p = findPkg(name, fromDir);
+    if (!p) { problems.push(`${name} (${why}) is not installed, so its licence cannot be read`); return; }
+    let j;
+    try { j = JSON.parse(fs.readFileSync(p, "utf8")); }
+    catch { problems.push(`${name}: package.json unreadable`); return; }
+    const key = `${name}@${j.version}`;
+    if (shipped.has(key)) return;
+    shipped.set(key, { name, version: j.version, licence: j.license, why });
+    if (!deep) return;
+    // Transitive dependencies are packaged too, so they count.
+    for (const dep of Object.keys(j.dependencies || {})) {
+      walk(dep, path.dirname(p), `via ${name}`);
+    }
+  };
+
+  const pkg = JSON.parse(fs.readFileSync(R("package.json"), "utf8"));
+  // 1. the production tree — electron-builder packages all of it into the asar
+  for (const dep of Object.keys(pkg.dependencies || {})) walk(dep, ROOT, "runtime dependency");
+  // 2. the vendored libraries. globe.gl ships as a UMD bundle with its
+  //    dependencies inlined, so the whole subtree is in the app whether or not it
+  //    appears in the production tree.
+  for (const dep of ["globe.gl", "three", "three-globe"]) walk(dep, ROOT, "vendored");
+  // 3. Electron itself, whose runtime *is* the app.
+  //
+  //    Not recursed: @electron/get, sumchecker and the rest are download helpers
+  //    that run at install time and are never packaged. Walking into them would
+  //    let the pass message claim they ship, which is the kind of small
+  //    overstatement this file exists to prevent.
+  walk("electron", ROOT, "the runtime is bundled into the app", false);
+
+  for (const rec of shipped.values()) {
+    if (EXCEPTIONS[rec.name]) continue;
+    if (!rec.licence) {
+      problems.push(`${rec.name}@${rec.version} declares no licence (${rec.why})`);
+    } else if (!allowed(rec.licence)) {
+      problems.push(`${rec.name}@${rec.version} is ${rec.licence} — not on the allowlist (${rec.why})`);
+    }
+  }
+
+  problems.length
+    ? fail("dependency licences", problems.join("; "))
+    : pass(`all ${shipped.size} shipped packages are permissively licensed`);
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
