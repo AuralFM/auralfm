@@ -1549,10 +1549,19 @@ if (!app.requestSingleInstanceLock()) {
     social.init(app.getPath("userData"));
     safety.init(app.getPath("userData"));
     durable.init(app.getPath("userData"));
-    // Loaded only if the file is already there. Calling ensure() here would mint
-    // a durable key on every first launch, which is the opposite of off by
-    // default — the preference has to ask for it.
-    if (getPrefs().durableIdentity && durable.exists()) durable.ensure();
+    /**
+     * The preference being on *is* the request, so honour it even if the file is
+     * missing.
+     *
+     * This used to read `&& durable.exists()`, guarding against minting a key on
+     * a first launch. That guard was protecting against a state that cannot
+     * happen — the preference defaults to false, so a fresh install asks for
+     * nothing — and in exchange it created one that can: preference on, no key.
+     * Settings then showed the switch ON next to "off — no lasting key exists",
+     * and the person believed they were reachable at a durable identity while the
+     * envelope subscription never included one. Nobody could write to them.
+     */
+    if (getPrefs().durableIdentity) durable.ensure();
     tips.donate("appOpened");
 
     // Standalone app with a menu bar companion: the globe is what people came

@@ -191,7 +191,7 @@ async function get(country, limit = 12) {
   }
 }
 
-module.exports = { get, LOCALES };
+module.exports = { get };
 
 /**
  * Read an article without opening a browser.

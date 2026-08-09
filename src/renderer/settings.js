@@ -109,12 +109,54 @@ $("#nickname").addEventListener("change", (e) =>
   set({ nickname: e.target.value.trim().slice(0, 32) }));
 
 /**
- * The fingerprint of the key in use here.
+ * The three managed lists — muted, contacts, word list — through one painter.
  *
- * Shown so two people can compare it out of band — the only verification
- * possible without an account. It changes when the place does, which is the
- * point, so it is re-read whenever presence stats are.
+ * They were three hand-written copies of the same shape: count in the header,
+ * clear the box, an empty-state row, then a row per item. The copies had already
+ * drifted — the word list had no empty state at all, so deleting every term left
+ * a card showing nothing with no explanation. That is what a fourth copy would
+ * have got wrong too.
+ *
+ * Row contents stay per-list, because that is the part that genuinely differs:
+ * one button, two buttons, a suffix. Only the frame is shared.
  */
+function mkRow(...kids) {
+  const r = document.createElement("div");
+  r.className = "row";
+  r.append(...kids);
+  return r;
+}
+
+function mkLabel(text, cls = "name sub") {
+  const s = document.createElement("span");
+  s.className = cls;
+  s.textContent = text;
+  return s;
+}
+
+function mkLink(text, onclick) {
+  const b = document.createElement("button");
+  b.className = "link";
+  b.textContent = text;
+  b.onclick = onclick;
+  return b;
+}
+
+/**
+ * @param {string} box    selector for the container
+ * @param {string} head   selector for the heading that carries the count
+ * @param {string} name   heading text without the count
+ * @param {Array} items
+ * @param {string} empty  what to say when there are none
+ * @param {(item:any)=>HTMLElement} build  one row
+ */
+function paintCard(box, head, name, items, empty, build) {
+  $(head).textContent = items.length ? `${name} — ${items.length}` : name;
+  const b = $(box);
+  b.textContent = "";
+  b.append(...(items.length ? items.map(build) : [mkRow(mkLabel(empty))]));
+}
+
 /**
  * Who you have muted, and a way back.
  *
@@ -123,58 +165,15 @@ $("#nickname").addEventListener("change", (e) =>
  * list repaints from main rather than from a local copy, so it cannot drift.
  */
 async function paintMuted() {
-  const box = $("#mutedlist");
   const keys = await guard("muteList", () => window.auralfm.muteList(), []);
-  $("#muted-head").textContent = keys.length
-    ? `${T["set.muted"] || "Muted"} — ${keys.length}`
-    : (T["set.muted"] || "Muted");
-  box.textContent = "";
-  if (!keys.length) {
-    const r = document.createElement("div");
-    r.className = "row";
-    const t = document.createElement("span");
-    t.className = "name sub";
-    t.textContent = T["set.mutedNone"] || "Nobody. Click a name in the chat to mute them.";
-    r.append(t);
-    box.append(r);
-    return;
-  }
-  for (const key of keys) {
-    const row = document.createElement("div");
-    row.className = "row";
-    const who = document.createElement("span");
-    who.className = "name sub mono";
-    who.textContent = key.slice(0, 8);
-    const un = document.createElement("button");
-    un.className = "link";
-    un.textContent = T["set.unmute"] || "Unmute";
-    un.onclick = async () => {
-      await guard("muteRemove", () => window.auralfm.muteRemove(key));
-      paintMuted();
-    };
-    row.append(who, un);
-    box.append(row);
-  }
-}
-
-async function paintFingerprint() {
-  const s2 = await guard("presenceStats", () => window.auralfm.presenceStats(), null);
-  const el = $("#fingerprint");
-  // The fingerprint, not the key. BitChat compares SHA-256 fingerprints rather
-  // than raw public keys, and four groups of four is what a person can read
-  // aloud to somebody else without losing their place.
-  const fp = s2?.fingerprint;
-  el.textContent = fp
-    ? String(fp).match(/.{1,4}/g).slice(0, 4).join(" ")
-    : (T["set.fingerprintNone"] || "not listening yet");
-
-  // The durable one, if it exists. Sixteen characters rather than the twelve
-  // shown above, because this is the one somebody will actually read to another
-  // person and rely on afterwards.
-  const dfp = s2?.durableFingerprint;
-  $("#durablefp").textContent = dfp
-    ? String(dfp).match(/.{1,4}/g).join(" ")
-    : (T["set.durableOff"] || "off — no lasting key exists");
+  paintCard("#mutedlist", "#muted-head", T["set.muted"] || "Muted", keys,
+    T["set.mutedNone"] || "Nobody. Click a name in the chat to mute them.",
+    (key) => mkRow(
+      mkLabel(key.slice(0, 8), "name sub mono"),
+      mkLink(T["set.unmute"] || "Unmute", async () => {
+        await guard("muteRemove", () => window.auralfm.muteRemove(key));
+        paintMuted();
+      })));
 }
 
 /**
@@ -187,65 +186,41 @@ async function paintFingerprint() {
  * something the app already knows — it is a statement by the person clicking it.
  */
 async function paintContacts() {
-  const box = $("#contactlist");
   const list = await guard("socialList", () => window.auralfm.socialList(), []);
-  $("#contacts-head").textContent = list.length
-    ? `${T["set.contacts"] || "People you keep"} — ${list.length}`
-    : (T["set.contacts"] || "People you keep");
-  box.textContent = "";
-  if (!list.length) {
-    const r = document.createElement("div");
-    r.className = "row";
-    const t = document.createElement("span");
-    t.className = "name sub";
-    t.textContent = T["set.contactsNone"] || "Nobody yet. /fav <name> in the chat keeps somebody.";
-    r.append(t);
-    box.append(r);
-    return;
-  }
-  for (const c of list) {
-    const row = document.createElement("div");
-    row.className = "row";
-    const who = document.createElement("span");
-    who.className = "name sub mono";
-    // The label they gave, then the key stub — which is what they saw in chat.
-    who.textContent = (c.label ? `${c.label} · ` : "") + c.pubkey.slice(0, 8)
-      + (c.mutual ? " ↔" : "") + (c.verified ? " ✓" : "");
-    // The two marks in the name are shorthand; this is what they actually claim.
-    who.title = [
-      c.mutual ? (T["set.mutualNote"] || "You keep each other.") : null,
-      c.verified ? (T["set.verifiedNote"] || "Fingerprint verified by you.") : null,
-    ].filter(Boolean).join(" ");
+  paintCard("#contactlist", "#contacts-head", T["set.contacts"] || "People you keep", list,
+    T["set.contactsNone"] || "Nobody yet. /fav <name> in the chat keeps somebody.",
+    (c) => {
+      // The label they gave, then the key stub — which is what they saw in chat.
+      const who = mkLabel((c.label ? `${c.label} · ` : "") + c.pubkey.slice(0, 8)
+        + (c.mutual ? " ↔" : "") + (c.verified ? " ✓" : ""), "name sub mono");
+      // The two marks in the name are shorthand; this is what they actually claim.
+      who.title = [
+        c.mutual ? (T["set.mutualNote"] || "You keep each other.") : null,
+        c.verified ? (T["set.verifiedNote"] || "Fingerprint verified by you.") : null,
+      ].filter(Boolean).join(" ");
 
-    const verify = document.createElement("button");
-    verify.className = "link";
-    verify.textContent = c.verified
-      ? (T["set.unverify"] || "Unverify") : (T["set.verify"] || "Verify");
-    verify.onclick = async () => {
-      if (!c.verified) {
-        const fp = await guard("fp", () => window.auralfm.socialFingerprint(c.pubkey), null);
-        // The confirm carries the fingerprint, because "verify" with nothing to
-        // read is a button that manufactures trust out of a click.
-        if (!confirm((T["set.verifyAsk"]
-          || "Mark this person verified?\n\nOnly do this if you have read this fingerprint aloud with them, in person or on a call you already trust:\n\n")
-          + (fp?.readable || c.pubkey.slice(0, 16)))) return;
-      }
-      await guard("socialVerify", () => window.auralfm.socialVerify(c.pubkey, !c.verified));
-      paintContacts();
-    };
+      const keep = mkLink(c.favorite ? (T["set.unfav"] || "Release") : (T["set.fav"] || "Keep"),
+        async () => {
+          await guard("socialFavorite", () => window.auralfm.socialFavorite(c.pubkey, !c.favorite));
+          paintContacts();
+        });
 
-    const drop = document.createElement("button");
-    drop.className = "link";
-    drop.textContent = c.favorite
-      ? (T["set.unfav"] || "Release") : (T["set.fav"] || "Keep");
-    drop.onclick = async () => {
-      await guard("socialFavorite", () => window.auralfm.socialFavorite(c.pubkey, !c.favorite));
-      paintContacts();
-    };
+      const verify = mkLink(c.verified ? (T["set.unverify"] || "Unverify") : (T["set.verify"] || "Verify"),
+        async () => {
+          if (!c.verified) {
+            const fp = await guard("fp", () => window.auralfm.socialFingerprint(c.pubkey), null);
+            // The confirm carries the fingerprint, because "verify" with nothing
+            // to read is a button that manufactures trust out of a click.
+            if (!confirm((T["set.verifyAsk"]
+              || "Mark this person verified?\n\nOnly do this if you have read this fingerprint aloud with them, in person or on a call you already trust:\n\n")
+              + (fp?.readable || c.pubkey.slice(0, 16)))) return;
+          }
+          await guard("socialVerify", () => window.auralfm.socialVerify(c.pubkey, !c.verified));
+          paintContacts();
+        });
 
-    row.append(who, drop, verify);
-    box.append(row);
-  }
+      return mkRow(who, keep, verify);
+    });
 }
 
 /**
@@ -256,34 +231,32 @@ async function paintContacts() {
  * cannot trust, and this one decides what reaches you.
  */
 async function paintFilter() {
-  const box = $("#filterlist");
   const r = await guard("filterList", () => window.auralfm.filterList(), { terms: [], shipped: [] });
-  const terms = r.terms || [];
   const shipped = new Set(r.shipped || []);
-  $("#filter-head").textContent = terms.length
-    ? `${T["set.filterList"] || "Word list"} — ${terms.length}`
-    : (T["set.filterList"] || "Word list");
-  box.textContent = "";
-  for (const term of terms) {
-    const row = document.createElement("div");
-    row.className = "row";
-    const w = document.createElement("span");
-    w.className = "name sub";
-    w.textContent = term;
-    // Saying which came with the app and which somebody added themselves, so
-    // "Reset" is a predictable button rather than a surprise.
-    if (!shipped.has(term)) w.textContent += "  ·  " + (T["set.filterYours"] || "yours");
-    const x = document.createElement("button");
-    x.className = "link";
-    x.textContent = T["set.filterDel"] || "Remove";
-    x.onclick = async () => {
-      await guard("filterRemove", () => window.auralfm.filterRemove(term));
-      paintFilter();
-    };
-    row.append(w, x);
-    box.append(row);
-  }
+  paintCard("#filterlist", "#filter-head", T["set.filterList"] || "Word list", r.terms || [],
+    T["set.filterNone"] || "Empty. Nothing is being hidden by word.",
+    (term) => mkRow(
+      // Saying which came with the app and which somebody added themselves, so
+      // "Reset" is a predictable button rather than a surprise.
+      mkLabel(shipped.has(term) ? term : `${term}  ·  ${T["set.filterYours"] || "yours"}`),
+      mkLink(T["set.filterDel"] || "Remove", async () => {
+        await guard("filterRemove", () => window.auralfm.filterRemove(term));
+        paintFilter();
+      })));
 }
+
+async function paintFingerprint() {
+  const s2 = await guard("presenceStats", () => window.auralfm.presenceStats(), null);
+  const el = $("#fingerprint");
+  // The fingerprint, not the key. BitChat compares SHA-256 fingerprints rather
+  // than raw public keys, and four groups of four is what a person can read
+  // aloud to somebody else without losing their place.
+  el.textContent = s2?.fingerprint || (T["set.fingerprintNone"] || "not listening yet");
+  $("#durablefp").textContent = s2?.durableFingerprint
+    || (T["set.durableOff"] || "off — no lasting key exists");
+}
+
+
 
 async function addTerm() {
   const el = $("#filterterm");

@@ -398,15 +398,28 @@ const LOOKBACK_SEC = 6 * 3600;
  * existing id *replaces* that subscription, so re-sending on a cell change
  * re-asks for history without opening a second one or closing the first.
  */
-function subscribe(only) {
-  const msg = JSON.stringify(["REQ", "auralfm", {
-    kinds: [PRESENCE_KIND, CHAT_KIND, LABEL_KIND],
-    since: Math.floor(Date.now() / 1000) - LOOKBACK_SEC,
-  }]);
+/**
+ * Send one frame to the relays, or to just one of them.
+ *
+ * `only` is for a socket that has only now connected: without it, announcing on
+ * each `onopen` broadcast to every socket already up, so three relays received
+ * six copies of the same heartbeat instead of three. Harmless to us and rude to
+ * them, which is the same category of mistake as the retry loop that got us
+ * blocked by Celestrak.
+ */
+function send(frame, only) {
+  const msg = JSON.stringify(frame);
   for (const w of (only ? [only] : alive())) {
     if (w.readyState !== 1) continue;
     try { w.send(msg); } catch { /* relay went away */ }
   }
+}
+
+function subscribe(only) {
+  send(["REQ", "auralfm", {
+    kinds: [PRESENCE_KIND, CHAT_KIND, LABEL_KIND],
+    since: Math.floor(Date.now() / 1000) - LOOKBACK_SEC,
+  }], only);
   subscribeNotes(only);
   subscribeDms(only);
 }
@@ -433,16 +446,12 @@ function subscribe(only) {
  */
 function subscribeNotes(only) {
   if (!here) return;
-  const msg = JSON.stringify(["REQ", "auralfm-notes", {
+  send(["REQ", "auralfm-notes", {
     kinds: [NOTE_KIND],
     "#g": [here.geohash],
     since: Math.floor((Date.now() - NOTE_TTL_MS) / 1000),
     limit: MAX_NOTES,
-  }]);
-  for (const w of (only ? [only] : alive())) {
-    if (w.readyState !== 1) continue;
-    try { w.send(msg); } catch { /* relay went away */ }
-  }
+  }], only);
 }
 
 /**
@@ -457,7 +466,7 @@ function subscribeNotes(only) {
 function subscribeDms(only) {
   const keys = [...inboxes().keys()];
   if (!keys.length) return;
-  const msg = JSON.stringify(["REQ", "auralfm-dm", {
+  send(["REQ", "auralfm-dm", {
     kinds: [WRAP_KIND],
     "#p": keys,
     // Envelope timestamps are fuzzed by up to fifteen minutes in both
@@ -465,29 +474,11 @@ function subscribeDms(only) {
     // was sent moments ago with a clock nudged forward.
     since: Math.floor(Date.now() / 1000) - LOOKBACK_SEC - 900,
     limit: 200,
-  }]);
-  for (const w of (only ? [only] : alive())) {
-    if (w.readyState !== 1) continue;
-    try { w.send(msg); } catch { /* relay went away */ }
-  }
+  }], only);
 }
 
-/**
- * Push one signed event to relays.
- *
- * @param {WebSocket} [only]  send to just this socket. Used when a relay has
- *   only now connected: without it, `announce()` on each `onopen` broadcast to
- *   every socket already up, so three relays received six copies of the same
- *   heartbeat instead of three. Harmless to us and rude to them, which is the
- *   same category of mistake as the retry loop that got us blocked by Celestrak.
- */
-function publish(evt, only) {
-  const msg = JSON.stringify(["EVENT", evt]);
-  for (const w of (only ? [only] : alive())) {
-    if (w.readyState !== 1) continue;
-    try { w.send(msg); } catch { /* relay went away */ }
-  }
-}
+/** Push one signed event to relays. */
+const publish = (evt, only) => send(["EVENT", evt], only);
 
 function announce(only) {
   if (!here) return;
@@ -969,9 +960,12 @@ const stats = () => ({
    * this one changes when the place does and was never written to disk.
    */
   pubkey: here ? identity(here.geohash).pk : null,
-  fingerprint: here
-    ? crypto.createHash("sha256").update(identity(here.geohash).pk).digest("hex").slice(0, 16)
-    : null,
+  // Grouped in fours here rather than in each renderer. Three of them were
+  // reimplementing the same split, and one carried a dead `.slice(0, 4)` that
+  // could never trim anything because the hash is already sixteen characters.
+  // Formatting a fingerprint for a human is one decision, so it lives in one
+  // place — identity.js owns it.
+  fingerprint: here ? identity_.readable(identity_.fingerprint(identity(here.geohash).pk)) : null,
   areas: identities.size,
   notes: notes.length,
   dms: dms.length,
@@ -984,7 +978,7 @@ const stats = () => ({
    * and the whole cost — see identity.js.
    */
   durable: identity_.pubkey(),
-  durableFingerprint: identity_.fingerprint(),
+  durableFingerprint: identity_.readable(identity_.fingerprint()),
   // The cell being read while browsing, if it is not the one being listened to.
   // The renderer needs this to label the conversation honestly and to disable
   // the composer — you cannot speak into a room you are not standing in.

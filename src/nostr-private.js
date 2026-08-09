@@ -294,7 +294,8 @@ function unwrap(giftWrap, recipientSk, recipientPkHex) {
   };
 }
 
-module.exports = {
-  DM_KIND, SEAL_KIND, WRAP_KIND, MAX_TEXT, MAX_ENVELOPE,
-  wrap, unwrap, signWith, verify, encrypt, decrypt, envelopeKey, b64u, isKey, fuzzedNow,
-};
+// Only what somebody outside this file actually calls. The first version
+// exported all fifteen symbols on the theory that a crypto module should expose
+// its primitives; nothing ever imported ten of them, and an unused export is a
+// promise to keep something working that nobody uses.
+module.exports = { WRAP_KIND, MAX_TEXT, wrap, unwrap, isKey };

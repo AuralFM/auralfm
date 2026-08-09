@@ -123,12 +123,7 @@ function set(pubkey, patch, now = Date.now()) {
   return true;
 }
 
-const isFavorite = (pubkey) => !!get(pubkey)?.favorite;
 const isMutual = (pubkey) => !!get(pubkey)?.mutual;
-const isVerified = (pubkey) => !!get(pubkey)?.verified;
-
-/** Keys to tell about a change — everyone you have favorited. */
-const favorites = () => Object.entries(load()).filter(([, v]) => v.favorite).map(([k]) => k);
 
 /**
  * Record that somebody favorited us.
@@ -160,7 +155,4 @@ function clear() {
   save();
 }
 
-module.exports = {
-  init, list, get, set, clear, noteMutual, favorites,
-  isFavorite, isMutual, isVerified, isKey, MAX, MAX_LABEL,
-};
+module.exports = { init, list, get, set, clear, noteMutual, isMutual, isKey };

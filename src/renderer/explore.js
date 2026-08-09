@@ -3540,7 +3540,7 @@ const COMMANDS = {
       if (!theirs) return systemLine("No key to check.");
       systemLine([
         `${name(who)}: ${theirs.readable}`,
-        mine?.fingerprint ? `you: ${mine.fingerprint.match(/.{1,4}/g).join(" ")}` : null,
+        mine?.fingerprint ? `you: ${mine.fingerprint}` : null,
         "Read these to each other. If they match, mark them verified in Settings.",
         "A fingerprint sent over this chat proves nothing — anyone can type one.",
       ].filter(Boolean).join("\n"));

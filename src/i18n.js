@@ -219,6 +219,7 @@ const en = {
   "set.filterAddDo": "Add",
   "set.filterDel": "Remove",
   "set.filterYours": "yours",
+  "set.filterNone": "Empty. Nothing is being hidden by word.",
   "set.filterReset": "Reset",
   "set.filterResetAsk": "Put the word list back to the one AuralFM ships with? Your additions and removals are lost.",
   "set.safetyHint": "Nobody moderates this network \u2014 there is no server to run a moderator and no account to suspend, which is true of every app built this way. The word filter catches careless abuse, not determined abuse: a list cannot beat somebody who spaces out their letters. \u201cOnly people you keep\u201d is the tool that actually holds, because being a stranger cannot be worked around. Reporting a message mutes the sender straight away and opens an email you choose whether to send.",
