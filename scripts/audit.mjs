@@ -3,12 +3,67 @@
  * Pre-flight checks for the traps this codebase has actually fallen into.
  *
  * Every rule below exists because the bug it catches shipped at least once, and
- * three of them shipped more than once. They are cheap, they run offline in
- * about a second, and they are the difference between finding a mistake now and
- * finding it in a screenshot from someone who was just trying to listen to the
- * radio.
+ * several shipped more than once. They are cheap, they run offline in about a
+ * second, and they are the difference between finding a mistake now and finding
+ * it in a screenshot from someone who was just trying to listen to the radio.
  *
  *   npm run audit
+ *
+ * ## What is checked, and the bug each one remembers
+ *
+ * **Renderers and markup**
+ *   renderer scripts parse .................. a syntax error in a renderer fails silently
+ *   script-src needs no 'unsafe-inline' ..... the CSP refactor, kept from regressing
+ *   tag balance ............................. an HTML comment opened inside a <meta>
+ *   [hidden] survives an explicit display ... a panel that would not hide
+ *   drag-region controls are clickable ...... a titlebar that ate its own buttons
+ *   local scripts pass the CSP .............. a script blocked only in the built app
+ *   no system colour keywords ............... themed windows drifting to system colours
+ *   every renderer catches its own errors ... fitHeight() threw for two days, silently
+ *
+ * **Boundaries**
+ *   every preload method has a handler ...... an IPC channel with nothing listening
+ *   no Electron imports outside main/preload  a renderer reaching past the bridge
+ *   state:set accepts only an allowlist ..... renderers clobbering main's own state
+ *   every chat channel goes through visible() a safety rule covering 2 surfaces of 3
+ *
+ * **Correctness and content**
+ *   every polled service has a cooldown ..... Celestrak IP-blocked this project
+ *   i18n keys resolve ....................... a missing key rendering as its own name
+ *   no duplicated blocks .................... a scripted edit pasted a boot sequence 3x
+ *   the English strings speak one English ... "favourites" slipped in
+ *   search finds 104.9 and 104,9 ............ decimal-comma locales found nothing
+ *   a bodiless envelope sends with tags ..... every favorite silently never sent
+ *
+ * **Design system**
+ *   design tokens are not bypassed .......... radii invented outside the scale
+ *   light theme agrees with itself .......... four token blocks drifting apart
+ *   the favourite star survives light theme . 1.01:1 contrast in all nine palettes
+ *
+ * **What ships**
+ *   shipped files exist ..................... build.files naming a missing path
+ *   every data file src/ reads is shipped ... the word filter read a file not packaged
+ *   third-party notices are current ......... five MIT libraries with no notice
+ *   every import is declared and credited ... @noble/hashes required but undeclared
+ *   the project states one licence .......... see below
+ *   shortwave schedule is current ........... a season's schedule going stale
+ *
+ * ### The licence check, in more detail
+ *
+ * `LICENSE` carried the MIT grant while `docs/TERMS.md` — which ships inside the
+ * app — said the software is not open source and may not be redistributed. Two
+ * shipped documents granting and withholding the same rights, with
+ * `THIRD-PARTY-NOTICES.md` (also shipped) siding with the MIT one. Resolved in
+ * favour of the terms: AuralFM is proprietary.
+ *
+ * The check asserts all four statements still agree — LICENSE, the notices
+ * preamble, docs/TERMS.md and package.json — because this is a legal claim that
+ * reaches every user, and the failure mode was silent for months.
+ *
+ * What it deliberately does **not** do: verify that a *dependency's* licence is
+ * MIT-or-similar. Nothing checks that yet. GPL-3.0 was refused once (#28) on
+ * judgement rather than on a rule, and an SPDX allow-list would make that
+ * automatic. Adjacent, cheap, and still open.
  */
 
 import { execFileSync } from "node:child_process";
