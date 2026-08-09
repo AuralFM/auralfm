@@ -958,6 +958,30 @@ console.log("\nlight theme agrees with itself");
     : pass(`Chromium ${meta?.chromium} notice ships verbatim and matches Electron ${meta?.electron}`);
 }
 
+// ── every chat-ish record carries what the renderer labels it with ───────────
+// repaintLog() writes `m.nick || m.from` as the sender on every line. Chat
+// records set both; the private-message records set neither, so a real inbound
+// DM rendered its sender as the literal string "undefined". Invisible in every
+// self-addressed test, because those arrive with `mine: true` and render "you".
+// Only a message from a second party shows it.
+{
+  console.log("\nevery message record carries a sender label");
+  const src = fs.readFileSync(R("src/presence-nostr.js"), "utf8");
+  const problems = [];
+  // Each push into a list the renderer paints must set `from`.
+  for (const m of src.matchAll(/(dms|messages|notes)\.push\(\{([\s\S]{0,400}?)\}\);/g)) {
+    const [, list, body] = m;
+    if (!/\bfrom:/.test(body)) problems.push(`${list}.push has no \`from\` — the renderer would show "undefined"`);
+  }
+  const renderer = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  if (!/m\.nick \|\| m\.from/.test(renderer)) {
+    problems.push("explore.js no longer labels with `m.nick || m.from` — this check needs updating");
+  }
+  problems.length
+    ? fail("sender labels", problems.join("; "))
+    : pass("every record the chat log paints carries a `from`");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

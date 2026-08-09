@@ -396,6 +396,7 @@ phase0/index.html      the original single-file prototype
 | `npm run audit` | Pre-flight checks for the traps this codebase has fallen into |
 | `npm run release` | Gate, build both arches, verify the artifacts, publish. `--dry-run` to rehearse |
 | `npm run test:relays` | Two independent clients meet over live relays and exercise presence, chat, notes, private messages and mutual favorites. **Manual only — never CI**, it publishes to other people's relays |
+| `npm run test:app-inbound` | Drives real inbound traffic from a second client into the running app and asserts against its DOM. **Manual only** — see the header for the setup |
 | `npm run check` | Report how stale the station catalogue is |
 
 ## Known limits

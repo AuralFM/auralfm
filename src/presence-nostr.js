@@ -647,6 +647,7 @@ function dm(to, text, tags = []) {
   // notice — nobody else will repeat it.
   const from = hex(schnorr.getPublicKey(sk));
   dms.push({ id: evt.id, at: Date.now(), with: to, pubkey: from,
+             from: from.slice(0, 8), nick: null,
              text: body.slice(0, priv.MAX_TEXT), mine: true, unread: false });
   trimDms();
   onDms(dms.slice());
@@ -723,7 +724,21 @@ function takeDm(evt) {
     if (!got.text.trim()) return;
   }
 
+  /**
+   * `from` matters, and its absence was a visible bug.
+   *
+   * The renderer labels every line with `m.nick || m.from`. Chat records carry
+   * both; these carried neither, so a real inbound private message rendered its
+   * sender as the string "undefined". Self-addressed tests never showed it —
+   * those arrive with `mine: true` and render as "you".
+   *
+   * `nick` is null on purpose rather than absent. A private envelope has nowhere
+   * to put a nickname: the rumor's tags are the favorite signal, and trusting a
+   * self-declared name inside an encrypted message would be worse than showing
+   * the key, because the key is the thing that was actually authenticated.
+   */
   dms.push({ id: evt.id, at: got.at, with: got.pubkey, pubkey: got.pubkey,
+             from: got.pubkey.slice(0, 8), nick: null,
              text: got.text, mine: false, unread: true });
   trimDms();
   onDms(dms.slice());
