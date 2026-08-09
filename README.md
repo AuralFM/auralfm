@@ -63,7 +63,38 @@ because Apple is winding down radio support in Shortcuts and Apple Music.
 - macOS
 - [Node.js](https://nodejs.org) 18+ (developed on 24)
 
-## Getting started
+## Install a build
+
+There is no signed release yet — see [#4](https://github.com/meltonbell3/auralfm/issues/4).
+Until there is, a downloaded DMG needs one deliberate step, because macOS
+Gatekeeper refuses unsigned apps on first launch:
+
+1. Download the DMG for your Mac from
+   [Releases](https://github.com/meltonbell3/auralfm/releases) — `arm64` for Apple
+   silicon, the unsuffixed one for Intel.
+2. Drag **AuralFM** to Applications.
+3. **Right-click the app → Open**, then confirm. A double-click will not work.
+
+If macOS still refuses:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/AuralFM.app
+```
+
+**Check what you downloaded.** An unsigned build has no other integrity signal, so
+the checksums published with each release are it:
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+Releases are built on a Mac rather than in CI, and `npm run release` is the whole
+pipeline — it gates on a clean tree and a green audit, builds both architectures,
+verifies the station catalog and the licence notices are actually inside the
+`app.asar`, writes checksums, and marks the release a prerelease while it is
+unsigned. `--dry-run` does all of that and publishes nothing.
+
+## Build it yourself
 
 ```bash
 git clone https://github.com/meltonbell3/auralfm.git
@@ -363,6 +394,7 @@ phase0/index.html      the original single-file prototype
 | `npm run sky` | Rebuild the star, constellation and name bundle |
 | `npm run lights` | Fetch NASA Black Marble and build the city-lights texture |
 | `npm run audit` | Pre-flight checks for the traps this codebase has fallen into |
+| `npm run release` | Gate, build both arches, verify the artifacts, publish. `--dry-run` to rehearse |
 | `npm run check` | Report how stale the station catalogue is |
 
 ## Known limits

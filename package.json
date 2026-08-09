@@ -25,7 +25,8 @@
     "notices": "node scripts/notices.mjs",
     "dist:staging": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=staging",
     "dist:beta": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=beta",
-    "dist:prod": "npm run audit && npm run dist"
+    "dist:prod": "npm run audit && npm run dist",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "electron": "^43.3.0",
@@ -45,7 +46,7 @@
   "build": {
     "appId": "com.meltonbell.auralfm",
     "productName": "AuralFM",
-    "copyright": "Copyright © 2026 Melton Bell",
+    "copyright": "Copyright \u00a9 2026 Melton Bell",
     "directories": {
       "output": "dist",
       "buildResources": "build"
