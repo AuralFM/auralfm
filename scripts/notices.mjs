@@ -51,6 +51,30 @@ const SHIPPED = [
   ["electron",       "runtime",  "Chromium and Node, the runtime the app is built on"],
 ];
 
+/**
+ * Notices that do not come from an npm package.
+ *
+ * Chromium is the case that forced this. Electron bundles it, its BSD-3-Clause
+ * requires the notice reproduced in binary redistributions, and there is no
+ * `node_modules/chromium` to read it from. Its full third-party credits
+ * (`LICENSES.chromium.html`) are 19 MB, so this build ships Chromium's own notice
+ * verbatim and links the full set upstream.
+ *
+ * Provenance lives in `assets/licenses/chromium-notice.json` — the exact Chromium
+ * version, the source URL at that tag, and a sha256. `npm run audit` fails if the
+ * Electron version recorded there stops matching the installed one, so an Electron
+ * upgrade cannot silently leave a stale notice behind.
+ */
+const FROM_FILE = [
+  {
+    name: "Chromium",
+    how: "runtime",
+    why: "The browser engine inside Electron",
+    text: "assets/licenses/chromium-LICENSE.txt",
+    meta: "assets/licenses/chromium-notice.json",
+  },
+];
+
 /** Data and imagery are not code and have their own obligations. */
 const DATA = [
   ["Radio Browser", "Public domain",
@@ -111,6 +135,23 @@ for (const [name, how, why] of SHIPPED) {
   if (!lic) missing.push(`${name} (no licence text anywhere)`);
   entries.push({ name, how, why, version: pkg.version, spdx: pkg.license || "see text",
                  text: lic?.text, note: lic?.note });
+}
+
+for (const f of FROM_FILE) {
+  let text = null, meta = {};
+  try { text = fs.readFileSync(path.join(ROOT, f.text), "utf8").trim(); }
+  catch { missing.push(`${f.name} (${f.text} not found)`); continue; }
+  try { meta = JSON.parse(fs.readFileSync(path.join(ROOT, f.meta), "utf8")); } catch {}
+  const full = meta.fullCredits || {};
+  entries.push({
+    name: f.name, how: f.how, why: f.why, version: meta.chromium || "version unknown",
+    spdx: "BSD-3-Clause", text,
+    note: "This is Chromium's own notice. Its bundled third-party components have "
+        + `their own licences, collected in ${full.file || "LICENSES.chromium.html"} — `
+        + "not reproduced here for size. The full set for this exact build is at "
+        + `${full.electronRelease || "the Electron release"} , and the Chromium source `
+        + `at ${full.chromiumSource || "chromium.googlesource.com"} .`,
+  });
 }
 
 const body = `# Third-party notices

@@ -896,6 +896,54 @@ console.log("\nlight theme agrees with itself");
     : pass(`all ${shipped.size} shipped packages are permissively licensed`);
 }
 
+// ── the Chromium notice matches the Electron that ships ──────────────────────
+// Chromium's BSD-3-Clause notice is shipped verbatim with a version and a link to
+// the full third-party set, because that set is 19 MB. Both go stale the moment
+// Electron is upgraded — a new Electron means a new Chromium, and a notice naming
+// the old one is worse than no notice, because it looks done.
+//
+// Checkable offline: the recorded Electron version must match the installed one.
+{
+  console.log("\nthe Chromium notice matches the Electron that ships");
+  const problems = [];
+  let meta = null;
+  try { meta = JSON.parse(fs.readFileSync(R("assets/licenses/chromium-notice.json"), "utf8")); }
+  catch { problems.push("assets/licenses/chromium-notice.json is missing or unreadable"); }
+
+  let text = null;
+  try { text = fs.readFileSync(R("assets/licenses/chromium-LICENSE.txt"), "utf8"); }
+  catch { problems.push("assets/licenses/chromium-LICENSE.txt is missing"); }
+
+  if (meta && text) {
+    const installed = (() => {
+      try { return JSON.parse(fs.readFileSync(R("node_modules/electron/package.json"), "utf8")).version; }
+      catch { return null; }
+    })();
+    if (!installed) skip("chromium notice", "electron is not installed");
+    else if (meta.electron !== installed) {
+      problems.push(`notice records Electron ${meta.electron}, but ${installed} is installed `
+        + `— refresh the Chromium notice (see the _comment in chromium-notice.json)`);
+    }
+    // The text must actually be the notice, not a placeholder somebody pasted.
+    for (const need of ["Redistributions in binary form", "Neither the name of Google LLC",
+                        "THE COPYRIGHT HOLDERS AND CONTRIBUTORS"]) {
+      if (!text.includes(need)) problems.push(`chromium-LICENSE.txt is missing "${need}"`);
+    }
+    // And it must reach the shipped file verbatim.
+    const notices = fs.readFileSync(R("THIRD-PARTY-NOTICES.md"), "utf8");
+    if (!notices.includes(text.trim())) {
+      problems.push("THIRD-PARTY-NOTICES.md does not contain the Chromium notice verbatim");
+    }
+    if (!notices.includes(String(meta.chromium))) {
+      problems.push(`THIRD-PARTY-NOTICES.md does not name Chromium ${meta.chromium}`);
+    }
+  }
+
+  problems.length
+    ? fail("chromium notice", problems.join("; "))
+    : pass(`Chromium ${meta?.chromium} notice ships verbatim and matches Electron ${meta?.electron}`);
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

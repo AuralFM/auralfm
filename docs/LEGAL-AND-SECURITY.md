@@ -18,7 +18,7 @@ a lawyer, and they are marked.
 | Divulging intercepted communications (47 U.S.C. §605) | **Low** | Broadcast, amateur and distress traffic are explicitly exempt, and the app never publishes what it hears. |
 | Station data licensing | **None** | Radio Browser data is public domain. |
 | Streaming other people's audio | **Low** | The app is a client. The station holds the licence, as with any browser. |
-| Open-source notice compliance | **Mostly fixed** | `THIRD-PARTY-NOTICES.md` credits eight packages with full licence texts, ships in the app, and is audit-checked. **Chromium's own notice still does not ship** — see below. |
+| Open-source notice compliance | **Fixed, with one judgement call** | `THIRD-PARTY-NOTICES.md` credits nine components including Electron and Chromium, ships in the app, and is audit-checked. Chromium's 19 MB third-party set is linked rather than embedded — a deliberate choice, see below. |
 | Copyleft creeping into a proprietary app | **Fixed** | `npm run audit` walks the production tree, the vendored bundle and Electron, and fails on any licence outside a permissive allowlist. 51 packages, all MIT/ISC/Apache-2.0/BSD/0BSD/Unlicense. |
 | **What licence AuralFM itself is under** | **Fixed** | `LICENSE` granted MIT while `docs/TERMS.md` — shipped — forbade redistribution. Resolved 8 August 2026 in favour of the terms: proprietary. Audit-checked across all four statements. Not lawyer-reviewed. |
 | **Cleartext receiver list over HTTP** | **Real, unfixed** | The KiwiSDR list is fetched over `http://` and cannot be fetched over HTTPS. |
@@ -161,27 +161,37 @@ an `EXCEPTIONS` map with the reason; it is empty today.
 51 packages, all permissive. GPL-3.0 was refused once — Meshtastic, #28 — on
 somebody remembering to look. That is now a control rather than a habit.
 
-### Still open: Chromium's notice does not ship
+### Chromium: notice shipped, third-party set linked
 
-Electron bundles Chromium, whose BSD-3-Clause requires the copyright notice and
-disclaimer to be reproduced in binary redistributions. Verified 8 August 2026:
-**the app bundle and the DMG contain zero licence files.** Electron's own MIT
-notice is now in `THIRD-PARTY-NOTICES.md`; Chromium's is not.
+Electron bundles Chromium, whose BSD-3-Clause requires the copyright notice, the
+conditions and the disclaimer to be reproduced in binary redistributions. As of
+8 August 2026 this was shipping in no build at all — the app bundle and both DMGs
+contained zero licence files.
 
-The notice lives at `node_modules/electron/dist/LICENSES.chromium.html` and is
-**19 MB** — about 6% of the installed app. That size is why this is a decision
-rather than a fix already applied. Three options:
+Now shipped:
 
-1. Ship it as-is. Unambiguously compliant, ~19 MB.
-2. Ship the Chromium BSD-3-Clause notice alone and link the full third-party set
-   to a versioned upstream URL. Much smaller; whether a link satisfies "provided
-   with the distribution" is exactly the kind of question for a lawyer.
-3. Ship it in the DMG beside the app rather than inside the bundle. Compliant on
-   first receipt, gone once the app is dragged to Applications.
+- **Chromium's own notice, verbatim**, in `THIRD-PARTY-NOTICES.md`, reachable in
+  the app under **Settings → About → Open source licences**. Kept exactly as
+  Chromium publishes it, comment markers and all — it is distributed as a C++
+  header block, and "reproduce" argues against reformatting a legal notice.
+- **The exact version it belongs to**, Chromium 150.0.7871.212 for Electron 43.3.0.
+- **Links to the full third-party set** for this precise build: the Electron
+  release that contains `LICENSES.chromium.html`, and the Chromium source at the
+  matching tag.
 
-Option 1 is the safe one. Nothing is compliant today.
+Provenance is recorded in `assets/licenses/chromium-notice.json` — source URL at
+the tag, fetch date, sha256, and the command to refresh it.
 
----
+**The judgement call.** The full third-party credits are 19 MB, about 6% of the
+installed app. This build links them rather than embedding them. Whether a link
+satisfies "provided with the distribution" is unsettled; embedding the file would
+remove the question at that cost. The decision is recorded here rather than
+buried, and it is on the list for legal review.
+
+**Two audit checks guard it.** The recorded Electron version must match the
+installed one — an Electron upgrade changes the Chromium version, and a notice
+naming the old one is worse than none because it looks finished. And the notice
+text must reach `THIRD-PARTY-NOTICES.md` verbatim, so a placeholder cannot ship.
 
 ## 4. Privacy — what actually leaves the machine
 

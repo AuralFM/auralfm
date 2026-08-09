@@ -1,0 +1,29 @@
+{
+  "_comment": [
+    "Provenance for the Chromium notice shipped in THIRD-PARTY-NOTICES.md.",
+    "",
+    "Electron bundles Chromium, whose BSD-3-Clause requires the copyright notice,",
+    "the conditions and the disclaimer to be reproduced in binary redistributions.",
+    "The full third-party credits (LICENSES.chromium.html) are 19 MB, so this build",
+    "ships Chromium's own notice verbatim and links the full set upstream.",
+    "",
+    "Kept verbatim, comment markers and all: Chromium publishes its LICENSE as a",
+    "C++ header block, and 'reproduce' argues against reformatting a legal notice.",
+    "",
+    "To refresh after an Electron upgrade:",
+    "  curl -sS 'https://chromium.googlesource.com/chromium/src/+/refs/tags/<chromium-version>/LICENSE?format=TEXT' | base64 -d > assets/licenses/chromium-LICENSE.txt",
+    "then update electron/chromium/fetched/sha256 here. npm run audit fails until the",
+    "electron version recorded here matches the installed one."
+  ],
+  "electron": "43.3.0",
+  "chromium": "150.0.7871.212",
+  "source": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.212/LICENSE",
+  "verified": "identical to chromium/src HEAD on the same day",
+  "fetched": "2026-08-08",
+  "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b",
+  "fullCredits": {
+    "file": "LICENSES.chromium.html (19 MB, in the Electron distribution)",
+    "electronRelease": "https://github.com/electron/electron/releases/tag/v43.3.0",
+    "chromiumSource": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.212/"
+  }
+}
