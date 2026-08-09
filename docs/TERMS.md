@@ -67,29 +67,37 @@ AuralFM is for people aged 13 and over. It is not directed at children, it asks
 for no personal information from anyone, and it has no accounts, profiles, or
 advertising.
 
-## Ending this licence
+## Stopping
 
-Your licence ends if you break these terms, and you can end it at any time by
-deleting the app. Nothing needs to be cancelled, because there is nothing to
+Delete the app. Nothing needs to be cancelled, because there is nothing to
 cancel: no account, no subscription, no record of you.
+
+Your rights under the MIT licence are not something AuralFM can withdraw, and
+nothing here tries to.
 
 ## Your licence to use AuralFM
 
-You are given a personal, non-exclusive, non-transferable, revocable licence to
-install and use AuralFM on Macs you own or control, for free, for as long as
-these terms are kept.
+**AuralFM is open source, under the MIT licence.** You may use it, copy it,
+change it, publish it, distribute it and sell it, and you may build something
+else out of it. The one condition is the one MIT states: keep the copyright
+notice and the permission notice with any substantial portion you pass on. The
+full text is in `LICENSE`.
 
-The software itself is **not open source**. You may not redistribute it, sell it,
-rent it, sublicence it, publish it, decompile or reverse-engineer it, or make
-derivative works from it, except where the law where you live gives you a right
-that cannot be signed away — in which case that right applies and nothing here
-limits it.
+Nothing in these terms takes that away. Where anything here could be read as
+narrowing the MIT licence, the licence wins.
 
-AuralFM includes third-party open source components under their own licences.
-Those licences govern those components, they are reproduced in full in the app
-under **Settings → About → Open source licences**, and nothing above restricts
-any right they grant you. The globe icon is by emilegraphics via the Noun
-Project under CC BY and is likewise covered by its own terms — see
+The rest of this document is not a restriction on the software. It is about
+**how the app behaves and what you can expect from it** — that it collects
+nothing, that the chat is a public channel on relays nobody here controls, and
+that there is no warranty. Those are descriptions and disclaimers, not
+conditions on your right to the code.
+
+**Two things the licence does not cover.** The name *AuralFM* and the project's
+marks are not granted — fork it freely, but a fork presented as AuralFM is a
+different thing. And the third-party components AuralFM bundles carry their own
+licences, which govern those components; they are reproduced in full in the app
+under **Settings → About → Open source licences**. The globe icons are by
+emilegraphics via the Noun Project under purchased royalty-free licences — see
 `assets/ATTRIBUTION.md`.
 
 ## Changes

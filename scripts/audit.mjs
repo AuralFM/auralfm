@@ -54,12 +54,18 @@
  * `LICENSE` carried the MIT grant while `docs/TERMS.md` — which ships inside the
  * app — said the software is not open source and may not be redistributed. Two
  * shipped documents granting and withholding the same rights, with
- * `THIRD-PARTY-NOTICES.md` (also shipped) siding with the MIT one. Resolved in
- * favour of the terms: AuralFM is proprietary.
+ * `THIRD-PARTY-NOTICES.md` (also shipped) siding with the MIT one.
+ *
+ * Settled 8 August 2026: **AuralFM is open source under MIT**, and the terms were
+ * the document that had to change. The reason is the project's own thesis — it
+ * claims no backend and no collection, and in a closed binary those are promises
+ * rather than facts.
  *
  * The check asserts all four statements still agree — LICENSE, the notices
  * preamble, docs/TERMS.md and package.json — because this is a legal claim that
- * reaches every user, and the failure mode was silent for months.
+ * reaches every user, and the failure mode was silent for months. It is written
+ * to be equally strict in both directions: it would fail just as loudly if a
+ * proprietary notice reappeared.
  *
  * A second check covers the other direction: what *dependencies* are licensed
  * under. It walks what actually ships — the production tree, the vendored
@@ -769,30 +775,38 @@ console.log("\nlight theme agrees with itself");
   const problems = [];
   const licence = fs.readFileSync(R("LICENSE"), "utf8");
   const terms = fs.readFileSync(R("docs/TERMS.md"), "utf8");
-  // Only the preamble: the rest of the notices file is third-party MIT texts,
-  // which must contain the grant wording.
+  // Only the preamble: the rest of the notices file is third-party licence text.
   const notices = fs.readFileSync(R("THIRD-PARTY-NOTICES.md"), "utf8").split("\n---")[0];
 
-  if (/permission is hereby granted, free of charge/i.test(licence)) {
-    problems.push("LICENSE contains the MIT grant, but AuralFM is proprietary");
+  // The grant itself has to be present and unambiguous. A LICENSE that says MIT
+  // in the heading and nothing else is not a licence.
+  if (!/^MIT License/m.test(licence)) problems.push("LICENSE is not titled MIT License");
+  if (!/permission is hereby granted, free of charge/i.test(licence)) {
+    problems.push("LICENSE does not contain the MIT grant");
   }
-  if (/^\s*MIT License/i.test(licence)) problems.push("LICENSE is titled MIT License");
-  if (!/proprietary/i.test(licence)) problems.push("LICENSE does not say proprietary");
-  if (/AuralFM is MIT licensed/i.test(notices)) {
-    problems.push("THIRD-PARTY-NOTICES preamble still calls AuralFM MIT");
+  if (/\bproprietary\b/i.test(licence.split("--------")[0])) {
+    problems.push("LICENSE still calls the project proprietary in its opening section");
   }
-  if (!/not open source/i.test(notices)) {
-    problems.push("THIRD-PARTY-NOTICES preamble does not say AuralFM is not open source");
+  // The two documents that ship must not contradict the grant. This is the exact
+  // failure that ran for months in the other direction: LICENSE granted MIT while
+  // docs/TERMS.md forbade redistribution, and both reached every user.
+  if (/not open source/i.test(terms)) {
+    problems.push("docs/TERMS.md still says the software is not open source");
   }
-  if (!/not open source/i.test(terms)) {
-    problems.push("docs/TERMS.md no longer says the software is not open source");
+  if (/you may not redistribute/i.test(terms)) {
+    problems.push("docs/TERMS.md still forbids redistribution");
+  }
+  if (!/MIT licence|MIT license/i.test(terms)) problems.push("docs/TERMS.md does not name the MIT licence");
+  if (/is proprietary/i.test(notices)) problems.push("THIRD-PARTY-NOTICES preamble calls AuralFM proprietary");
+  if (!/open source/i.test(notices)) {
+    problems.push("THIRD-PARTY-NOTICES preamble does not say AuralFM is open source");
   }
   const pkgLicence = JSON.parse(fs.readFileSync(R("package.json"), "utf8")).license || "";
-  if (/^MIT$/i.test(pkgLicence)) problems.push(`package.json license is "${pkgLicence}"`);
+  if (pkgLicence !== "MIT") problems.push(`package.json license is "${pkgLicence}", not MIT`);
 
   problems.length
     ? fail("licence", problems.join("; "))
-    : pass("LICENSE, TERMS, the notices preamble and package.json all say proprietary");
+    : pass("LICENSE, TERMS, the notices preamble and package.json all say MIT");
 }
 
 // ── every licence that ships is one we can ship ───────────────────────────────

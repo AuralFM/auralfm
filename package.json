@@ -2,7 +2,7 @@
   "name": "auralfm",
   "version": "0.1.0",
   "description": "Listen to any live radio station in the world from your menu bar",
-  "license": "SEE LICENSE IN docs/TERMS.md",
+  "license": "MIT",
   "main": "src/main.js",
   "type": "commonjs",
   "private": true,

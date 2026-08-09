@@ -1,59 +1,52 @@
-AuralFM — Proprietary Software Licence Notice
+MIT License
 
-Copyright (c) 2026 Melton Bell III. All rights reserved.
+Copyright (c) 2026 Melton Bell III
 
-AuralFM is proprietary software. It is not open source.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-No permission is granted to copy, modify, merge, publish, distribute,
-sublicense, sell, decompile or reverse-engineer this software, or to make
-derivative works from it, except:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-  (a) as expressly permitted by `docs/TERMS.md`, which grants an end user a
-      personal, non-exclusive, non-transferable, revocable licence to install
-      and use AuralFM on Macs they own or control, at no charge, for as long as
-      those terms are kept; or
-
-  (b) where the law where you live grants you a right that cannot be waived by
-      agreement — in which case that right applies, and nothing here limits it.
-
-`docs/TERMS.md` is the operative end-user licence and ships inside the
-application. Where this notice and those terms could be read differently, the
-terms govern.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 --------------------------------------------------------------------------------
 Third-party components
 
-This notice covers Melton Bell III's own code only.
-
-AuralFM bundles, vendors and downloads third-party software that is open source
-under its own licences. Those licences govern those components, nothing above
-restricts any right they grant you, and every licence text is reproduced in full
-in THIRD-PARTY-NOTICES.md and in the application under
+The licence above covers Melton Bell III's own code. AuralFM also bundles,
+vendors and runs on third-party software under its own licences — Electron and
+Chromium, globe.gl, three.js, three-globe, satellite.js and the @noble
+cryptography libraries. Every one is permissive, and every licence text is
+reproduced in full in THIRD-PARTY-NOTICES.md and in the application under
 Settings → About → Open source licences.
 
 The globe icons in assets/ are by emilegraphics via the Noun Project under
 royalty-free licences purchased 4 August 2026; certificates are in
 assets/licenses/ and terms are recorded in assets/ATTRIBUTION.md. They are not
-covered by this notice.
+covered by the licence above.
 
 --------------------------------------------------------------------------------
-No warranty
+On the name
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR OR
-COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+The MIT licence grants rights in the code. It does not grant rights in the name
+"AuralFM" or in the project's marks. A fork is free and welcome; presenting a
+fork as AuralFM is a different thing.
 
 --------------------------------------------------------------------------------
-This notice replaced an MIT License on 8 August 2026.
+This file was MIT, was briefly rewritten as a proprietary notice on 8 August
+2026 to match docs/TERMS.md, and is MIT again as of the same day.
 
-The MIT text had been in place while `docs/TERMS.md` — which ships to every user
-— said the software is not open source and may not be redistributed. Those two
-documents granted and withheld the same rights, and both were shipping. This
-notice resolves that in favour of the terms and of the project's actual position.
-
-It has not been reviewed by a lawyer. It is a plain statement of intent, not
-drafted advice, and it should be checked before AuralFM is distributed to anyone
-outside a private circle.
+The reason for returning to it is worth recording, because it is the reason this
+project exists in the form it does: AuralFM claims to have no backend of its own
+and to collect nothing. In a closed binary those are promises. Open, they are
+checkable — and a privacy claim that cannot be checked is just marketing.

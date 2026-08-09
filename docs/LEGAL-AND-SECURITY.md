@@ -19,8 +19,8 @@ a lawyer, and they are marked.
 | Station data licensing | **None** | Radio Browser data is public domain. |
 | Streaming other people's audio | **Low** | The app is a client. The station holds the licence, as with any browser. |
 | Open-source notice compliance | **Fixed, with one judgement call** | `THIRD-PARTY-NOTICES.md` credits nine components including Electron and Chromium, ships in the app, and is audit-checked. Chromium's 19 MB third-party set is linked rather than embedded — a deliberate choice, see below. |
-| Copyleft creeping into a proprietary app | **Fixed** | `npm run audit` walks the production tree, the vendored bundle and Electron, and fails on any licence outside a permissive allowlist. 51 packages, all MIT/ISC/Apache-2.0/BSD/0BSD/Unlicense. |
-| **What licence AuralFM itself is under** | **Fixed** | `LICENSE` granted MIT while `docs/TERMS.md` — shipped — forbade redistribution. Resolved 8 August 2026 in favour of the terms: proprietary. Audit-checked across all four statements. Not lawyer-reviewed. |
+| Copyleft creeping in | **Fixed** | `npm run audit` walks the production tree, the vendored bundle and Electron, and fails on any licence outside a permissive allowlist. 51 packages, all MIT/ISC/Apache-2.0/BSD/0BSD/Unlicense. |
+| **What licence AuralFM itself is under** | **Fixed** | `LICENSE` granted MIT while `docs/TERMS.md` — shipped — forbade redistribution. Settled 8 August 2026 in favour of the licence: **MIT, open source.** The terms were the document that had to change. Audit-checked across all four statements, in both directions. Not lawyer-reviewed. |
 | **Cleartext receiver list over HTTP** | **Real, unfixed** | The KiwiSDR list is fetched over `http://` and cannot be fetched over HTTPS. |
 | Unmoderated public chat | **Medium** | No hosting liability, but an App Store age rating problem. |
 | Privacy | **Strong** | Fresh key each launch, nothing persisted, no account, no backend. |
@@ -103,7 +103,7 @@ reputational one, in a small community that will notice.
 
 ## 3. Licensing — what was out of compliance, and what still is
 
-### AuralFM's own licence: was contradictory, now proprietary
+### AuralFM's own licence: was contradictory, now MIT
 
 `LICENSE` carried an **MIT License** — which grants any recipient the right to
 copy, modify, publish, distribute, sublicense and sell — while `docs/TERMS.md`,
@@ -117,14 +117,30 @@ Two documents granting and withholding the same rights, both reaching users, wit
 `THIRD-PARTY-NOTICES.md` — also shipped — siding with the MIT one. Ambiguity in a
 licence grant tends to be construed against the drafter.
 
-Resolved 8 August 2026 in favour of the terms: **AuralFM is proprietary and is
-not open source.** `LICENSE` is now an all-rights-reserved notice that defers to
-`docs/TERMS.md` as the operative end-user licence and carves out third-party
-components. `npm run audit` asserts all four statements still agree.
+Settled 8 August 2026 in favour of the licence: **AuralFM is open source under
+MIT.** `docs/TERMS.md` was the document that had to change — its licence-grant
+section now states the MIT rights plainly and says that where anything in the
+terms could be read as narrowing the licence, the licence wins. The rest of that
+document is descriptions and disclaimers, not conditions on the right to the code.
 
-**It has not been reviewed by a lawyer, and `LICENSE` says so on its face.**
-Replacing a licence grant is exactly where wording matters, and it should be
-checked before the app reaches anyone outside a private circle.
+The reason is the project's own thesis rather than an obligation to anyone. Nothing
+in the dependency tree requires it: BitChat, whose conventions AuralFM adopted, is
+under **The Unlicense** — a public-domain dedication with no reciprocity clause at
+all — and all 51 shipped packages are permissive. AuralFM claims to have no backend
+of its own and to collect nothing. In a closed binary those are promises; open,
+they are checkable, and an unverifiable privacy claim is marketing.
+
+Two things MIT does **not** cover, and both matter:
+
+- **The name.** A fork is free and welcome; a fork presented as AuralFM is not.
+  The trademark, not the licence, is what protects that — which moves the filing
+  from optional to load-bearing.
+- **One-way.** A version released under MIT stays MIT for that version. This is
+  not a decision to revisit casually.
+
+`npm run audit` asserts all four statements agree — `LICENSE`, `docs/TERMS.md`,
+the notices preamble and `package.json` — and is written to fail just as loudly if
+a proprietary notice reappears. Verified in both directions.
 
 ### Third-party notice compliance: the npm tree is covered
 
@@ -295,12 +311,12 @@ Verified rather than assumed:
 
 Four things:
 
-1. **The proprietary licence itself.** `LICENSE` was rewritten from MIT to
-   all-rights-reserved on 8 August 2026 to match `docs/TERMS.md`, by an engineer
-   and not a lawyer. Withdrawing a licence grant that was previously published —
-   even in a private repo, even before release — is the kind of thing worth a
-   real read. Anyone who obtained a copy while the MIT text was in place may have
-   a colourable argument that it applied to that copy.
+1. **The MIT licence and the terms sitting beside it.** `LICENSE` is MIT and
+   `docs/TERMS.md` was rewritten to stop contradicting it, both by an engineer and
+   not a lawyer. The specific thing worth a read is whether the terms still narrow
+   the grant anywhere by implication — the intent is that they do not, and the
+   document says the licence wins, but intent is not the same as drafting.
+   Releasing under MIT is also irreversible for that version.
 2. **The 1,000-unit Noun Project resale cap**, if the app is ever sold. §3.A is
    ambiguous about what "an item for resale" means for software, and getting it
    wrong is cheap to avoid and expensive to discover.
@@ -320,8 +336,8 @@ In order:
 
 1. ~~`THIRD-PARTY-NOTICES.md`, shipped and linked from About.~~ **Done** —
    generated, seven packages with full licence texts, in the bundle, and
-   audit-checked. AuralFM's own licence was contradictory and is now proprietary;
-   that one still wants a lawyer.
+   audit-checked. AuralFM's own licence was contradictory and is now MIT; that one
+   still wants a lawyer.
 2. Decide the KiwiSDR list question — hard validation, or lean on the bundled
    snapshot.
 3. Code signing and notarisation (#4).
