@@ -26,7 +26,8 @@
     "dist:staging": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=staging",
     "dist:beta": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=beta",
     "dist:prod": "npm run audit && npm run dist",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "test:relays": "node scripts/relay-test/two-party.mjs"
   },
   "devDependencies": {
     "electron": "^43.3.0",
