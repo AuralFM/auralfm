@@ -39,6 +39,7 @@
   "dependencies": {
     "@noble/ciphers": "^2.3.0",
     "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.3.0",
     "satellite.js": "^7.1.0"
   },
   "build": {
@@ -65,7 +66,7 @@
       "assets/sky.json",
       "data/schedule.json",
       "data/relays.json",
-    "data/filter-default.json",
+      "data/filter-default.json",
       "!**/*.js.map",
       "!**/*.d.ts",
       "!**/*.d.ts.map",

@@ -38,6 +38,8 @@ const check = process.argv.includes("--check");
  */
 const SHIPPED = [
   ["@noble/curves",  "bundled",  "Schnorr signatures for Nostr presence and chat"],
+  ["@noble/ciphers", "bundled",  "XChaCha20-Poly1305 for private messages"],
+  ["@noble/hashes",  "bundled",  "SHA-256 and HKDF for the private-message key schedule"],
   ["satellite.js",   "bundled",  "SGP4 orbit propagation for satellites and the ISS"],
   ["globe.gl",       "vendored", "The globe itself"],
   ["three",          "vendored", "3D rendering, inside globe.gl"],

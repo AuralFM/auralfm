@@ -618,15 +618,76 @@ console.log("\nlight theme agrees with itself");
     // A directory glob covering it counts too.
     return ![...allow].some((a) => a === "data/**/*" || a === "data/*");
   });
-  // Present on disk, or the reference itself is the bug.
-  const absent = [...wanted].filter((f) => !fs.existsSync(R(f)));
+  missing.length
+    ? fail("data files", missing.map((f) => `${f} is read but not in build.files`).join("; "))
+    : pass(`all ${wanted.size} data files read by src/ are in build.files`);
+
+  /**
+   * Whether the files are actually *there* is a separate question, and it is only
+   * answerable on a machine that has run the crawl.
+   *
+   * The first version of this check tested both halves together and so passed
+   * locally and failed on CI for three commits running — data/stations.min.json
+   * and friends are generated and gitignored, so a fresh clone legitimately does
+   * not have them. Which also means: verifying locally is not verifying. The
+   * allowlist half above runs everywhere; this half stands aside where the inputs
+   * cannot exist.
+   */
+  const tracked = [...wanted].filter((f) => fs.existsSync(R(f)));
+  if (tracked.length !== wanted.size) {
+    skip("data files exist", "some data/ files are generated and gitignored — runs locally");
+  } else {
+    pass(`all ${wanted.size} are present on disk`);
+  }
+}
+
+// ── every module src/ imports is declared, and credited ──────────────────────
+// Two separate omissions from one commit, both silent.
+//
+// `@noble/hashes` was required directly by src/nostr-private.js and never added
+// to `dependencies`. It resolved anyway, because @noble/curves depends on it and
+// npm hoists — so the crypto worked on this machine and would keep working right
+// up until curves bumped and dropped it, at which point private messages break
+// at runtime inside a packaged app.
+//
+// And `@noble/ciphers` shipped without a THIRD-PARTY-NOTICES entry, because that
+// list is curated by hand. MIT requires the notice to travel with the code.
+{
+  console.log("\nevery module src/ imports is declared and credited");
+  const pkg = JSON.parse(fs.readFileSync(R("package.json"), "utf8"));
+  const deps = new Set(Object.keys(pkg.dependencies || {}));
+  const notices = fs.readFileSync(R("scripts/notices.mjs"), "utf8");
+
+  const imported = new Set();
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (!/vendor/.test(full)) walk(full); continue; }
+      if (!/\.js$/.test(e.name) || /\.min\./.test(e.name)) continue;
+      const src = fs.readFileSync(full, "utf8");
+      for (const m of src.matchAll(/require\("([^"]+)"\)/g)) {
+        const id = m[1];
+        if (id.startsWith("node:") || id.startsWith(".")) continue;
+        if (id === "electron") continue;                 // provided by the runtime
+        // Scoped packages keep two segments; everything else keeps one.
+        imported.add(id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0]);
+      }
+    }
+  };
+  walk(R("src"));
+
   const problems = [
-    ...missing.map((f) => `${f} is read but not in build.files`),
-    ...absent.map((f) => `${f} is read but does not exist`),
+    ...[...imported].filter((d) => !deps.has(d))
+      .map((d) => `${d} is required by src/ but not in dependencies`),
+    // Credited by name in the curated SHIPPED list, which is what generates the
+    // notices file. Checking the source list rather than the output keeps this
+    // honest when the output is regenerated.
+    ...[...deps].filter((d) => !notices.includes(`"${d}"`))
+      .map((d) => `${d} ships but has no THIRD-PARTY-NOTICES entry`),
   ];
   problems.length
-    ? fail("data files", problems.join("; "))
-    : pass(`all ${wanted.size} data files read by src/ are shipped`);
+    ? fail("dependencies", problems.join("; "))
+    : pass(`all ${imported.size} imports declared, all ${deps.size} runtime deps credited`);
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
