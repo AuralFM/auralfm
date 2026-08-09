@@ -690,6 +690,44 @@ console.log("\nlight theme agrees with itself");
     : pass(`all ${imported.size} imports declared, all ${deps.size} runtime deps credited`);
 }
 
+// ── the licence says one thing ────────────────────────────────────────────────
+// LICENSE carried the MIT grant — "permission is hereby granted... to deal in
+// the Software without restriction... distribute, sublicense, and/or sell" —
+// while docs/TERMS.md, which ships to every user, said the software is not open
+// source and may not be redistributed. Two shipped documents granting and
+// withholding the same rights, and THIRD-PARTY-NOTICES.md (also shipped) sided
+// with the MIT one. Resolved in favour of the terms; this stops it drifting back.
+{
+  console.log("\nthe project states one licence for itself");
+  const problems = [];
+  const licence = fs.readFileSync(R("LICENSE"), "utf8");
+  const terms = fs.readFileSync(R("docs/TERMS.md"), "utf8");
+  // Only the preamble: the rest of the notices file is third-party MIT texts,
+  // which must contain the grant wording.
+  const notices = fs.readFileSync(R("THIRD-PARTY-NOTICES.md"), "utf8").split("\n---")[0];
+
+  if (/permission is hereby granted, free of charge/i.test(licence)) {
+    problems.push("LICENSE contains the MIT grant, but AuralFM is proprietary");
+  }
+  if (/^\s*MIT License/i.test(licence)) problems.push("LICENSE is titled MIT License");
+  if (!/proprietary/i.test(licence)) problems.push("LICENSE does not say proprietary");
+  if (/AuralFM is MIT licensed/i.test(notices)) {
+    problems.push("THIRD-PARTY-NOTICES preamble still calls AuralFM MIT");
+  }
+  if (!/not open source/i.test(notices)) {
+    problems.push("THIRD-PARTY-NOTICES preamble does not say AuralFM is not open source");
+  }
+  if (!/not open source/i.test(terms)) {
+    problems.push("docs/TERMS.md no longer says the software is not open source");
+  }
+  const pkgLicence = JSON.parse(fs.readFileSync(R("package.json"), "utf8")).license || "";
+  if (/^MIT$/i.test(pkgLicence)) problems.push(`package.json license is "${pkgLicence}"`);
+
+  problems.length
+    ? fail("licence", problems.join("; "))
+    : pass("LICENSE, TERMS, the notices preamble and package.json all say proprietary");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

@@ -101,7 +101,10 @@ reputational one, in a small community that will notice.
 
 ## 3. The open-source gap — the one thing that is actually out of compliance
 
-`LICENSE` covers Melton's own code (MIT). Nothing covers what ships alongside it.
+`LICENSE` covers Melton's own code, and it is **proprietary** — AuralFM is not
+open source. It carried an MIT text until 8 August 2026, which contradicted
+`docs/TERMS.md` shipping beside it; the terms were right and the notice now
+matches them. What ships *alongside* Melton's code is a separate obligation.
 
 The app bundles **globe.gl, three.js, three-globe, satellite.js and
 @noble/curves**, and now downloads **onnxruntime-web and transformers.js**. Every
