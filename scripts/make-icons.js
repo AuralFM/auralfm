@@ -323,43 +323,94 @@ app.whenReady().then(async () => {
   const untilReady = async (win, ms = 8000) => {
     const start = Date.now();
     for (;;) {
+      const err = await win.webContents.executeJavaScript(
+        "document.documentElement.dataset.texErr || null");
+      // Checked on every pass, not only on timeout. A texture that fails to load
+      // sets texErr and *still* lets the ready flag be set, because the catch
+      // swallows it — so the old code sailed past a broken texture and wrote a
+      // flat icon while reporting success.
+      if (err) throw new Error("texture failed to load: " + err);
       if (await win.webContents.executeJavaScript(
         "document.documentElement.dataset.ready === '1'")) return;
-      if (Date.now() - start > ms) {
-        const err = await win.webContents.executeJavaScript(
-          "document.documentElement.dataset.texErr || null");
-        throw new Error("icon never reported ready" + (err ? ": " + err : ""));
-      }
+      if (Date.now() - start > ms) throw new Error("icon never reported ready");
       await sleep(40);
     }
   };
 
+  /**
+   * Did the map actually arrive?
+   *
+   * `Image.decode()` proves the file parses. It does not prove the *CSS
+   * background layer* has been rasterized, and those are separate pieces of work
+   * in the compositor — so on an unlucky run the capture happened with the
+   * texture decoded and the layer still unpainted. The Earth came out as flat
+   * fallback navy, the starfield behind it came out pure black, the build
+   * reported success, and a black sphere shipped.
+   *
+   * That is not fixable by waiting longer on a guess. The only reliable signal is
+   * the artifact: a photograph of the Earth has continents, oceans and ice in it,
+   * so its luminance varies a lot. A flat fill does not vary at all. Measured
+   * over the middle half of the canvas, the broken render scored sd 11.9 and a
+   * correct one 42.2 — far enough apart to test with confidence.
+   */
+  const FLAT_SD = 25;
+  const contrast = (img) => {
+    const { width: w, height: h } = img.getSize();
+    const b = img.getBitmap();
+    const x0 = Math.round(w * 0.25), x1 = Math.round(w * 0.75);
+    const y0 = Math.round(h * 0.25), y1 = Math.round(h * 0.75);
+    let n = 0, sum = 0, sumSq = 0;
+    for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) {
+      const o = (y * w + x) * 4;
+      const lum = 0.2126 * b[o + 2] + 0.7152 * b[o + 1] + 0.0722 * b[o];
+      n++; sum += lum; sumSq += lum * lum;
+    }
+    const mean = sum / n;
+    return Math.sqrt(Math.max(0, sumSq / n - mean * mean));
+  };
+
+  /**
+   * Load, settle, capture — and for a textured variant, prove the texture is in
+   * the pixels before accepting the shot. Retries rather than failing on the
+   * first flat frame, because the cause is a race and a second attempt with the
+   * layer already warm almost always wins.
+   */
+  const shoot = async (win, size, textured, attempts = 4) => {
+    for (let i = 1; ; i++) {
+      await win.loadFile(tmp);
+      await untilReady(win);
+      // More frames on each retry: the first pass is the cold one.
+      for (let f = 0; f < i * 2; f++) await sleep(60);
+      const shot = await win.webContents.capturePage({ x: 0, y: 0, width: size, height: size });
+      const img = shot.getSize().width === size
+        ? shot
+        : shot.resize({ width: size, height: size, quality: "best" });
+      if (!textured) return img;
+      const sd = contrast(img);
+      if (sd >= FLAT_SD) return img;
+      if (i >= attempts) {
+        throw new Error(`textured icon rendered flat after ${attempts} attempts `
+          + `(contrast sd ${sd.toFixed(1)}, need ${FLAT_SD}). `
+          + `Refusing to write a black icon — that is the bug this check exists for.`);
+      }
+      console.log(`  retrying textured render (attempt ${i} was flat, sd ${sd.toFixed(1)})`);
+    }
+  };
+
+  // capturePage returns device pixels, so on a Retina display a shot comes back
+  // at 2x the requested size. shoot() downscales to the exact dimensions asked
+  // for — which also means every icon is supersampled, not just resized up.
   const render = async (win, svgFile, size, style) => {
     const svg = fs.readFileSync(path.join(ASSETS, svgFile), "utf8");
     fs.writeFileSync(tmp, page(svg, size, style));
-    await win.loadFile(tmp);
-    await untilReady(win);
-    const shot = await win.webContents.capturePage({ x: 0, y: 0, width: size, height: size });
-    const img = shot.getSize().width === size
-      ? shot
-      : shot.resize({ width: size, height: size, quality: "best" });
-    return img.toPNG();
+    return (await shoot(win, size, false)).toPNG();
   };
 
   try {
     for (const [src, name, size, style, variant] of JOBS) {
       const svg = fs.readFileSync(path.join(ASSETS, src), "utf8");
       fs.writeFileSync(tmp, page(svg, size, style, variant));
-      await win.loadFile(tmp);
-      await untilReady(win);
-      const shot = await win.webContents.capturePage({ x: 0, y: 0, width: size, height: size });
-      // capturePage returns device pixels, so on a Retina display this comes back
-      // at 2x the requested size. Downscale to the exact pixel dimensions we asked
-      // for — which also means every icon is supersampled, not just resized up.
-      const img = shot.getSize().width === size
-        ? shot
-        : shot.resize({ width: size, height: size, quality: "best" });
-      const png = img.toPNG();
+      const png = (await shoot(win, size, !!VARIANTS[variant]?.texture)).toPNG();
       fs.writeFileSync(path.join(OUT, name), png);
       console.log(`  ${name.padEnd(22)} ${size}x${size}  ${(png.length / 1024).toFixed(1)} KB`);
     }
@@ -372,9 +423,24 @@ app.whenReady().then(async () => {
     execFileSync("iconutil", ["-c", "icns", ICONSET, "-o", path.join(ROOT, "build", "icon.icns")]);
     const icns = fs.statSync(path.join(ROOT, "build", "icon.icns"));
     console.log(`  build/icon.icns        ${ICNS.length} sizes  ${(icns.size / 1024).toFixed(0)} KB`);
-  } finally {
+  } catch (err) {
+    /**
+     * Fail the build, loudly.
+     *
+     * Without this the rejection surfaced as an UnhandledPromiseRejectionWarning
+     * and the process still exited 0, so `npm run dist` printed the error, walked
+     * straight past it, and packaged whatever icon happened to be on disk. Every
+     * guard above was already working and none of them could stop a release —
+     * which is the same shape as the bug they exist to catch.
+     */
+    console.error("\nicon generation failed:", err.message, "\n");
     if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
     win.destroy();
+    app.exit(1);
+    return;
+  } finally {
+    if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    if (!win.isDestroyed()) win.destroy();
   }
   console.log("written to assets/generated/");
   app.quit();
