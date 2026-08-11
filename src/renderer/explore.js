@@ -3076,11 +3076,17 @@ function repaintLog() {
   const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
   log.innerHTML = "";
 
-  const merged = [
-    ...chatCache.map((m) => ({ ...m, sort: m.at || 0 })),
-    ...noteCache.map((m) => ({ ...m, kind: "note", sort: m.at || 0 })),
-    ...dmCache.map((m) => ({ ...m, kind: "dm", sort: m.at || 0 })),
-  ].sort((a, b) => a.sort - b.sort);
+  // In a private conversation the log *is* that conversation. Leaving the public
+  // room's messages underneath would put a twenty-kilometre square and a private
+  // thread in one column, which is the confusion this whole change exists to end.
+  const merged = (dmWith
+    ? dmCache.filter((m) => m.with === dmWith.pubkey)
+        .map((m) => ({ ...m, kind: "dm", sort: m.at || 0 }))
+    : [
+        ...chatCache.map((m) => ({ ...m, sort: m.at || 0 })),
+        ...noteCache.map((m) => ({ ...m, kind: "note", sort: m.at || 0 })),
+        ...dmCache.map((m) => ({ ...m, kind: "dm", sort: m.at || 0 })),
+      ]).sort((a, b) => a.sort - b.sort);
 
   for (const m of merged) {
     const el = document.createElement("div");
@@ -3305,9 +3311,239 @@ function paintComposer() {
   if (!input) return;
   const browsing = !!viewingCell;
   input.disabled = browsing;
-  input.placeholder = browsing
-    ? t("chat.browsing", "Listening here would let you reply")
-    : t("chat.placeholder", "Say something to this place");
+  input.placeholder = dmWith
+    ? t("chat.dmPlaceholder", "Private message")
+    : browsing
+      ? t("chat.browsing", "Listening here would let you reply")
+      : t("chat.placeholder", "Say something to this place");
+  describeMode();
+}
+
+/**
+ * ─── Which conversation you are in, and whether Enter will do what you meant ──
+ *
+ * One text field had two meanings and showed neither. `/msg gal hello` and
+ * `hello` go to entirely different audiences, and until this existed the only
+ * way to find out which one you had typed was to send it. That is a mode error,
+ * the same shape as caps lock: the machine knows, the person cannot see it.
+ *
+ * Three things fix it, in increasing order of how much they change:
+ *
+ *   **The mode line** under the input says, in words, what Enter will do. It is
+ *   `aria-live="polite"` so it is spoken rather than only shown.
+ *
+ *   **The name picker** offers who you can actually address, because the failure
+ *   this always produced was a nickname that did not resolve — and the old code
+ *   threw away everything you had typed when that happened.
+ *
+ *   **A private conversation is a place.** `/msg somebody` walks you into it and
+ *   the bar above the log says whose it is. This is what bitchat does — their
+ *   `/msg` calls `startPrivateChat(with:)` and the message argument is optional —
+ *   and since their users are in these same rooms, behaving the same way is
+ *   worth more than any cleverness of ours.
+ */
+let dmWith = null;                     // { pubkey, nick } while in a private thread
+
+/**
+ * The room's own name, which is the station's place and never the listener's.
+ *
+ * Deliberately not `viewingCell`'s place: this names the audience for something
+ * you are about to *send*, and sending only ever reaches the cell you are
+ * listening to. Naming the browsed city here would promise the wrong room.
+ */
+const myPlaceName = () => playing?.place || null;
+
+/** Everyone here we could name. Speakers carry a nickname; the silent do not. */
+function roster() {
+  const out = new Map();
+  for (const m of chatCache) {
+    if (m.mine || !m.pubkey) continue;
+    out.set(m.pubkey, { pubkey: m.pubkey, nick: m.nick || null, from: m.from, spoke: true });
+  }
+  /**
+   * Present but silent. Their heartbeat has no nickname in it — a bitchat
+   * nickname travels on the message, not the announcement — so the short key is
+   * the only handle they have, and it is a real one.
+   *
+   * Filtered to this cell, and that filter is not cosmetic. `peers` is everybody
+   * the relays told us about anywhere on Earth: on a live network this returned
+   * seventy-nine people while the header beside it said how many were *here*.
+   * Offering a stranger in Tokyo under a heading that names Mexico City is the
+   * same lie the header check already refuses to tell.
+   */
+  for (const p of peers) {
+    if (!p.pubkey || out.has(p.pubkey)) continue;
+    if (!myCell || !p.geohash || !sameCell(p.geohash, myCell)) continue;
+    out.set(p.pubkey, { pubkey: p.pubkey, nick: null, from: p.id, spoke: false });
+  }
+  return [...out.values()];
+}
+
+/** Everybody a fragment could mean. Empty fragment means everybody. */
+function matchPeople(want) {
+  const w = String(want || "").trim().toLowerCase().replace(/^@/, "");
+  const all = roster();
+  if (!w) return all;
+  const exact = all.filter((p) => (p.nick || "").toLowerCase() === w || p.from.toLowerCase() === w);
+  if (exact.length) return exact;
+  return all.filter((p) => (p.nick || "").toLowerCase().startsWith(w)
+                        || p.from.toLowerCase().startsWith(w)
+                        || p.pubkey.toLowerCase().startsWith(w));
+}
+
+/** Exactly one person, or nothing. Ambiguity is not a match. */
+const matchOne = (want) => {
+  const hits = matchPeople(want);
+  return hits.length === 1 ? hits[0] : null;
+};
+
+/** Walk into a private conversation. */
+async function enterDm(who) {
+  dmWith = { pubkey: who.pubkey, nick: who.nick || who.from };
+  $("chatdm").hidden = false;
+  $("chatdmwho").textContent = `${t("chat.dmWith", "Private with")} ${dmWith.nick}`;
+  $("chatinput").classList.add("dm");
+  await guard("dmRead", () => window.auralfm.dmRead(dmWith.pubkey));
+  paintComposer();
+  repaintLog();
+  $("chatinput").focus();
+}
+
+/** Back to the room. */
+function leaveDm() {
+  if (!dmWith) return;
+  dmWith = null;
+  $("chatdm").hidden = true;
+  $("chatdmwho").textContent = "";      // hidden is not the same as empty
+  $("chatinput").classList.remove("dm");
+  hideNames();
+  paintComposer();
+  repaintLog();
+  $("chatinput").focus();
+}
+
+function hideNames() {
+  const box = $("chatnames");
+  if (box) { box.hidden = true; box.innerHTML = ""; }
+}
+
+/**
+ * Offer the names, rather than let somebody guess one.
+ *
+ * Clicking a name completes the command instead of running it, so the person is
+ * still the one who presses Enter. A picker that fired the command would be a
+ * different kind of surprise from the one being fixed here.
+ */
+function showNames(word, fragment) {
+  const box = $("chatnames");
+  if (!box) return;
+  const hits = matchPeople(fragment).slice(0, 8);
+  if (!hits.length) return hideNames();
+  box.innerHTML = "";
+  for (const p of hits) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "option");
+    const n = document.createElement("span");
+    n.textContent = p.nick || p.from;
+    b.append(n);
+    if (!p.spoke) {
+      const q = document.createElement("span");
+      q.className = "q";
+      q.textContent = t("chat.hasNotSpoken", "here, hasn't spoken");
+      b.append(q);
+    }
+    const k = document.createElement("span");
+    k.className = "k";
+    k.textContent = p.from;
+    b.append(k);
+    b.onclick = () => {
+      const input = $("chatinput");
+      input.value = `${word} ${p.nick || p.from} `;
+      input.focus();
+      describeMode();
+    };
+    box.append(b);
+  }
+  box.hidden = false;
+}
+
+/**
+ * Say what Enter will do.
+ *
+ * Every branch here answers one question — who is about to read this — because
+ * that is the question the old composer could not answer.
+ */
+function describeMode() {
+  const input = $("chatinput"), bar = $("chatmode");
+  if (!input || !bar) return;
+  const text = input.value;
+  const set = (html, cls) => { bar.innerHTML = html; bar.className = `cmdmode${cls ? ` ${cls}` : ""}`; };
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  input.classList.remove("cmdok", "cmdbad");
+
+  if (viewingCell) { hideNames(); return set(t("chat.onlyLooking", "You are looking at this room, not listening to it.")); }
+
+  if (text.startsWith("/")) {
+    const sp = text.indexOf(" ");
+    const word = (sp < 0 ? text : text.slice(0, sp)).toLowerCase();
+    const rest = sp < 0 ? "" : text.slice(sp + 1);
+    const cmd = COMMANDS[word];
+
+    // Still typing the command itself: show what it could become.
+    if (sp < 0 && !cmd) {
+      const near = Object.keys(COMMANDS).filter((k) => k.startsWith(word));
+      hideNames();
+      input.classList.add(near.length ? "cmdok" : "cmdbad");
+      // Say when the list is cut short. A truncated list that looks complete is
+      // how somebody concludes a command does not exist.
+      return near.length
+        ? set(esc(near.slice(0, 8).join("  ")) + (near.length > 8 ? ` +${near.length - 8}` : ""))
+        : set(`<b>${esc(word)}</b> ${t("chat.notACommand", "is not a command. Type / to see them.")}`, "warn");
+    }
+    if (!cmd) {
+      hideNames();
+      input.classList.add("cmdbad");
+      return set(`<b>${esc(word)}</b> ${t("chat.notACommand", "is not a command. Type / to see them.")}`, "warn");
+    }
+
+    if (cmd.needsName) {
+      const frag = rest.split(" ")[0] || "";
+      const one = matchOne(frag);
+      if (one) {
+        hideNames();
+        input.classList.add("cmdok");
+        return set(`<b>${esc(word)}</b> → <b>${esc(one.nick || one.from)}</b>`
+                 + (cmd.privately ? ` — ${t("chat.privateOnly", "nobody else in this room sees it")}` : ""),
+                   cmd.privately ? "priv" : "");
+      }
+      showNames(word, frag);
+      // A command typed correctly but not yet finished is incomplete, not wrong.
+      // Marking it red the moment somebody types `/msg` tells them they made a
+      // mistake when all they did was not finish the sentence — which is exactly
+      // the sort of false alarm that teaches people to ignore the signal.
+      if (!frag) {
+        return set(`<b>${esc(word)}</b> ${esc(cmd.hint.replace(word, "").replace(/^\s*—\s*/, "").trim())}`);
+      }
+      input.classList.add("cmdbad");
+      return set(`${t("chat.nobodyCalled", "Nobody here called")} <b>${esc(frag)}</b>`, "warn");
+    }
+
+    hideNames();
+    input.classList.add("cmdok");
+    return set(esc(cmd.hint));
+  }
+
+  hideNames();
+  if (dmWith) {
+    input.classList.add("cmdok");
+    return set(`${t("chat.privateTo", "Private to")} <b>${esc(dmWith.nick)}</b> — `
+             + t("chat.privateOnly", "nobody else in this room sees it"), "priv");
+  }
+  const where = myPlaceName();
+  return set(where
+    ? `${t("chat.everyoneNear", "Everyone near")} <b>${esc(where)}</b> ${t("chat.willSee", "will see this")}`
+    : t("chat.everyoneHere", "Everyone in this room will see this"));
 }
 
 /**
@@ -3346,6 +3582,7 @@ const COMMANDS = {
   },
   "/mute": {
     hint: "/mute <name> — stop seeing somebody",
+    needsName: true,
     run: async (rest) => {
       const who = findPerson(rest, "/mute");
       if (!who) return;
@@ -3397,25 +3634,50 @@ const COMMANDS = {
    * have switched on the durable identity in Settings — which is the honest
    * shape of a system with no accounts in it.
    */
+  /**
+   * Words are optional, because this opens a conversation rather than posting
+   * one line. `/msg gal` walks in; `/msg gal hello` walks in and says hello.
+   * Same as bitchat, whose users are in these rooms and already know it.
+   */
   "/msg": {
-    hint: "/msg <name> <words> — privately, encrypted",
+    hint: "/msg <name> — open a private conversation",
+    needsName: true,
+    privately: true,
     run: async (rest) => {
       const [first, ...words] = (rest || "").trim().split(" ");
       const who = findPerson(first, "/msg");
       if (!who) return;
+      await enterDm(who);
       const body = words.join(" ").trim();
-      if (!body) return systemLine(`Say something: /msg ${first} are you hearing this too?`);
+      if (!body) {
+        return systemLine(`Private with ${name(who)}. Everything you type now goes only to them. `
+          + "Esc, or Back to the room, to leave.");
+      }
       const ok = await guard("dmSend", () => window.auralfm.dmSend(who.pubkey, body), false);
       if (!ok) return systemLine("Not sent — no relay is connected, or they are muted.");
-      systemLine(`→ ${name(who)} (private): ${body}`);
     },
   },
+  /**
+   * Favorites, and the honest condition on them.
+   *
+   * bitchat refuses this outright in a geohash channel — "favorites are only for
+   * mesh peers in #mesh" — and every room in AuralFM is a geohash channel. The
+   * reason is not arbitrary: a favorite is a note about a person, and a per-area
+   * key is thrown away at quit, so keeping one is keeping a note about somebody
+   * who will not exist tomorrow.
+   *
+   * Rather than refuse it, this requires the thing that makes it true. With the
+   * durable identity on, a favorite can survive; without it, saying so up front
+   * is better than succeeding and then explaining.
+   */
   "/fav": {
     hint: "/fav <name> — keep somebody, and tell them",
+    needsName: true,
     run: (rest) => setFavorite(rest, true),
   },
   "/unfav": {
     hint: "/unfav <name> — stop keeping somebody",
+    needsName: true,
     run: (rest) => setFavorite(rest, false),
   },
 
@@ -3431,6 +3693,7 @@ const COMMANDS = {
    */
   "/verify": {
     hint: "/verify <name> — compare fingerprints in person",
+    needsName: true,
     run: async (rest) => {
       const who = findPerson(rest, "/verify");
       if (!who) return;
@@ -3481,27 +3744,63 @@ const name = (p) => p.nick || p.from || String(p.pubkey || "").slice(0, 8);
  * spoken here. Reports its own failure and returns null, so every caller is one
  * line rather than five identical ones.
  */
+/**
+ * Turn what somebody typed into a person.
+ *
+ * This used to search only the message log, which meant the set of people you
+ * could address was the set who had spoken — while the header counted everybody
+ * present. Both statements were true at once, so the app could say "57
+ * listening" and "nobody called gal has said anything here" in the same breath,
+ * and it read as broken because it was.
+ *
+ * [roster] resolves against presence as well, so somebody who is here and quiet
+ * can still be messaged, favorited or muted. Muting matters most: the person
+ * worth muting may well be one you have not heard from yet.
+ */
 function findPerson(rest, cmd) {
-  const want = String(rest || "").trim().toLowerCase();
-  if (!want) { systemLine(`Who? ${cmd} followed by the name shown beside a message.`); return null; }
-  const hit = chatCache.find((m) => !m.mine && m.pubkey &&
-    ((m.nick || "").toLowerCase() === want || m.from.toLowerCase().startsWith(want)));
-  if (!hit) { systemLine(`Nobody called "${String(rest).trim()}" has said anything here.`); return null; }
-  return hit;
+  const want = String(rest || "").trim();
+  if (!want) {
+    const all = roster();
+    systemLine(all.length
+      ? `Who? ${cmd} <name>. Here now: ${all.slice(0, 8).map((p) => p.nick || p.from).join(", ")}`
+      : `Who? ${cmd} followed by a name — but there is nobody here yet.`);
+    return null;
+  }
+  const hits = matchPeople(want);
+  if (!hits.length) {
+    const all = roster();
+    systemLine(all.length
+      ? `Nobody here called "${want}". Here now: ${all.slice(0, 8).map((p) => p.nick || p.from).join(", ")}`
+      : `Nobody here called "${want}" — the room is empty.`);
+    return null;
+  }
+  // Ambiguity is not a match. Picking one on somebody's behalf is how a private
+  // message reaches the wrong person.
+  if (hits.length > 1) {
+    systemLine(`"${want}" could be ${hits.slice(0, 6).map((p) => p.nick || p.from).join(", ")}. Be more specific.`);
+    return null;
+  }
+  return hits[0];
 }
 
 async function setFavorite(rest, on) {
   const who = findPerson(rest, on ? "/fav" : "/unfav");
   if (!who) return;
+  // Ask before doing it, not after. The old order kept the person and *then*
+  // explained that keeping them probably would not last, which is a receipt for
+  // something that did not happen rather than a choice.
+  if (on) {
+    const st = await guard("stats", () => window.auralfm.presenceStats(), null);
+    if (!st?.durable && !confirm(
+      `Keep ${name(who)}?\n\nYour key is thrown away when AuralFM quits, so this will not survive `
+      + "a restart — and neither will theirs unless they have switched on a durable identity too. "
+      + "Settings → Privacy turns yours on.\n\nKeep them for this session anyway?")) return;
+  }
   const ok = await guard("socialFavorite", () => window.auralfm.socialFavorite(who.pubkey, on), false);
   if (!ok) return systemLine("That did not work — they may be muted.");
   systemLine(on
     ? `Keeping ${name(who)}. They have been told, privately. It becomes mutual if they keep you back.`
     : `No longer keeping ${name(who)}.`);
-  // The honest caveat, once, at the moment it matters: most keys out there are
-  // ephemeral, so a favorite usually will not survive the other side quitting.
-  if (on) systemLine("Most keys on this network are thrown away at quit, including ours by default. "
-    + "Settings → Privacy has a durable identity if you want this to last.");
 }
 
 /**
@@ -3541,19 +3840,50 @@ let chatCache = [];
  */
 $("chatlog").addEventListener("click", (e) => { if (e.detail === 3) panicWipe(); });
 
+/** The relay took nothing. Say so without taking the words away. */
+function sendFailed(input, msg) {
+  input.placeholder = msg;
+  setTimeout(paintComposer, 4000);
+}
+
 $("chatform").onsubmit = async (e) => {
   e.preventDefault();
   const input = $("chatinput");
   let text = input.value.trim();
   if (!text) return;
 
+  /**
+   * Inside a private conversation, ordinary words go to that person and only to
+   * them. A command is still a command — being in a thread should not stop you
+   * typing /help — and that is the one ambiguity worth keeping, because a
+   * message beginning with a slash is a command everywhere else in the app too.
+   */
+  if (dmWith && !text.startsWith("/")) {
+    input.disabled = true;
+    const ok = await guard("dmSend", () => window.auralfm.dmSend(dmWith.pubkey, text), false);
+    input.disabled = false;
+    input.focus();
+    if (ok) input.value = "";
+    else sendFailed(input, t("chat.dmFailed", "Not sent — no relay took it, or they are muted."));
+    describeMode();
+    return;
+  }
+
   if (text.startsWith("/")) {
     const [word, ...rest] = text.split(" ");
     const cmd = COMMANDS[word.toLowerCase()];
-    input.value = "";
-    if (!cmd) return systemLine(`${word} is not a command. Try /help.`);
+    // Everything below deliberately leaves `input.value` alone until something
+    // has actually happened. Clearing it first is what threw away a long message
+    // every time a nickname failed to resolve — the single most annoying way
+    // this composer could fail, and the one that happened most.
+    if (!cmd) { describeMode(); return systemLine(`${word} is not a command. Try /help.`); }
+    // The name is the part that fails, so it is checked before anything is lost.
+    if (cmd.needsName && !matchOne((rest[0] || ""))) {
+      describeMode();                    // the mode line and picker already say why
+      return findPerson(rest[0] || "", word) && undefined;
+    }
     const out = await cmd.run(rest.join(" "));
-    if (!out || !out.send) return;
+    if (!out || !out.send) { input.value = ""; describeMode(); return; }
     text = out.send;                     // /me rewrites rather than intercepts
   }
 
@@ -3562,13 +3892,29 @@ $("chatform").onsubmit = async (e) => {
   input.disabled = false;
   input.focus();
   if (sent) input.value = "";
-  else {
-    // Never silently swallow it. If no relay took the message, the text stays
-    // where the person typed it.
-    input.placeholder = t("chat.failed", "AuralFM cannot reach a relay. It did not send your message.");
-    setTimeout(() => { input.placeholder = t("chat.placeholder", "Say something to this place"); }, 4000);
-  }
+  // Never silently swallow it. If no relay took the message, the text stays
+  // where the person typed it.
+  else sendFailed(input, t("chat.failed", "AuralFM cannot reach a relay. It did not send your message."));
+  describeMode();
 };
+
+// The mode line is only honest if it keeps up with the typing.
+$("chatinput").addEventListener("input", describeMode);
+$("chatdmout").onclick = leaveDm;
+/**
+ * Escape leaves the conversation.
+ *
+ * Only while the composer has focus and only while there is a thread to leave,
+ * so it never competes with Escape elsewhere — the tour listens on capture, and
+ * a key that closes two things at once closes the wrong one.
+ */
+$("chatinput").addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!dmWith) return;
+  e.preventDefault();
+  e.stopPropagation();
+  leaveDm();
+});
 async function refreshSpace() {
   try { spaceWx = (await window.auralfm.space()) || spaceWx; } catch { /* keep the last */ }
 }

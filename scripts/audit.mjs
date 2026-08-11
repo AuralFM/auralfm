@@ -330,10 +330,23 @@ for (const { code, name } of LANGUAGES) {
 }
 
 // Anything the renderers ask for must exist.
+//
+// The scripts moved out of the HTML and this check did not follow them, so for
+// a while it read four files and scored 92 keys while explore.js alone asked for
+// 72 more that nothing verified. Every one of those happened to be defined —
+// the discipline held without the check — but a missing key renders as its own
+// name, and "chat.privateOnly" appearing in the interface is the exact failure
+// this was written to prevent.
+const rendererScripts = fs.readdirSync(R("src/renderer"))
+  .filter((f) => f.endsWith(".js"))
+  .map((f) => fs.readFileSync(R(`src/renderer/${f}`), "utf8"));
 const used = new Set();
 for (const { html } of renderers) {
   for (const m of html.matchAll(/data-i18n(?:-title|-ph)?="([^"]+)"/g)) used.add(m[1]);
   for (const m of html.matchAll(/\bt\(\s*"([^"]+)"/g)) used.add(m[1]);
+}
+for (const js of rendererScripts) {
+  for (const m of js.matchAll(/\bt\(\s*"([^"]+)"/g)) used.add(m[1]);
 }
 for (const m of main.matchAll(/t\["([^"]+)"\]/g)) used.add(m[1]);
 const unknown = [...used].filter((k) => !(k in en));
@@ -658,6 +671,42 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("chat funnel", problems.join("; "))
     : pass("messages, notes and private messages all pass through visible()");
+}
+
+// ── the composer does not throw away what somebody typed ─────────────────────
+// `input.value = ""` used to run *before* the command did, so every command that
+// failed on a name it could not resolve deleted the message with it. Typing
+// `/msg gal <a paragraph>` with the name slightly wrong lost the paragraph.
+//
+// Checked structurally rather than by running the renderer: inside the submit
+// handler, the clear must not appear before `cmd.run`. A comment cannot enforce
+// an ordering, and this ordering is the whole bug.
+{
+  console.log("\nthe composer keeps your words when a command fails");
+  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const start = src.indexOf('$("chatform").onsubmit');
+  const problems = [];
+  if (start < 0) problems.push("the submit handler is gone");
+  else {
+    const body = src.slice(start, start + 3000);
+    // The invariant, stated exactly: between looking a command up and running
+    // it, nothing may clear the input. Anything looser measures the private
+    // branch above — which clears correctly, after a successful send — and this
+    // check's own first two attempts both failed that way.
+    const look = body.indexOf("COMMANDS[");
+    const run = body.indexOf("cmd.run(", look < 0 ? 0 : look);
+    if (look < 0 || run < 0) problems.push("nothing dispatches a command");
+    else if (/input\.value\s*=\s*""/.test(body.slice(look, run))) {
+      problems.push("input is cleared before the command runs — a failed command loses the message");
+    }
+    // And the private path has to exist, or every DM is a public message.
+    if (!/dmWith\s*&&\s*!text\.startsWith\("\/"\)/.test(body)) {
+      problems.push("nothing routes a private conversation to dmSend");
+    }
+  }
+  problems.length
+    ? fail("composer", problems.join("; "))
+    : pass("a command runs before the input is cleared, and a private thread sends privately");
 }
 
 // ── a note is not duplicated by sweeping the globe ───────────────────────────

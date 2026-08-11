@@ -389,7 +389,13 @@ function emit() {
     // The cell travels with the peer. Without it the renderer can only place a
     // ring on the globe, and any count it shows beside a place name would be a
     // worldwide total wearing a local label.
-    if (c) list.push({ id: pubkey.slice(0, 8), lat: c.lat, lon: c.lon,
+    // `id` is the label — eight characters is enough to tell two strangers
+    // apart on screen. `pubkey` is the address, and it has to be all of it:
+    // without it a renderer can see that somebody is here and can do nothing
+    // about it, because favoriting and messaging both need the whole key. That
+    // is not a leak — this key was announced to every relay we are connected
+    // to, by them, which is how we know they are here at all.
+    if (c) list.push({ id: pubkey.slice(0, 8), pubkey, lat: c.lat, lon: c.lon,
                        label: v.label, geohash: v.geohash });
   }
   onPeers(list);
