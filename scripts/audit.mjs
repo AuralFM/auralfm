@@ -709,6 +709,40 @@ console.log("\nlight theme agrees with itself");
     : pass("a command runs before the input is cleared, and a private thread sends privately");
 }
 
+// ── what the app says survives the next message ──────────────────────────────
+// systemLine() appended straight into #chatlog, and repaintLog() empties that
+// element and rebuilds it from the caches. So every explanation the chat gave
+// lasted until the next inbound message: "Nobody here called gal" could vanish a
+// second after it appeared, which made the app least articulate exactly when it
+// had most to say. It has to live in a cache and be merged like any other kind.
+{
+  console.log("\nwhat the app says outlives the next repaint");
+  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const problems = [];
+  const fn = src.slice(src.indexOf("function systemLine("), src.indexOf("function systemLine(") + 500);
+  if (!src.includes("function systemLine(")) problems.push("systemLine is gone");
+  else {
+    if (/\.append\(|createElement\(/.test(fn)) {
+      problems.push("systemLine writes to the DOM — repaintLog will erase it");
+    }
+    if (!/systemCache\.push\(/.test(fn)) problems.push("systemLine does not record what it said");
+  }
+  // And the repaint has to put them back, in both views.
+  const rp = src.slice(src.indexOf("function repaintLog("), src.indexOf("function repaintLog(") + 1400);
+  if (!/systemCache\.map\(/.test(rp)) problems.push("repaintLog does not merge systemCache");
+  // Clearing the log without clearing the cache is a Clear that clears nothing.
+  for (const site of ['"/clear"', "async function panicWipe("]) {
+    const i = src.indexOf(site);
+    if (i < 0) { problems.push(`${site} is gone`); continue; }
+    if (!/clearSystemLines\(\)/.test(src.slice(i, i + 700))) {
+      problems.push(`${site} empties the log but not systemCache`);
+    }
+  }
+  problems.length
+    ? fail("system lines", problems.join("; "))
+    : pass("system lines are cached, repainted in both views, and cleared with the log");
+}
+
 // ── a note is not duplicated by sweeping the globe ───────────────────────────
 // The three inbound lists — chat, notes, private messages — shared one seen-set,
 // and they do not share a lifetime. `view()` empties the chat whenever the

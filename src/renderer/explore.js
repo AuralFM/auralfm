@@ -3079,10 +3079,14 @@ function repaintLog() {
   // In a private conversation the log *is* that conversation. Leaving the public
   // room's messages underneath would put a twenty-kilometre square and a private
   // thread in one column, which is the confusion this whole change exists to end.
+  // What the app said belongs in both views: it is addressed to you, not to a
+  // room, so walking into a private conversation should not silence it.
+  const said = systemCache.map((m) => ({ ...m, sort: m.at || 0 }));
   const merged = (dmWith
-    ? dmCache.filter((m) => m.with === dmWith.pubkey)
-        .map((m) => ({ ...m, kind: "dm", sort: m.at || 0 }))
+    ? [...said, ...dmCache.filter((m) => m.with === dmWith.pubkey)
+        .map((m) => ({ ...m, kind: "dm", sort: m.at || 0 }))]
     : [
+        ...said,
         ...chatCache.map((m) => ({ ...m, sort: m.at || 0 })),
         ...noteCache.map((m) => ({ ...m, kind: "note", sort: m.at || 0 })),
         ...dmCache.map((m) => ({ ...m, kind: "dm", sort: m.at || 0 })),
@@ -3091,6 +3095,15 @@ function repaintLog() {
   for (const m of merged) {
     const el = document.createElement("div");
     el.className = "msg" + (m.mine ? " mine" : "") + (m.kind ? ` ${m.kind}` : "");
+
+    // The app talking. No name, no mute control, no mention handling — there is
+    // nobody on the other end of it.
+    if (m.kind === "system") {
+      el.textContent = m.text;
+      log.append(el);
+      continue;
+    }
+
     const who = document.createElement("span");
     who.className = "who";
     // No nickname is the common case, and a truncated pubkey is at least true.
@@ -3574,7 +3587,17 @@ const COMMANDS = {
   },
   "/clear": {
     hint: "clear this log (local only)",
-    run: () => { $("chatlog").textContent = ""; systemLine("Cleared. Only here — the relays still have it."); },
+    /**
+     * Clearing has to empty what the app said as well as what the log showed.
+     * Emptying the element alone left `systemCache` holding every line, and the
+     * next repaint put them all straight back — a Clear that cleared nothing.
+     */
+    run: () => {
+      clearSystemLines();
+      chatCache = []; noteCache = []; dmCache = [];
+      $("chatlog").textContent = "";
+      systemLine("Cleared. Only here — the relays still have it.");
+    },
   },
   "/me": {
     hint: "/me is listening — sends as an action",
@@ -3815,19 +3838,37 @@ async function panicWipe() {
   if (!confirm(t("chat.wipeAsk",
     "Erase favorites, listening history, the mute list and every key this session used? This cannot be undone."))) return;
   const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
+  leaveDm();
+  clearSystemLines();
+  chatCache = []; noteCache = []; dmCache = [];
   $("chatlog").textContent = "";
   systemLine(t("chat.wiped", "Erased.") + " " + (done || []).join(", "));
 }
 
-/** A line in the log from the app rather than from a person. */
+/**
+ * A line in the log from the app rather than from a person.
+ *
+ * Held in a list rather than appended straight to the DOM, because [repaintLog]
+ * empties the log and rebuilds it from the caches — so anything written directly
+ * survived only until the next message arrived. The app would explain that a
+ * name did not resolve, a relay would deliver something a second later, and the
+ * explanation was gone. Every `systemLine` in the file was that fragile, which
+ * made the app least articulate at exactly the moments it had most to say.
+ *
+ * Capped, and local: none of this was ever sent anywhere, and none of it
+ * survives a restart.
+ */
+const systemCache = [];
+const MAX_SYSTEM = 40;
+
 function systemLine(text) {
-  const log = $("chatlog");
-  const el = document.createElement("div");
-  el.className = "msg system";
-  el.textContent = text;
-  log.append(el);
-  log.scrollTop = log.scrollHeight;
+  systemCache.push({ at: Date.now(), text: String(text), kind: "system" });
+  if (systemCache.length > MAX_SYSTEM) systemCache.splice(0, systemCache.length - MAX_SYSTEM);
+  repaintLog();
 }
+
+/** Forget what the app said. Paired with clearing the log it was written into. */
+function clearSystemLines() { systemCache.length = 0; }
 
 /** Newest messages, kept so /mute can resolve a name to a key. */
 let chatCache = [];
