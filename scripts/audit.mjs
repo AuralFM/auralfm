@@ -34,6 +34,7 @@
  *   the English strings speak one English ... "favourites" slipped in
  *   search finds 104.9 and 104,9 ............ decimal-comma locales found nothing
  *   a bodiless envelope sends with tags ..... every favorite silently never sent
+ *   sweeping the globe duplicates no note ... one "hola" was drawn seven times
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -657,6 +658,83 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("chat funnel", problems.join("; "))
     : pass("messages, notes and private messages all pass through visible()");
+}
+
+// ── a note is not duplicated by sweeping the globe ───────────────────────────
+// The three inbound lists — chat, notes, private messages — shared one seen-set,
+// and they do not share a lifetime. `view()` empties the chat whenever the
+// selection moves, so it cleared that set; the notes list survives a view change
+// and was still holding its notes. The next subscription replayed them, the set
+// no longer recognised them, and each one was appended again.
+//
+// Melton hit it as seven identical notes from a stranger who had said "hola"
+// once. Six selection changes, six extra copies. Nothing static would have found
+// this: every function here is correct on its own, and the defect only exists in
+// the order they run in.
+//
+// So this drives the real module against a relay that does the one thing that
+// matters — serves what it has stored to every REQ it receives. No network: the
+// fake is installed as `globalThis.WebSocket`, which is what `connect()` dials.
+{
+  console.log("\nsweeping the globe does not duplicate a note");
+  const LAT = 38.72, LON = -9.14;
+  let NOTE = null;
+
+  class FakeRelay {
+    constructor() { this.readyState = 1; setTimeout(() => this.onopen?.(), 0); }
+    send(data) {
+      let f;
+      try { f = JSON.parse(data); } catch { return; }
+      if (f[0] !== "REQ" || !NOTE) return;
+      const [, subId, filter] = f;
+      if (!(filter.kinds || []).includes(1)) return;      // not the notes subscription
+      setTimeout(() => this.onmessage?.({ data: JSON.stringify(["EVENT", subId, NOTE]) }), 0);
+    }
+    close() { this.readyState = 3; this.onclose?.(); }
+  }
+
+  const realWs = globalThis.WebSocket;
+  globalThis.WebSocket = FakeRelay;
+  const tick = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  let seen = [];
+  let counted = null;
+  try {
+    const nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href)
+      .then((m) => m.default ?? m);
+    nostr.onNotes((list) => { seen = list; });
+    NOTE = {
+      id: "a".repeat(64),
+      // A stranger's key, or it is discarded as our own echoed back.
+      pubkey: "b".repeat(64),
+      kind: 1,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [["g", nostr.geohash(LAT, LON)], ["n", "yuls"]],
+      content: "hola",
+    };
+    nostr.join(LAT, LON, "test");
+    await tick(140);
+    const afterJoin = seen.length;
+    // Six selection changes, which is a few seconds of spinning the globe with
+    // the listening lock off.
+    for (const [la, lo] of [[35.68, 139.69], [-22.9, -43.2], [51.5, -0.12],
+                            [40.7, -74.0], [-33.86, 151.2], [19.43, -99.13]]) {
+      nostr.view(la, lo);
+      await tick();
+    }
+    counted = { afterJoin, afterSweep: seen.length };
+    nostr.leave();
+  } finally {
+    globalThis.WebSocket = realWs;
+  }
+
+  if (!counted || counted.afterJoin !== 1) {
+    fail("note delivery", `one note from eight relays arrived as ${counted?.afterJoin ?? "nothing"}`);
+  } else if (counted.afterSweep !== 1) {
+    fail("note duplication",
+         `one note became ${counted.afterSweep} after six view changes — a seen-set is being cleared without its list`);
+  } else {
+    pass("one note stays one note across eight relays and six view changes");
+  }
 }
 
 // ── every data file the app reads is actually shipped ────────────────────────

@@ -320,13 +320,36 @@ let sockets = [];
 let beat = null;
 let here = null;                  // { geohash, label }
 const peers = new Map();          // pubkey -> { geohash, label, at }
+/**
+ * Three lists, and one seen-set each. The pairing is the point.
+ *
+ * Relays deliver the same event more than once — several relays carry it, and
+ * re-issuing a REQ under a subscription id that already exists makes the relay
+ * replay everything stored that matches. So each list needs to know what it has
+ * already taken.
+ *
+ * This was a single shared set, and that was a bug rather than a simplification.
+ * The three lists have three different lifetimes: chat is emptied whenever the
+ * view moves, notes survive that and are emptied only on a real move, private
+ * messages survive both. One set could only be cleared on the shortest of those
+ * lifetimes, so `view()` cleared it for the chat's sake — and the very next
+ * subscription replayed a note the still-populated notes list was holding, which
+ * appended a second copy. Melton found it with seven identical notes on screen
+ * from one stranger who had said "hola" once.
+ *
+ * The rule, therefore: **a set is cleared exactly where its list is, on the same
+ * lines.** Anything else and the two disagree about what has been seen. The one
+ * deliberate exception is `forgetDms`, which says why on the spot.
+ */
 const messages = [];              // newest last, capped at HISTORY
-const seenIds = new Set();        // relays deliver the same event more than once
+const seenChat = new Set();
 let onPeers = () => {};
 let onMessages = () => {};
 
 const notes = [];                 // location notes for the cell we are in
+const seenNotes = new Set();
 const dms = [];                   // private messages, decrypted, this session
+const seenDms = new Set();
 let onNotes = () => {};
 let onDms = () => {};
 /** Set by main so an authenticated favorite signal can be recorded. */
@@ -576,8 +599,8 @@ function drop(text, nickname) {
 
 /** Keep a note, drop the expired, newest first. */
 function recordNote(evt, mine = false) {
-  if (seenIds.has(evt.id)) return;
-  seenIds.add(evt.id);
+  if (seenNotes.has(evt.id)) return;
+  seenNotes.add(evt.id);
   const exp = (evt.tags || []).find((t) => t[0] === "expiration")?.[1];
   const expiresAt = Number(exp) > 0 ? Number(exp) * 1000 : null;
   notes.push({
@@ -661,8 +684,8 @@ function trimDms() {
 
 /** Add a message to the log, newest last, and tell the renderer. */
 function record(evt, mine = false) {
-  if (seenIds.has(evt.id)) return;
-  seenIds.add(evt.id);
+  if (seenChat.has(evt.id)) return;
+  seenChat.add(evt.id);
   const g = (evt.tags || []).find((t) => t[0] === "g")?.[1] || null;
   messages.push({
     id: evt.id,
@@ -699,14 +722,14 @@ function record(evt, mine = false) {
  * because a stranger's malformed event is not an error condition.
  */
 function takeDm(evt) {
-  if (seenIds.has(evt.id)) return;
+  if (seenDms.has(evt.id)) return;
   const box = inboxes();
   const p = (evt.tags || []).find((t) => t[0] === "p")?.[1];
   const sk = p && box.get(p);
   if (!sk) return;                      // not addressed to a key we hold
   const got = priv.unwrap(evt, sk, p);
   if (!got) return;
-  seenIds.add(evt.id);
+  seenDms.add(evt.id);
 
   /**
    * The favorite signal, and why it is trusted.
@@ -873,8 +896,13 @@ function view(lat, lon) {
   viewing = cell;
   // The log is per-cell, so moving the view has to clear what belonged to the
   // last one — otherwise Lisbon's conversation appears under Tokyo's name.
+  //
+  // The chat and nothing else. Notes are subscribed on `here`, not `viewing`, so
+  // looking elsewhere does not change which notes are ours to hold — and the
+  // re-subscription below replays them, which is exactly how one note became
+  // seven when this cleared a set the notes list also depended on.
   messages.length = 0;
-  seenIds.clear();
+  seenChat.clear();
   onMessages([]);
   emit();
   // Re-ask, so a cell that is quiet right now still shows its recent history
@@ -891,11 +919,12 @@ function join(lat, lon, label) {
   const moved = here && here.geohash !== cell;
   if (moved) {
     messages.length = 0;
-    seenIds.clear();
+    seenChat.clear();
     peers.clear();
     // Notes belong to the place, not the session — a note left in Lisbon shown
     // under Tokyo's name is the same lie as Lisbon's conversation would be.
     notes.length = 0;
+    seenNotes.clear();
     onMessages([]);
     onNotes([]);
     emit();
@@ -929,8 +958,9 @@ function leave() {
   // The log belongs to the cell, not to the session. Carrying a Lisbon
   // conversation into a Tokyo one would be worse than losing it.
   messages.length = 0;
+  seenChat.clear();
   notes.length = 0;
-  seenIds.clear();
+  seenNotes.clear();
   emit();
   onMessages([]);
   onNotes([]);
@@ -1015,6 +1045,16 @@ function markRead(pubkey) {
 }
 
 /** Drop every private message. The panic wipe, and only the panic wipe. */
+/**
+ * The panic wipe's entry point, and the one place a list is emptied without its
+ * seen-set.
+ *
+ * That is deliberate and it is the direction you want. `seenDms` keeps the ids,
+ * so a wiped conversation cannot be replayed back onto the screen by the next
+ * subscription — which is what "forget" has to mean for the one thing in here
+ * somebody might wipe because they are frightened. Clearing the set as well
+ * would make the wipe cosmetic until the next relay round trip.
+ */
 function forgetDms() {
   dms.length = 0;
   onDms([]);
