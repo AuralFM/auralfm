@@ -36,6 +36,7 @@
  *   a bodiless envelope sends with tags ..... every favorite silently never sent
  *   sweeping the globe duplicates no note ... one "hola" was drawn seven times
  *   system lines outlive a repaint ......... every explanation the chat gave vanished
+ *   the renderer is told once per burst ... 2,939 IPC messages in fifteen seconds
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -740,6 +741,38 @@ console.log("\nlight theme agrees with itself");
     : pass("a command runs before the input is cleared, and a private thread sends privately");
 }
 
+// ── the renderer is told once per burst, not once per packet ─────────────────
+// Every inbound event used to hand the renderer a freshly built copy of the whole
+// list it belonged to. Measured against live relays for fifteen seconds: 2,939
+// onPeers calls carrying 1,245,312 objects. In Electron each one is a structured
+// clone across a process boundary, and they queue *ahead of* whatever the
+// renderer asked for next — which is why presenceStats() took twelve seconds
+// right after tuning and the chat looked dead exactly when somebody opened it.
+//
+// The rule that keeps it fixed: nothing calls a renderer callback directly.
+// Inbound paths mark a list dirty and one flush sends it.
+{
+  console.log("\nthe renderer is updated per burst, not per event");
+  const src = fs.readFileSync(R("src/presence-nostr.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const problems = [];
+  const i = src.indexOf("function flush()");
+  if (i < 0) problems.push("flush() is gone — updates are no longer coalesced");
+  else {
+    const body = src.slice(i, src.indexOf("\n}", i));
+    const inside = (body.match(/\bon(?:Peers|Messages|Notes|Dms)\(/g) || []).length;
+    const total = (src.match(/\bon(?:Peers|Messages|Notes|Dms)\(/g) || []).length;
+    if (inside !== 4) problems.push(`flush() sends ${inside} of the 4 lists`);
+    if (total > inside) {
+      problems.push(`${total - inside} renderer callback(s) invoked outside flush() — a burst will flood IPC`);
+    }
+    if (!/setTimeout\(flush,/.test(src)) problems.push("nothing schedules a flush");
+  }
+  problems.length
+    ? fail("update coalescing", problems.join("; "))
+    : pass("every renderer update goes through one flush, so a burst costs one message");
+}
+
 // ── a room never carries a conversation ──────────────────────────────────────
 // Rooms are scoped to a place and stop meaning anything when you tune away.
 // Private messages are scoped to a person and follow you everywhere. Merged into
@@ -841,7 +874,11 @@ console.log("\nlight theme agrees with itself");
 
   const realWs = globalThis.WebSocket;
   globalThis.WebSocket = FakeRelay;
-  const tick = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  // Comfortably past the module's coalescing window: inbound lists are flushed
+  // on a short timer rather than per event, so anything that waits less than
+  // that measures the timer instead of the behaviour. This check once did, and
+  // read zero notes for a note that arrived ninety milliseconds later.
+  const tick = (ms = 260) => new Promise((r) => setTimeout(r, ms));
   let seen = [];
   let counted = null;
   try {
@@ -858,7 +895,7 @@ console.log("\nlight theme agrees with itself");
       content: "hola",
     };
     nostr.join(LAT, LON, "test");
-    await tick(140);
+    await tick(400);
     const afterJoin = seen.length;
     // Six selection changes, which is a few seconds of spinning the globe with
     // the listening lock off.

@@ -382,7 +382,58 @@ function prune() {
   if (changed) emit();
 }
 
-function emit() {
+/**
+ * ─── One update per frame, not one per packet ────────────────────────────────
+ *
+ * Every inbound event used to hand the renderer a freshly built copy of the
+ * whole list it belonged to. Measured against live relays for fifteen seconds
+ * from a standing start in Mexico City:
+ *
+ *   peers known                545
+ *   onPeers fired            2,939      ~196 per second
+ *   objects handed over  1,245,312      because each call rebuilt all 545
+ *
+ * In Electron each of those crosses a process boundary — structured-cloned,
+ * queued, and repainted at the other end. Two thousand nine hundred of them
+ * queue *ahead of* the reply to whatever the renderer asked for next, which is
+ * why `presenceStats()` took twelve seconds right after tuning and the chat
+ * looked dead exactly when somebody opened it.
+ *
+ * Nothing about what is sent changes. What changes is how often: a dirty flag
+ * per list and one flush on a short timer, so a burst of two hundred events
+ * costs one update instead of two hundred.
+ *
+ * `FLUSH_MS` is a hair under a tenth of a second. Long enough that a relay
+ * dumping its backlog collapses into a handful of updates, short enough that
+ * nobody perceives it — and the paths where a person is *waiting* on their own
+ * action do not wait for it at all: `say`, `drop`, `dm` and every clear call
+ * `flush()` on the spot.
+ */
+const FLUSH_MS = 90;
+const dirty = { peers: false, messages: false, notes: false, dms: false };
+let flushTimer = null;
+
+function schedule(what) {
+  dirty[what] = true;
+  if (flushTimer) return;
+  flushTimer = setTimeout(flush, FLUSH_MS);
+}
+
+/** Send whatever is dirty, now. Safe to call when nothing is. */
+function flush() {
+  if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+  if (dirty.peers)    { dirty.peers = false;    onPeers(peerList()); }
+  if (dirty.messages) { dirty.messages = false; onMessages(messages.slice()); }
+  if (dirty.notes)    { dirty.notes = false;    onNotes(liveNotes()); }
+  if (dirty.dms)      { dirty.dms = false;      onDms(dms.slice()); }
+}
+
+const emit = () => schedule("peers");
+
+/** For anything the person just did themselves — no waiting for the timer. */
+const emitNow = (what) => { dirty[what] = true; flush(); };
+
+function peerList() {
   const list = [];
   for (const [pubkey, v] of peers) {
     const c = ungeohash(v.geohash);
@@ -398,7 +449,7 @@ function emit() {
     if (c) list.push({ id: pubkey.slice(0, 8), pubkey, lat: c.lat, lon: c.lon,
                        label: v.label, geohash: v.geohash });
   }
-  onPeers(list);
+  return list;
 }
 
 /**
@@ -563,6 +614,7 @@ function say(text, nickname) {
   // Show it immediately rather than waiting for a relay to echo it back — some
   // never do, and a chat that swallows your own message feels broken.
   record(evt, true);
+  flush();                    // your own words appear now, not in 90ms
   return true;
 }
 
@@ -600,6 +652,7 @@ function drop(text, nickname) {
   });
   publish(evt);
   recordNote(evt, true);
+  flush();
   return true;
 }
 
@@ -631,15 +684,17 @@ function recordNote(evt, mine = false) {
  * screen can cross its own deadline while being read. Checking here means both
  * cases are the same case.
  */
-function emitNotes() {
+function liveNotes() {
   const now = Date.now();
   for (let i = notes.length - 1; i >= 0; i--) {
     if (notes[i].expiresAt && notes[i].expiresAt <= now) notes.splice(i, 1);
   }
   notes.sort((a, b) => b.at - a.at);
   if (notes.length > MAX_NOTES) notes.length = MAX_NOTES;
-  onNotes(notes.slice());
+  return notes.slice();
 }
+
+const emitNotes = () => schedule("notes");
 
 /**
  * Send a private message to one key.
@@ -679,7 +734,7 @@ function dm(to, text, tags = []) {
              from: from.slice(0, 8), nick: null,
              text: body.slice(0, priv.MAX_TEXT), mine: true, unread: false });
   trimDms();
-  onDms(dms.slice());
+  emitNow("dms");
   return true;
 }
 
@@ -714,7 +769,7 @@ function record(evt, mine = false) {
   // time order. Sort rather than trust it.
   messages.sort((a, b) => a.at - b.at);
   if (messages.length > HISTORY) messages.splice(0, messages.length - HISTORY);
-  onMessages(messages.slice());
+  schedule("messages");
 }
 
 /**
@@ -770,7 +825,7 @@ function takeDm(evt) {
              from: got.pubkey.slice(0, 8), nick: null,
              text: got.text, mine: false, unread: true });
   trimDms();
-  onDms(dms.slice());
+  schedule("dms");
 }
 
 let dialled = [];        // what relaysFor() chose for the cell we are in
@@ -909,8 +964,8 @@ function view(lat, lon) {
   // seven when this cleared a set the notes list also depended on.
   messages.length = 0;
   seenChat.clear();
-  onMessages([]);
   emit();
+  emitNow("messages");        // flushes the peer list with it
   // Re-ask, so a cell that is quiet right now still shows its recent history
   // rather than looking dead until somebody speaks.
   if (sockets.length) subscribe();
@@ -931,9 +986,9 @@ function join(lat, lon, label) {
     // under Tokyo's name is the same lie as Lisbon's conversation would be.
     notes.length = 0;
     seenNotes.clear();
-    onMessages([]);
-    onNotes([]);
     emit();
+    emitNow("messages");
+    emitNow("notes");
   }
   here = { geohash: cell, label: String(label || "").slice(0, 60) };
 
@@ -968,8 +1023,8 @@ function leave() {
   notes.length = 0;
   seenNotes.clear();
   emit();
-  onMessages([]);
-  onNotes([]);
+  emitNow("messages");
+  emitNow("notes");
   /**
    * Private messages are deliberately *not* cleared here.
    *
@@ -1046,7 +1101,7 @@ function thread(pubkey) {
 function markRead(pubkey) {
   let changed = false;
   for (const m of dms) if (m.with === pubkey && m.unread) { m.unread = false; changed = true; }
-  if (changed) onDms(dms.slice());
+  if (changed) emitNow("dms");
   return changed;
 }
 
@@ -1063,7 +1118,7 @@ function markRead(pubkey) {
  */
 function forgetDms() {
   dms.length = 0;
-  onDms([]);
+  emitNow("dms");
 }
 
 module.exports = { join, leave, view, say, stats, setExtraRelays, geohash, ungeohash, sameCell,
