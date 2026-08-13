@@ -620,8 +620,10 @@ async function toggleFav(ch) {
   const i = favorites.findIndex((f) => f.id === ch.id);
   if (i >= 0) favorites.splice(i, 1);
   else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
-  state.favorites = favorites;
-  await window.auralfm.setState(state);
+  // Only the list we changed. Writing the whole object back would send this
+  // window's copy of vol and lastChannel too, undoing whatever the popover did
+  // while this one was not looking.
+  await window.auralfm.setState({ favorites });
   renderStations();
 }
 
@@ -727,8 +729,8 @@ window.auralfm.onPlayerState((s) => {
   // Tuning across the world moves us to a different cell; re-read it rather than
   // keep counting against the last one.
   window.auralfm.presenceStats()
-    .then((st) => { myCell = st?.cell || null; paintChatHead(); })
-    .catch(() => paintChatHead());
+    .then((st) => { myCell = st?.cell || null; paintChatHead(); paintComposer(); })
+    .catch(() => { paintChatHead(); paintComposer(); });
 });
 
 /**
@@ -3259,6 +3261,11 @@ async function syncChat(prefs) {
       viewingCell = st?.viewing || null;
     } catch { /* not up yet */ }
     paintChatHead();
+    // The composer names the room too, and it was not repainting here. Tuning
+    // from Rio to Los Angeles moved the header and left the line under the input
+    // still promising Rio — two cities on screen at once, one of them a lie
+    // about who was going to read the next thing typed.
+    paintComposer();
     chatNotice();
   } else {
     myCell = null;

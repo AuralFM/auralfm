@@ -21,7 +21,13 @@ contextBridge.exposeInMainWorld("auralfm", {
 
   // persistence
   getState: () => ipcRenderer.invoke("state:get"),
-  setState: (state) => ipcRenderer.invoke("state:set", state),
+  /**
+   * Send only the keys you changed. Sending a whole object sends whatever this
+   * window last read, which is how one renderer's stale copy silently deleted
+   * favorites the other had just saved.
+   */
+  setState: (patch) => ipcRenderer.invoke("state:set", patch),
+  onStateChanged: (fn) => ipcRenderer.on("state:changed", (_e, s) => fn(s)),
 
   // catalog
   search: (q, limit, filter) => ipcRenderer.invoke("catalog:search", q, limit, filter),

@@ -853,14 +853,39 @@ ipcMain.handle("state:get", () => load());
  */
 const RENDERER_KEYS = ["favorites", "vol", "lastChannel", "exploreView", "locked"];
 
+/**
+ * Merge a patch from a renderer.
+ *
+ * Only the keys actually present are taken, and that is load-bearing rather than
+ * defensive: two windows write here, they each hold their own copy, and the one
+ * that sends a whole state object sends whatever it last read — which is not
+ * what is on disk.
+ *
+ * That cost Melton his favorites. The popover reads state once at launch and
+ * never again; every volume nudge and every tune called `persist()`, which sent
+ * its entire boot-time snapshot back. Star a station in Explore, then touch the
+ * volume, and the popover's stale `favorites` array overwrote it. It looked
+ * intermittent and sequence-dependent because it was: it depended on which
+ * window wrote last.
+ *
+ * Both renderers now send only what they changed, and the result is broadcast so
+ * neither one is ever working from a copy the other has already replaced. This
+ * is the same reasoning that put muted.js, social.js and mystations.js in files
+ * of their own — favorites are the one list of the user's that never got that
+ * treatment.
+ */
 ipcMain.handle("state:set", (_e, incoming) => {
   if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return false;
   const current = load();
   const merged = { ...current };
+  const touched = [];
   for (const k of RENDERER_KEYS) {
-    if (k in incoming) merged[k] = incoming[k];
+    if (k in incoming) { merged[k] = incoming[k]; touched.push(k); }
   }
-  return save(merged);
+  const ok = save(merged);
+  // Tell every window what the truth is now, so the next patch is built on it.
+  if (ok && touched.length) broadcast("state:changed", merged);
+  return ok;
 });
 ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
   // Push known-bad streams down rather than hiding them — a station that failed

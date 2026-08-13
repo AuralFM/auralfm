@@ -24,7 +24,7 @@
  * **Boundaries**
  *   every preload method has a handler ...... an IPC channel with nothing listening
  *   no Electron imports outside main/preload  a renderer reaching past the bridge
- *   state:set accepts only an allowlist ..... renderers clobbering main's own state
+ *   state:set takes patches, not snapshots .. a stale popover copy deleted favorites
  *   every chat channel goes through visible() a safety rule covering 2 surfaces of 3
  *
  * **Correctness and content**
@@ -35,6 +35,7 @@
  *   search finds 104.9 and 104,9 ............ decimal-comma locales found nothing
  *   a bodiless envelope sends with tags ..... every favorite silently never sent
  *   sweeping the globe duplicates no note ... one "hola" was drawn seven times
+ *   system lines outlive a repaint ......... every explanation the chat gave vanished
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -605,7 +606,7 @@ console.log("\nlight theme agrees with itself");
   console.log("\nstate:set only accepts keys the renderers own");
   const src = fs.readFileSync(R("src/main.js"), "utf8");
   const list = src.match(/const RENDERER_KEYS = \[([^\]]*)\]/);
-  const handler = src.match(/ipcMain\.handle\("state:set"[\s\S]{0,400}?\n\}\);/);
+  const handler = src.match(/ipcMain\.handle\("state:set"[\s\S]{0,1200}?\n\}\);/);
   const problems = [];
   if (!list) problems.push("RENDERER_KEYS is gone");
   else {
@@ -615,9 +616,39 @@ console.log("\nlight theme agrees with itself");
   }
   if (!handler) problems.push("state:set handler not found");
   else if (!/RENDERER_KEYS/.test(handler[0])) problems.push("state:set does not use the allowlist");
+
+  /**
+   * And every writer sends a patch, never its own copy of everything.
+   *
+   * This is the rule that cost Melton his favorites. Two windows write state,
+   * the popover read it once at launch and never again, and `persist()` sent
+   * that whole boot-time object back on every volume change — quietly restoring
+   * a stale `favorites` array over the one Explore had just saved. The handler
+   * is not what failed; it merged exactly what it was given. What failed was
+   * being given a snapshot instead of a change.
+   *
+   * An object literal at the call site is the difference, and it is checkable.
+   */
+  for (const f of fs.readdirSync(R("src/renderer")).filter((n) => n.endsWith(".js"))) {
+    const js = fs.readFileSync(R(`src/renderer/${f}`), "utf8");
+    for (const m of js.matchAll(/setState\(\s*([^)]{0,40})/g)) {
+      const arg = m[1].trim();
+      // An object literal, and not one that just re-spreads the window's own
+      // state — `{...state}` is the same snapshot wearing braces.
+      if (!arg.startsWith("{") || /\.\.\.\s*state\b/.test(arg)) {
+        problems.push(`${f} calls setState(${arg.slice(0, 20)}…) — send a patch, not a snapshot`);
+      }
+    }
+  }
+  // The other windows have to hear about it, or they keep building on a copy
+  // that is already out of date.
+  if (handler && !/broadcast\(/.test(handler[0])) {
+    problems.push("state:set does not tell the other windows what changed");
+  }
+
   problems.length
     ? fail("state:set", problems.join("; "))
-    : pass("state:set merges an allowlist, and prefs and layers are not in it");
+    : pass("state:set merges an allowlist, renderers send patches, and changes are broadcast");
 }
 
 // ── the favorite handshake can actually be sent ───────────────────────────────

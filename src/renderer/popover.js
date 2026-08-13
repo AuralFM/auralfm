@@ -85,8 +85,31 @@ function publish(){
     rssi: sdrRx ? lastRssi : null,
   });
 }
-const persist=()=> window.auralfm.setState(state);
+/**
+ * Save one thing, not everything.
+ *
+ * This used to send the whole `state` object, which this window read once at
+ * launch and never refreshed. So every volume change wrote a boot-time copy of
+ * `favorites` over whatever Explore had saved since — silently, and only
+ * sometimes, depending on which window wrote last.
+ */
+const persist=(patch)=> window.auralfm.setState({ ...patch });
+
+/** Main is the truth. Anything it saves lands here before the next patch. */
+window.auralfm.onStateChanged?.((s)=>{
+  if (!s || typeof s !== "object") return;
+  state = { ...state, ...s };
+  if (!Array.isArray(state.favorites)) state.favorites = [];
+  // Repaint only if the favorites list is what is on screen, so this never
+  // yanks a search result out from under somebody mid-type.
+  if (!qEl.value.trim()) showFavorites();
+});
 const isFav=(id)=> state.favorites.some(f=>f.id===id);
+
+// The way back to the globe, in the open rather than behind ⌘G or a right-click
+// on a menu bar icon. Main already had the door; this window had no handle on it.
+$("openglobe").onclick = () => window.auralfm.openExplore();
+Icons.set($("openglobe"), "external");
 
 // ── rendering ────────────────────────────────────────────────────────────────
 function render(items, {numbered=false, empty="", showTags=false}={}) {
@@ -167,7 +190,7 @@ function toggleFav(ch) {
   const i = state.favorites.findIndex(f => f.id === ch.id);
   if (i >= 0) state.favorites.splice(i, 1);
   else state.favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
-  persist();
+  persist({ favorites: state.favorites });
   qEl.value.trim() ? render(rows, {numbered:false}) : showFavorites();
 }
 
@@ -196,7 +219,7 @@ async function tune(ch, { chained = false } = {}) {
   current = ch;
   nowName.textContent = ch.title;
   toggle.disabled = false;
-  state.lastChannel = ch; persist();
+  state.lastChannel = ch; persist({ lastChannel: ch });
   [...listEl.children].forEach((el,i)=> el.setAttribute?.("aria-current", rows[i]?.id === ch.id));
 
   const my = ++gen;
@@ -307,7 +330,7 @@ function applyVolume(v) {
   sdrSession?.setVolume(v);
   vol.value = v;
   Icons.set($("mute"), v === 0 ? "volumeOff" : v < 0.5 ? "volumeLow" : "volumeHigh");
-  state.vol = +v; persist();
+  state.vol = +v; persist({ vol: +v });
   // Tell Explore. Volume was the one control that moved in only one direction:
   // Explore's slider arrives here as a transport message and is applied, but a
   // drag on *this* slider changed the audio and never said so, leaving Explore
