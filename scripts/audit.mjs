@@ -740,6 +740,38 @@ console.log("\nlight theme agrees with itself");
     : pass("a command runs before the input is cleared, and a private thread sends privately");
 }
 
+// ── a room never carries a conversation ──────────────────────────────────────
+// Rooms are scoped to a place and stop meaning anything when you tune away.
+// Private messages are scoped to a person and follow you everywhere. Merged into
+// one column, a message meant for one person appeared in every room's log and
+// travelled from city to city — Melton sent a screenshot of a PRIVATE line
+// sitting in a city it had nothing to do with. The two scopes stay apart.
+{
+  console.log("\nthe room log carries the room, not private conversations");
+  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const problems = [];
+  const i = src.indexOf("const merged = (dmWith");
+  if (i < 0) problems.push("the log's merge is gone or renamed");
+  else {
+    const block = src.slice(i, i + 900);
+    // The room branch is what follows the `: [` of the conditional.
+    const room = block.slice(block.indexOf(": ["));
+    if (/dmCache/.test(room)) {
+      problems.push("the room branch merges dmCache — private messages will show in every room");
+    }
+    if (!/dmCache\.filter\(/.test(block)) {
+      problems.push("the conversation branch does not filter dmCache to one person");
+    }
+  }
+  // And the drawer has to exist to reach them, or they are unreachable.
+  for (const fn of ["function conversations(", "function paintDmButton(", "function openConvos("]) {
+    if (!src.includes(fn)) problems.push(`${fn}) is gone`);
+  }
+  problems.length
+    ? fail("room vs conversation", problems.join("; "))
+    : pass("the room shows the room; conversations live behind their own count");
+}
+
 // ── what the app says survives the next message ──────────────────────────────
 // systemLine() appended straight into #chatlog, and repaintLog() empties that
 // element and rebuilds it from the caches. So every explanation the chat gave
@@ -759,7 +791,7 @@ console.log("\nlight theme agrees with itself");
     if (!/systemCache\.push\(/.test(fn)) problems.push("systemLine does not record what it said");
   }
   // And the repaint has to put them back, in both views.
-  const rp = src.slice(src.indexOf("function repaintLog("), src.indexOf("function repaintLog(") + 1400);
+  const rp = src.slice(src.indexOf("function repaintLog("), src.indexOf("function repaintLog(") + 2600);
   if (!/systemCache\.map\(/.test(rp)) problems.push("repaintLog does not merge systemCache");
   // Clearing the log without clearing the cache is a Clear that clears nothing.
   for (const site of ['"/clear"', "async function panicWipe("]) {

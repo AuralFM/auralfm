@@ -3067,6 +3067,8 @@ function paintNotes(list) {
 
 function paintDms(list) {
   dmCache = Array.isArray(list) ? list.slice(-200) : [];
+  paintDmButton();
+  if (convosOpen) paintConvos();
   repaintLog();
 }
 
@@ -3081,8 +3083,22 @@ function repaintLog() {
   // In a private conversation the log *is* that conversation. Leaving the public
   // room's messages underneath would put a twenty-kilometre square and a private
   // thread in one column, which is the confusion this whole change exists to end.
-  // What the app said belongs in both views: it is addressed to you, not to a
-  // room, so walking into a private conversation should not silence it.
+  /**
+   * Two scopes, never in one column.
+   *
+   * A room is a place: its messages and its notes belong to a twenty-kilometre
+   * cell and stop meaning anything the moment you tune somewhere else. A private
+   * conversation is a person: it belongs to them and follows you everywhere.
+   *
+   * Merging them put a message meant for one person into every room's log and
+   * carried it from city to city — Melton sent a screenshot of exactly that, a
+   * PRIVATE line sitting above a public composer in a city it had nothing to do
+   * with. So the room shows the room, a conversation shows the conversation, and
+   * neither one borrows the other's column.
+   *
+   * What the app said appears in both, because it is addressed to you rather
+   * than to a room, and walking into a conversation should not silence it.
+   */
   const said = systemCache.map((m) => ({ ...m, sort: m.at || 0 }));
   const merged = (dmWith
     ? [...said, ...dmCache.filter((m) => m.with === dmWith.pubkey)
@@ -3091,7 +3107,6 @@ function repaintLog() {
         ...said,
         ...chatCache.map((m) => ({ ...m, sort: m.at || 0 })),
         ...noteCache.map((m) => ({ ...m, kind: "note", sort: m.at || 0 })),
-        ...dmCache.map((m) => ({ ...m, kind: "dm", sort: m.at || 0 })),
       ]).sort((a, b) => a.sort - b.sort);
 
   for (const m of merged) {
@@ -3417,8 +3432,116 @@ const matchOne = (want) => {
   return hits.length === 1 ? hits[0] : null;
 };
 
+/**
+ * ─── The drawer ──────────────────────────────────────────────────────────────
+ *
+ * Conversations grouped by the person they are with, newest first, behind a
+ * count that is not on screen at all until there is one to count. That is the
+ * whole architecture: rooms are the app, conversations are a drawer.
+ */
+let convosOpen = false;
+
+/** One entry per person, with enough to decide whether to open it. */
+function conversations() {
+  const by = new Map();
+  for (const m of dmCache) {
+    if (!m.with) continue;
+    const g = by.get(m.with) || { pubkey: m.with, at: 0, last: "", unread: 0, nick: null };
+    if ((m.at || 0) >= g.at) { g.at = m.at || 0; g.last = m.text || ""; g.mine = !!m.mine; }
+    // The name has to come from them, not from us: our own sent records carry
+    // our short key in `from`, so reading it off the newest message would label
+    // every conversation with our own name.
+    if (!m.mine) g.nick = m.nick || g.nick || m.from;
+    if (m.unread && !m.mine) g.unread++;
+    by.set(m.with, g);
+  }
+  for (const g of by.values()) {
+    // A label you set yourself wins: it is the only name here you chose.
+    g.name = contacts.get(g.pubkey)?.label || g.nick || g.pubkey.slice(0, 8);
+  }
+  return [...by.values()].sort((a, b) => b.at - a.at);
+}
+
+/** The count in the header, absent when there is nothing to say. */
+function paintDmButton() {
+  const b = $("chatdms");
+  if (!b) return;
+  const list = conversations();
+  b.hidden = list.length === 0;
+  if (b.hidden) return;
+  const unread = list.reduce((n, c) => n + c.unread, 0);
+  b.textContent = unread
+    ? `${unread} ${t("chat.newPrivate", "new")}`
+    : `${list.length} ${t("chat.privateCount", "private")}`;
+  b.classList.toggle("unread", unread > 0);
+  b.setAttribute("aria-expanded", convosOpen ? "true" : "false");
+}
+
+function paintConvos() {
+  const box = $("chatconvos");
+  if (!box) return;
+  box.innerHTML = "";
+  const list = conversations();
+  if (!list.length) {
+    const n = document.createElement("div");
+    n.className = "none";
+    n.textContent = t("chat.noPrivate", "No private conversations yet. /msg somebody to start one.");
+    box.append(n);
+    return;
+  }
+  for (const c of list) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "row";
+    row.setAttribute("role", "listitem");
+
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = c.name;
+
+    const last = document.createElement("span");
+    last.className = "last";
+    // Say which way it went. Without it a conversation reads as though they
+    // spoke last when the last thing said was yours.
+    last.textContent = (c.mine ? `${t("chat.you", "you")}: ` : "") + c.last;
+
+    const when = document.createElement("span");
+    when.className = "when";
+    when.textContent = c.at ? new Date(c.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
+
+    row.append(nm, last, when);
+    if (c.unread) {
+      const d = document.createElement("span");
+      d.className = "dot";
+      d.setAttribute("aria-label", `${c.unread} ${t("chat.newPrivate", "new")}`);
+      row.append(d);
+    }
+    row.onclick = () => { closeConvos(); enterDm({ pubkey: c.pubkey, nick: c.name }); };
+    box.append(row);
+  }
+}
+
+function openConvos() {
+  convosOpen = true;
+  paintConvos();
+  $("chatconvos").hidden = false;
+  $("chatlog").hidden = true;
+  hideNames();
+  paintDmButton();
+}
+
+function closeConvos() {
+  convosOpen = false;
+  $("chatconvos").hidden = true;
+  $("chatlog").hidden = false;
+  paintDmButton();
+}
+
+const toggleConvos = () => (convosOpen ? closeConvos() : openConvos());
+
 /** Walk into a private conversation. */
 async function enterDm(who) {
+  if (convosOpen) closeConvos();
   dmWith = { pubkey: who.pubkey, nick: who.nick || who.from };
   $("chatdm").hidden = false;
   $("chatdmwho").textContent = `${t("chat.dmWith", "Private with")} ${dmWith.nick}`;
@@ -3956,8 +4079,10 @@ $("chatdmout").onclick = leaveDm;
  * so it never competes with Escape elsewhere — the tour listens on capture, and
  * a key that closes two things at once closes the wrong one.
  */
+$("chatdms").onclick = toggleConvos;
 $("chatinput").addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (convosOpen) { e.preventDefault(); e.stopPropagation(); return closeConvos(); }
   if (!dmWith) return;
   e.preventDefault();
   e.stopPropagation();
