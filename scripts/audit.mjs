@@ -743,6 +743,52 @@ console.log("\nlight theme agrees with itself");
     : pass("a command runs before the input is cleared, and a private thread sends privately");
 }
 
+// ── typing a frequency is not a scanner ──────────────────────────────────────
+// A frequency box is exactly the feature that invites automated sweeping, and
+// this project has already knocked three receivers offline. The answer is built
+// from data already on the machine — the schedule, the space weather, the
+// receiver list — and exactly one connection is made, when a person picks a
+// receiver. Also checks the parser, because "forgiving input" is where a tuner
+// quietly sends somebody to the wrong end of the spectrum.
+{
+  console.log("\ntyping a frequency answers from local data and dials once");
+  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const problems = [];
+
+  const i = src.indexOf("async function showFrequency(");
+  if (i < 0) problems.push("showFrequency is gone");
+  else {
+    const body = src.slice(i, src.indexOf("\n}\n", i));
+    for (const call of ["tunerStart", "tuneSdr"]) {
+      const n = (body.match(new RegExp(call + "\\(", "g")) || []).length;
+      if (n > 1) problems.push(`${call}() appears ${n}x — a frequency must dial at most one receiver`);
+    }
+    // The lookup itself must not reach for a radio at all.
+    const clickAt = body.indexOf("const go = ()");
+    const beforeClick = clickAt < 0 ? body : body.slice(0, clickAt);
+    if (/tunerStart\(|tuneSdr\(/.test(beforeClick)) {
+      problems.push("the lookup connects to a receiver before anybody chose one");
+    }
+  }
+
+  // The parser, against what people actually type.
+  const start = src.indexOf("function parseKHz(");
+  if (start < 0) problems.push("parseKHz is gone");
+  else {
+    const fn = new Function(`${src.slice(start, src.indexOf("\n}", start) + 2)}; return parseKHz;`)();
+    const cases = [["7850", 7850], ["7.850", 7850], ["7,850", 7850], ["7850 kHz", 7850],
+                   ["7.850 MHz", 7850], ["7", 7000], ["4625", 4625],
+                   ["0", null], ["abc", null], ["30001", null], ["-500", null]];
+    for (const [input, want] of cases) {
+      const got = fn(input);
+      if (got !== want) problems.push(`parseKHz(${JSON.stringify(input)}) = ${got}, expected ${want}`);
+    }
+  }
+  problems.length
+    ? fail("tune by frequency", problems.join("; "))
+    : pass("a frequency is answered from local data, parsed forgivingly, and dials one receiver");
+}
+
 // ── a hub is the pair, and only the pair ─────────────────────────────────────
 // Two people who type the same name and password must land in the same room, and
 // anything less than the same pair must land somewhere else. Every one of these

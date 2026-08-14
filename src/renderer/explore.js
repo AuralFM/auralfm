@@ -4644,9 +4644,239 @@ function stationResultRow(ch) {
 }
 
 /** Select a place and take the globe there — the two always happen together. */
+/**
+ * ─── Tuning by frequency ─────────────────────────────────────────────────────
+ *
+ * A frequency is shortwave's address. People arrange to meet on one — nets,
+ * roundtables, DX gatherings — and the culture is organised around numbers
+ * rather than around places. The app modelled only the geography half:
+ * receivers near a city, and no way to say "take me to 7850".
+ *
+ * Two rules this must not break, both learned the hard way and both in
+ * docs/DECENTRALIZATION.md:
+ *
+ *   **It is not a scanner.** Typing a number never probes a receiver to find one
+ *   that works. This project has already knocked three receivers offline, and a
+ *   frequency box is exactly the feature that invites automated sweeping. The
+ *   answer is assembled from data already on this machine — the schedule, the
+ *   space weather, the receiver list — and exactly one connection is made, when
+ *   somebody picks a receiver.
+ *
+ *   **It does not promise audio.** A frequency with nothing scheduled on it, or
+ *   on a band that is shut, says so before anything is dialled. Connecting and
+ *   delivering silence would be worse than saying "there is probably nothing
+ *   there", because silence is indistinguishable from a broken app.
+ */
+
+/**
+ * What somebody typed, in kHz.
+ *
+ * Forgiving on purpose: `7850`, `7850.0`, `7,850`, `7.850` and `7.850 MHz` are
+ * all the same request. The one genuine ambiguity is a bare small number — `7`
+ * is 7 MHz to every shortwave listener alive and 7 kHz to nobody, so anything at
+ * or under 30 is read as MHz. Above that it is kHz, which is how the bands are
+ * spoken and how the schedule stores them.
+ */
+function parseKHz(input) {
+  let s = String(input || "").trim().toLowerCase();
+  if (!s) return null;
+  const mhzSaid = /\bmhz\b/.test(s);
+  const khzSaid = /\bkhz\b/.test(s);
+  s = s.replace(/(khz|mhz|hz)/g, "").replace(/[\s,]/g, "").replace(/,/g, ".");
+  if (!/^\d*\.?\d+$/.test(s)) return null;
+  let n = parseFloat(s);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (mhzSaid || (!khzSaid && n <= 30)) n *= 1000;
+  n = Math.round(n * 100) / 100;
+  // The tuner clamps to this anyway; refusing here says why instead of silently
+  // moving somebody to the edge of the spectrum.
+  return n >= 1 && n <= 30000 ? n : null;
+}
+
+/**
+ * The frequency being looked at, if any.
+ *
+ * Held rather than drawn, because the rail is rebuilt by anything that touches
+ * the selection — the globe settling, the player changing, a prefs broadcast.
+ * The first version wrote the result straight into the list and it survived
+ * about four seconds: you typed a frequency, read one line of it, and watched it
+ * turn back into the receiver list on its own. Same defect as system lines
+ * appended to a log that gets rebuilt, and the same fix — the renderer asks what
+ * mode it is in rather than remembering what it last drew.
+ */
+let freqView = null;          // { khz } while a frequency is on screen
+/**
+ * Why the lookup and the drawing are separate.
+ *
+ * The first version did both in one async function and the renderer called it on
+ * every repaint. Two of them overlapping each emptied the list and each filled
+ * it, so eight receivers drew as sixteen. Guarding that with a sequence token
+ * then made it worse in a way that looked like nothing at all: the rail repaints
+ * faster than the schedule query resolves, so every render was overtaken by the
+ * next and the list stayed empty forever.
+ *
+ * Both are the same mistake — asking a repaint to do work that can be in flight.
+ * The lookup happens once, when somebody types a frequency, and what it found is
+ * kept. Drawing is synchronous and can happen as often as it likes.
+ */
+
+/** The box you type a frequency into, above the receivers near here. */
+function frequencyRow(nearby) {
+  const wrap = document.createElement("div");
+  wrap.className = "freqrow";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = "freqinput";
+  input.setAttribute("inputmode", "decimal");
+  input.maxLength = 12;
+  input.spellcheck = false;
+  input.autocomplete = "off";
+  input.placeholder = t("sdr.freqPlaceholder", "Go to a frequency — 7850, or 7.850");
+  input.setAttribute("aria-label", t("sdr.freqLabel", "Tune to a frequency"));
+
+  const go = async () => {
+    const khz = parseKHz(input.value);
+    if (!khz) {
+      // An emptied box is a way back to the receiver list, not an error.
+      if (!input.value.trim() && freqView) {
+        freqView = null;
+        renderNearbyReceivers(nearby);
+        $("freqinput")?.focus();
+        return;
+      }
+      if (input.value.trim()) {
+        input.setAttribute("aria-invalid", "true");
+        setTimeout(() => input.removeAttribute("aria-invalid"), 2500);
+      }
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    await showFrequency(khz, nearby);
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); go(); }
+  });
+  wrap.append(input);
+  return wrap;
+}
+
+/**
+ * What is on a frequency, and who could hear it — answered without touching a
+ * receiver.
+ */
+async function showFrequency(khz, nearby) {
+  /**
+   * A window rather than an exact match. Schedules and dials disagree by a
+   * kilohertz or two all the time, and a listener asking for 7850 means "that
+   * broadcast", not "that float".
+   */
+  const TOL = 5;
+  let air = [];
+  try {
+    air = await window.auralfm.sdrOnAir({ minKHz: khz - TOL, maxKHz: khz + TOL }) || [];
+  } catch { air = []; }
+  freqView = { khz, air };
+  paintFrequency(nearby);
+}
+
+/** Draw what the lookup found. Synchronous, so a repaint can never race it. */
+function paintFrequency(nearby) {
+  const { khz, air } = freqView;
+  const list = stationListEl;
+  list.innerHTML = "";
+  list.append(frequencyRow(nearby));
+  const freqInput = $("freqinput");
+  if (freqInput) freqInput.value = String(khz);
+
+  const line = (text, strong = false) => {
+    const d = document.createElement("div");
+    d.className = "empty";
+    d.style.cssText = `padding:${strong ? "12px 15px 2px" : "2px 15px 8px"};text-align:left`
+      + (strong ? ";font-weight:590;color:var(--label)" : "");
+    d.textContent = text;
+    list.append(d);
+    return d;
+  };
+
+  const band = { freq: khz, when: Kiwi.whenFor(khz) };
+  line(`${khz.toLocaleString()} kHz`, true);
+
+  if (air.length) {
+    const names = air.slice(0, 4).map((e) => e.station).filter(Boolean);
+    line(names.length
+      ? `${t("sdr.onNow", "Scheduled now")}: ${names.join(", ")}`
+      : t("sdr.onNowUnnamed", "Something is scheduled here now."));
+  } else {
+    // Said plainly, and not treated as a dead end: the schedule covers
+    // broadcasters and known utility stations, not amateurs, pirates or anything
+    // unlisted, and those are some of the best listening there is.
+    line(t("sdr.nothingScheduled",
+      "Nothing in the schedule here right now. That does not mean it is empty — amateurs, pirates and unlisted stations are not in it."));
+  }
+
+  /**
+   * Rank the receivers by whether the path is likely open *at that receiver*,
+   * which is a different question for each one: a band shut over Wellington can
+   * be wide open over Warsaw at the same moment.
+   */
+  const { lat: sunLat, lng: sunLng } = subsolarPoint();
+  const rad = Math.PI / 180;
+  const daylightAt = (rx) =>
+    Math.sin(rx.lat * rad) * Math.sin(sunLat * rad) +
+    Math.cos(rx.lat * rad) * Math.cos(sunLat * rad) * Math.cos((rx.lng - sunLng) * rad) > 0;
+
+  const candidates = (nearby || []).map((rx) => {
+    const o = Kiwi.outlook(band, daylightAt(rx), spaceWx);
+    return { rx, o };
+  }).sort((a, b) => (b.o.open ? 1 : 0) - (a.o.open ? 1 : 0) || a.rx.km - b.rx.km);
+
+  if (!candidates.length) {
+    line(t("sdr.noReceivers", "No receivers near this place. Pick somewhere else on the globe."));
+    return;
+  }
+  const anyOpen = candidates.some((c) => c.o.open);
+  if (!anyOpen) {
+    line(t("sdr.bandShut",
+      "This band looks shut from every receiver near here. You can still listen — it is a forecast, not a measurement."));
+  }
+
+  for (const { rx, o } of candidates) {
+    const el = document.createElement("div");
+    el.className = "st";
+    el.tabIndex = 0;
+    el.setAttribute("role", "button");
+    el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
+    el.querySelector(".sn").textContent = rx.loc || rx.name;
+    el.querySelector(".stags").textContent =
+      `${rx.km < 1 ? "here" : `${rx.km.toLocaleString()} km`} · ${o.open
+        ? t("sdr.pathLikely", "path likely open") : t("sdr.pathUnlikely", "path unlikely")}`
+      + (o.why ? ` · ${o.why}` : "");
+
+    // One connection, and only because somebody chose this receiver. Nothing
+    // above this line has touched a radio.
+    const go = () => {
+      window.Tip?.donate("shortwaveTuned");
+      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc,
+                               lat: rx.lat, lng: rx.lng, freq: khz, mode: "am",
+                               band: `${khz} kHz`, width: "normal" });
+      tunerStart(rx, khz, "am", "normal");
+      for (const sib of list.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
+      el.setAttribute("aria-current", "true");
+    };
+    el.addEventListener("click", go);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+    list.append(el);
+  }
+}
+
 /** Receivers near the selected place, with how far away each one is. */
 function renderNearbyReceivers(nearby) {
+  // A frequency on screen is a mode, and a repaint must not silently leave it.
+  if (freqView) { paintFrequency(nearby); return; }
   stationListEl.innerHTML = "";
+  stationListEl.append(frequencyRow(nearby));
   const dist = (km) => km < 1 ? "here" : `${km.toLocaleString()} km`;
   for (const rx of nearby) {
     const el = document.createElement("div");
@@ -4671,6 +4901,7 @@ function renderNearbyReceivers(nearby) {
  * the rail says so rather than making you know it.
  */
 async function selectReceiver(rx) {
+  freqView = null;                     // its bands replace the frequency view
   setTimeout(updateSun, 0);            // same reason as renderStations()
   sdrSel = rx;
   railMode = "stations";                 // its bands, not the nearby-receiver list
