@@ -841,6 +841,17 @@ function record(evt, mine = false) {
     // Someone posting into a cell they are not standing in — us, always, and
     // some of them. Worth showing rather than flattening.
     teleport: (evt.tags || []).some((t) => t[0] === "t" && t[1] === "teleport"),
+    /**
+     * What they are using, if their client says so (NIP-89).
+     *
+     * Already on the wire and previously thrown away. Worth keeping because the
+     * first question anyone asks about this room is who these people are, and
+     * "a bitchat user on a phone" is a different answer from "someone on the web
+     * client". Untrusted like everything else here: it is a string a stranger
+     * chose, so it is clipped and never interpreted.
+     */
+    client: ((evt.tags || []).find((t) => t[0] === "client")?.[1] || "")
+      .slice(0, 24).replace(/[^\w.\- ]/g, "") || null,
     text: String(evt.content || "").slice(0, MAX_MESSAGE),
     mine,
   });

@@ -3206,6 +3206,20 @@ function repaintLog() {
       far.textContent = `  ${t("chat.tuned", "tuned in")}`;
       el.append(far);
     }
+    /**
+     * What they are using, when they say and it is not us.
+     *
+     * On the name's tooltip rather than in the line. The first question anyone
+     * asks about this room is who these people are, and the client answers a lot
+     * of it — but it is not what the sentence is about, and a second grey word
+     * after every message would be a column of noise. Absent for AuralFM,
+     * because "you are talking to someone using the app you are using" is not
+     * information.
+     */
+    if (!m.mine && m.client && m.client !== "auralfm") {
+      const via = `${m.nick || m.from} — ${m.client}`;
+      who.title = who.title ? `${via}\n${who.title}` : via;
+    }
     log.append(el);
   }
   if (atBottom) log.scrollTop = log.scrollHeight;
