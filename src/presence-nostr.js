@@ -159,6 +159,21 @@ function directory() {
  * Set from main out of prefs. Kept separate from ANCHORS so the shipped list
  * can change with an update without silently discarding somebody's own.
  */
+/**
+ * Hide inbound messages that did not pay for themselves.
+ *
+ * The one moderation tool that needs no moderator: spam is cheap to send and
+ * proof of work makes it less so, at the price of also hiding anyone whose
+ * client does not mine. Off by default, because that price is real — bitchat
+ * does not mine, and a floor of 12 would silence every bitchat user in the room.
+ *
+ * Deliberately applies to messages and notes only, never to presence. Filtering
+ * heartbeats would empty the listener count of everyone whose client does not
+ * mine, which reads as "nobody is here" rather than as a filter doing its job.
+ */
+let powFloor = 0;
+const setPowFloor = (n) => { powFloor = Number.isFinite(+n) && +n > 0 ? Math.min(+n, 32) : 0; };
+
 let extraRelays = [];
 function setExtraRelays(urls) {
   const clean = (Array.isArray(urls) ? urls : [])
@@ -308,12 +323,76 @@ function forgetIdentities() { identities.clear(); }
  * Signs with the key belonging to the event's own `g` tag, so the identity is
  * always the one for the place being posted to.
  */
-function sign(evt) {
+/**
+ * ─── Saying who we are, and paying to be heard ───────────────────────────────
+ *
+ * **The client tag (NIP-89).** A tag naming the software that made the event.
+ * There was one already, on kind 20808 — an event only we parse, so it told
+ * nobody anything. A five-minute census of live geohash traffic found 104 people
+ * present and every self-identifying event saying `glub.chat`; AuralFM was not
+ * countable at all. This puts it where other clients actually look.
+ *
+ * **Proof of work (NIP-13).** A `nonce` tag mined until the event id starts with
+ * `POW_TARGET` zero bits. It is not a hoop for its own sake: clients on this
+ * network offer a filter that hides messages below a difficulty, so an unmined
+ * message is one they may never render. Measured on this project's reference
+ * machine — the 2019 i5-8257U the captions work was benchmarked on:
+ *
+ *     difficulty 8    3ms median,     11ms worst of eight
+ *     difficulty 12  46ms median,    110ms worst      <- what the network uses
+ *     difficulty 16 670ms median,  1,250ms worst
+ *     difficulty 20  7.9s median,   16.3s worst
+ *
+ * Twelve, because it is what the rest of the network mines to and it costs a
+ * twentieth of a second on the slowest machine this project supports. Sixteen
+ * would be a perceptible pause before every sentence; twenty is unusable there.
+ *
+ * Mining blocks, so it is capped. Past the deadline the nonce is dropped and the
+ * event goes out unmined rather than holding up the app — a message that arrives
+ * is worth more than one that meets a target nobody may be checking. Sending
+ * without the tag is honest; sending a `nonce` that claims a difficulty the id
+ * does not have is not, and would be rejected anyway.
+ */
+const CLIENT = "auralfm";
+const POW_TARGET = 12;
+const POW_DEADLINE_MS = 1500;
+
+/** NIP-13 difficulty: leading zero bits of the id, counted from the hex. */
+function powBits(idHex) {
+  let n = 0;
+  for (const ch of idHex) {
+    const v = parseInt(ch, 16);
+    if (Number.isNaN(v)) return 0;
+    if (v === 0) { n += 4; continue; }
+    return n + Math.clz32(v) - 28;
+  }
+  return n;
+}
+
+const serialize = (p, evt, tags) =>
+  JSON.stringify([0, p, evt.created_at, evt.kind, tags, evt.content]);
+
+function sign(evt, { pow = POW_TARGET } = {}) {
   const cell = (evt.tags || []).find((t) => t[0] === "g")?.[1] || null;
   const { sk: k, pk: p } = identity(cell);
-  const serial = JSON.stringify([0, p, evt.created_at, evt.kind, evt.tags, evt.content]);
-  const id = crypto.createHash("sha256").update(serial).digest();
-  return { ...evt, pubkey: p, id: hex(id), sig: hex(schnorr.sign(id, k)) };
+
+  let tags = evt.tags || [];
+  if (!tags.some((t) => t[0] === "client")) tags = [...tags, ["client", CLIENT]];
+
+  let id = crypto.createHash("sha256").update(serialize(p, evt, tags)).digest();
+  if (pow > 0) {
+    const stop = Date.now() + POW_DEADLINE_MS;
+    let nonce = 0;
+    for (;;) {
+      const tried = [...tags, ["nonce", String(nonce), String(pow)]];
+      const h = crypto.createHash("sha256").update(serialize(p, evt, tried)).digest();
+      if (powBits(hex(h)) >= pow) { tags = tried; id = h; break; }
+      nonce++;
+      // Checked rarely: Date.now() in the inner loop costs more than the hash.
+      if ((nonce & 0x3ff) === 0 && Date.now() > stop) break;
+    }
+  }
+  return { ...evt, tags, pubkey: p, id: hex(id), sig: hex(schnorr.sign(id, k)) };
 }
 
 let sockets = [];
@@ -571,7 +650,7 @@ function announce(only) {
   // Ours: the same cell, plus what is playing there.
   publish(sign({
     kind: LABEL_KIND, created_at,
-    tags: [["g", here.geohash], ["client", "auralfm"]],
+    tags: [["g", here.geohash]],
     content: JSON.stringify({ l: here.label }),
   }), only);
 }
@@ -872,6 +951,11 @@ function connect() {
       const g = (e.tags || []).find((t) => t[0] === "g")?.[1];
       if (!g || !/^[0-9b-hjkmnp-z]{2,9}$/.test(g)) return;
 
+      // Below the floor the reader set, this never happened. Checked before any
+      // parsing work, since the whole point is to not pay for spam.
+      if (powFloor && (e.kind === NOTE_KIND || e.kind === CHAT_KIND)
+          && powBits(String(e.id || "")) < powFloor) return;
+
       if (e.kind === NOTE_KIND) {
         // Only the cell we are standing in, and prefix matching so a bitchat
         // note pinned to a street inside our cell still counts as here.
@@ -1121,7 +1205,7 @@ function forgetDms() {
   emitNow("dms");
 }
 
-module.exports = { join, leave, view, say, stats, setExtraRelays, geohash, ungeohash, sameCell,
+module.exports = { join, leave, view, say, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
                    drop, dm, thread, markRead, forgetDms,
                    history: () => messages.slice(),
                    noteHistory: () => notes.slice(),

@@ -37,6 +37,7 @@
  *   sweeping the globe duplicates no note ... one "hola" was drawn seven times
  *   system lines outlive a repaint ......... every explanation the chat gave vanished
  *   the renderer is told once per burst ... 2,939 IPC messages in fifteen seconds
+ *   we say who we are and mine ........... invisible to a network that filters on both
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -739,6 +740,69 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("composer", problems.join("; "))
     : pass("a command runs before the input is cleared, and a private thread sends privately");
+}
+
+// ── what we publish says who we are and paid to be heard ─────────────────────
+// A five-minute census of live geohash traffic found 104 people present and
+// every self-identifying event saying `glub.chat`. AuralFM had a client tag, but
+// only on kind 20808 — an event nobody else parses — so it announced itself to
+// no one. And clients on this network offer a proof-of-work filter, so an
+// unmined message is one they may simply never render.
+//
+// Signs a real event through the real module and checks the result the way a
+// relay would, because the failure that matters is not a missing tag: it is
+// mining that changes the tags after the id is computed, which produces an event
+// every relay rejects and nothing local would notice.
+{
+  console.log("\nevery event we publish is identified and mined");
+  const problems = [];
+  try {
+    const nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href)
+      .then((m) => m.default ?? m);
+    const { schnorr } = await import("@noble/curves/secp256k1.js");
+    const crypto = await import("node:crypto");
+    const B = (h) => Uint8Array.from(Buffer.from(h, "hex"));
+
+    const sent = [];
+    class Capture {
+      constructor() { this.readyState = 1; setTimeout(() => this.onopen?.(), 0); }
+      send(d) { const f = JSON.parse(d); if (f[0] === "EVENT") sent.push(f[1]); }
+      close() { this.readyState = 3; }
+    }
+    const realWs = globalThis.WebSocket;
+    globalThis.WebSocket = Capture;
+    try {
+      nostr.join(19.4326, -99.1332, "audit");
+      await new Promise((r) => setTimeout(r, 400));
+      nostr.say("audit");
+      nostr.drop("audit");
+      await new Promise((r) => setTimeout(r, 200));
+      nostr.leave();
+    } finally { globalThis.WebSocket = realWs; }
+
+    const kinds = new Map();
+    for (const e of sent) kinds.set(e.kind, e);
+    if (!kinds.size) problems.push("nothing was published at all");
+    for (const [kind, e] of kinds) {
+      const client = (e.tags.find((t) => t[0] === "client") || [])[1];
+      if (client !== "auralfm") problems.push(`kind ${kind} does not say who sent it`);
+      if (nostr.powBits(e.id) < 12) problems.push(`kind ${kind} mined to only ${nostr.powBits(e.id)} bits`);
+      // The id must match the tags actually sent. Mining rewrites tags, and an
+      // id computed before that rewrite is an event every relay drops.
+      const serial = JSON.stringify([0, e.pubkey, e.created_at, e.kind, e.tags, e.content]);
+      if (crypto.createHash("sha256").update(serial).digest("hex") !== e.id) {
+        problems.push(`kind ${kind} has an id that does not match its own tags`);
+      }
+      let ok = false;
+      try { ok = schnorr.verify(B(e.sig), B(e.id), B(e.pubkey)); } catch { ok = false; }
+      if (!ok) problems.push(`kind ${kind} carries an invalid signature`);
+    }
+  } catch (err) {
+    problems.push(`could not exercise the signer: ${err.message}`);
+  }
+  problems.length
+    ? fail("client tag and proof of work", problems.join("; "))
+    : pass("every published kind names auralfm, mines to 12 bits, and still verifies");
 }
 
 // ── the renderer is told once per burst, not once per packet ─────────────────

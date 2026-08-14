@@ -481,6 +481,25 @@
         <button class="sw" id="onlyKept" role="switch" aria-checked="false"
                 aria-labelledby="onlyKept-lbl"></button>
       </div>
+      <!--
+        Proof of work. The one spam control that works without a moderator: a
+        message costs the sender something to send, and this is what you insist
+        they spent. Off by default and it has to be — bitchat does not mine, so a
+        floor silences most of the people actually out there.
+      -->
+      <div class="row">
+        <span class="name" id="powFloor-lbl" data-i18n="set.powFloor">Hide messages that cost nothing to send</span>
+        <select id="powFloor" aria-labelledby="powFloor-lbl">
+          <option value="0" data-i18n="set.powOff">Off</option>
+          <option value="8" data-i18n="set.powLenient">Lenient</option>
+          <option value="12" data-i18n="set.powStandard">Standard</option>
+          <option value="16" data-i18n="set.powStrict">Strict</option>
+          <option value="20" data-i18n="set.powExtreme">Extreme</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="name sub" data-i18n="set.powHint">Also hides anyone whose app does not do this — bitchat does not. Never hides who is present, only what they said.</span>
+      </div>
       <div class="row">
         <span class="name sub" id="filter-head" data-i18n="set.filterList">Word list</span>
         <button class="link" id="filterreset" data-i18n="set.filterReset">Reset</button>

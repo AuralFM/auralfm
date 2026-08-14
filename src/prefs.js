@@ -66,6 +66,20 @@ const DEFAULTS = {
    */
   filterChat: true,
   /**
+   * Hide inbound messages below this proof-of-work difficulty. Off by default.
+   *
+   * NIP-13 makes a message cost something to send, and this is the reader's end
+   * of that bargain: 0 off, 8 lenient, 12 what the rest of the network mines to,
+   * 16 strict, 20 extreme. Spam control that needs no moderator, which is the
+   * only kind available in a design with no server.
+   *
+   * Off, and it has to be, because the cost falls on the innocent too: bitchat
+   * does not mine at all, so a floor of 12 would silence every bitchat user in
+   * the room — most of the people actually out there. Somebody drowning in spam
+   * can make that trade knowingly; nobody should have it made for them.
+   */
+  powFloor: 0,
+  /**
    * Show nothing from anyone who is not a mutual contact. Off by default.
    *
    * The strongest tool available in a design with no server, and the honest

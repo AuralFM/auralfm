@@ -644,6 +644,7 @@ function setPrefs(patch) {
   // message — switching the filter on and watching nothing happen reads as a
   // dead setting.
   if ("filterChat" in patch || "onlyKept" in patch) refreshChat();
+  if ("powFloor" in patch) { nostr.setPowFloor(getPrefs().powFloor || 0); refreshChat(); }
   /**
    * Switching the durable identity on mints the key; switching it off destroys
    * it, and destroying it is not reversible.
@@ -711,6 +712,7 @@ const getStrings = () => i18n.strings(getPrefs().language, app.getLocale());
 function syncNostrPresence() {
   const on = getPrefs().presence === true;
   nostr.setExtraRelays(getPrefs().relays || []);
+  nostr.setPowFloor(getPrefs().powFloor || 0);
   const ch = playerState.playing ? playerState.channel : null;
   if (!on || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
     nostr.leave();

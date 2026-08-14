@@ -36,6 +36,7 @@ function paint() {
   $("#hidePreviews").setAttribute("aria-checked", String(P.hidePreviews === true));
   $("#durableIdentity").setAttribute("aria-checked", String(P.durableIdentity === true));
   $("#filterChat").setAttribute("aria-checked", String(P.filterChat !== false));
+  $("#powFloor").value = String(P.powFloor ?? 0);
   $("#onlyKept").setAttribute("aria-checked", String(P.onlyKept === true));
   if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
@@ -277,6 +278,7 @@ $("#filterreset").addEventListener("click", async () => {
   paintFilter();
 });
 $("#filterChat").addEventListener("click", () => set({ filterChat: P.filterChat === false }));
+$("#powFloor").addEventListener("change", (e) => set({ powFloor: Number(e.target.value) || 0 }));
 $("#onlyKept").addEventListener("click", () => set({ onlyKept: P.onlyKept !== true }));
 
 /**
