@@ -4720,6 +4720,36 @@ let freqView = null;          // { khz } while a frequency is on screen
  * kept. Drawing is synchronous and can happen as often as it likes.
  */
 
+/**
+ * How many receivers are in the list, said once, where somebody is already
+ * looking at receivers.
+ *
+ * The docs stopped quoting a figure because any figure drifts — the catalogue
+ * holds 837, 744 answered one morning in August, next month it could be 900. But
+ * the app knows the real number at load, and showing it is more honest than any
+ * sentence we could write and better than none: it is always right, it needs no
+ * maintenance, and the drift is the point rather than the problem.
+ *
+ * Phrased as plain reporting rather than as a boast. The number goes down as
+ * often as up, and a line that only ever reads "look how many" becomes a lie the
+ * week it drops.
+ */
+let receiverTotal = null;
+window.auralfm.sdrStats?.().then((s) => {
+  receiverTotal = s?.count ?? null;
+  // Repaint only if receivers are what is on screen, so this never disturbs
+  // somebody in the middle of something else.
+  if (railMode === "shortwave") {
+    const el = $("rxtotal");
+    if (el && receiverTotal) el.textContent = receiverCountLine();
+  }
+}).catch(() => {});
+
+const receiverCountLine = () => `${receiverTotal.toLocaleString()} `
+  + (receiverTotal === 1
+      ? t("sdr.receiverOne", "receiver volunteered worldwide")
+      : t("sdr.receiverMany", "receivers volunteered worldwide"));
+
 /** The box you type a frequency into, above the receivers near here. */
 function frequencyRow(nearby) {
   const wrap = document.createElement("div");
@@ -4757,6 +4787,14 @@ function frequencyRow(nearby) {
     if (e.key === "Enter") { e.preventDefault(); go(); }
   });
   wrap.append(input);
+
+  // Underneath the box, quietly. Somebody typing a frequency is already thinking
+  // about the whole network rather than about this city.
+  const total = document.createElement("div");
+  total.id = "rxtotal";
+  total.className = "rxtotal";
+  if (receiverTotal) total.textContent = receiverCountLine();
+  wrap.append(total);
   return wrap;
 }
 
@@ -4852,17 +4890,19 @@ function paintFrequency(nearby) {
         ? t("sdr.pathLikely", "path likely open") : t("sdr.pathUnlikely", "path unlikely")}`
       + (o.why ? ` · ${o.why}` : "");
 
-    // One connection, and only because somebody chose this receiver. Nothing
-    // above this line has touched a radio.
-    const go = () => {
-      window.Tip?.donate("shortwaveTuned");
-      window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc,
-                               lat: rx.lat, lng: rx.lng, freq: khz, mode: "am",
-                               band: `${khz} kHz`, width: "normal" });
-      tunerStart(rx, khz, "am", "normal");
-      for (const sib of list.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
-      el.setAttribute("aria-current", "true");
-    };
+    /**
+     * One connection, and only because somebody chose this receiver — nothing
+     * above this line has touched a radio.
+     *
+     * Handed to `selectReceiver` rather than tuned here. Calling `tunerStart`
+     * directly did start the waterfall and then lost it seconds later: the dial
+     * is shown only when a receiver is what you are looking at (`sdrSel`), and
+     * tuning behind the app's back left it believing a *place* was selected — so
+     * the next repaint through `goToPlace` stopped the tuner and hid the dial.
+     * The receiver's own interface is the thing that was wanted anyway; this
+     * just arrives at it already on the right frequency.
+     */
+    const go = () => selectReceiver(rx, { tuneTo: khz });
     el.addEventListener("click", go);
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
@@ -4900,7 +4940,11 @@ function renderNearbyReceivers(nearby) {
  * already computes is exactly what tells you which bands are worth trying, so
  * the rail says so rather than making you know it.
  */
-async function selectReceiver(rx) {
+/**
+ * @param {object} rx
+ * @param {{tuneTo?: number}} [opts]  a frequency to land on, from the frequency box
+ */
+async function selectReceiver(rx, { tuneTo = null } = {}) {
   freqView = null;                     // its bands replace the frequency view
   setTimeout(updateSun, 0);            // same reason as renderStations()
   sdrSel = rx;
@@ -5078,6 +5122,22 @@ async function selectReceiver(rx) {
     // 3 kHz above the dial and are half silenced at the normal width.
     tuneRow(el, { freq: b.freq, mode: b.mode, label: b.label, width: b.width });
     stationListEl.append(el);
+  }
+
+  /**
+   * Asked for by frequency: land on it, now that this receiver is properly the
+   * thing being looked at and the dial will stay.
+   *
+   * AM at normal width, because a bare frequency says nothing about mode — and
+   * guessing SSB for somebody who typed a broadcast frequency is worse than
+   * being plainly wrong in the common case. The mode buttons are right there.
+   */
+  if (tuneTo) {
+    window.Tip?.donate("shortwaveTuned");
+    window.auralfm.tuneSdr({ host: rx.host, name: rx.name, loc: rx.loc,
+                             lat: rx.lat, lng: rx.lng, freq: tuneTo, mode: "am",
+                             band: `${tuneTo} kHz`, width: "normal" });
+    tunerStart(rx, tuneTo, "am", "normal");
   }
 
   flyTo(rx.lat, rx.lng);
