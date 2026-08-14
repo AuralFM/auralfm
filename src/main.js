@@ -1421,6 +1421,12 @@ ipcMain.handle("hub:leave", () => { nostr.leaveHub(); return true; });
 ipcMain.handle("hub:state", () => nostr.hubState());
 ipcMain.handle("hub:say", (_e, text) => nostr.sayHub(text, getPrefs().nickname));
 ipcMain.handle("hub:history", () => visible(nostr.hubHistory()));
+/**
+ * Look one person up. Reads only, one at a time, and never in bulk — see the
+ * note in presence-nostr: a list of authors is a list of who is in your cell.
+ */
+ipcMain.handle("profile:get", (_e, pubkey) => nostr.lookupProfile(String(pubkey || "")));
+ipcMain.handle("profile:known", () => nostr.knownProfiles());
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.
 // The nickname comes from prefs unless the caller overrides it, so there is one

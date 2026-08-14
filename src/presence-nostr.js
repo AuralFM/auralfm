@@ -182,6 +182,67 @@ const setPowFloor = (n) => { powFloor = Number.isFinite(+n) && +n > 0 ? Math.min
  * in four at once is a different product with a different interface, and the
  * app has no room to show it honestly.
  */
+/**
+ * ─── Looking somebody up ─────────────────────────────────────────────────────
+ *
+ * Kind 0 is a Nostr profile: a display name, a line about themselves, a NIP-05
+ * address. Most people in these rooms are eight hex characters, and a name makes
+ * the room legible.
+ *
+ * **One person at a time, and only when asked.** The obvious implementation is a
+ * bulk fetch — `{kinds:[0], authors:[everyone here]}` — and it is the one thing
+ * this must not do, because that author list *is* the cell. Every other
+ * subscription in this file deliberately asks for everything and filters locally
+ * so no relay learns which place we care about, and a bulk profile fetch would
+ * hand them the same fact by another route. Asking about one person tells a relay
+ * that somebody looked up that person, which is a far smaller thing and one the
+ * user chose.
+ *
+ * Nothing is published. This only ever reads.
+ */
+const profiles = new Map();          // pubkey -> { name, about, nip05, at }
+const pendingProfiles = new Map();   // pubkey -> resolve
+const PROFILE_WAIT_MS = 4000;
+const MAX_PROFILES = 300;
+
+const clean = (v, n) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, n);
+
+function takeProfile(evt) {
+  let j = {};
+  try { j = JSON.parse(evt.content || "{}") || {}; } catch { /* a profile we cannot read */ }
+  const p = {
+    name: clean(j.display_name || j.displayName || j.name, 40) || null,
+    about: clean(j.about, 140) || null,
+    // Shown as a claim, never as a verification: checking a NIP-05 means asking
+    // that domain, which is a request to somebody else's server about a person
+    // we are reading. Saying "they claim" is honest and costs nothing.
+    nip05: clean(j.nip05, 60) || null,
+    at: (evt.created_at || 0) * 1000,
+  };
+  const prev = profiles.get(evt.pubkey);
+  if (!prev || p.at >= prev.at) profiles.set(evt.pubkey, p);
+  while (profiles.size > MAX_PROFILES) profiles.delete(profiles.keys().next().value);
+  const resolve = pendingProfiles.get(evt.pubkey);
+  if (resolve) { pendingProfiles.delete(evt.pubkey); resolve(profiles.get(evt.pubkey)); }
+}
+
+/** Ask the relays about one person. Resolves with what came back, or null. */
+function lookupProfile(pubkey) {
+  if (!priv.isKey(pubkey)) return Promise.resolve(null);
+  if (profiles.has(pubkey)) return Promise.resolve(profiles.get(pubkey));
+  if (!alive().length) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; pendingProfiles.delete(pubkey); resolve(v); };
+    pendingProfiles.set(pubkey, finish);
+    send(["REQ", `who-${pubkey.slice(0, 8)}`, { kinds: [0], authors: [pubkey], limit: 1 }]);
+    setTimeout(() => finish(profiles.get(pubkey) || null), PROFILE_WAIT_MS);
+  });
+}
+
+/** Everything looked up so far, for a renderer that wants to show names. */
+const knownProfiles = () => Object.fromEntries(profiles);
+
 let hub = null;
 const hubMessages = [];
 
@@ -973,6 +1034,9 @@ function connect() {
        */
       if (e.kind === WRAP_KIND) { takeDm(e); return; }
 
+      // A profile we asked for. No geohash, and none expected.
+      if (e.kind === 0) { takeProfile(e); return; }
+
       /**
        * A hub message, which has no geohash and never should — it belongs to a
        * room rather than a place. Handled before the `g` gate below, which would
@@ -1337,7 +1401,7 @@ function forgetDms() {
 
 module.exports = { join, leave, view, say, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
                    drop, dm, thread, markRead, forgetDms,
-                   joinHub, leaveHub, sayHub,
+                   joinHub, leaveHub, sayHub, lookupProfile, knownProfiles,
                    hubState: () => (hub ? { name: hub.name, tag: hub.tag } : null),
                    hubHistory: () => hubMessages.slice(),
                    onHub: (fn) => { onHub = fn; },

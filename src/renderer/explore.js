@@ -3054,6 +3054,18 @@ let dmCache = [];
 /** The hub we are in, and what has been said in it. */
 let hubIn = null;          // { name, tag } or null
 let hubCache = [];
+/**
+ * Profiles looked up so far, by pubkey.
+ *
+ * Only ever filled by somebody running /whois. Nothing populates this in the
+ * background, because the background version is the bulk fetch that would tell a
+ * relay who is in your cell.
+ */
+let knownProfiles = {};
+window.auralfm.profilesKnown?.().then((p) => { knownProfiles = p || {}; }).catch(() => {});
+
+/** Their own nickname first — it travels with the message and is more current. */
+const displayName = (m) => m.nick || knownProfiles[m.pubkey]?.name || m.from;
 /** Everything main knows about the people here, keyed by pubkey. */
 let contacts = new Map();
 
@@ -3129,7 +3141,7 @@ function repaintLog() {
     const who = document.createElement("span");
     who.className = "who";
     // No nickname is the common case, and a truncated pubkey is at least true.
-    who.textContent = (m.mine ? t("chat.you", "you") : (m.nick || m.from)) + "  ";
+    who.textContent = (m.mine ? t("chat.you", "you") : displayName(m)) + "  ";
     // The name is the mute control. Nothing else in a chat line identifies a
     // person, so there is nowhere better to put it, and a separate button on
     // every message would be a column of buttons nobody wants.
@@ -3918,6 +3930,37 @@ const COMMANDS = {
       systemLine(`In "${got.name}". Everything you type goes only to people who typed the same name and password. `
         + "Nobody else can read it, including the relays carrying it — but anyone who learns the pair can, "
         + "including what was said before they knew it.");
+    },
+  },
+  /**
+   * Who is this?
+   *
+   * Deliberately a command rather than something the app does for you. Fetching
+   * everyone's profile would mean handing a relay the list of people in your
+   * cell, which is the one thing the whole subscription design avoids. Asking
+   * about one person says only that somebody looked that person up, and you are
+   * the one who decided to.
+   */
+  "/whois": {
+    hint: "/whois <name> — look someone up, if they published a profile",
+    needsName: true,
+    run: async (rest) => {
+      const who = findPerson(rest, "/whois");
+      if (!who) return;
+      systemLine(`Asking the relays about ${name(who)}…`);
+      const p = await guard("profileGet", () => window.auralfm.profileGet(who.pubkey), null);
+      if (!p || (!p.name && !p.about && !p.nip05)) {
+        return systemLine(`Nothing published for ${name(who)}. Most people here have no profile — `
+          + "the key is the whole identity, and that is the normal case rather than a gap.");
+      }
+      knownProfiles[who.pubkey] = p;
+      const lines = [`${p.name || name(who)}`];
+      // "claims", not "verified": checking a NIP-05 means asking that domain
+      // about this person, which is a request we have not made.
+      if (p.nip05) lines.push(`claims ${p.nip05} — unverified, and checking it would ask that domain about them`);
+      if (p.about) lines.push(p.about);
+      systemLine(lines.join("\n"));
+      repaintLog();
     },
   },
   "/fav": {

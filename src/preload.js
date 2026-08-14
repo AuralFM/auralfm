@@ -132,6 +132,9 @@ contextBridge.exposeInMainWorld("auralfm", {
   hubState: () => ipcRenderer.invoke("hub:state"),
   hubSay: (text) => ipcRenderer.invoke("hub:say", text),
   hubHistory: () => ipcRenderer.invoke("hub:history"),
+  /** One person, when asked. Never a list — the list would be your room. */
+  profileGet: (pubkey) => ipcRenderer.invoke("profile:get", pubkey),
+  profilesKnown: () => ipcRenderer.invoke("profile:known"),
   onHubMessages: (fn) => ipcRenderer.on("hub:messages", (_e, list) => fn(list)),
   dmRead: (pubkey) => ipcRenderer.invoke("dm:read", pubkey),
   onDms: (fn) => ipcRenderer.on("presence:dms", (_e, list) => fn(list)),

@@ -39,6 +39,7 @@
  *   the renderer is told once per burst ... 2,939 IPC messages in fifteen seconds
  *   we say who we are and mine ........... invisible to a network that filters on both
  *   a hub is its name and password ....... a room the relays carry and cannot read
+ *   a profile lookup names one person .... a bulk fetch would name your whole cell
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -741,6 +742,37 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("composer", problems.join("; "))
     : pass("a command runs before the input is cleared, and a private thread sends privately");
+}
+
+// ── a profile lookup asks about one person, never a room ─────────────────────
+// Every subscription in this app asks relays for everything and filters locally,
+// so no relay learns which cell anybody cares about. A profile fetch is the one
+// place that is easy to undo by accident: `{kinds:[0], authors:[…]}` is efficient
+// and correct-looking, and the author list *is* the set of people in your cell.
+// One author per request, and only when somebody asks.
+{
+  console.log("\na profile lookup names one person, not a room");
+  const src = fs.readFileSync(R("src/presence-nostr.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const problems = [];
+  const i = src.indexOf("function lookupProfile(");
+  if (i < 0) problems.push("lookupProfile is gone");
+  else {
+    const body = src.slice(i, src.indexOf("\n}", i));
+    if (!/authors: \[pubkey\]/.test(body)) {
+      problems.push("the request does not name exactly one author");
+    }
+    if (/authors: \[\.\.\.|authors: \[…\]|\.map\(|Object\.keys|peers/.test(body)) {
+      problems.push("the request builds its author list from a collection");
+    }
+  }
+  // And nothing anywhere else may subscribe to kind 0 in bulk.
+  for (const m of src.matchAll(/kinds: \[0\][^}]*/g)) {
+    if (!/authors: \[pubkey\]/.test(m[0])) problems.push(`a kind-0 subscription does not name one author: ${m[0].slice(0, 50)}`);
+  }
+  problems.length
+    ? fail("profile lookup", problems.join("; "))
+    : pass("profiles are fetched one person at a time, only when asked");
 }
 
 // ── typing a frequency is not a scanner ──────────────────────────────────────
