@@ -466,6 +466,22 @@
         <span class="name sub" id="durablefp">—</span>
       </div>
     </div>
+    <!--
+      Hubs. Not a switch, because a hub is somewhere you go rather than something
+      you configure — and the key is derived when you join and never written down,
+      so there is nothing here to remember or to toggle.
+      It is here because a feature nobody can find is indistinguishable from one
+      that was never built, which is exactly what happened to private messages,
+      and Settings is where people look to learn what an app can do.
+    -->
+    <div class="card spaced">
+      <div class="row">
+        <span class="name" data-i18n="set.hubs">Private rooms</span>
+        <span class="name sub" data-i18n="set.hubsHow">Type /hub in the chat</span>
+      </div>
+    </div>
+    <p class="hint" data-i18n="set.hubsHint">A hub is a room with no registry and no invitation: a name and a password, typed into the chat as /hub "radio club" yourpassword. Everyone who types the same pair is in the same room, and the password alone decides which room that is — the name on its own decides nothing. The relays carry it and cannot read it. What it is not: anyone who learns the pair can read everything said in it, including what was said before they knew it, so changing the password does not lock anybody out — it makes a different room.</p>
+
     <p class="hint" data-i18n="set.durableHint">Off, every key is thrown away when you quit, and nobody can favorite or verify you — there is nothing lasting to point at. On, one key is saved on this Mac and used for private messages only; presence on the globe stays anonymous either way. The cost is real: anyone watching relays can tell that the identity written to on Tuesday was written to again on Friday. Switching this off destroys the key, and anyone holding your fingerprint will find nothing answers to it.</p>
 
     <!-- The safety tools. There are no moderators on this network — bitchat has
