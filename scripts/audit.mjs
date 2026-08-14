@@ -38,6 +38,7 @@
  *   system lines outlive a repaint ......... every explanation the chat gave vanished
  *   the renderer is told once per burst ... 2,939 IPC messages in fifteen seconds
  *   we say who we are and mine ........... invisible to a network that filters on both
+ *   a hub is its name and password ....... a room the relays carry and cannot read
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -742,6 +743,53 @@ console.log("\nlight theme agrees with itself");
     : pass("a command runs before the input is cleared, and a private thread sends privately");
 }
 
+// ── a hub is the pair, and only the pair ─────────────────────────────────────
+// Two people who type the same name and password must land in the same room, and
+// anything less than the same pair must land somewhere else. Every one of these
+// is a way the feature could look like it works while being either broken or a
+// lie about privacy: a name that decides the room on its own, a password that is
+// ignored, a ciphertext that opens in the wrong room.
+{
+  console.log("\na hub is its name and its password together");
+  const problems = [];
+  try {
+    const hub = await import(pathToFileURL(R("src/hub.js")).href).then((m) => m.default ?? m);
+    const a = hub.derive("Radio Club", "shortwave-2026");
+
+    if (!a) problems.push("a valid pair produced no room");
+    else {
+      // Written differently, same room. People type untidily and must still meet.
+      const messy = hub.derive("  radio   CLUB ", "shortwave-2026");
+      if (messy?.tag !== a.tag) problems.push("the same pair typed untidily lands in a different room");
+
+      // Change either half and it is a different room.
+      const otherPw = hub.derive("Radio Club", "shortwave-2025");
+      const otherNm = hub.derive("Radio Clubb", "shortwave-2026");
+      if (otherPw?.tag === a.tag) problems.push("the password does not decide the room");
+      if (otherNm?.tag === a.tag) problems.push("the name does not decide the room");
+
+      // The published half must not be the secret half.
+      if (a.tag.includes(Buffer.from(a.key).toString("hex").slice(0, 16))) {
+        problems.push("the public tag leaks the key");
+      }
+
+      const sealed = hub.seal("meet on 7.200", a);
+      if (hub.open(sealed, a) !== "meet on 7.200") problems.push("a hub cannot read its own message");
+      if (hub.open(sealed, otherPw) !== null) problems.push("the wrong password can read it");
+      if (hub.open(sealed, otherNm) !== null) problems.push("a ciphertext opens in another room");
+      if (hub.open(sealed.slice(0, -4) + "AAAA", a) !== null) problems.push("a tampered message still opens");
+    }
+    // A hub with only half a pair is a public channel wearing a disguise.
+    if (hub.derive("named", "")) problems.push("a hub with no password was allowed");
+    if (hub.derive("", "worded")) problems.push("a hub with no name was allowed");
+  } catch (err) {
+    problems.push(`hub.js would not run: ${err.message}`);
+  }
+  problems.length
+    ? fail("hubs", problems.join("; "))
+    : pass("the same pair meets, anything else does not, and no ciphertext travels between rooms");
+}
+
 // ── what we publish says who we are and paid to be heard ─────────────────────
 // A five-minute census of live geohash traffic found 104 people present and
 // every self-identifying event saying `glub.chat`. AuralFM had a client tag, but
@@ -847,14 +895,17 @@ console.log("\nlight theme agrees with itself");
   console.log("\nthe room log carries the room, not private conversations");
   const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
   const problems = [];
-  const i = src.indexOf("const merged = (dmWith");
+  const i = src.indexOf("const merged = (");
   if (i < 0) problems.push("the log's merge is gone or renamed");
   else {
-    const block = src.slice(i, i + 900);
-    // The room branch is what follows the `: [` of the conditional.
-    const room = block.slice(block.indexOf(": ["));
-    if (/dmCache/.test(room)) {
-      problems.push("the room branch merges dmCache — private messages will show in every room");
+    const block = src.slice(i, i + 1400);
+    // The room is the last branch — whatever follows the final `: [`.
+    const room = block.slice(block.lastIndexOf(": ["));
+    for (const [name, why] of [
+      ["dmCache", "private messages will show in every room"],
+      ["hubCache", "a private hub's messages will show in every room"],
+    ]) {
+      if (new RegExp(name).test(room)) problems.push(`the room branch merges ${name} — ${why}`);
     }
     if (!/dmCache\.filter\(/.test(block)) {
       problems.push("the conversation branch does not filter dmCache to one person");

@@ -42,6 +42,7 @@ const path = require("node:path");
 const { schnorr } = require("@noble/curves/secp256k1.js");
 const priv = require("./nostr-private.js");
 const identity_ = require("./identity.js");
+const hubs = require("./hub.js");
 
 /**
  * Kinds, and why these ones.
@@ -173,6 +174,16 @@ function directory() {
  */
 let powFloor = 0;
 const setPowFloor = (n) => { powFloor = Number.isFinite(+n) && +n > 0 ? Math.min(+n, 32) : 0; };
+
+/**
+ * The hub we are in, if any: { name, tag, key }.
+ *
+ * One at a time, deliberately. A hub is somewhere you are, like a room — being
+ * in four at once is a different product with a different interface, and the
+ * app has no room to show it honestly.
+ */
+let hub = null;
+const hubMessages = [];
 
 let extraRelays = [];
 function setExtraRelays(urls) {
@@ -373,7 +384,12 @@ const serialize = (p, evt, tags) =>
   JSON.stringify([0, p, evt.created_at, evt.kind, tags, evt.content]);
 
 function sign(evt, { pow = POW_TARGET } = {}) {
-  const cell = (evt.tags || []).find((t) => t[0] === "g")?.[1] || null;
+  // A hub message has no `g` tag — it belongs to a room, not a place — so its
+  // identity is scoped to the hub instead. Same rule either way: the key that
+  // signs is the key for the thing being posted to.
+  const cell = (evt.tags || []).find((t) => t[0] === "g")?.[1]
+            || (evt.tags || []).find((t) => t[0] === "h")?.[1]
+            || null;
   const { sk: k, pk: p } = identity(cell);
 
   let tags = evt.tags || [];
@@ -431,6 +447,7 @@ const dms = [];                   // private messages, decrypted, this session
 const seenDms = new Set();
 let onNotes = () => {};
 let onDms = () => {};
+let onHub = () => {};
 /** Set by main so an authenticated favorite signal can be recorded. */
 let onFavorited = () => {};
 
@@ -489,7 +506,7 @@ function prune() {
  * `flush()` on the spot.
  */
 const FLUSH_MS = 90;
-const dirty = { peers: false, messages: false, notes: false, dms: false };
+const dirty = { peers: false, messages: false, notes: false, dms: false, hub: false };
 let flushTimer = null;
 
 function schedule(what) {
@@ -505,6 +522,7 @@ function flush() {
   if (dirty.messages) { dirty.messages = false; onMessages(messages.slice()); }
   if (dirty.notes)    { dirty.notes = false;    onNotes(liveNotes()); }
   if (dirty.dms)      { dirty.dms = false;      onDms(dms.slice()); }
+  if (dirty.hub)      { dirty.hub = false;      onHub(hubMessages.slice()); }
 }
 
 const emit = () => schedule("peers");
@@ -955,6 +973,17 @@ function connect() {
        */
       if (e.kind === WRAP_KIND) { takeDm(e); return; }
 
+      /**
+       * A hub message, which has no geohash and never should — it belongs to a
+       * room rather than a place. Handled before the `g` gate below, which would
+       * otherwise drop it for the very thing that makes it a hub message.
+       */
+      const h = (e.tags || []).find((t) => t[0] === "h")?.[1];
+      if (h) {
+        if (hub && h === hub.tag && !mineKeys().has(e.pubkey)) takeHub(e);
+        return;
+      }
+
       // Our own, echoed back. Every key this run has used, not one — there is a
       // key per place now, and comparing against a single `pk` stopped compiling
       // the moment that changed.
@@ -1211,6 +1240,91 @@ function markRead(pubkey) {
  * somebody might wipe because they are frightened. Clearing the set as well
  * would make the wipe cosmetic until the next relay round trip.
  */
+/**
+ * ─── Hubs ────────────────────────────────────────────────────────────────────
+ *
+ * A room reached by knowing a name and a password. See [hub.js] for what that
+ * buys and what it does not.
+ *
+ * The traffic rides on the same kind as public chat, with an `h` tag and no `g`
+ * tag. That combination keeps it out of everyone else's way: a client watching
+ * geohash channels requires a `g` tag, so a hub message is not something they
+ * have to look at, and the tag it does carry means nothing without the password.
+ *
+ * The subscription is unchanged and deliberately unfiltered. Asking relays for
+ * `#h` would be efficient and would also tell each of them exactly which room we
+ * are in — a small, permanent, avoidable disclosure. The events already arrive;
+ * the matching happens here.
+ */
+const seenHub = new Set();
+
+function joinHub(name, password) {
+  const h = hubs.derive(name, password);
+  if (!h) return null;
+  hub = h;
+  hubMessages.length = 0;
+  seenHub.clear();
+  emitNow("hub");
+  return { name: h.name, tag: h.tag };
+}
+
+function leaveHub() {
+  hub = null;
+  hubMessages.length = 0;
+  seenHub.clear();
+  emitNow("hub");
+}
+
+/** @returns {boolean} whether anything was published */
+function sayHub(text, nickname) {
+  if (!hub || !alive().length) return false;
+  const body = String(text || "").trim().slice(0, hubs.MAX_TEXT);
+  if (!body) return false;
+  const nick = String(nickname || "").trim().slice(0, 32);
+  // The nickname goes inside the envelope, never on the event. A name in a tag
+  // would tell every relay who is in a room they otherwise cannot read.
+  const sealed = hubs.seal(JSON.stringify({ t: body, n: nick }), hub);
+  if (!sealed) return false;
+  const evt = sign({
+    kind: CHAT_KIND, created_at: Math.floor(Date.now() / 1000),
+    tags: [["h", hub.tag]], content: sealed,
+  });
+  publish(evt);
+  recordHub(evt, body, nick, true);
+  flush();
+  return true;
+}
+
+/** Open an inbound hub message, or ignore it. */
+function takeHub(evt) {
+  if (seenHub.has(evt.id)) return;
+  const opened = hubs.open(evt.content, hub);
+  if (opened === null) return;              // not ours, or not readable
+  let body = opened, nick = "";
+  try {
+    const j = JSON.parse(opened);
+    if (j && typeof j === "object") { body = String(j.t ?? ""); nick = String(j.n ?? "").slice(0, 32); }
+  } catch { /* a simpler sender; the text is the whole of it */ }
+  if (!body) return;
+  recordHub(evt, body, nick, false);
+  schedule("hub");
+}
+
+function recordHub(evt, text, nick, mine) {
+  seenHub.add(evt.id);
+  hubMessages.push({
+    id: evt.id,
+    at: (evt.created_at || 0) * 1000,
+    from: String(evt.pubkey || "").slice(0, 8),
+    pubkey: String(evt.pubkey || ""),
+    nick: nick || null,
+    text: String(text).slice(0, hubs.MAX_TEXT),
+    mine,
+  });
+  hubMessages.sort((a, b) => a.at - b.at);
+  if (hubMessages.length > HISTORY) hubMessages.splice(0, hubMessages.length - HISTORY);
+}
+
 function forgetDms() {
   dms.length = 0;
   emitNow("dms");
@@ -1218,6 +1332,10 @@ function forgetDms() {
 
 module.exports = { join, leave, view, say, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
                    drop, dm, thread, markRead, forgetDms,
+                   joinHub, leaveHub, sayHub,
+                   hubState: () => (hub ? { name: hub.name, tag: hub.tag } : null),
+                   hubHistory: () => hubMessages.slice(),
+                   onHub: (fn) => { onHub = fn; },
                    history: () => messages.slice(),
                    noteHistory: () => notes.slice(),
                    dmHistory: () => dms.slice(),

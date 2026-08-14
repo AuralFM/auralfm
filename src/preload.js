@@ -123,6 +123,16 @@ contextBridge.exposeInMainWorld("auralfm", {
   dmHistory: () => ipcRenderer.invoke("dm:history"),
   dmThread: (pubkey) => ipcRenderer.invoke("dm:thread", pubkey),
   dmSend: (pubkey, text) => ipcRenderer.invoke("dm:send", pubkey, text),
+  /**
+   * Hubs. The password crosses once, going in, and never comes back — `hubState`
+   * answers with the room's name and public tag, never the key.
+   */
+  hubJoin: (name, password) => ipcRenderer.invoke("hub:join", name, password),
+  hubLeave: () => ipcRenderer.invoke("hub:leave"),
+  hubState: () => ipcRenderer.invoke("hub:state"),
+  hubSay: (text) => ipcRenderer.invoke("hub:say", text),
+  hubHistory: () => ipcRenderer.invoke("hub:history"),
+  onHubMessages: (fn) => ipcRenderer.on("hub:messages", (_e, list) => fn(list)),
   dmRead: (pubkey) => ipcRenderer.invoke("dm:read", pubkey),
   onDms: (fn) => ipcRenderer.on("presence:dms", (_e, list) => fn(list)),
   onUnread: (fn) => ipcRenderer.on("presence:unread", (_e, n) => fn(n)),

@@ -1408,6 +1408,19 @@ ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
 ipcMain.handle("palettes:list", () => palettes.list());
 ipcMain.handle("palettes:get", () => palettes.byId(getPrefs().palette));
 ipcMain.handle("presence:history", () => visible(nostr.history()));
+/**
+ * Hubs. A private room reached by knowing a name and a password.
+ *
+ * The password crosses the bridge once, on the way in, and is never stored or
+ * echoed back — `hubState()` returns the name and the public tag, never the key.
+ * Messages go through `visible()` like every other channel, because muting and
+ * the word filter are about your window and a private room is still your window.
+ */
+ipcMain.handle("hub:join", (_e, name, password) => nostr.joinHub(name, password));
+ipcMain.handle("hub:leave", () => { nostr.leaveHub(); return true; });
+ipcMain.handle("hub:state", () => nostr.hubState());
+ipcMain.handle("hub:say", (_e, text) => nostr.sayHub(text, getPrefs().nickname));
+ipcMain.handle("hub:history", () => visible(nostr.hubHistory()));
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.
 // The nickname comes from prefs unless the caller overrides it, so there is one
@@ -1616,6 +1629,10 @@ if (!app.requestSingleInstanceLock()) {
     // channel where you happened to silence them.
     nostr.onNotes((list) =>
       explore?.webContents.send("presence:notes", visible(list)));
+    // A hub is a private room, but muting and the word filter are about your
+    // window rather than about the channel, so it goes through the same funnel.
+    nostr.onHub((list) =>
+      explore?.webContents.send("hub:messages", visible(list)));
     nostr.onDms((list) => {
       const clean = visible(list);
       explore?.webContents.send("presence:dms", clean);

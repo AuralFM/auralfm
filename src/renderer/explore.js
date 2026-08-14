@@ -3051,6 +3051,9 @@ function paintChatHead() {
  */
 let noteCache = [];
 let dmCache = [];
+/** The hub we are in, and what has been said in it. */
+let hubIn = null;          // { name, tag } or null
+let hubCache = [];
 /** Everything main knows about the people here, keyed by pubkey. */
 let contacts = new Map();
 
@@ -3100,7 +3103,9 @@ function repaintLog() {
    * than to a room, and walking into a conversation should not silence it.
    */
   const said = systemCache.map((m) => ({ ...m, sort: m.at || 0 }));
-  const merged = (dmWith
+  const merged = (hubIn
+    ? [...said, ...hubCache.map((m) => ({ ...m, kind: "hub", sort: m.at || 0 }))]
+    : dmWith
     ? [...said, ...dmCache.filter((m) => m.with === dmWith.pubkey)
         .map((m) => ({ ...m, kind: "dm", sort: m.at || 0 }))]
     : [
@@ -3237,6 +3242,7 @@ function badge(glyph, label) {
 }
 
 window.auralfm.onChat(paintChat);
+window.auralfm.onHubMessages((list) => { hubCache = Array.isArray(list) ? list : []; repaintLog(); });
 window.auralfm.onNotes(paintNotes);
 window.auralfm.onDms((list) => {
   paintDms(list);
@@ -3553,6 +3559,34 @@ function closeConvos() {
 
 const toggleConvos = () => (convosOpen ? closeConvos() : openConvos());
 
+/** Walk into a hub. */
+async function enterHub(h) {
+  if (dmWith) leaveDm();
+  if (convosOpen) closeConvos();
+  hubIn = h;
+  hubCache = await guard("hubHistory", () => window.auralfm.hubHistory(), []) || [];
+  $("chatdm").hidden = false;
+  $("chatdmwho").textContent = `${t("chat.hubIn", "Hub")} ${h.name}`;
+  $("chatinput").classList.add("dm");
+  paintComposer();
+  repaintLog();
+  $("chatinput").focus();
+}
+
+/** Back to the place. */
+async function leaveHub() {
+  if (!hubIn) return;
+  hubIn = null;
+  hubCache = [];
+  await guard("hubLeave", () => window.auralfm.hubLeave(), null);
+  $("chatdm").hidden = true;
+  $("chatdmwho").textContent = "";
+  $("chatinput").classList.remove("dm");
+  paintComposer();
+  repaintLog();
+  $("chatinput").focus();
+}
+
 /** Walk into a private conversation. */
 async function enterDm(who) {
   if (convosOpen) closeConvos();
@@ -3692,6 +3726,11 @@ function describeMode() {
   }
 
   hideNames();
+  if (hubIn) {
+    input.classList.add("cmdok");
+    return set(`${t("chat.hubTo", "To the hub")} <b>${esc(hubIn.name)}</b> — `
+             + t("chat.hubOnly", "only people who know its name and password can read this"), "priv");
+  }
   if (dmWith) {
     input.classList.add("cmdok");
     return set(`${t("chat.privateTo", "Private to")} <b>${esc(dmWith.nick)}</b> — `
@@ -3837,6 +3876,35 @@ const COMMANDS = {
    * durable identity on, a favorite can survive; without it, saying so up front
    * is better than succeeding and then explaining.
    */
+  /**
+   * A private room reached by knowing a name and a password.
+   *
+   * Both on one line, so it can be handed to somebody in one line. The password
+   * is whatever follows the first space after the name, spaces included — a
+   * passphrase is a better password than a word and the syntax should not
+   * discourage one.
+   */
+  "/hub": {
+    hint: "/hub <name> <password> — a private room, or /hub to leave",
+    run: async (rest) => {
+      const body = (rest || "").trim();
+      if (!body) {
+        if (!hubIn) return systemLine("Which hub? /hub radio club shortwave2026 — the first word is the name, the rest is the password.");
+        await leaveHub();
+        return;
+      }
+      const sp = body.indexOf(" ");
+      if (sp < 0) return systemLine("A hub needs a password too: /hub " + body + " <password>");
+      const name = body.slice(0, sp), password = body.slice(sp + 1).trim();
+      if (!password) return systemLine("A hub needs a password too: /hub " + name + " <password>");
+      const got = await guard("hubJoin", () => window.auralfm.hubJoin(name, password), null);
+      if (!got) return systemLine("That did not work — a hub needs both a name and a password.");
+      await enterHub(got);
+      systemLine(`In "${got.name}". Everything you type goes only to people who typed the same name and password. `
+        + "Nobody else can read it, including the relays carrying it — but anyone who learns the pair can, "
+        + "including what was said before they knew it.");
+    },
+  },
   "/fav": {
     hint: "/fav <name> — keep somebody, and tell them",
     needsName: true,
@@ -4043,6 +4111,19 @@ $("chatform").onsubmit = async (e) => {
    * typing /help — and that is the one ambiguity worth keeping, because a
    * message beginning with a slash is a command everywhere else in the app too.
    */
+  // In a hub, ordinary words go to the hub and nowhere else. A command is still
+  // a command, so /hub can get you out of one.
+  if (hubIn && !text.startsWith("/")) {
+    input.disabled = true;
+    const ok = await guard("hubSay", () => window.auralfm.hubSay(text), false);
+    input.disabled = false;
+    input.focus();
+    if (ok) input.value = "";
+    else sendFailed(input, t("chat.hubFailed", "Not sent — no relay took it."));
+    describeMode();
+    return;
+  }
+
   if (dmWith && !text.startsWith("/")) {
     input.disabled = true;
     const ok = await guard("dmSend", () => window.auralfm.dmSend(dmWith.pubkey, text), false);
@@ -4097,6 +4178,7 @@ $("chatdms").onclick = toggleConvos;
 $("chatinput").addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (convosOpen) { e.preventDefault(); e.stopPropagation(); return closeConvos(); }
+  if (hubIn) { e.preventDefault(); e.stopPropagation(); return void leaveHub(); }
   if (!dmWith) return;
   e.preventDefault();
   e.stopPropagation();
