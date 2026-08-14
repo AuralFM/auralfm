@@ -874,10 +874,28 @@ console.log("\nlight theme agrees with itself");
 
   const realWs = globalThis.WebSocket;
   globalThis.WebSocket = FakeRelay;
-  // Comfortably past the module's coalescing window: inbound lists are flushed
-  // on a short timer rather than per event, so anything that waits less than
-  // that measures the timer instead of the behaviour. This check once did, and
-  // read zero notes for a note that arrived ninety milliseconds later.
+  /**
+   * Wait for the condition, never for the clock.
+   *
+   * This check has now been wrong twice for the same reason. First it slept
+   * 140ms for a note that arrives after a coalescing flush; widening it to a
+   * fixed 400ms then made it *flaky* — passing or failing depending on how long
+   * eight sockets and a 599-relay distance sort happened to take. A check that
+   * goes green on a re-run is worse than one that fails, because it teaches
+   * everyone to re-run instead of to look.
+   *
+   * So: poll for what is being asserted, with a deadline long enough that only a
+   * real failure reaches it. The duplicate this exists to catch is a *count*,
+   * and a count is still wrong however long you wait for it.
+   */
+  const settle = async (want, deadlineMs = 4000) => {
+    const until = Date.now() + deadlineMs;
+    while (Date.now() < until) {
+      if (want()) return true;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    return false;
+  };
   const tick = (ms = 260) => new Promise((r) => setTimeout(r, ms));
   let seen = [];
   let counted = null;
@@ -895,15 +913,20 @@ console.log("\nlight theme agrees with itself");
       content: "hola",
     };
     nostr.join(LAT, LON, "test");
-    await tick(400);
+    await settle(() => seen.length >= 1);
     const afterJoin = seen.length;
     // Six selection changes, which is a few seconds of spinning the globe with
     // the listening lock off.
     for (const [la, lo] of [[35.68, 139.69], [-22.9, -43.2], [51.5, -0.12],
                             [40.7, -74.0], [-33.86, 151.2], [19.43, -99.13]]) {
       nostr.view(la, lo);
+      // Each view re-subscribes, so wait for the replay to have been offered
+      // and flushed before moving the view again — otherwise the sweep races
+      // ahead of the very duplication it is trying to provoke.
       await tick();
     }
+    // Give any duplicate every chance to appear before declaring there is none.
+    await settle(() => seen.length !== 1, 1000);
     counted = { afterJoin, afterSweep: seen.length };
     nostr.leave();
   } finally {
