@@ -1291,7 +1291,12 @@ function sayHub(text, nickname) {
   });
   publish(evt);
   recordHub(evt, body, nick, true);
-  flush();
+  // `flush()` alone sent nothing: recordHub does not mark the list dirty, so
+  // your own message sat in the module until some unrelated event happened to
+  // flush it. Found by two apps talking — the sender's log was empty while the
+  // receiver's was correct, which is the one arrangement a single client cannot
+  // show you.
+  emitNow("hub");
   return true;
 }
 

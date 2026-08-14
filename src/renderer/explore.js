@@ -3885,17 +3885,32 @@ const COMMANDS = {
    * discourage one.
    */
   "/hub": {
-    hint: "/hub <name> <password> — a private room, or /hub to leave",
+    hint: '/hub <name> <password> — a private room. Quote a name with spaces: /hub "radio club" <password>',
     run: async (rest) => {
       const body = (rest || "").trim();
       if (!body) {
-        if (!hubIn) return systemLine("Which hub? /hub radio club shortwave2026 — the first word is the name, the rest is the password.");
+        if (!hubIn) return systemLine('Which hub? /hub radioclub shortwave2026 — or quote a name with spaces: /hub "radio club" shortwave2026');
         await leaveHub();
         return;
       }
-      const sp = body.indexOf(" ");
-      if (sp < 0) return systemLine("A hub needs a password too: /hub " + body + " <password>");
-      const name = body.slice(0, sp), password = body.slice(sp + 1).trim();
+      /**
+       * Where the name ends and the password begins.
+       *
+       * A passphrase makes a better password than a word, so the password is
+       * everything after the name rather than the last token. That leaves
+       * multi-word *names* with nowhere to go — typing `/hub radio club pw`
+       * created a room called "radio" whose password was "club pw", which works
+       * and looks broken. Quotes settle it, and the unquoted form still does the
+       * obvious thing for the common case of a one-word name.
+       */
+      let name, password;
+      const quoted = body.match(/^"([^"]+)"\s+(.+)$/) || body.match(/^'([^']+)'\s+(.+)$/);
+      if (quoted) { name = quoted[1]; password = quoted[2].trim(); }
+      else {
+        const sp = body.indexOf(" ");
+        if (sp < 0) return systemLine(`A hub needs a password too: /hub ${body} <password>`);
+        name = body.slice(0, sp); password = body.slice(sp + 1).trim();
+      }
       if (!password) return systemLine("A hub needs a password too: /hub " + name + " <password>");
       const got = await guard("hubJoin", () => window.auralfm.hubJoin(name, password), null);
       if (!got) return systemLine("That did not work — a hub needs both a name and a password.");
