@@ -1445,8 +1445,26 @@ ipcMain.handle("profile:known", () => nostr.knownProfiles());
 let levelsWaiting = null;
 ipcMain.handle("card:levels", () => new Promise((resolve) => {
   if (!win || win.isDestroyed()) return resolve(null);
-  const done = (v) => { if (levelsWaiting) { clearTimeout(levelsWaiting.timer); levelsWaiting = null; resolve(v); } };
-  levelsWaiting = { done, timer: setTimeout(() => done(null), 700) };
+  /**
+   * Each request settles itself, exactly once.
+   *
+   * The first version kept one shared slot and checked "is anybody waiting?".
+   * Open the sheet twice and the second request replaced the slot; then the
+   * *first* request's timer fired, saw the slot occupied, cleared the second
+   * request's timer and resolved itself — leaving the second promise with
+   * nothing left to settle it. It hung forever, and an `await` on it hung the
+   * share sheet with it. Found by opening the sheet a second time.
+   */
+  const entry = { settled: false };
+  entry.done = (v) => {
+    if (entry.settled) return;
+    entry.settled = true;
+    clearTimeout(entry.timer);
+    if (levelsWaiting === entry) levelsWaiting = null;
+    resolve(v);
+  };
+  entry.timer = setTimeout(() => entry.done(null), 700);
+  levelsWaiting = entry;
   win.webContents.send("card:levelsWanted");
 }));
 ipcMain.on("card:levelsAre", (_e, levels) => {
@@ -1463,6 +1481,22 @@ ipcMain.handle("card:copy", (_e, dataUrl) => {
 });
 
 /** The deep link for what is playing, so it can be pasted beside the card. */
+/** Save the card where somebody chooses. Cancelling returns null, not an error. */
+ipcMain.handle("card:save", async (_e, dataUrl) => {
+  const str = String(dataUrl || "");
+  if (!/^data:image\/png;base64,/.test(str) || str.length > 12 * 1024 * 1024) return null;
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    defaultPath: `AuralFM ${stamp}.png`,
+    filters: [{ name: "PNG", extensions: ["png"] }],
+  });
+  if (canceled || !filePath) return null;
+  try {
+    fs.writeFileSync(filePath, Buffer.from(str.split(",")[1], "base64"));
+    return filePath;
+  } catch { return null; }
+});
+
 ipcMain.handle("card:link", (_e, title) => {
   const t = String(title || "").trim().slice(0, 120);
   if (!t) return null;

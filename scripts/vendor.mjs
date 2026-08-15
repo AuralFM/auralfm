@@ -18,6 +18,11 @@ const LIBS = [
 
 ];
 
+// Added for the share card's QR code. Vendored rather than bundled for the same
+// reason globe.gl is: the renderer loads it as a plain script and there is no
+// build step to resolve a bare import.
+LIBS.push(["qrcode-generator", "dist/qrcode.js"]);
+
 fs.mkdirSync(OUT, { recursive: true });
 for (const [pkg, rel] of LIBS) {
   const src = path.join(ROOT, "node_modules", pkg, rel);

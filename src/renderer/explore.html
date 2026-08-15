@@ -1073,6 +1073,37 @@
   #chatinput.cmdok{box-shadow:inset 0 0 0 1px var(--accent)}
   #chatinput.cmdbad{box-shadow:inset 0 0 0 1px var(--err)}
   #chatinput.dm{box-shadow:inset 0 0 0 1px var(--accent);background:var(--edge-hi)}
+  /* The share sheet. Dark scrim, the card at a readable size, actions under it. */
+  .sheet{
+    position:fixed;inset:0;z-index:9500;display:grid;place-items:center;
+    background:rgba(0,0,0,.62);backdrop-filter:blur(10px);
+  }
+  .sheetbox{
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    padding:20px;border-radius:var(--r-xl);background:var(--pane);
+    border:1px solid var(--line);max-height:92vh;
+  }
+  #sheetimg{
+    max-height:64vh;width:auto;border-radius:var(--r-lg);display:block;
+    box-shadow:0 18px 60px rgba(0,0,0,.5);
+  }
+  .sheetrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .sheetbtn{
+    appearance:none;border:0;border-radius:var(--r-md);background:var(--fill);
+    color:var(--label);font:inherit;font-size:12px;padding:7px 13px;cursor:default;
+    transition:background var(--dur-hover) var(--ease-out);
+  }
+  .sheetbtn:hover{background:var(--fill-hi)}
+  .sheetbtn.primary{background:var(--accent);color:var(--on-accent);font-weight:590}
+  .sheetsaid{min-height:15px;font-size:11px;color:var(--label3)}
+  .outwrap{flex:none;display:flex;align-items:center;gap:5px;color:var(--label2)}
+  #outicon{font-size:13px;line-height:0;display:grid;place-items:center}
+  #outdev{
+    flex:none;max-width:120px;appearance:none;border:0;border-radius:var(--r-sm);
+    background:var(--fill);color:var(--label2);font:inherit;font-size:10.5px;
+    padding:3px 6px;outline:none;text-overflow:ellipsis;
+  }
+  #outdev:hover{color:var(--label)}
   .cmdmode{
     min-height:14px;padding:4px 10px 0;font-size:10.5px;line-height:1.3;
     color:var(--label3);letter-spacing:.005em;
@@ -1380,6 +1411,16 @@
        elements that change together, so a live region on either one alone would
        say "Connecting…" without ever saying to what. This carries both. -->
   <span id="nowSpoken" class="sronly" role="status" aria-live="polite"></span>
+  <!--
+    Where the sound comes out, beside the volume — the two things that decide
+    what you hear and how loudly, together. Explore has no audio element of its
+    own, so this writes the preference and the menu bar panel moves the sound.
+  -->
+  <span class="outwrap" id="outwrap" hidden>
+    <span id="outicon" aria-hidden="true"></span>
+    <select id="outdev" data-i18n-title="ctl.output" title="Where the sound comes out"
+            aria-label="Where the sound comes out"></select>
+  </span>
   <span class="volwrap">
     <button id="mute"></button>
     <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8">
@@ -1394,6 +1435,25 @@
 <script src="tipcard.js"></script>
 <script src="reveal.js"></script>
 <script src="astro.js"></script>
+<!--
+  The share sheet. Melton's report was "the card never came up" — it was copied
+  to the clipboard silently, which is indistinguishable from nothing happening.
+  A thing you are about to publish under your own name should be looked at first.
+-->
+<div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-label="Share what you are listening to">
+  <div class="sheetbox">
+    <img id="sheetimg" alt="A card showing what you are listening to">
+    <div class="sheetrow">
+      <button id="sheetcopy" class="sheetbtn primary" data-i18n="ctl.copyCard">Copy image</button>
+      <button id="sheetsave" class="sheetbtn" data-i18n="ctl.saveCard">Save…</button>
+      <button id="sheetlink" class="sheetbtn" data-i18n="ctl.copyLink">Copy link</button>
+      <button id="sheetclose" class="sheetbtn" data-i18n="ctl.close">Close</button>
+    </div>
+    <div id="sheetsaid" class="sheetsaid" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<script src="vendor/qrcode.js"></script>
 <script src="card.js"></script>
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>

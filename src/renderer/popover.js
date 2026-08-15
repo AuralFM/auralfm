@@ -136,8 +136,12 @@ async function renderOutputs() {
   catch { devs = []; }
   // A machine with one output has no choice to offer, and a control with one
   // option is furniture.
-  sel.hidden = devs.length < 2;
-  if (sel.hidden) return;
+  // The whole control hides together, icon included — a lone speaker glyph next
+  // to nothing is a button that does not exist.
+  const wrap = $("outwrap");
+  if (wrap) wrap.hidden = devs.length < 2;
+  if (devs.length < 2) return;
+  Icons.set($("outicon"), "speakers");
   sel.innerHTML = "";
   const mk = (value, label) => {
     const o = document.createElement("option");
@@ -261,7 +265,22 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
     el.setAttribute("aria-current", current?.id === ch.id);
     el.innerHTML =
       // Empty chips read as broken placeholders; reserve the width without the fill.
-      (numbered && i < 9 ? `<span class="key">${i+1}</span>` : `<span class="key blank"></span>`) +
+      /**
+       * Every favourite is numbered, not only the first nine.
+       *
+       * The cap was there because 1–9 are the keyboard shortcuts and there is no
+       * tenth key. But the effect was a list that counted to nine and then went
+       * blank, which reads as the app losing track rather than as a keyboard
+       * running out — Melton has more than nine and saw exactly that.
+       *
+       * So the number is a position now and the *key cap* is the shortcut. Past
+       * nine the number is still there, without the cap around it, because
+       * drawing a key that cannot be pressed would be the dishonest version of
+       * fixing this.
+       */
+      (numbered
+        ? `<span class="key${i < 9 ? "" : " plain"}">${i+1}</span>`
+        : `<span class="key blank"></span>`) +
       `<span class="meta"><span class="nm"></span><div class="sub"></div></span>` +
       `<button class="star${isFav(ch.id)?" on":""}" title="${t('ctl.favorite', 'Favorite')}">${Icons.svg(isFav(ch.id)?"starFill":"star")}</button>` +
       `<span class="bars"><i></i><i></i><i></i></span>`;
@@ -715,6 +734,9 @@ async function applyStrings() {
 
 window.auralfm.onPrefs(async (p) => {
   applyPrefs(p);
+  // Explore has the same control and no audio element of its own, so it writes
+  // the preference and this window is what actually moves the sound.
+  if ((p.audioOutput || "") !== outputId) { applyOutput(p.audioOutput || ""); renderOutputs(); }
   await applyPalette();
   await applyStrings();
   // Rows carry translated titles, so redraw whatever list is on screen.

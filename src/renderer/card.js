@@ -32,6 +32,7 @@
  */
 (() => {
   const W = 1080, H = 1350;
+  const t_scan = "Scan for AuralFM";
 
   /** The app's own colours, so a card looks like the thing it came from. */
   const INK = "#0C0B0B";          // onyx, the same stop the icon and splash use
@@ -201,6 +202,40 @@
     ctx.fillRect(0, 0, W, H);
 
     /**
+     * Space, fading out before the words start.
+     *
+     * The Earth was floating on flat ink, which is not where the Earth is. Stars
+     * put it somewhere. They stop before the text does, though: a starfield
+     * behind a caption is a caption you have to work to read, so density falls to
+     * nothing by the time the type begins and the lower third is honest black.
+     *
+     * Deterministic from the station's own coordinates rather than random, so
+     * the same station gives the same sky twice. A card that reshuffles its
+     * background every time you press the button feels like a slot machine.
+     */
+    const seedFrom = `${now.title}|${now.lat}|${now.lon}`;
+    let seed = 0;
+    for (let i = 0; i < seedFrom.length; i++) seed = (seed * 31 + seedFrom.charCodeAt(i)) >>> 0;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+    for (let i = 0; i < 620; i++) {
+      const x = rnd() * W, y = rnd() * H;
+      // Fade the field out across the middle so nothing competes with the type.
+      const depth = Math.max(0, 1 - Math.max(0, y - 340) / 560);
+      if (depth <= 0.02) continue;
+      const r = rnd() * 1.5 + 0.4;
+      const a = (0.12 + rnd() * 0.55) * depth;
+      ctx.fillStyle = `rgba(233,226,212,${a.toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    // And a wash back to black underneath them, so the fade has no seam.
+    const wash = ctx.createLinearGradient(0, 620, 0, 980);
+    wash.addColorStop(0, "rgba(12,11,11,0)");
+    wash.addColorStop(1, INK);
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 620, W, 360);
+
+    /**
      * The layout, as bands.
      *
      * The first version placed each element from its own constant and they
@@ -208,11 +243,16 @@
      * the place. Bands are stated once here and everything hangs off them.
      */
     const M = 96;
-    const inner = W - M * 2;
+    const QR = 176;                           // the code, and the room it needs
+    const QR_X = W - M - QR, QR_Y = 1004;
+    // The type stops short of the code rather than running under it.
+    const inner = W - M * 2 - QR - 56;
     const GLOBE_CY = 380, GLOBE_R = 330;      //  50 ..  710
-    const WAVE_Y = 762, WAVE_H = 84;          // 762 ..  846
-    const LABEL_Y = 906;
-    const TITLE_TOP = 962;                    // two lines reach ~1160
+    const WAVE_Y = 786, WAVE_H = 84;          // 786 ..  870
+    const LABEL_Y = 942;
+    // Close under the label, because the three lines are one thought: what, and
+    // where. They were spread far enough apart to read as three separate facts.
+    const TITLE_TOP = 968;
     const FOOT_NAME = H - 96, FOOT_TIME = H - 52;   // 1254, 1298
 
     // The Earth, centred on the station, above the words about it.
@@ -221,14 +261,29 @@
       && drawGlobe(ctx, CX, CY, R, now.lat, now.lon, now.sun || { lat: 0, lng: 0 });
 
     if (placed) {
-      // A ring where the station is — dead centre, because the projection is
-      // centred on it. That is the whole idea: this is the view from above you.
-      ctx.strokeStyle = "rgba(233,226,212,.85)";
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(CX, CY, 13, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = "rgba(233,226,212,.30)";
+      /**
+       * The station, in the app's own green.
+       *
+       * Drawn as a dot inside two fading rings. A still image cannot pulse, and
+       * pretending otherwise is not available — but a pulse *stopped* looks like
+       * this, and the rings read as the wave that just left. The live globe is
+       * where an actual pulse belongs.
+       */
+      const GREEN = "53,196,106";             // --up, the app's own green
+      const glow = ctx.createRadialGradient(CX, CY, 4, CX, CY, 46);
+      glow.addColorStop(0, `rgba(${GREEN},.55)`);
+      glow.addColorStop(1, `rgba(${GREEN},0)`);
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(CX, CY, 46, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = `rgba(${GREEN},.75)`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(CX, CY, 20, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = `rgba(${GREEN},.30)`;
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(CX, CY, 30, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(CX, CY, 34, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = `rgb(${GREEN})`;
+      ctx.beginPath(); ctx.arc(CX, CY, 8.5, 0, Math.PI * 2); ctx.fill();
       // The limb, so the sphere has an edge against the ink.
       ctx.strokeStyle = "rgba(233,226,212,.18)";
       ctx.lineWidth = 2;
@@ -314,6 +369,46 @@
         ctx.roundRect(x, bandY + (bandH - h) / 2, Math.max(1.5, bw), h, Math.min(3, bw / 2));
         ctx.fill();
       }
+    }
+
+    /**
+     * The code, on the right.
+     *
+     * A prototype, and it says so honestly by pointing somewhere real rather
+     * than somewhere invented: the repository, which is where the app itself
+     * lives. It 404s until that repository is public, and it is one constant to
+     * change the day there is a site — or, later, the day a station has a page
+     * of its own, which is what Melton actually wants it to reach.
+     *
+     * Encoded by a library rather than by hand. A subtly wrong QR looks perfect
+     * and scans as nothing, and there is no way to check that from here — the
+     * only honest verification is a phone, so the encoder is one that is already
+     * verified by everybody else using it.
+     */
+    if (now.qr && typeof qrcode === "function") {
+      try {
+        const q = qrcode(0, "M");
+        q.addData(now.qr);
+        q.make();
+        const n = q.getModuleCount();
+        const quiet = 3;                       // a code with no margin will not scan
+        const cell = QR / (n + quiet * 2);
+        ctx.fillStyle = "rgba(233,226,212,.92)";
+        ctx.beginPath();
+        ctx.roundRect(QR_X, QR_Y, QR, QR, 12);
+        ctx.fill();
+        ctx.fillStyle = INK;
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) {
+            if (!q.isDark(r, c)) continue;
+            ctx.fillRect(QR_X + (c + quiet) * cell, QR_Y + (r + quiet) * cell,
+                         Math.ceil(cell), Math.ceil(cell));
+          }
+        }
+        ctx.fillStyle = FAINT;
+        ctx.font = "500 21px Inter, system-ui, sans-serif";
+        ctx.fillText(t_scan, QR_X, QR_Y + QR + 34);
+      } catch { /* no code rather than a broken one */ }
     }
 
     // The foot: the app, and when. The time is the point of a card like this —

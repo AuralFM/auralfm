@@ -42,6 +42,15 @@ const SHIPPED = [
   ["@noble/hashes",  "bundled",  "SHA-256 and HKDF for the private-message key schedule"],
   ["satellite.js",   "bundled",  "SGP4 orbit propagation for satellites and the ISS"],
   ["globe.gl",       "vendored", "The globe itself"],
+  /**
+   * The published package carries no LICENSE file — the notice lives in the
+   * source header instead, where it stays because the file is vendored whole.
+   * `assets/licenses/qrcode-generator-LICENSE.txt` reproduces that header
+   * verbatim and then the MIT text it designates by URL, so what ships is the
+   * author's own notice rather than one assumed on their behalf.
+   */
+  ["qrcode-generator", "vendored", "The QR code on the share card",
+   "assets/licenses/qrcode-generator-LICENSE.txt"],
   ["three",          "vendored", "3D rendering, inside globe.gl"],
   ["three-globe",    "vendored", "Earth textures and globe layers"],
   // The runtime itself. Its MIT notice was missing from every build: the app
@@ -111,7 +120,13 @@ function readPkg(name) {
   catch { return null; }
 }
 
-function readLicence(name) {
+function readLicence(name, override) {
+  // Some packages publish no licence file and carry the notice in the source
+  // instead. Those name a shipped file rather than being skipped.
+  if (override) {
+    try { return { text: fs.readFileSync(path.join(ROOT, override), "utf8").trim() }; }
+    catch { /* fall through and report it missing, which is the honest outcome */ }
+  }
   const dir = pkgDir(name);
   for (const f of LICENSE_NAMES) {
     const p = path.join(dir, f);
@@ -128,10 +143,10 @@ const HOW = {
 
 const entries = [];
 const missing = [];
-for (const [name, how, why] of SHIPPED) {
+for (const [name, how, why, licenceOverride] of SHIPPED) {
   const pkg = readPkg(name);
   if (!pkg) { missing.push(name); continue; }
-  const lic = readLicence(name);
+  const lic = readLicence(name, licenceOverride);
   if (!lic) missing.push(`${name} (no licence text anywhere)`);
   entries.push({ name, how, why, version: pkg.version, spdx: pkg.license || "see text",
                  text: lic?.text, note: lic?.note });

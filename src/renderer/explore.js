@@ -776,18 +776,57 @@ $("nowStar").onclick = async () => {
  * pushed there as well — putting a URL nobody asked for onto somebody's
  * clipboard is how a share button becomes a thing people stop trusting.
  */
-$("nowShare").onclick = async () => {
+/**
+ * Where the sound comes out, from this window.
+ *
+ * The list is read here — any renderer can enumerate outputs — but the choice is
+ * written as a preference rather than applied, because the audio element lives
+ * in the menu bar panel. One place makes sound; this is a remote control for it.
+ */
+async function renderOutputs() {
+  const wrap = $("outwrap"), sel = $("outdev");
+  if (!wrap || !sel) return;
+  let devs = [];
+  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audiooutput"); }
+  catch { devs = []; }
+  wrap.hidden = devs.length < 2;
+  if (devs.length < 2) return;
+  Icons.set($("outicon"), "speakers");
+  const chosen = prefs?.audioOutput || "";
+  sel.innerHTML = "";
+  const mk = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
+  mk("", t("ctl.outputSystem", "System output"));
+  for (const d of devs) {
+    if (/^default$/i.test(d.deviceId)) continue;
+    mk(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
+  }
+  sel.value = [...sel.options].some((o) => o.value === chosen) ? chosen : "";
+}
+$("outdev").addEventListener("change", (e) => {
+  window.auralfm.setPrefs({ audioOutput: e.target.value });
+});
+navigator.mediaDevices.addEventListener?.("devicechange", () => renderOutputs());
+
+/**
+ * Show the card before it goes anywhere.
+ *
+ * It used to be copied straight to the clipboard, which is indistinguishable
+ * from nothing having happened — Melton pressed it and reported that the card
+ * never came up, which was exactly right. Something you are about to publish
+ * under your own name should be looked at first.
+ */
+let sheetPng = null;
+
+async function openShareSheet() {
   if (!playing) return;
-  const btn = $("nowShare");
-  const say = (msg) => {
-    const before = btn.title;
-    btn.title = msg;
-    btn.setAttribute("aria-label", msg);
-    setTimeout(() => { btn.title = before; btn.setAttribute("aria-label", before); }, 4000);
-  };
+  const sheet = $("sheet"), said = $("sheetsaid");
+  said.textContent = "";
+  $("sheetimg").removeAttribute("src");
+  sheet.hidden = false;
+  $("sheetclose").focus();
   try {
     const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
-    const png = await window.Card.make({
+    sheetPng = await window.Card.make({
       title: playing.title || "",
       place: playing.place || "",
       country: playing.country || "",
@@ -800,14 +839,58 @@ $("nowShare").onclick = async () => {
       // the Earth as it was at the moment somebody was listening.
       sun: subsolarPoint(),
       levels,
+      /**
+       * What the code points at.
+       *
+       * The repository, because it is real and it is where the app lives. There
+       * is no site yet, and encoding a URL that does not exist would be the same
+       * mistake as a donation button that goes nowhere. One constant to change
+       * the day there is somewhere better — a station's own page is what this is
+       * eventually for.
+       */
+      qr: "https://github.com/meltonbell3/auralfm",
     });
-    const ok = await guard("cardCopy", () => window.auralfm.cardCopy(png), false);
-    say(ok ? t("ctl.shareDone", "Card copied — paste it into a post")
-           : t("ctl.shareFailed", "Could not copy the card"));
+    $("sheetimg").src = sheetPng;
+    if (!levels) said.textContent = t("ctl.noWave", "No sound yet — play for a moment and open this again.");
   } catch {
-    say(t("ctl.shareFailed", "Could not copy the card"));
+    said.textContent = t("ctl.shareFailed", "Could not make the card");
   }
+}
+
+function closeShareSheet() {
+  $("sheet").hidden = true;
+  sheetPng = null;
+  $("nowShare")?.focus();
+}
+
+$("nowShare").onclick = openShareSheet;
+$("sheetclose").onclick = closeShareSheet;
+$("sheet").addEventListener("click", (e) => { if (e.target === $("sheet")) closeShareSheet(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("sheet").hidden) { e.preventDefault(); closeShareSheet(); }
+}, true);
+
+$("sheetcopy").onclick = async () => {
+  if (!sheetPng) return;
+  const ok = await guard("cardCopy", () => window.auralfm.cardCopy(sheetPng), false);
+  $("sheetsaid").textContent = ok
+    ? t("ctl.shareDone", "Copied — paste it into a post")
+    : t("ctl.shareFailed", "Could not copy the card");
 };
+$("sheetsave").onclick = async () => {
+  if (!sheetPng) return;
+  const where = await guard("cardSave", () => window.auralfm.cardSave(sheetPng), null);
+  // A cancelled save is a decision, not a failure, and should not be reported
+  // as one.
+  if (where) $("sheetsaid").textContent = t("ctl.savedTo", "Saved");
+};
+$("sheetlink").onclick = async () => {
+  const link = await guard("cardLink", () => window.auralfm.cardLink(playing?.title), null);
+  $("sheetsaid").textContent = link
+    ? t("ctl.linkCopied", "Link copied — it opens AuralFM for anyone who has it")
+    : t("ctl.shareFailed", "Could not copy the link");
+};
+
 
 // ── transport ────────────────────────────────────────────────────────────────
 // Explore has no audio element — these drive the one player in the popover, so
@@ -5279,7 +5362,8 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("lock"), "unlock");
   Icons.set($("mute"), "volumeHigh");
   Icons.set($("nowStar"), "star");
-  Icons.set($("nowShare"), "external");
+  Icons.set($("nowShare"), "dots");
+  renderOutputs();
 
   await loadPlaces("");
   paintColdOpen();
