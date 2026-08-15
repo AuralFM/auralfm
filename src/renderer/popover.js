@@ -24,6 +24,72 @@ let gen = 0, watchdog = null, searchSeq = 0, debounce = null;
 let sdrSession = null, audioCtx = null, sdrRx = null;
 
 /**
+ * ─── Where the sound comes out ───────────────────────────────────────────────
+ *
+ * macOS sends every app to one system output, so listening in the kitchen meant
+ * moving the whole Mac's audio there and moving it back afterwards. The browser
+ * engine can route a single element instead, which is the thing a radio wants:
+ * the radio goes to the kitchen speaker and everything else stays put.
+ *
+ * Measured in this app before building it, because two of the three assumptions
+ * I had were wrong:
+ *
+ *   `setSinkId` on the audio element        works
+ *   `setSinkId` on the AudioContext         works — so shortwave follows too,
+ *                                           and this is not a half feature
+ *   device *names* without a microphone     visible. In a browser the labels are
+ *                                           gated behind microphone permission;
+ *                                           in Electron they are not, so nothing
+ *                                           has to ask for a microphone to name
+ *                                           a speaker. That would have been an
+ *                                           unacceptable price here.
+ *
+ * What this cannot do, and the interface should not imply: **pair** a Bluetooth
+ * device. Pairing is the operating system's, and Web Bluetooth — which does
+ * exist here — is for low-energy data devices, not for audio routing. A speaker
+ * has to be paired and connected in macOS first; then it appears in this list
+ * like any other output, and the app can send the radio to it.
+ */
+let outputId = "";                      // "" means whatever macOS is using
+
+async function applyOutput(id) {
+  outputId = String(id || "");
+  const target = outputId || undefined;
+  // Both paths, or shortwave would keep coming out of the built-in speakers
+  // while the streams moved — which reads as a broken feature rather than a
+  // partial one.
+  try { await audio.setSinkId?.(target ?? ""); } catch { /* device went away */ }
+  try { if (audioCtx) await audioCtx.setSinkId?.(target ?? ""); } catch { /* same */ }
+}
+
+async function renderOutputs() {
+  const sel = $("outdev");
+  if (!sel) return;
+  let devs = [];
+  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audiooutput"); }
+  catch { devs = []; }
+  // A machine with one output has no choice to offer, and a control with one
+  // option is furniture.
+  sel.hidden = devs.length < 2;
+  if (sel.hidden) return;
+  sel.innerHTML = "";
+  const mk = (value, label) => {
+    const o = document.createElement("option");
+    o.value = value; o.textContent = label;
+    sel.append(o);
+  };
+  mk("", t("ctl.outputSystem", "System output"));
+  for (const d of devs) {
+    if (/^default$/i.test(d.deviceId)) continue;     // that is what "" already means
+    mk(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
+  }
+  // A remembered device that has since been unplugged or switched off falls back
+  // silently rather than leaving the menu pointing at nothing.
+  sel.value = [...sel.options].some((o) => o.value === outputId) ? outputId : "";
+  if (sel.value !== outputId) { outputId = ""; applyOutput(""); }
+}
+
+/**
  * End a shortwave session.
  *
  * The callback is detached first, deliberately. Stopping fires onState, and if
@@ -434,6 +500,8 @@ window.auralfm.onTuneSdr((rx) => {
   stop();                                   // one source of sound, always
   audioCtx = audioCtx || new AudioContext();
   audioCtx.resume?.();
+  // A context created after the choice was made has to be told about it.
+  if (outputId) { try { audioCtx.setSinkId?.(outputId); } catch { /* device went away */ } }
 
   sdrRx = { ...rx, label: `${rx.band} · ${rx.loc || rx.name}` };
   setStatus("Connecting to receiver…");
@@ -593,6 +661,17 @@ window.auralfm.onShown(() => {
   applyPrefs((await window.auralfm.getPrefs()) || {});
   await applyPalette();
   await applyStrings();
+
+  // Where the sound goes, restored before anything plays.
+  const p0 = (await window.auralfm.getPrefs()) || {};
+  await applyOutput(p0.audioOutput || "");
+  await renderOutputs();
+  $("outdev").addEventListener("change", async (e) => {
+    await applyOutput(e.target.value);
+    window.auralfm.setPrefs({ audioOutput: outputId });
+  });
+  // A speaker connecting or disconnecting changes what is on offer.
+  navigator.mediaDevices.addEventListener?.("devicechange", () => renderOutputs());
 
   const saved = await window.auralfm.getState();
   state = { favorites: [], vol: 0.8, ...(saved || {}) };

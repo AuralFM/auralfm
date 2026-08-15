@@ -38,7 +38,7 @@
   "repository": {
     "type": "git"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/auralfm",
+  "homepage": "https://github.com/meltonbell3/auralfm",
   "dependencies": {
     "@noble/ciphers": "^2.3.0",
     "@noble/curves": "^2.2.0",

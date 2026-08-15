@@ -312,6 +312,12 @@
   }
   #mute:hover{color:var(--label)}
   #mute:active{transform:scale(.9)}
+  #outdev{
+    flex:none;max-width:104px;appearance:none;border:0;border-radius:var(--r-sm);
+    background:var(--fill);color:var(--label2);font:inherit;font-size:10.5px;
+    padding:2px 5px;outline:none;text-overflow:ellipsis;
+  }
+  #outdev:hover{color:var(--label)}
   #vol{width:78px;accent-color:var(--accent);flex:none}
   #toggle{font-size:11px}
 </style>
@@ -349,6 +355,10 @@
          about passes through here: finding, connecting, buffering, failed. -->
     <div id="status" role="status" aria-live="polite" data-i18n="app.searchStation">Search for a station</div>
   </div>
+  <!-- Where the sound goes. Hidden on a Mac with only one output, because a
+       control with one option is furniture. -->
+  <select id="outdev" hidden data-i18n-title="ctl.output" title="Where the sound comes out"
+          aria-label="Where the sound comes out"></select>
   <button id="mute" title="Mute"></button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
 </div>

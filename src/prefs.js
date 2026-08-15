@@ -64,6 +64,14 @@ const DEFAULTS = {
    * for a review checklist rather than for a person. The list is editable and
    * every term in it can be deleted — see [safety.js].
    */
+  /**
+   * Which output the radio comes out of. "" is whatever macOS is using.
+   *
+   * Remembered as a device id, which macOS may not reuse between sessions or
+   * after a speaker is switched off. A stale one falls back to the system output
+   * silently rather than pointing at nothing.
+   */
+  audioOutput: "",
   filterChat: true,
   /**
    * Hide inbound messages below this proof-of-work difficulty. Off by default.

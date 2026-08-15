@@ -40,6 +40,7 @@
  *   we say who we are and mine ........... invisible to a network that filters on both
  *   a hub is its name and password ....... a room the relays carry and cannot read
  *   a profile lookup names one person .... a bulk fetch would name your whole cell
+ *   the chosen output moves both kinds ... shortwave would keep using the laptop
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -742,6 +743,33 @@ console.log("\nlight theme agrees with itself");
   problems.length
     ? fail("composer", problems.join("; "))
     : pass("a command runs before the input is cleared, and a private thread sends privately");
+}
+
+// ── the radio comes out of one place, whichever kind it is ───────────────────
+// Two things make sound here: an <audio> element for streams and an AudioContext
+// for shortwave. Routing only the first is the failure that looks like a working
+// feature — the music moves to the kitchen speaker and the shortwave keeps
+// playing out of the laptop, and the person reasonably concludes the app is
+// broken rather than that half of it was wired.
+{
+  console.log("\nchoosing an output moves both kinds of audio");
+  const src = fs.readFileSync(R("src/renderer/popover.js"), "utf8");
+  const problems = [];
+  const i = src.indexOf("async function applyOutput(");
+  if (i < 0) problems.push("applyOutput is gone");
+  else {
+    const body = src.slice(i, src.indexOf("\n}", i));
+    if (!/audio\.setSinkId/.test(body)) problems.push("streams do not follow the choice");
+    if (!/audioCtx.*setSinkId/.test(body)) problems.push("shortwave does not follow the choice");
+  }
+  // A context made later has to be told too, or shortwave started after the
+  // choice comes out of the wrong speaker.
+  if (!/audioCtx = audioCtx \|\| new AudioContext\(\)[\s\S]{0,300}?setSinkId/.test(src)) {
+    problems.push("a shortwave session started after the choice ignores it");
+  }
+  problems.length
+    ? fail("audio output", problems.join("; "))
+    : pass("both the stream element and the shortwave context follow the chosen output");
 }
 
 // ── a profile lookup asks about one person, never a room ─────────────────────
