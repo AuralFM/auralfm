@@ -260,7 +260,7 @@
      * full measure back: the station, the city, and the waveform.
      */
     const QR = 116;
-    const QR_X = W - M - QR, QR_Y = 1190;     // 1190 .. 1306
+    const QR_X = W - M - QR, QR_Y = 1160;     // 1160 .. 1276, label under it
     const inner = W - M * 2;                  // the full measure, back again
     const GLOBE_CY = 380, GLOBE_R = 330;      //   50 ..  710
     const WAVE_Y = 772, WAVE_H = 88;          //  772 ..  860
@@ -313,31 +313,57 @@
     ctx.fillText("LISTENING TO", M, LABEL_Y);
     ctx.letterSpacing = "0px";
 
-    // The station, as large as it can be without being cut.
-    const titleSize = fitted(ctx, now.title, 700, 88, 44, inner);
+    /**
+     * The station, as large as it can be without being cut — by width *and* by
+     * height.
+     *
+     * `fitted` only ever answered the width question, so a name long enough to
+     * take two lines was still set at the full size and the second line pushed
+     * the city down onto the foot. The clamp that stopped it hitting "AuralFM"
+     * then parked the city 20px under the second baseline, which is a collision
+     * wearing a seatbelt. The budget below is the honest fix: whatever is left
+     * between the label and the foot has to hold every line plus the gap under
+     * them, so a two-line title is set smaller rather than allowed to overflow.
+     */
+    const GAP = 64;                           // last title baseline -> city baseline
+    const LEAD = 1.14;
+    let titleSize = fitted(ctx, now.title, 700, 88, 44, inner);
     ctx.font = `700 ${titleSize}px Inter, system-ui, sans-serif`;
-    const lines = wrap(ctx, now.title, inner, 2);
+    let lines = wrap(ctx, now.title, inner, 2);
+    if (lines.length > 1) {
+      const budget = TEXT_FLOOR - TITLE_TOP;
+      const fits = Math.floor((budget - GAP) / (1 + LEAD * (lines.length - 1)));
+      if (fits < titleSize) {
+        titleSize = Math.max(44, fits);
+        ctx.font = `700 ${titleSize}px Inter, system-ui, sans-serif`;
+        lines = wrap(ctx, now.title, inner, 2);
+      }
+    }
     ctx.fillStyle = BONE;
     let y = TITLE_TOP + titleSize;
-    for (const line of lines) {
+    lines.forEach((line, i) => {
       ctx.fillText(line, M, y);
-      y += titleSize * 1.14;
-    }
+      // Between lines only. Advancing after the last one left a whole empty line
+      // of air under the title, which is what put the city adrift from it.
+      if (i < lines.length - 1) y += titleSize * LEAD;
+    });
 
     /**
      * Where it is coming from.
      *
      * A constant gap, not a multiple of the title size — it was a multiple, and
      * a long station name, which is exactly the case that shrinks the title,
-     * pulled the place up against it. And clamped above the foot, because a
-     * two-line title used to push this line straight through "AuralFM".
+     * pulled the place up against it. Close, because the station and the place
+     * it broadcasts from are one thought, not two facts that happen to be
+     * stacked. The clamp stays as a backstop, but the height budget above is
+     * what actually keeps this off the foot now.
      */
     const where = [now.place, now.country].filter(Boolean).join(", ");
     if (where) {
       const ps = fitted(ctx, where, 500, 40, 26, inner);
       ctx.font = `500 ${ps}px Inter, system-ui, sans-serif`;
       ctx.fillStyle = DIM;
-      y = Math.min(y + 26, TEXT_FLOOR);
+      y = Math.min(y + GAP, TEXT_FLOOR);
       ctx.fillText(where, M, y);
       y += 30;
     }
@@ -422,18 +448,19 @@
           }
         }
         /**
-         * Above the code, and right-aligned to it.
+         * Under the code, right-aligned to it.
          *
-         * Above, because underneath it would sit almost on the card's edge and
-         * drag the foot row off balance. Right-aligned, because the words are
-         * wider than the code they label — set from the code's left edge they
-         * ran past the card's own margin, which is the one line on the card
-         * that has to be straight.
+         * A caption belongs under the thing it captions. It sat above for a
+         * while because the code was low enough that anything beneath it would
+         * have been on the card's edge — so the code moved up rather than the
+         * label staying in the wrong place. Right-aligned because the words are
+         * wider than the code: set from its left edge they ran past the card's
+         * own margin, which is the one line here that has to be straight.
          */
         ctx.fillStyle = FAINT;
         ctx.font = "500 20px Inter, system-ui, sans-serif";
         ctx.textAlign = "right";
-        ctx.fillText(t_scan, QR_X + QR, QR_Y - 16);
+        ctx.fillText(t_scan, QR_X + QR, QR_Y + QR + 30);
         ctx.textAlign = "left";
       } catch { /* no code rather than a broken one */ }
     }
