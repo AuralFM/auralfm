@@ -32,7 +32,14 @@
  */
 (() => {
   const W = 1080, H = 1350;
-  const t_scan = "Scan for AuralFM";
+  /**
+   * An instruction, not a brand.
+   *
+   * "Scan to Listen" is the promise the code will keep once stations have their
+   * own pages. Today it reaches the repository, where the app that plays them
+   * lives — so the sentence is already true in the only way it can be.
+   */
+  const t_scan = "Scan to Listen";
 
   /** The app's own colours, so a card looks like the thing it came from. */
   const INK = "#0C0B0B";          // onyx, the same stop the icon and splash use
@@ -243,17 +250,26 @@
      * the place. Bands are stated once here and everything hangs off them.
      */
     const M = 96;
-    const QR = 176;                           // the code, and the room it needs
-    const QR_X = W - M - QR, QR_Y = 1004;
-    // The type stops short of the code rather than running under it.
-    const inner = W - M * 2 - QR - 56;
-    const GLOBE_CY = 380, GLOBE_R = 330;      //  50 ..  710
-    const WAVE_Y = 786, WAVE_H = 84;          // 786 ..  870
-    const LABEL_Y = 942;
+    /**
+     * The code belongs in the foot row, not beside the words.
+     *
+     * It sat up beside the title, which cost the type a third of the card's
+     * width for something that is a footnote — you scan it after reading, not
+     * instead of reading. Down here it lines up with the wordmark and the time,
+     * which is the row of small permanent things, and everything above gets the
+     * full measure back: the station, the city, and the waveform.
+     */
+    const QR = 116;
+    const QR_X = W - M - QR, QR_Y = 1190;     // 1190 .. 1306
+    const inner = W - M * 2;                  // the full measure, back again
+    const GLOBE_CY = 380, GLOBE_R = 330;      //   50 ..  710
+    const WAVE_Y = 772, WAVE_H = 88;          //  772 ..  860
+    const LABEL_Y = 916;
     // Close under the label, because the three lines are one thought: what, and
     // where. They were spread far enough apart to read as three separate facts.
-    const TITLE_TOP = 968;
-    const FOOT_NAME = H - 96, FOOT_TIME = H - 52;   // 1254, 1298
+    const TITLE_TOP = 942;
+    const TEXT_FLOOR = 1150;                  // the words stop where the foot begins
+    const FOOT_NAME = 1236, FOOT_TIME = 1278;
 
     // The Earth, centred on the station, above the words about it.
     const R = GLOBE_R, CX = W / 2, CY = GLOBE_CY;
@@ -298,7 +314,7 @@
     ctx.letterSpacing = "0px";
 
     // The station, as large as it can be without being cut.
-    const titleSize = fitted(ctx, now.title, 700, 76, 40, inner);
+    const titleSize = fitted(ctx, now.title, 700, 88, 44, inner);
     ctx.font = `700 ${titleSize}px Inter, system-ui, sans-serif`;
     const lines = wrap(ctx, now.title, inner, 2);
     ctx.fillStyle = BONE;
@@ -321,7 +337,7 @@
       const ps = fitted(ctx, where, 500, 40, 26, inner);
       ctx.font = `500 ${ps}px Inter, system-ui, sans-serif`;
       ctx.fillStyle = DIM;
-      y = Math.min(y + 26, FOOT_NAME - 46);
+      y = Math.min(y + 26, TEXT_FLOOR);
       ctx.fillText(where, M, y);
       y += 30;
     }
@@ -332,7 +348,7 @@
       ctx.font = "500 32px Inter, system-ui, sans-serif";
       ctx.fillStyle = FAINT;
       ctx.fillText(`${Number(now.freq.toFixed(2))} kHz · shortwave`,
-                   M, Math.min(y + 12, FOOT_NAME - 8));
+                   M, Math.min(y + 12, TEXT_FLOOR + 42));
     }
 
     /**
@@ -405,9 +421,20 @@
                          Math.ceil(cell), Math.ceil(cell));
           }
         }
+        /**
+         * Above the code, and right-aligned to it.
+         *
+         * Above, because underneath it would sit almost on the card's edge and
+         * drag the foot row off balance. Right-aligned, because the words are
+         * wider than the code they label — set from the code's left edge they
+         * ran past the card's own margin, which is the one line on the card
+         * that has to be straight.
+         */
         ctx.fillStyle = FAINT;
-        ctx.font = "500 21px Inter, system-ui, sans-serif";
-        ctx.fillText(t_scan, QR_X, QR_Y + QR + 34);
+        ctx.font = "500 20px Inter, system-ui, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(t_scan, QR_X + QR, QR_Y - 16);
+        ctx.textAlign = "left";
       } catch { /* no code rather than a broken one */ }
     }
 

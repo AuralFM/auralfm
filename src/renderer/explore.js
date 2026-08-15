@@ -791,7 +791,6 @@ async function renderOutputs() {
   catch { devs = []; }
   wrap.hidden = devs.length < 2;
   if (devs.length < 2) return;
-  Icons.set($("outicon"), "speakers");
   const chosen = prefs?.audioOutput || "";
   sel.innerHTML = "";
   const mk = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
@@ -800,7 +799,62 @@ async function renderOutputs() {
     if (/^default$/i.test(d.deviceId)) continue;
     mk(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
   }
-  sel.value = [...sel.options].some((o) => o.value === chosen) ? chosen : "";
+  const here = [...sel.options].some((o) => o.value === chosen);
+  sel.value = here ? chosen : "";
+  paintOutputIcon(devs, chosen, here);
+}
+
+/**
+ * Which mark sits beside the output menu, and why.
+ *
+ * Three states, and the third is the one worth having. A wireless speaker that
+ * has wandered off is not the same as no preference — the app is playing out of
+ * the laptop when you asked it not to, and silently falling back to the built-in
+ * speakers is how somebody ends up broadcasting a shortwave station to a room
+ * they thought was quiet. The warning mark says the chosen device is gone.
+ *
+ * Bluetooth is detected from the device label, which is the only signal the web
+ * audio API exposes — there is no "is this wireless" flag. macOS puts the
+ * transport in the name for AirPods, Beats, and most headsets, and when it does
+ * not, this simply shows a speaker, which is not wrong, only less specific. It
+ * is deliberately not clever: guessing wireless from a name that merely looks
+ * like a person's would be worse than saying nothing.
+ */
+const BT = /\b(bluetooth|airpods|beats|wireless|bt)\b/i;
+
+let outputWasGone = false;
+
+function paintOutputIcon(devs, chosen, present) {
+  const icon = $("outicon");
+  if (!icon) return;
+  const dev = chosen ? devs.find((d) => d.deviceId === chosen) : null;
+  const wireless = BT.test(dev?.label || "");
+  const gone = !!chosen && !present;
+
+  if (gone) {
+    Icons.set(icon, "bluetoothWarn");
+    icon.title = t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac");
+  } else if (wireless) {
+    Icons.set(icon, "bluetooth");
+    icon.title = dev.label;
+  } else {
+    Icons.set(icon, "speakers");
+    icon.title = "";
+  }
+
+  /**
+   * Say it, once, when it happens.
+   *
+   * The mark is `aria-hidden`, so on its own this would be a change that only
+   * sighted people notice — and it is not decoration: the sound moved to a
+   * different room than the one you chose. Announced on the transition rather
+   * than on every repaint, because `devicechange` fires freely and a line per
+   * event would be a machine shouting about its own hardware.
+   */
+  if (gone !== outputWasGone) {
+    outputWasGone = gone;
+    if (gone) systemLine(t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac"));
+  }
 }
 $("outdev").addEventListener("change", (e) => {
   window.auralfm.setPrefs({ audioOutput: e.target.value });
@@ -968,6 +1022,34 @@ async function showFavorites() {
   }
   for (const f of favorites) placeListEl.appendChild(stationResultRow(f));
 }
+
+/**
+ * Somewhere else.
+ *
+ * Weighted by nothing — every station in the catalogue is equally likely, which
+ * is the point. A shuffle that quietly favoured the popular ones would keep
+ * handing you the same twenty places and would be a recommendation engine
+ * wearing a dice costume. The whole catalogue, or it is not a shuffle.
+ *
+ * The button says what happened, because a random jump with no explanation
+ * looks like the app losing its place.
+ */
+$("tripBtn").onclick = async () => {
+  const b = $("tripBtn");
+  if (b.disabled) return;
+  b.disabled = true;
+  try {
+    const pick = await guard("randomStation", () => window.auralfm.randomStation(), null);
+    if (!pick) { systemLine(t("ctl.somewhereFailed", "Could not find anywhere just now")); return; }
+    showingFavorites = false;
+    $("favBtn").setAttribute("aria-pressed", "false");
+    playChannel(pick);
+    systemLine(t("ctl.somewhereWent", "Somewhere else: {place}")
+      .replace("{place}", [pick.place, pick.country].filter(Boolean).join(", ") || pick.title));
+  } finally { b.disabled = false; }
+};
+
+$("setBtn").onclick = () => window.auralfm.openSettings();
 
 $("favBtn").onclick = () => {
   if (!showingFavorites) { showFavorites(); return; }
@@ -5357,6 +5439,8 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("newsBtn"), "headlines");
   Icons.set($("layersBtn"), "layers");
   Icons.set($("favBtn"), "star");
+  Icons.set($("tripBtn"), "earthTrips");
+  Icons.set($("setBtn"), "settings");
   Icons.set($("newsSrc"), "source");
   Icons.set($("play"), "play");
   Icons.set($("lock"), "unlock");

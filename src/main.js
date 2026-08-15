@@ -460,8 +460,7 @@ function showAbout() {
       "Weather: Open-Meteo · ISS: wheretheiss.at\n" +
       "Orbits: Celestrak (TLEs) · Headlines: Google News\n" +
       "Markets: CoinGecko\n\n" +
-      "Globe icons by emilegraphics, the Noun Project — royalty-free licences\n" +
-      "purchased 4 Aug 2026.\n\n" +
+      "The globe, and every mark in the app, drawn by Melton Bell III.\n\n" +
       "Full licence texts for everything this app ships, vendors or downloads\n" +
       "are in THIRD-PARTY-NOTICES.md, beside the application.",
   });
@@ -770,6 +769,27 @@ function spinTray(on) {
   }
 }
 
+/**
+ * The globe, for the one menu item that opens it.
+ *
+ * Read once and kept. Menus are rebuilt on every right-click so the language can
+ * change, and re-reading two files from disk each time to draw a 16px picture is
+ * work for nothing. Failure is not fatal: a menu item without a picture is still
+ * a menu item, and an icon is not worth taking the tray down for.
+ */
+let menuGlobe;
+function menuGlobeIcon() {
+  if (menuGlobe === undefined) {
+    try {
+      menuGlobe = nativeImage.createFromPath(
+        path.join(__dirname, "..", "assets", "generated", "menuGlobe.png"));
+      if (menuGlobe.isEmpty()) menuGlobe = null;
+    } catch { menuGlobe = null; }
+  }
+  return menuGlobe || undefined;
+}
+
+
 function createTray() {
   // Fall back to the shipped mark if the frames are missing rather than
   // starting with no tray icon at all, which would leave a menu bar app with
@@ -793,7 +813,7 @@ function createTray() {
     tray.popUpContextMenu(Menu.buildFromTemplate([
       { label: "AuralFM", enabled: false },
       { type: "separator" },
-      { label: t["menu.openGlobe"], click: openExplore },
+      { label: t["menu.openGlobe"], icon: menuGlobeIcon(), click: openExplore },
       { label: t["menu.settings"], click: openSettings },
       { label: t["menu.about"], click: showAbout },
       { type: "separator" },
@@ -1303,6 +1323,9 @@ ipcMain.handle("catalog:placeChannels", (_e, i, filter) => {
   return { ...r, channels: [...own, ...r.channels], total: r.total + own.length };
 });
 ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), bands: catalog.placeBands(i) }));
+/** Somewhere else. The renderer names no station; the catalogue picks. */
+ipcMain.handle("catalog:random", () => catalog.randomChannel());
+
 ipcMain.handle("catalog:globePoints", () => {
   const pts = catalog.globePoints();
   const extra = mine.countsByPlace();

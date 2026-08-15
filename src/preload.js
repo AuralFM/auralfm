@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   places: (q, limit) => ipcRenderer.invoke("catalog:places", q, limit),
   placeChannels: (i, filter) => ipcRenderer.invoke("catalog:placeChannels", i, filter),
   placeFacets: (i) => ipcRenderer.invoke("catalog:placeFacets", i),
+  randomStation: () => ipcRenderer.invoke("catalog:random"),
   globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
   clouds: () => ipcRenderer.invoke("clouds:get"),
   iss: () => ipcRenderer.invoke("iss:get"),

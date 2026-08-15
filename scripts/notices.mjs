@@ -102,8 +102,8 @@ const DATA = [
    "837 receivers, on their hardware and their bandwidth, given away free. Not a licence — a debt."],
   ["Inter", "SIL Open Font License 1.1",
    "The interface typeface, vendored at `assets/fonts/InterVariable.woff2`. Copyright (c) 2016 The Inter Project Authors. Full licence at `assets/fonts/Inter-LICENSE.txt`."],
-  ["Noun Project — emilegraphics", "Royalty-free, purchased",
-   "Both globe icons. Certificates in `assets/licenses/`; see `assets/ATTRIBUTION.md`."],
+  ["The AuralFM marks", "Original work",
+   "The globe and every icon in the app are drawn by Melton Bell III and owned outright. Two Noun Project globes were licensed and shipped until they were replaced; see `assets/ATTRIBUTION.md`."],
 ];
 
 const LICENSE_NAMES = [

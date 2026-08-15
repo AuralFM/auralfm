@@ -248,6 +248,28 @@ function globePoints() {
   return out;
 }
 
+/**
+ * Any station at all, uniformly.
+ *
+ * Uniform over the whole catalogue on purpose: weighting by anything — how many
+ * stations a place has, how often one has worked, what somebody played
+ * yesterday — would keep handing back the same busy cities and would be a
+ * recommendation engine wearing a dice costume. 38,000 stations, each as likely
+ * as the next, is the only version of this that is actually a shuffle.
+ *
+ * A station with no coordinates is skipped rather than returned, because the
+ * whole point is to land somewhere on the globe. A handful of tries is enough:
+ * almost every channel has a place, so this effectively never loops.
+ */
+function randomChannel() {
+  if (!channels.length) return null;
+  for (let tries = 0; tries < 12; tries++) {
+    const c = hydrate(Math.floor(Math.random() * channels.length));
+    if (Number.isFinite(c.lat) && Number.isFinite(c.lon)) return c;
+  }
+  return null;
+}
+
 /** One place by index, for anything that already knows which place it means. */
 const placeById = (i) => (places[i] ? hydratePlace(i) : null);
 
@@ -281,4 +303,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, placeSearch, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats };
+module.exports = { load, search, randomChannel, placeSearch, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats };

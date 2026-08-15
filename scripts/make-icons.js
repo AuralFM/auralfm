@@ -32,11 +32,14 @@ const MAX = 1024;
 /**
  * The .icns entries, and which glyph each one uses.
  *
- * Two glyphs, on purpose. The outlined globe is beautiful at 128 and above and
- * collapses into a solid disc at 32, because its latitude lines merge once they
- * are under a pixel apart. The filled globe keeps its bands legible down to 16.
- * Carrying different artwork at different sizes is exactly what the .icns format
- * is for, and it is what Apple's own icons do.
+ * One glyph now, at every size.
+ *
+ * There used to be two, because the licensed outlined globe was beautiful at 128
+ * and collapsed into a solid disc at 32 — its latitude lines merged once they
+ * were under a pixel apart. Melton's mark has no such problem: the continents are
+ * knocked out of a filled disc, so the shapes that carry it are chunky enough to
+ * survive 16px and clean enough to hold up at 1024. Carrying two glyphs was a
+ * workaround for artwork that could not do both, and it is not needed.
  *
  * This also fixes a quieter problem: nothing regenerated build/icon.icns, so the
  * packaged app kept shipping whatever was committed there months ago.
@@ -46,12 +49,12 @@ const ICNS = [
   ["icon_16x16@2x.png",     32,  "icon.svg"],
   ["icon_32x32.png",        32,  "icon.svg"],
   ["icon_32x32@2x.png",     64,  "icon.svg"],
-  ["icon_128x128.png",     128,  "icon-line.svg"],
-  ["icon_128x128@2x.png",  256,  "icon-line.svg"],
-  ["icon_256x256.png",     256,  "icon-line.svg"],
-  ["icon_256x256@2x.png",  512,  "icon-line.svg"],
-  ["icon_512x512.png",     512,  "icon-line.svg"],
-  ["icon_512x512@2x.png", 1024,  "icon-line.svg"],
+  ["icon_128x128.png",     128,  "icon.svg"],
+  ["icon_128x128@2x.png",  256,  "icon.svg"],
+  ["icon_256x256.png",     256,  "icon.svg"],
+  ["icon_256x256@2x.png",  512,  "icon.svg"],
+  ["icon_512x512.png",     512,  "icon.svg"],
+  ["icon_512x512@2x.png", 1024,  "icon.svg"],
 ];
 
 // [source svg, output basename, size px, style]
@@ -68,15 +71,20 @@ const JOBS = [
   ["icon.svg",      "trayTemplate.png",    16, "template", "onyx"],
   ["icon.svg",      "trayTemplate@2x.png", 32, "template", "onyx"],
   ["icon.svg",      "favicon.png",         64, "app",      "onyx"],
-  ["icon-line.svg", "app-512.png",        512, "app",      "onyx"],
-  ["icon-line.svg", "app-1024.png",      1024, "app",      "onyx"],
+  // For the tray *menu*, not the tray icon: a menu item's image is drawn at the
+  // text size and gets no template treatment from the menu, so it ships as the
+  // bone the menu already uses.
+  ["icon.svg",      "menuGlobe.png",       16, "menu",     "onyx"],
+  ["icon.svg",      "menuGlobe@2x.png",    32, "menu",     "onyx"],
+  ["icon.svg", "app-512.png",        512, "app",      "onyx"],
+  ["icon.svg", "app-1024.png",      1024, "app",      "onyx"],
   // The switchable set, chosen in Settings. 512 is what app.dock.setIcon wants.
   // Nothing here replaces the bundle's own icon: that is fixed at build time,
   // so Finder keeps showing the default while the Dock follows the setting.
   ["icon.svg",      "dock-onyx.png",      512, "app",      "onyx"],
   ["icon.svg",      "dock-bone.png",      512, "app",      "bone"],
   ["icon.svg",      "dock-onair.png",     512, "app",      "onair"],
-  ["icon-line.svg", "dock-earth.png",     512, "app",      "earth"],
+  ["icon.svg", "dock-earth.png",     512, "app",      "earth"],
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -92,10 +100,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /**
  * The switchable icons.
  *
- * Two Noun Project marks were licensed, filled and outlined, and this is how
- * they compose against the brand. The Earth is not the mark at all: it is the
- * same texture the globe is wearing, so the thing in the Dock and the thing on
- * screen are one object rather than an emblem of it.
+ * The mark is Melton's globe, and this is how it composes against the brand. The
+ * Earth is not the mark at all: it is the same texture the globe is wearing, so
+ * the thing in the Dock and the thing on screen are one object rather than an
+ * emblem of it.
  *
  * `body` fills the squircle, `glyph` colours the mark, `catch` is the top edge
  * highlight. `texture` replaces the fill and drops the glyph entirely.
@@ -167,6 +175,26 @@ function squirclePath(box, n = 5) {
 }
 
 function page(svg, size, style = "template", variant = "onyx") {
+  /**
+   * A bare glyph on transparency, in the menu's own ink.
+   *
+   * Not a template image: a menu *item's* image gets no template treatment from
+   * the menu, so a pure black mark would be a black smear beside white text on
+   * the dark menu every macOS 26 build draws. Not an app tile either — a
+   * squircle beside a menu label reads as an app icon that wandered in.
+   */
+  if (style === "menu") {
+    return `<!doctype html><meta charset="utf-8">
+      <style>
+        html,body{margin:0;padding:0;background:transparent}
+        #w{width:${size}px;height:${size}px;color:${VARIANTS.onyx.glyph}}
+        svg{width:100%;height:100%;display:block}
+      </style>
+      <div id="w">${svg}</div>
+      <script>requestAnimationFrame(() => requestAnimationFrame(
+        () => { document.documentElement.dataset.ready = "1"; }));</script>`;
+  }
+
   if (style === "template") {
     return `<!doctype html><meta charset="utf-8">
       <style>
