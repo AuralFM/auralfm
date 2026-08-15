@@ -80,6 +80,7 @@
       "!assets/generated/app-1024.png"
     ],
     "mac": {
+      "electronLanguages": ["en", "en_GB", "es", "es_419", "fr", "de", "pt_BR", "pt_PT"],
       "category": "public.app-category.music",
       "icon": "build/icon.icns",
       "target": [

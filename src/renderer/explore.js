@@ -619,7 +619,11 @@ async function toggleFav(ch) {
   favorites = Array.isArray(state.favorites) ? state.favorites : [];
   const i = favorites.findIndex((f) => f.id === ch.id);
   if (i >= 0) favorites.splice(i, 1);
-  else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
+  else favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure,
+                       // Coordinates too. Without them a favourite is a name and a
+                       // place-string, and everything downstream that needs a point on
+                       // the globe — the share card most visibly — had nothing to draw.
+                       lat:ch.lat, lon:ch.lon });
   // Only the list we changed. Writing the whole object back would send this
   // window's copy of vol and lastChannel too, undoing whatever the popover did
   // while this one was not looking.
@@ -975,6 +979,21 @@ async function openShareSheet() {
   $("sheetclose").focus();
   try {
     const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
+    /**
+     * Find the coordinates if what is playing does not carry them.
+     *
+     * Favourites were saved as a name and a place-string with no point, so a
+     * station played from favourites — which is most of them — produced a card
+     * with a city printed on it and no globe. Melton's screenshot was exactly
+     * that. The shape is fixed above, but 27 favourites were already on disk
+     * and a stored file does not fix itself, so this looks the station up by id
+     * rather than making people re-save anything.
+     */
+    let { lat, lon } = playing;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      const found = await guard("cardWhere", () => window.auralfm.stationById(playing.id), null);
+      if (found) { lat = found.lat; lon = found.lon; }
+    }
     sheetPng = await window.Card.make({
       title: playing.title || "",
       place: playing.place || "",
@@ -982,8 +1001,8 @@ async function openShareSheet() {
       sdr: !!playing.sdr,
       freq: tuneState?.freq ?? null,
       when: new Date(),
-      lat: playing.lat ?? null,
-      lon: playing.lon ?? null,
+      lat: Number.isFinite(lat) ? lat : null,
+      lon: Number.isFinite(lon) ? lon : null,
       // The same subsolar point the globe's terminator uses, so the card shows
       // the Earth as it was at the moment somebody was listening.
       sun: subsolarPoint(),
@@ -1119,31 +1138,71 @@ async function showFavorites() {
 }
 
 /**
- * Somewhere else.
+ * Travelling.
  *
- * Weighted by nothing — every station in the catalogue is equally likely, which
- * is the point. A shuffle that quietly favoured the popular ones would keep
- * handing you the same twenty places and would be a recommendation engine
- * wearing a dice costume. The whole catalogue, or it is not a shuffle.
+ * Press it and you land somewhere; it keeps moving every fifteen minutes until
+ * you press it again. A one-shot button was the wrong shape for what this is —
+ * the point is to leave it on and let the world come past, not to press a dice
+ * roll over and over.
  *
- * The button says what happened, because a random jump with no explanation
- * looks like the app losing its place.
+ * Uniform over all 38,000 stations, deliberately. Weighting by anything — how
+ * many stations a place has, what worked yesterday — would keep handing back the
+ * same busy cities and would be a recommendation engine wearing a dice costume.
+ *
+ * It stops itself if the lock is on, because the lock means "stay here" and two
+ * features arguing about which station is playing is worse than either.
  */
-$("tripBtn").onclick = async () => {
+const TRIP_EVERY_MS = 15 * 60 * 1000;
+let tripTimer = null;
+
+async function tripHop({ announce = true } = {}) {
   const b = $("tripBtn");
-  if (b.disabled) return;
-  b.disabled = true;
   b.classList.add("busy");
   try {
     const pick = await guard("randomStation", () => window.auralfm.randomStation(), null);
-    if (!pick) { systemLine(t("ctl.somewhereFailed", "Could not find anywhere just now")); return; }
+    if (!pick) {
+      if (announce) systemLine(t("ctl.somewhereFailed", "Could not find anywhere just now"));
+      return false;
+    }
     showingFavorites = false;
     $("favBtn").setAttribute("aria-pressed", "false");
-    playChannel(pick);
-    systemLine(t("ctl.somewhereWent", "Somewhere else: {place}")
-      .replace("{place}", [pick.place, pick.country].filter(Boolean).join(", ") || pick.title));
-  } finally { b.disabled = false; b.classList.remove("busy"); }
-};
+    // The same call every other "play this" path in this window makes. The first
+    // version called a `playChannel` that does not exist in this file, so the
+    // button threw on click and did nothing at all — found by pressing it, not
+    // by reading it.
+    window.auralfm.tune(pick);
+    if (Number.isFinite(pick.lat) && Number.isFinite(pick.lon)) flyTo(pick.lat, pick.lon);
+    if (announce) {
+      systemLine(t("ctl.somewhereWent", "Somewhere else: {place}")
+        .replace("{place}", [pick.place, pick.country].filter(Boolean).join(", ") || pick.title));
+    }
+    return true;
+  } finally { b.classList.remove("busy"); }
+}
+
+function stopTrip({ say = false } = {}) {
+  if (tripTimer) { clearInterval(tripTimer); tripTimer = null; }
+  const b = $("tripBtn");
+  b.setAttribute("aria-pressed", "false");
+  b.title = t("ctl.somewhere", "Take me somewhere");
+  if (say) systemLine(t("ctl.tripStopped", "Stopped travelling"));
+}
+
+async function startTrip() {
+  const b = $("tripBtn");
+  b.setAttribute("aria-pressed", "true");
+  b.title = t("ctl.tripStop", "Stop travelling");
+  systemLine(t("ctl.tripStarted", "Travelling — a new station every 15 minutes"));
+  await tripHop();
+  if (tripTimer) clearInterval(tripTimer);
+  tripTimer = setInterval(async () => {
+    // The lock means "stay here". Honour it rather than argue with it.
+    if (locked) { stopTrip({ say: true }); return; }
+    await tripHop();
+  }, TRIP_EVERY_MS);
+}
+
+$("tripBtn").onclick = () => { if (tripTimer) stopTrip({ say: true }); else startTrip(); };
 
 $("setBtn").onclick = () => window.auralfm.openSettings();
 

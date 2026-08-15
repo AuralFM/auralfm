@@ -1323,6 +1323,9 @@ ipcMain.handle("catalog:placeChannels", (_e, i, filter) => {
   return { ...r, channels: [...own, ...r.channels], total: r.total + own.length };
 });
 ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), bands: catalog.placeBands(i) }));
+/** One station by id — for anything holding a name that has lost its place. */
+ipcMain.handle("catalog:byId", (_e, id) => catalog.byId(String(id || "")) || null);
+
 /** Somewhere else. The renderer names no station; the catalogue picks. */
 ipcMain.handle("catalog:random", () => catalog.randomChannel());
 

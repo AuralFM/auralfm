@@ -1164,6 +1164,82 @@ console.log("\nlight theme agrees with itself");
   }
 }
 
+// ── every button in a toolbar calls something that exists ────────────────────
+// The travel globe shipped calling `playChannel(pick)`. There is no such
+// function in explore.js — it threw on click and the button did nothing at all,
+// which is exactly what Melton reported. It passed review because the *data*
+// path was verified (randomStation returns a station) and the handler was not.
+//
+// This checks the whole class: every identifier a click handler calls has to be
+// defined in the file, on `window`, or on one of the bridges.
+{
+  console.log("\nevery click handler calls something that exists");
+  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const defined = new Set();
+  /**
+   * Every script the page loads counts, not just this one.
+   *
+   * `guard` lives in errors.js and is hung on `window`; scoping this to
+   * explore.js alone reported four handlers as broken that work perfectly. A
+   * check that cries wolf is one people learn to skip, which is the failure mode
+   * this whole file exists to avoid.
+   */
+  const loaded = [...fs.readFileSync(R("src/renderer/explore.html"), "utf8")
+    .matchAll(/<script src="([\w./-]+)"/g)].map((m) => m[1]);
+  for (const rel of [...loaded, "explore.js"]) {
+    const file = R(path.join("src/renderer", rel));
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, "utf8");
+    for (const m of text.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g)) defined.add(m[1]);
+    for (const m of text.matchAll(/(?:^|\n)\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/g)) defined.add(m[1]);
+    for (const m of text.matchAll(/window\.([A-Za-z_$][\w$]*)\s*=/g)) defined.add(m[1]);
+  }
+  // Things the file legitimately reaches for that are not declared in it.
+  const AMBIENT = new Set(["window","document","console","Math","JSON","Date","Number","String",
+    "Array","Object","Set","Map","Promise","Icons","Card","t","$","setTimeout","clearTimeout",
+    "setInterval","clearInterval","requestAnimationFrame","navigator","location","fetch","alert",
+    "parseInt","parseFloat","isNaN","Intl","URL","Boolean","RegExp","Error","structuredClone"]);
+  const bad = [];
+  // Every `X.onclick = ` handler body, and every arrow assigned to one.
+  for (const m of src.matchAll(/\$\("([\w-]+)"\)\.onclick\s*=\s*(?:async\s*)?\(?\)?\s*=>\s*\{([\s\S]*?)\n\};/g)) {
+    const [, id, body] = m;
+    for (const c of body.matchAll(/(?:^|[^\w.$])([A-Za-z_$][\w$]*)\s*\(/g)) {
+      const name = c[1];
+      if (defined.has(name) || AMBIENT.has(name)) continue;
+      if (/^(if|for|while|switch|catch|return|typeof|await|new|function)$/.test(name)) continue;
+      // The name, not the button. Matching handler bodies by regex cannot
+      // reliably say *which* onclick a call sits in — the first version blamed
+      // `lock` for a call in the travel button — and a failure message that
+      // names the wrong control sends you to the wrong place.
+      bad.push(`${name}()`);
+    }
+  }
+  if (bad.length) fail("handler calls a missing function",
+         `Explore calls ${[...new Set(bad)].join(", ")} from a click handler; nothing defines it`);
+  else pass("every onclick handler in Explore calls a function that is defined");
+}
+
+// ── a favourite remembers where it is ────────────────────────────────────────
+// Favourites were stored as id/title/place/country/secure — a name and a
+// place-string with no point on the globe. Everything downstream that needs
+// coordinates had nothing: most visibly the share card, which printed the city
+// and drew no Earth. Both windows write this shape and both had to be fixed, so
+// this checks both rather than the one that was noticed.
+{
+  console.log("\na favourite remembers where it is");
+  const miss = [];
+  for (const f of ["src/renderer/explore.js", "src/renderer/popover.js"]) {
+    const src = fs.readFileSync(R(f), "utf8");
+    const m = src.match(/favorites\.push\(\{[\s\S]{0,400}?\}\)/);
+    if (!m) { miss.push(`${f}: no favorites.push found`); continue; }
+    if (!/lat:\s*ch\.lat/.test(m[0]) || !/lon:\s*ch\.lon/.test(m[0])) {
+      miss.push(`${f}: saves a favourite without coordinates`);
+    }
+  }
+  if (miss.length) fail("favourite without a place", miss.join("; "));
+  else pass("both windows save favourites with lat and lon");
+}
+
 // ── every data file the app reads is actually shipped ────────────────────────
 // `build.files` is an allowlist, so a new data file is absent from the package
 // unless somebody remembers to add it. filter-default.json was: the word filter

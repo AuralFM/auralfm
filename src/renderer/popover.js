@@ -425,7 +425,11 @@ function showFavorites() {
 function toggleFav(ch) {
   const i = state.favorites.findIndex(f => f.id === ch.id);
   if (i >= 0) state.favorites.splice(i, 1);
-  else state.favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure });
+  else state.favorites.push({ id:ch.id, title:ch.title, place:ch.place, country:ch.country, secure:ch.secure,
+                       // Coordinates too. Without them a favourite is a name and a
+                       // place-string, and everything downstream that needs a point on
+                       // the globe — the share card most visibly — had nothing to draw.
+                       lat:ch.lat, lon:ch.lon });
   persist({ favorites: state.favorites });
   qEl.value.trim() ? render(rows, {numbered:false}) : showFavorites();
 }
