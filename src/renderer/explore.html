@@ -1484,19 +1484,23 @@
     what you hear and how loudly, together. Explore has no audio element of its
     own, so this writes the preference and the menu bar panel moves the sound.
   -->
+  <span class="volwrap">
+    <button id="mute"></button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8">
+  </span>
   <!--
-    One button, not a button beside a menu. The menu used to sit permanently
-    next to the speaker showing "System output", which is a label for a thing
-    nobody is currently changing taking up room in the one bar that also carries
-    live prices. Press the speaker, choose, done.
+    After the volume, before the prices. Where the sound goes and how loud it is
+    are the same question asked twice, so they sit together; the prices are not
+    part of that question and stay at the far end where they have always been.
+
+    One button, not a button beside a menu. The picker used to sit permanently
+    open reading "System output" — a label for a thing nobody is changing, in the
+    one bar that also carries live prices and has nowhere to put them when it
+    runs out of room.
   -->
   <span class="outwrap" id="outwrap" hidden>
     <button id="outbtn" aria-haspopup="listbox" aria-expanded="false"
             data-i18n-title="ctl.output" title="Where the sound comes out"></button>
-  </span>
-  <span class="volwrap">
-    <button id="mute"></button>
-    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8">
   </span>
   <span class="markets" id="markets"></span>
 </div>
