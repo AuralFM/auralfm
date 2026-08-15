@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme, clipboard } = require("electron");
 const path = require("node:path");
 const geo = require("./geo");
 
@@ -1427,6 +1427,32 @@ ipcMain.handle("hub:history", () => visible(nostr.hubHistory()));
  */
 ipcMain.handle("profile:get", (_e, pubkey) => nostr.lookupProfile(String(pubkey || "")));
 ipcMain.handle("profile:known", () => nostr.knownProfiles());
+
+/**
+ * A card of what is playing, onto the clipboard.
+ *
+ * The renderer draws it and hands over a data URL; this only turns that into an
+ * image and puts it where a paste will find it. Nothing is uploaded and no
+ * network call happens anywhere in this path — a share button is the usual place
+ * a privacy promise quietly ends, and this one does not.
+ */
+ipcMain.handle("card:copy", (_e, dataUrl) => {
+  const s = String(dataUrl || "");
+  if (!/^data:image\/png;base64,/.test(s) || s.length > 12 * 1024 * 1024) return false;
+  const img = nativeImage.createFromDataURL(s);
+  if (img.isEmpty()) return false;
+  clipboard.writeImage(img);
+  return true;
+});
+
+/** The deep link for what is playing, so it can be pasted beside the card. */
+ipcMain.handle("card:link", (_e, title) => {
+  const t = String(title || "").trim().slice(0, 120);
+  if (!t) return null;
+  const link = `auralfm://play?station=${encodeURIComponent(t)}`;
+  clipboard.writeText(link);
+  return link;
+});
 // Returns false when there is nowhere to say it — nothing playing, presence off,
 // or no relay up. The renderer needs to know rather than assume it landed.
 // The nickname comes from prefs unless the caller overrides it, so there is one

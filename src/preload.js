@@ -135,6 +135,12 @@ contextBridge.exposeInMainWorld("auralfm", {
   /** One person, when asked. Never a list — the list would be your room. */
   profileGet: (pubkey) => ipcRenderer.invoke("profile:get", pubkey),
   profilesKnown: () => ipcRenderer.invoke("profile:known"),
+  /**
+   * A card of what is playing, onto the clipboard. The renderer draws it; main
+   * only pastes it. Nothing here uploads anything.
+   */
+  cardCopy: (dataUrl) => ipcRenderer.invoke("card:copy", dataUrl),
+  cardLink: (title) => ipcRenderer.invoke("card:link", title),
   onHubMessages: (fn) => ipcRenderer.on("hub:messages", (_e, list) => fn(list)),
   dmRead: (pubkey) => ipcRenderer.invoke("dm:read", pubkey),
   onDms: (fn) => ipcRenderer.on("presence:dms", (_e, list) => fn(list)),

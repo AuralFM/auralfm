@@ -749,6 +749,10 @@ function paintNowStar() {
   const b = $("nowStar");
   if (!b) return;
   const ch = playing;
+  // Sharing works for shortwave too — a frequency and a receiver is exactly the
+  // kind of thing worth posting — so it follows `playing`, not `canFav`.
+  const share = $("nowShare");
+  if (share) share.hidden = !ch;
   const canFav = !!(ch && ch.id && !ch.sdr);
   b.hidden = !canFav;
   if (!canFav) return;
@@ -762,6 +766,40 @@ $("nowStar").onclick = async () => {
   if (!playing || !playing.id || playing.sdr) return;
   await toggleFav(playing);          // it reloads `favorites` from disk; paint after
   paintNowStar();
+};
+
+/**
+ * Copy a card of what is playing.
+ *
+ * The image is what a paste into a post will take, so the image is what goes on
+ * the clipboard. The `auralfm://` link is offered in the confirmation rather than
+ * pushed there as well — putting a URL nobody asked for onto somebody's
+ * clipboard is how a share button becomes a thing people stop trusting.
+ */
+$("nowShare").onclick = async () => {
+  if (!playing) return;
+  const btn = $("nowShare");
+  const say = (msg) => {
+    const before = btn.title;
+    btn.title = msg;
+    btn.setAttribute("aria-label", msg);
+    setTimeout(() => { btn.title = before; btn.setAttribute("aria-label", before); }, 4000);
+  };
+  try {
+    const png = await window.Card.make({
+      title: playing.title || "",
+      place: playing.place || "",
+      country: playing.country || "",
+      sdr: !!playing.sdr,
+      freq: tuneState?.freq ?? null,
+      when: new Date(),
+    });
+    const ok = await guard("cardCopy", () => window.auralfm.cardCopy(png), false);
+    say(ok ? t("ctl.shareDone", "Card copied — paste it into a post")
+           : t("ctl.shareFailed", "Could not copy the card"));
+  } catch {
+    say(t("ctl.shareFailed", "Could not copy the card"));
+  }
 };
 
 // ── transport ────────────────────────────────────────────────────────────────
@@ -5234,6 +5272,7 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("lock"), "unlock");
   Icons.set($("mute"), "volumeHigh");
   Icons.set($("nowStar"), "star");
+  Icons.set($("nowShare"), "external");
 
   await loadPlaces("");
   paintColdOpen();

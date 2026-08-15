@@ -1368,6 +1368,11 @@
        unrelated things rather than a pair and a label. -->
   <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation"></button>
   <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden></button>
+  <!-- Next to the two controls that act on this station, because it is a third
+       one. Hidden until something is playing — there is nothing to share about
+       silence. -->
+  <button id="nowShare" title="Copy a card of what you are listening to"
+          data-i18n-title="ctl.share" hidden></button>
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
@@ -1389,6 +1394,7 @@
 <script src="tipcard.js"></script>
 <script src="reveal.js"></script>
 <script src="astro.js"></script>
+<script src="card.js"></script>
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
 <script src="explore.js"></script>
