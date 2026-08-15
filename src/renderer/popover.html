@@ -315,14 +315,34 @@
   }
   #mute:hover{color:var(--label)}
   #mute:active{transform:scale(.9)}
-  .outwrap{flex:none;display:flex;align-items:center;gap:4px;color:var(--label2)}
-  #outicon{font-size:13px;line-height:0;display:grid;place-items:center}
-  #outdev{
-    flex:none;max-width:96px;appearance:none;border:0;border-radius:var(--r-sm);
-    background:var(--fill);color:var(--label2);font:inherit;font-size:10.5px;
-    padding:2px 5px;outline:none;text-overflow:ellipsis;
+  .outwrap{flex:none;display:flex;align-items:center;color:var(--label2)}
+  /* One button, same as Explore. The permanent picker beside it spent the panel's
+     scarcest resource — width — on a label for something nobody is changing. */
+  #outbtn{
+    background:none;border:0;color:var(--label2);font-size:14px;line-height:0;
+    padding:2px 4px;border-radius:var(--r-sm);cursor:default;flex:none;
+    display:grid;place-items:center;
+    transition:color var(--dur-hover) var(--ease-out),background var(--dur-hover) var(--ease-out);
   }
-  #outdev:hover{color:var(--label)}
+  #outbtn:hover{color:var(--label)}
+  #outbtn[aria-expanded="true"]{color:var(--accent);background:var(--fill)}
+  #outbtn.gone{color:var(--err)}
+  .outmenu{
+    position:fixed;z-index:9400;min-width:170px;max-width:260px;padding:5px;
+    border-radius:var(--r-lg);background:var(--pane);border:1px solid var(--line);
+    box-shadow:0 12px 40px rgba(0,0,0,.45);backdrop-filter:blur(20px);
+  }
+  .outmenu button{
+    display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+    appearance:none;border:0;border-radius:var(--r-md);background:none;
+    color:var(--label);font:inherit;font-size:11.5px;padding:6px 8px;cursor:default;
+    transition:background var(--dur-hover) var(--ease-out);
+  }
+  .outmenu button:hover,.outmenu button:focus-visible{background:var(--fill);outline:none}
+  .outmenu button[aria-selected="true"]{color:var(--accent)}
+  .outmenu .tick{flex:none;width:12px;opacity:0}
+  .outmenu button[aria-selected="true"] .tick{opacity:1}
+  .outmenu .devname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #vol{width:78px;accent-color:var(--accent);flex:none}
   #toggle{font-size:11px}
 </style>
@@ -363,13 +383,15 @@
   <!-- Where the sound goes. Hidden on a Mac with only one output, because a
        control with one option is furniture. -->
   <span class="outwrap" id="outwrap" hidden>
-    <span id="outicon" aria-hidden="true"></span>
-    <select id="outdev" data-i18n-title="ctl.output" title="Where the sound comes out"
-            aria-label="Where the sound comes out"></select>
+    <button id="outbtn" aria-haspopup="listbox" aria-expanded="false"
+            data-i18n-title="ctl.output" title="Where the sound comes out"></button>
   </span>
   <button id="mute" title="Mute"></button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
 </div>
+
+<div id="outmenu" class="outmenu" role="listbox" hidden
+     aria-label="Where the sound comes out"></div>
 
 <script src="errors.js"></script>
 <script src="tips.js"></script>

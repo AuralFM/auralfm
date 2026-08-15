@@ -783,69 +783,81 @@ $("nowStar").onclick = async () => {
  * written as a preference rather than applied, because the audio element lives
  * in the menu bar panel. One place makes sound; this is a remote control for it.
  */
+/**
+ * Where the sound comes out.
+ *
+ * One button that opens a menu, rather than a button beside a menu that is
+ * always open. The permanent picker sat in the transport reading "System
+ * output" — a label for a thing nobody is changing, in the one bar that also
+ * carries live prices and has nowhere to put them when it runs out of room.
+ *
+ * The device list is read fresh each time it opens, because between one press
+ * and the next somebody's headphones can arrive or leave, and a cached list
+ * would offer a speaker that is not there.
+ */
+let outDevices = [];
+
+async function readOutputs() {
+  try {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    return all.filter((d) => d.kind === "audiooutput" && !/^default$/i.test(d.deviceId));
+  } catch { return []; }
+}
+
 async function renderOutputs() {
-  const wrap = $("outwrap"), sel = $("outdev");
-  if (!wrap || !sel) return;
-  let devs = [];
-  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audiooutput"); }
-  catch { devs = []; }
-  wrap.hidden = devs.length < 2;
-  if (devs.length < 2) return;
+  const wrap = $("outwrap");
+  if (!wrap) return;
+  outDevices = await readOutputs();
+  // One device is not a choice, and a control that cannot change anything is
+  // clutter with a tooltip.
+  wrap.hidden = outDevices.length < 2;
+  if (wrap.hidden) { closeOutMenu(); return; }
   const chosen = prefs?.audioOutput || "";
-  sel.innerHTML = "";
-  const mk = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
-  mk("", t("ctl.outputSystem", "System output"));
-  for (const d of devs) {
-    if (/^default$/i.test(d.deviceId)) continue;
-    mk(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
-  }
-  const here = [...sel.options].some((o) => o.value === chosen);
-  sel.value = here ? chosen : "";
-  paintOutputIcon(devs, chosen, here);
+  paintOutputIcon(outDevices, chosen, !chosen || outDevices.some((d) => d.deviceId === chosen));
+  if (!$("outmenu").hidden) paintOutMenu();
 }
 
 /**
- * Which mark sits beside the output menu, and why.
+ * Which mark sits on the output button, and why.
  *
  * Three states, and the third is the one worth having. A wireless speaker that
  * has wandered off is not the same as no preference — the app is playing out of
  * the laptop when you asked it not to, and silently falling back to the built-in
  * speakers is how somebody ends up broadcasting a shortwave station to a room
- * they thought was quiet. The warning mark says the chosen device is gone.
+ * they thought was quiet.
  *
- * Bluetooth is detected from the device label, which is the only signal the web
- * audio API exposes — there is no "is this wireless" flag. macOS puts the
- * transport in the name for AirPods, Beats, and most headsets, and when it does
- * not, this simply shows a speaker, which is not wrong, only less specific. It
- * is deliberately not clever: guessing wireless from a name that merely looks
- * like a person's would be worse than saying nothing.
+ * Bluetooth is detected from the device label, the only signal the web audio API
+ * exposes — there is no "is this wireless" flag. macOS puts the transport in the
+ * name for AirPods, Beats and most headsets; when it does not, this shows a
+ * speaker, which is not wrong, only less specific. Guessing wireless from a name
+ * that merely looks like a person's would be worse than saying nothing.
  */
 const BT = /\b(bluetooth|airpods|beats|wireless|bt)\b/i;
 
 let outputWasGone = false;
 
 function paintOutputIcon(devs, chosen, present) {
-  const icon = $("outicon");
-  if (!icon) return;
+  const btn = $("outbtn");
+  if (!btn) return;
   const dev = chosen ? devs.find((d) => d.deviceId === chosen) : null;
-  const wireless = BT.test(dev?.label || "");
   const gone = !!chosen && !present;
 
+  btn.classList.toggle("gone", gone);
   if (gone) {
-    Icons.set(icon, "bluetoothWarn");
-    icon.title = t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac");
-  } else if (wireless) {
-    Icons.set(icon, "bluetooth");
-    icon.title = dev.label;
+    Icons.set(btn, "bluetoothWarn");
+    btn.title = t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac");
+  } else if (BT.test(dev?.label || "")) {
+    Icons.set(btn, "bluetooth");
+    btn.title = dev.label;
   } else {
-    Icons.set(icon, "speakers");
-    icon.title = "";
+    Icons.set(btn, "speakers");
+    btn.title = t("ctl.output", "Where the sound comes out");
   }
 
   /**
    * Say it, once, when it happens.
    *
-   * The mark is `aria-hidden`, so on its own this would be a change that only
+   * The mark is a picture on a button, so on its own this would be a change only
    * sighted people notice — and it is not decoration: the sound moved to a
    * different room than the one you chose. Announced on the transition rather
    * than on every repaint, because `devicechange` fires freely and a line per
@@ -856,9 +868,92 @@ function paintOutputIcon(devs, chosen, present) {
     if (gone) systemLine(t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac"));
   }
 }
-$("outdev").addEventListener("change", (e) => {
-  window.auralfm.setPrefs({ audioOutput: e.target.value });
+
+function paintOutMenu() {
+  const menu = $("outmenu");
+  const chosen = prefs?.audioOutput || "";
+  menu.textContent = "";
+  const add = (value, label) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "option");
+    b.setAttribute("aria-selected", String(value === chosen));
+    const tick = document.createElement("span");
+    tick.className = "tick";
+    tick.textContent = "\u2713";
+    const name = document.createElement("span");
+    name.className = "devname";
+    name.textContent = label;
+    b.append(tick, name);
+    b.onclick = () => {
+      window.auralfm.setPrefs({ audioOutput: value });
+      closeOutMenu();
+    };
+    menu.append(b);
+  };
+  add("", t("ctl.outputSystem", "System output"));
+  for (const d of outDevices) add(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
+}
+
+function placeOutMenu() {
+  const btn = $("outbtn"), menu = $("outmenu");
+  const r = btn.getBoundingClientRect();
+  const m = menu.getBoundingClientRect();
+  // Above the button, because the transport is at the bottom of the window and
+  // a menu dropped downward would open off-screen.
+  const top = Math.max(8, r.top - m.height - 8);
+  const left = Math.min(Math.max(8, r.right - m.width), window.innerWidth - m.width - 8);
+  menu.style.top = `${Math.round(top)}px`;
+  menu.style.left = `${Math.round(left)}px`;
+}
+
+async function openOutMenu() {
+  outDevices = await readOutputs();
+  paintOutMenu();
+  const menu = $("outmenu");
+  menu.hidden = false;
+  placeOutMenu();
+  $("outbtn").setAttribute("aria-expanded", "true");
+  menu.querySelector('button[aria-selected="true"]')?.focus();
+}
+
+function closeOutMenu({ refocus = false } = {}) {
+  const menu = $("outmenu");
+  if (menu.hidden) return;
+  menu.hidden = true;
+  $("outbtn").setAttribute("aria-expanded", "false");
+  if (refocus) $("outbtn").focus();
+}
+
+$("outbtn").onclick = () => {
+  if ($("outmenu").hidden) openOutMenu(); else closeOutMenu({ refocus: true });
+};
+
+// Anywhere else closes it, including on the button itself — that click is
+// handled above and must not immediately reopen what it just closed.
+document.addEventListener("pointerdown", (e) => {
+  if ($("outmenu").hidden) return;
+  if ($("outmenu").contains(e.target) || $("outbtn").contains(e.target)) return;
+  closeOutMenu();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  const menu = $("outmenu");
+  if (menu.hidden) return;
+  if (e.key === "Escape") { e.preventDefault(); closeOutMenu({ refocus: true }); return; }
+  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  e.preventDefault();
+  const items = [...menu.querySelectorAll("button")];
+  const at = items.indexOf(document.activeElement);
+  const next = e.key === "ArrowDown"
+    ? (at + 1) % items.length
+    : (at <= 0 ? items.length - 1 : at - 1);
+  items[next]?.focus();
 });
+
+// A menu placed from a rectangle has to be replaced when the rectangle moves.
+window.addEventListener("resize", () => { if (!$("outmenu").hidden) placeOutMenu(); });
+
 navigator.mediaDevices.addEventListener?.("devicechange", () => renderOutputs());
 
 /**
@@ -1038,6 +1133,7 @@ $("tripBtn").onclick = async () => {
   const b = $("tripBtn");
   if (b.disabled) return;
   b.disabled = true;
+  b.classList.add("busy");
   try {
     const pick = await guard("randomStation", () => window.auralfm.randomStation(), null);
     if (!pick) { systemLine(t("ctl.somewhereFailed", "Could not find anywhere just now")); return; }
@@ -1046,7 +1142,7 @@ $("tripBtn").onclick = async () => {
     playChannel(pick);
     systemLine(t("ctl.somewhereWent", "Somewhere else: {place}")
       .replace("{place}", [pick.place, pick.country].filter(Boolean).join(", ") || pick.title));
-  } finally { b.disabled = false; }
+  } finally { b.disabled = false; b.classList.remove("busy"); }
 };
 
 $("setBtn").onclick = () => window.auralfm.openSettings();

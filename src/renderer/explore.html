@@ -273,6 +273,31 @@
   }
   .toolbar button:hover{background:var(--fill);color:var(--label)}
   .toolbar button[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
+  /**
+   * What the travel globe is doing, right now.
+   *
+   * Four states on one glyph. The artwork never changes — swapping in a spinner
+   * would mean the button you pressed is not the button you are looking at, and
+   * a control that becomes a different control mid-press is the thing that makes
+   * people press twice. Colour, weight and scale carry the state instead.
+   *
+   * Pressed is `--accent`, so it is the palette's own colour in all nine rather
+   * than a hard-coded green that would be wrong in eight of them.
+   */
+  #tripBtn{transition:background var(--dur-hover) var(--ease-out),
+                      color var(--dur-hover) var(--ease-out),
+                      transform var(--dur-press) var(--ease-out)}
+  #tripBtn:active{color:var(--accent);background:var(--fill-hi);transform:scale(.92)}
+  #tripBtn.busy{color:var(--accent);background:var(--fill)}
+  /* A slow breath, not a spin: the mark is a globe with a plane through it and
+     rotating it would read as loading rather than as travelling. Stopped
+     entirely for anyone who asked for less motion. */
+  #tripBtn.busy svg{animation:tripbreath 1.1s var(--ease-in-out) infinite}
+  @keyframes tripbreath{0%,100%{opacity:.55}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){
+    #tripBtn.busy svg{animation:none;opacity:.7}
+  }
+  #tripBtn:disabled{cursor:default}
   .toolbar #q{
     width:clamp(280px, 24vw, 560px);height:24px;padding:0 9px;border:0;border-radius:var(--r-md);
     background:var(--fill);color:var(--label);font:inherit;outline:none;
@@ -1096,14 +1121,51 @@
   .sheetbtn:hover{background:var(--fill-hi)}
   .sheetbtn.primary{background:var(--accent);color:var(--on-accent);font-weight:590}
   .sheetsaid{min-height:15px;font-size:11px;color:var(--label3)}
-  .outwrap{flex:none;display:flex;align-items:center;gap:5px;color:var(--label2)}
-  #outicon{font-size:13px;line-height:0;display:grid;place-items:center}
-  #outdev{
-    flex:none;max-width:120px;appearance:none;border:0;border-radius:var(--r-sm);
-    background:var(--fill);color:var(--label2);font:inherit;font-size:10.5px;
-    padding:3px 6px;outline:none;text-overflow:ellipsis;
+  .outwrap{flex:none;display:flex;align-items:center;color:var(--label2)}
+  /* Same shape as the star and the mute button beside it — these are three
+     controls of one kind and were three different sizes. */
+  #outbtn{
+    background:none;border:0;color:var(--label2);font-size:15px;line-height:0;
+    padding:2px 4px;border-radius:var(--r-sm);cursor:default;flex:none;
+    display:grid;place-items:center;
+    transition:color var(--dur-hover) var(--ease-out),background var(--dur-hover) var(--ease-out);
   }
-  #outdev:hover{color:var(--label)}
+  #outbtn:hover{color:var(--label)}
+  #outbtn[aria-expanded="true"]{color:var(--accent);background:var(--fill)}
+  /* The chosen device is gone. Stated in colour *and* in the log, because this
+     one is not decoration — the sound is coming out of somewhere else. */
+  #outbtn.gone{color:var(--err)}
+
+  .outmenu{
+    position:fixed;z-index:9400;min-width:190px;max-width:320px;padding:5px;
+    border-radius:var(--r-lg);background:var(--pane);border:1px solid var(--line);
+    box-shadow:0 12px 40px rgba(0,0,0,.45);backdrop-filter:blur(20px);
+  }
+  .outmenu button{
+    display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+    appearance:none;border:0;border-radius:var(--r-md);background:none;
+    color:var(--label);font:inherit;font-size:12px;padding:7px 9px;cursor:default;
+    transition:background var(--dur-hover) var(--ease-out);
+  }
+  .outmenu button:hover,.outmenu button:focus-visible{background:var(--fill);outline:none}
+  .outmenu button[aria-selected="true"]{color:var(--accent)}
+  /* A tick, in a fixed column, so the names all start on the same line whether
+     or not they are the chosen one. */
+  .outmenu .tick{flex:none;width:13px;opacity:0}
+  .outmenu button[aria-selected="true"] .tick{opacity:1}
+  .outmenu .devname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* The share button had no rule at all, so it fell back to the browser's grey
+     default and sat in the transport looking like a pressed chip next to two
+     controls that are bare glyphs. */
+  #nowShare{
+    background:none;border:0;color:var(--label2);font-size:15px;line-height:0;
+    padding:2px 6px;border-radius:var(--r-sm);cursor:default;flex:none;
+    display:grid;place-items:center;
+    transition:color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
+  }
+  #nowShare:hover{color:var(--label)}
+  #nowShare:active{transform:scale(.9)}
   .cmdmode{
     min-height:14px;padding:4px 10px 0;font-size:10.5px;line-height:1.3;
     color:var(--label3);letter-spacing:.005em;
@@ -1422,10 +1484,15 @@
     what you hear and how loudly, together. Explore has no audio element of its
     own, so this writes the preference and the menu bar panel moves the sound.
   -->
+  <!--
+    One button, not a button beside a menu. The menu used to sit permanently
+    next to the speaker showing "System output", which is a label for a thing
+    nobody is currently changing taking up room in the one bar that also carries
+    live prices. Press the speaker, choose, done.
+  -->
   <span class="outwrap" id="outwrap" hidden>
-    <span id="outicon" aria-hidden="true"></span>
-    <select id="outdev" data-i18n-title="ctl.output" title="Where the sound comes out"
-            aria-label="Where the sound comes out"></select>
+    <button id="outbtn" aria-haspopup="listbox" aria-expanded="false"
+            data-i18n-title="ctl.output" title="Where the sound comes out"></button>
   </span>
   <span class="volwrap">
     <button id="mute"></button>
@@ -1446,6 +1513,14 @@
   to the clipboard silently, which is indistinguishable from nothing happening.
   A thing you are about to publish under your own name should be looked at first.
 -->
+<!--
+  Outside the transport bar on purpose. `.now` is overflow:hidden, so a menu
+  rendered inside it is clipped at the bar's own edge no matter how it is
+  positioned. It is placed from the button's rectangle at open time instead.
+-->
+<div id="outmenu" class="outmenu" role="listbox" hidden
+     aria-label="Where the sound comes out"></div>
+
 <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-label="Share what you are listening to">
   <div class="sheetbox">
     <img id="sheetimg" alt="A card showing what you are listening to">

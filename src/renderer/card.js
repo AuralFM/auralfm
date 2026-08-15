@@ -483,6 +483,32 @@
 
   window.Card = {
     /**
+     * The Earth, on any canvas.
+     *
+     * Exposed because it is the app's own artwork and there should be exactly
+     * one function that draws it. The alternative — a second copy of the inverse
+     * orthographic projection and the terminator maths for making brand imagery
+     * — is two Earths that drift apart, and the one in the marketing would be
+     * the one nobody notices is wrong.
+     *
+     * Textures must be loaded first; `ready()` does that.
+     */
+    drawGlobe(ctx, cx, cy, r, lat, lon, sun) {
+      return drawGlobe(ctx, cx, cy, r, lat, lon, sun || { lat: 0, lng: 0 });
+    },
+
+    /** Load the textures without drawing anything. */
+    async ready() {
+      if (!TEX.day) {
+        [TEX.day, TEX.night] = await Promise.all([
+          loadTexture("vendor/earth-blue-marble.jpg"),
+          loadTexture("vendor/earth-night.jpg"),
+        ]);
+      }
+      return !!TEX.day;
+    },
+
+    /**
      * Make the card. Waits for the font, because a card drawn before Inter
      * loads is drawn in the system fallback and looks like somebody else's app.
      */

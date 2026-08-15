@@ -128,35 +128,117 @@ async function applyOutput(id) {
   try { if (audioCtx) await audioCtx.setSinkId?.(target ?? ""); } catch { /* same */ }
 }
 
+/**
+ * Where the sound goes.
+ *
+ * One button that opens a menu, matching Explore. The picker used to sit open
+ * beside the speaker, spending this panel's scarcest resource — width — on a
+ * label for something nobody is currently changing.
+ *
+ * This window is the one that actually makes noise, so it both shows the choice
+ * and applies it; Explore only writes the preference.
+ */
+let outDevices = [];
+
+async function readOutputs() {
+  try {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    return all.filter((d) => d.kind === "audiooutput" && !/^default$/i.test(d.deviceId));
+  } catch { return []; }
+}
+
+/** Bluetooth is only ever readable from the label; see the note in Explore. */
+const BT = /\b(bluetooth|airpods|beats|wireless|bt)\b/i;
+
+function paintOutputIcon() {
+  const btn = $("outbtn");
+  if (!btn) return;
+  const dev = outputId ? outDevices.find((d) => d.deviceId === outputId) : null;
+  const gone = !!outputId && !dev;
+  btn.classList.toggle("gone", gone);
+  if (gone) {
+    Icons.set(btn, "bluetoothWarn");
+    btn.title = t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac");
+  } else if (BT.test(dev?.label || "")) {
+    Icons.set(btn, "bluetooth");
+    btn.title = dev.label;
+  } else {
+    Icons.set(btn, "speakers");
+    btn.title = t("ctl.output", "Where the sound comes out");
+  }
+}
+
 async function renderOutputs() {
-  const sel = $("outdev");
-  if (!sel) return;
-  let devs = [];
-  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audiooutput"); }
-  catch { devs = []; }
+  const wrap = $("outwrap");
+  if (!wrap) return;
+  outDevices = await readOutputs();
   // A machine with one output has no choice to offer, and a control with one
   // option is furniture.
-  // The whole control hides together, icon included — a lone speaker glyph next
-  // to nothing is a button that does not exist.
-  const wrap = $("outwrap");
-  if (wrap) wrap.hidden = devs.length < 2;
-  if (devs.length < 2) return;
-  Icons.set($("outicon"), "speakers");
-  sel.innerHTML = "";
-  const mk = (value, label) => {
-    const o = document.createElement("option");
-    o.value = value; o.textContent = label;
-    sel.append(o);
-  };
-  mk("", t("ctl.outputSystem", "System output"));
-  for (const d of devs) {
-    if (/^default$/i.test(d.deviceId)) continue;     // that is what "" already means
-    mk(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
+  wrap.hidden = outDevices.length < 2;
+  if (wrap.hidden) { closeOutMenu(); return; }
+  // A remembered device that has since been unplugged falls back to the system
+  // output rather than leaving the control pointing at nothing.
+  if (outputId && !outDevices.some((d) => d.deviceId === outputId)) {
+    outputId = "";
+    await applyOutput("");
   }
-  // A remembered device that has since been unplugged or switched off falls back
-  // silently rather than leaving the menu pointing at nothing.
-  sel.value = [...sel.options].some((o) => o.value === outputId) ? outputId : "";
-  if (sel.value !== outputId) { outputId = ""; applyOutput(""); }
+  paintOutputIcon();
+  if (!$("outmenu").hidden) paintOutMenu();
+}
+
+function paintOutMenu() {
+  const menu = $("outmenu");
+  menu.textContent = "";
+  const add = (value, label) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "option");
+    b.setAttribute("aria-selected", String(value === outputId));
+    const tick = document.createElement("span");
+    tick.className = "tick";
+    tick.textContent = "\u2713";
+    const name = document.createElement("span");
+    name.className = "devname";
+    name.textContent = label;
+    b.append(tick, name);
+    b.onclick = async () => {
+      await applyOutput(value);
+      window.auralfm.setPrefs({ audioOutput: outputId });
+      closeOutMenu();
+      paintOutputIcon();
+    };
+    menu.append(b);
+  };
+  add("", t("ctl.outputSystem", "System output"));
+  for (const d of outDevices) add(d.deviceId, d.label || t("ctl.outputUnnamed", "Speaker"));
+}
+
+function placeOutMenu() {
+  const r = $("outbtn").getBoundingClientRect();
+  const menu = $("outmenu");
+  const m = menu.getBoundingClientRect();
+  const top = Math.max(8, r.top - m.height - 8);
+  const left = Math.min(Math.max(8, r.right - m.width), window.innerWidth - m.width - 8);
+  menu.style.top = `${Math.round(top)}px`;
+  menu.style.left = `${Math.round(left)}px`;
+}
+
+async function openOutMenu() {
+  outDevices = await readOutputs();
+  paintOutMenu();
+  const menu = $("outmenu");
+  menu.hidden = false;
+  placeOutMenu();
+  $("outbtn").setAttribute("aria-expanded", "true");
+  menu.querySelector('button[aria-selected="true"]')?.focus();
+}
+
+function closeOutMenu({ refocus = false } = {}) {
+  const menu = $("outmenu");
+  if (!menu || menu.hidden) return;
+  menu.hidden = true;
+  $("outbtn").setAttribute("aria-expanded", "false");
+  if (refocus) $("outbtn").focus();
 }
 
 /**
@@ -760,10 +842,26 @@ window.auralfm.onShown(() => {
   const p0 = (await window.auralfm.getPrefs()) || {};
   await applyOutput(p0.audioOutput || "");
   await renderOutputs();
-  $("outdev").addEventListener("change", async (e) => {
-    await applyOutput(e.target.value);
-    window.auralfm.setPrefs({ audioOutput: outputId });
+  $("outbtn").onclick = () => {
+    if ($("outmenu").hidden) openOutMenu(); else closeOutMenu({ refocus: true });
+  };
+  document.addEventListener("pointerdown", (e) => {
+    if ($("outmenu").hidden) return;
+    if ($("outmenu").contains(e.target) || $("outbtn").contains(e.target)) return;
+    closeOutMenu();
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    const menu = $("outmenu");
+    if (menu.hidden) return;
+    if (e.key === "Escape") { e.preventDefault(); closeOutMenu({ refocus: true }); return; }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = [...menu.querySelectorAll("button")];
+    const at = items.indexOf(document.activeElement);
+    items[e.key === "ArrowDown" ? (at + 1) % items.length
+                                : (at <= 0 ? items.length - 1 : at - 1)]?.focus();
   });
+  window.addEventListener("resize", () => { if (!$("outmenu").hidden) placeOutMenu(); });
   // A speaker connecting or disconnecting changes what is on offer.
   navigator.mediaDevices.addEventListener?.("devicechange", () => renderOutputs());
 
