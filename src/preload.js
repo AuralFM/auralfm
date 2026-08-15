@@ -141,6 +141,10 @@ contextBridge.exposeInMainWorld("auralfm", {
    */
   cardCopy: (dataUrl) => ipcRenderer.invoke("card:copy", dataUrl),
   cardLink: (title) => ipcRenderer.invoke("card:link", title),
+  /** Explore asks for it; the popover is the window that can hear. */
+  cardLevels: () => ipcRenderer.invoke("card:levels"),
+  onLevelsWanted: (fn) => ipcRenderer.on("card:levelsWanted", () => fn()),
+  levelsAre: (levels) => ipcRenderer.send("card:levelsAre", levels),
   onHubMessages: (fn) => ipcRenderer.on("hub:messages", (_e, list) => fn(list)),
   dmRead: (pubkey) => ipcRenderer.invoke("dm:read", pubkey),
   onDms: (fn) => ipcRenderer.on("presence:dms", (_e, list) => fn(list)),

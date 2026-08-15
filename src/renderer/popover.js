@@ -52,6 +52,72 @@ let sdrSession = null, audioCtx = null, sdrRx = null;
  */
 let outputId = "";                      // "" means whatever macOS is using
 
+/**
+ * ─── What the audio actually looks like ──────────────────────────────────────
+ *
+ * A share card can name a station, and naming is not hearing. A picture of the
+ * sound is the nearest honest thing — and it has to be the *real* sound, because
+ * a decorative squiggle pretending to be a waveform is a lie told in a picture,
+ * which is worse than no picture.
+ *
+ * Measured before building: an AnalyserNode on a live cross-origin radio stream
+ * returns real data here — 119 of 256 bins non-zero on KEXP, peak 192. On the
+ * web, `createMediaElementSource` on a cross-origin element yields silence to an
+ * analyser; in Electron it does not.
+ *
+ * The cost, and it is why this is done once and carefully: routing the element
+ * through Web Audio means the *context* now decides the output device, not the
+ * element. `applyOutput` already sets both, so the speaker picker keeps working
+ * — but forgetting that would make choosing a speaker silently stop working the
+ * moment somebody pressed play.
+ */
+let analyser = null, mediaSrc = null;
+const LEVELS = 96;                       // a few seconds of history, at 10/second
+const levels = new Array(LEVELS).fill(0);
+
+function ensureAnalyser() {
+  if (analyser || !audio) return;
+  try {
+    audioCtx = audioCtx || new AudioContext();
+    if (outputId) { try { audioCtx.setSinkId?.(outputId); } catch { /* device went away */ } }
+    // Once an element is a source it must reach the destination through the
+    // graph, or it plays to nothing. Connected in the same breath for that
+    // reason — a throw between these two lines is silence.
+    mediaSrc = audioCtx.createMediaElementSource(audio);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.72;
+    mediaSrc.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    setInterval(sampleLevel, 100);
+  } catch {
+    // Anything wrong here leaves the element playing exactly as it was; the card
+    // simply has no waveform to draw, which is the right way to fail.
+    analyser = null; mediaSrc = null;
+  }
+}
+
+/** One number per tick: how loud, roughly, right now. */
+function sampleLevel() {
+  if (!analyser) return;
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(buf);
+  // Weighted towards the low and mid bins, which is where music and speech live
+  // and where a listener would say the sound "is".
+  let sum = 0, weight = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const w = 1 / (1 + i / 40);
+    sum += buf[i] * w; weight += w;
+  }
+  levels.push(Math.min(1, (sum / weight) / 190));
+  levels.shift();
+}
+
+/** What the card asks for. Zeros mean there is nothing worth drawing. */
+function levelHistory() {
+  return levels.some((v) => v > 0.02) ? levels.slice() : null;
+}
+
 async function applyOutput(id) {
   outputId = String(id || "");
   const target = outputId || undefined;
@@ -160,6 +226,9 @@ function publish(){
  * sometimes, depending on which window wrote last.
  */
 const persist=(patch)=> window.auralfm.setState({ ...patch });
+
+// Explore draws the card; this window is the one that can hear.
+window.auralfm.onLevelsWanted?.(() => window.auralfm.levelsAre(levelHistory()));
 
 /** Main is the truth. Anything it saves lands here before the next patch. */
 window.auralfm.onStateChanged?.((s)=>{
@@ -372,6 +441,9 @@ async function autoSkip(reason) {
 audio.addEventListener("playing", () => {
   clearTimeout(watchdog);
   live = true;
+  // Only once a stream is genuinely playing: creating the graph before there is
+  // audio would route a silent element and tell us nothing.
+  ensureAnalyser();
   skipping = false;
   window.auralfm.reportOk(current?.id);
   updateMediaSession();

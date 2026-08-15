@@ -1436,6 +1436,23 @@ ipcMain.handle("profile:known", () => nostr.knownProfiles());
  * network call happens anywhere in this path — a share button is the usual place
  * a privacy promise quietly ends, and this one does not.
  */
+/**
+ * The card is drawn in Explore; only the popover can hear. So Explore asks, main
+ * relays, the popover answers — with a deadline, because a window that is busy
+ * or gone must not leave a card waiting forever. No answer simply means a card
+ * without a waveform, which is the honest fallback.
+ */
+let levelsWaiting = null;
+ipcMain.handle("card:levels", () => new Promise((resolve) => {
+  if (!win || win.isDestroyed()) return resolve(null);
+  const done = (v) => { if (levelsWaiting) { clearTimeout(levelsWaiting.timer); levelsWaiting = null; resolve(v); } };
+  levelsWaiting = { done, timer: setTimeout(() => done(null), 700) };
+  win.webContents.send("card:levelsWanted");
+}));
+ipcMain.on("card:levelsAre", (_e, levels) => {
+  levelsWaiting?.done(Array.isArray(levels) ? levels.slice(0, 256).map(Number) : null);
+});
+
 ipcMain.handle("card:copy", (_e, dataUrl) => {
   const s = String(dataUrl || "");
   if (!/^data:image\/png;base64,/.test(s) || s.length > 12 * 1024 * 1024) return false;

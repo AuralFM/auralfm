@@ -786,6 +786,7 @@ $("nowShare").onclick = async () => {
     setTimeout(() => { btn.title = before; btn.setAttribute("aria-label", before); }, 4000);
   };
   try {
+    const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
     const png = await window.Card.make({
       title: playing.title || "",
       place: playing.place || "",
@@ -793,6 +794,12 @@ $("nowShare").onclick = async () => {
       sdr: !!playing.sdr,
       freq: tuneState?.freq ?? null,
       when: new Date(),
+      lat: playing.lat ?? null,
+      lon: playing.lon ?? null,
+      // The same subsolar point the globe's terminator uses, so the card shows
+      // the Earth as it was at the moment somebody was listening.
+      sun: subsolarPoint(),
+      levels,
     });
     const ok = await guard("cardCopy", () => window.auralfm.cardCopy(png), false);
     say(ok ? t("ctl.shareDone", "Card copied — paste it into a post")
