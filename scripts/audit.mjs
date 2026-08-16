@@ -1184,6 +1184,36 @@ console.log("\nlight theme agrees with itself");
   }
 }
 
+// ── nothing routes the radio through Web Audio ──────────────────────────────
+// `createMediaElementSource` permanently redirects an element's audio into the
+// Web Audio graph, and for cross-origin media the browser passes silence through
+// that graph. An AnalyserNode was attached on the `playing` event to draw a
+// waveform on the share card, and about one station in six went quiet while
+// still reporting that it was playing — the stream arriving, the clock
+// advancing, the station named on screen, and no sound.
+//
+// Melton found it as "a lot of stations with no sound, very random". It is not
+// random: it is whether the station's server answers a cross-origin request.
+//
+// The measurement that originally justified the analyser was true and
+// misleading — it worked on KEXP, which sends the headers. One station is not a
+// sample. Nothing may put this back without a way to sample levels that cannot
+// mute the radio.
+{
+  console.log("\nnothing routes the radio through Web Audio");
+  const guilty = [];
+  for (const f of ["src/renderer/popover.js", "src/renderer/explore.js"]) {
+    const src = fs.readFileSync(R(f), "utf8");
+    // In a comment explaining why it is absent: fine. In code: not fine.
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    if (/createMediaElementSource\s*\(/.test(code)) guilty.push(f);
+  }
+  guilty.length
+    ? fail("the radio is routed through Web Audio",
+           `${guilty.join(", ")} calls createMediaElementSource — cross-origin streams will play silence`)
+    : pass("no renderer routes the playing element through an AudioContext");
+}
+
 // ── the output button does not come and go ──────────────────────────────────
 // It hid whenever fewer than two outputs were enumerated. macOS reports
 // `default` plus the built-in speakers and nothing else once a bluetooth speaker

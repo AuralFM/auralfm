@@ -1030,7 +1030,8 @@ async function openShareSheet() {
       qr: "https://github.com/meltonbell3/auralfm",
     });
     $("sheetimg").src = sheetPng;
-    if (!levels) said.textContent = t("ctl.noWave", "No sound yet — play for a moment and open this again.");
+    // No waveform is now the normal case, not a symptom of anything, so the
+    // sheet no longer tells people to wait for sound that is already playing.
   } catch {
     said.textContent = t("ctl.shareFailed", "Could not make the card");
   }
