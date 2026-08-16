@@ -1108,8 +1108,20 @@ console.log("\nlight theme agrees with itself");
    * So: poll for what is being asserted, with a deadline long enough that only a
    * real failure reaches it. The duplicate this exists to catch is a *count*,
    * and a count is still wrong however long you wait for it.
+   *
+   * Third time: polling was right, four seconds was not. This went red three
+   * times in one day and passed on every re-run, which is precisely the pattern
+   * the paragraph above says is worse than failing. It reproduced immediately
+   * with all eight cores pinned — nothing here touches the network, so what it
+   * was measuring was how much CPU this process could get, not whether the note
+   * arrived.
+   *
+   * A deadline is a statement about the machine, not about the code. Since a
+   * generous one costs nothing on a green run — the poll returns the moment the
+   * condition holds — the only thing a short deadline buys is a faster answer on
+   * a genuine failure, which is not worth a check that cries wolf.
    */
-  const settle = async (want, deadlineMs = 4000) => {
+  const settle = async (want, deadlineMs = 20000) => {
     const until = Date.now() + deadlineMs;
     while (Date.now() < until) {
       if (want()) return true;
@@ -1147,7 +1159,10 @@ console.log("\nlight theme agrees with itself");
       await tick();
     }
     // Give any duplicate every chance to appear before declaring there is none.
-    await settle(() => seen.length !== 1, 1000);
+    // This one always waits the whole window when the code is correct, so it is
+    // the only part of this check that costs time on a green run. 2.5s buys the
+    // same immunity to load that the delivery wait gets for free.
+    await settle(() => seen.length !== 1, 2500);
     counted = { afterJoin, afterSweep: seen.length };
     nostr.leave();
   } finally {
@@ -1155,12 +1170,46 @@ console.log("\nlight theme agrees with itself");
   }
 
   if (!counted || counted.afterJoin !== 1) {
-    fail("note delivery", `one note from eight relays arrived as ${counted?.afterJoin ?? "nothing"}`);
+    // Nothing arriving and the wrong number arriving are different failures with
+    // different causes, and saying "arrived as 0" for a timeout sent me looking
+    // at the relay fake when the answer was the clock.
+    fail("note delivery", counted && counted.afterJoin === 0
+      ? "no note arrived within 20s — delivery is broken, or this machine is too busy to be measured on"
+      : `one note from eight relays arrived as ${counted?.afterJoin ?? "nothing"}`);
   } else if (counted.afterSweep !== 1) {
     fail("note duplication",
          `one note became ${counted.afterSweep} after six view changes — a seen-set is being cleared without its list`);
   } else {
     pass("one note stays one note across eight relays and six view changes");
+  }
+}
+
+// ── every mark carries the set's stroke weight ───────────────────────────────
+// The system icons are stroked 1.6 on a 24 grid. Melton's marks arrive as filled
+// outlines on boxes up to 3955 units wide, so their line thickness is baked into
+// the geometry and lands wherever the artwork put it — the aeroplane measured
+// 0.33 CSS px against the star's 1.07 and read as a hairline in a row of icons
+// that were not hairlines.
+//
+// `MARK` takes a weight for exactly this, and the failure mode is forgetting one
+// when adding the next mark. Solid shapes are exempt: `dots` is three filled
+// circles and `globe` is a filled disc, and stroking either would thicken a
+// shape that has no line to thicken.
+{
+  console.log("\nevery outline mark carries a stroke weight");
+  const src = fs.readFileSync(R("src/renderer/icons.js"), "utf8");
+  const SOLID = new Set(["dots", "globe"]);
+  const missing = [];
+  for (const m of src.matchAll(/(\w+): MARK\("([^"]+)",\s*`[\s\S]*?`(,\s*(\d+))?\)/g)) {
+    const [, name, , , weight] = m;
+    if (SOLID.has(name)) continue;
+    if (!weight) missing.push(name);
+  }
+  if (missing.length) {
+    fail("mark without a weight",
+         `${missing.join(", ")} would draw thinner than the 24-grid set around them`);
+  } else {
+    pass("every outline mark states a weight; solid marks are exempt by name");
   }
 }
 
