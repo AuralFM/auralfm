@@ -1184,6 +1184,32 @@ console.log("\nlight theme agrees with itself");
   }
 }
 
+// ── the output button does not come and go ──────────────────────────────────
+// It hid whenever fewer than two outputs were enumerated. macOS reports
+// `default` plus the built-in speakers and nothing else once a bluetooth speaker
+// disconnects, so after the `default` duplicate is filtered out the count is
+// one — and the button vanished at exactly the moment somebody had lost the
+// device they were listening on, reflowing the transport bar as it went.
+//
+// Melton reported it as the speaker disappearing. Both windows had the rule.
+{
+  console.log("\nthe output button does not come and go");
+  const bad = [];
+  for (const f of ["src/renderer/explore.js", "src/renderer/popover.js"]) {
+    const src = fs.readFileSync(R(f), "utf8");
+    const m = src.match(/wrap\.hidden\s*=\s*([^;]+);/);
+    if (!m) { bad.push(`${f}: nothing sets wrap.hidden`); continue; }
+    // Any threshold above "there is nothing at all" is a control that flickers
+    // as devices come and go.
+    if (!/outDevices\.length\s*===\s*0/.test(m[1])) {
+      bad.push(`${f}: hides on \`${m[1].trim()}\``);
+    }
+  }
+  bad.length
+    ? fail("output button hides on a device count", bad.join("; "))
+    : pass("both windows hide the output button only when there are no outputs at all");
+}
+
 // ── every mark carries the set's stroke weight ───────────────────────────────
 // The system icons are stroked 1.6 on a 24 grid. Melton's marks arrive as filled
 // outlines on boxes up to 3955 units wide, so their line thickness is baked into

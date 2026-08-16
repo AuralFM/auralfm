@@ -812,9 +812,21 @@ async function renderOutputs() {
   const wrap = $("outwrap");
   if (!wrap) return;
   outDevices = await readOutputs();
-  // One device is not a choice, and a control that cannot change anything is
-  // clutter with a tooltip.
-  wrap.hidden = outDevices.length < 2;
+  /**
+   * The button stays put.
+   *
+   * It used to hide whenever fewer than two outputs were listed — inherited from
+   * when this was a dropdown, where one option really is furniture. But macOS
+   * reports `default` plus the built-in speakers and nothing else the moment a
+   * bluetooth speaker disconnects, so that rule made the control vanish exactly
+   * when somebody had just lost the device they were listening on, and reflowed
+   * the transport bar while doing it.
+   *
+   * A control that comes and goes is worse than one with few options: you cannot
+   * learn where it lives, and you go looking for it at the one moment you need
+   * it. It hides only when there is genuinely nothing to show.
+   */
+  wrap.hidden = outDevices.length === 0;
   if (wrap.hidden) { closeOutMenu(); return; }
   const chosen = prefs?.audioOutput || "";
   paintOutputIcon(outDevices, chosen, !chosen || outDevices.some((d) => d.deviceId === chosen));

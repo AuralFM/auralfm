@@ -164,9 +164,10 @@ async function renderOutputs() {
   const wrap = $("outwrap");
   if (!wrap) return;
   outDevices = await readOutputs();
-  // A machine with one output has no choice to offer, and a control with one
-  // option is furniture.
-  wrap.hidden = outDevices.length < 2;
+  // Stays put; see the note in Explore. Hiding below two outputs made the button
+  // disappear the moment a bluetooth speaker disconnected — which is precisely
+  // when somebody goes looking for it.
+  wrap.hidden = outDevices.length === 0;
   if (wrap.hidden) { closeOutMenu(); return; }
   // A remembered device that has since been unplugged falls back to the system
   // output rather than leaving the control pointing at nothing.
