@@ -42,6 +42,51 @@
   const t_scan = "Scan to Listen";
 
   /** The app's own colours, so a card looks like the thing it came from. */
+  /**
+   * The card wears the palette the person is actually using.
+   *
+   * Read from the live CSS custom properties rather than restated here, so the
+   * card cannot drift from the app: change a palette in the stylesheet and the
+   * card follows on the next render, with nothing to keep in step by hand.
+   *
+   * The ground stays dark in every palette, and that is deliberate rather than
+   * lazy. The subject of this card is a photograph of the Earth at night with a
+   * starfield behind it — a light ground would put a black circle of space on a
+   * bone rectangle, which is not the light version of this card, it is a hole in
+   * it. The palette shows up where it can be honest: the type, and the marker on
+   * the station, which is the palette's own accent.
+   */
+  /**
+   * "#35C46A" or "rgb(53 196 106)" in, "53,196,106" out.
+   *
+   * The marker draws itself at several alphas, so it needs the channels rather
+   * than a colour string. Anything unparseable falls back to the app's green
+   * rather than throwing — a card with a slightly wrong dot beats no card.
+   */
+  function rgbTriplet(value) {
+    const v = String(value || "").trim();
+    let m = v.match(/^#([0-9a-f]{6})$/i);
+    if (m) {
+      const n = parseInt(m[1], 16);
+      return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+    }
+    m = v.match(/^#([0-9a-f]{3})$/i);
+    if (m) {
+      const [r, g, b] = m[1].split("").map((c) => parseInt(c + c, 16));
+      return `${r},${g},${b}`;
+    }
+    m = v.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+    if (m) return `${m[1]},${m[2]},${m[3]}`;
+    return "53,196,106";
+  }
+
+  const readVar = (name, fallback) => {
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    } catch { return fallback; }
+  };
+
   const INK = "#0C0B0B";          // onyx, the same stop the icon and splash use
   const BONE = "#E9E2D4";
   const DIM = "rgba(233,226,212,.55)";
@@ -285,7 +330,14 @@
        * this, and the rings read as the wave that just left. The live globe is
        * where an actual pulse belongs.
        */
-      const GREEN = "53,196,106";             // --up, the app's own green
+      /**
+       * The station, in the palette's accent.
+       *
+       * It was fixed green — right in Onyx and On Air, wrong in the other seven.
+       * `--accent` is the one token every palette redefines, so this is the
+       * single most visible way a card can belong to the person who made it.
+       */
+      const GREEN = rgbTriplet(readVar("--accent", "#35C46A"));
       const glow = ctx.createRadialGradient(CX, CY, 4, CX, CY, 46);
       glow.addColorStop(0, `rgba(${GREEN},.55)`);
       glow.addColorStop(1, `rgba(${GREEN},0)`);

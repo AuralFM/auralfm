@@ -836,37 +836,36 @@ async function renderOutputs() {
  * speaker, which is not wrong, only less specific. Guessing wireless from a name
  * that merely looks like a person's would be worse than saying nothing.
  */
-const BT = /\b(bluetooth|airpods|beats|wireless|bt)\b/i;
-
 let outputWasGone = false;
 
+/**
+ * One glyph: a speaker.
+ *
+ * It briefly showed a bluetooth mark for wireless devices and a red warning mark
+ * when the chosen one had gone. Both were wrong here. The warning fired on
+ * launch, before the device list had finished enumerating, so the very first
+ * thing the app said was that something had failed when nothing had — an alarm
+ * that cries on startup is an alarm nobody reads. And detecting "wireless" from
+ * a device *label* was always a guess dressed as a fact.
+ *
+ * The disappearance is still worth saying, so it is still said — in the log,
+ * once, in words. It is just not a third icon on a button that has one job.
+ */
 function paintOutputIcon(devs, chosen, present) {
   const btn = $("outbtn");
   if (!btn) return;
+  Icons.set(btn, "speakers");
   const dev = chosen ? devs.find((d) => d.deviceId === chosen) : null;
-  const gone = !!chosen && !present;
-
-  btn.classList.toggle("gone", gone);
-  if (gone) {
-    Icons.set(btn, "bluetoothWarn");
-    btn.title = t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac");
-  } else if (BT.test(dev?.label || "")) {
-    Icons.set(btn, "bluetooth");
-    btn.title = dev.label;
-  } else {
-    Icons.set(btn, "speakers");
-    btn.title = t("ctl.output", "Where the sound comes out");
-  }
+  btn.title = dev?.label || t("ctl.output", "Where the sound comes out");
 
   /**
-   * Say it, once, when it happens.
+   * Only once the device list is real.
    *
-   * The mark is a picture on a button, so on its own this would be a change only
-   * sighted people notice — and it is not decoration: the sound moved to a
-   * different room than the one you chose. Announced on the transition rather
-   * than on every repaint, because `devicechange` fires freely and a line per
-   * event would be a machine shouting about its own hardware.
+   * `present` is false both when the speaker has genuinely gone and when nothing
+   * has been enumerated yet, and those are not the same thing. Requiring a
+   * non-empty list is what stops a cold start from reporting a failure.
    */
+  const gone = !!chosen && !present && devs.length > 0;
   if (gone !== outputWasGone) {
     outputWasGone = gone;
     if (gone) systemLine(t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac"));
@@ -1152,7 +1151,7 @@ async function showFavorites() {
  * It stops itself if the lock is on, because the lock means "stay here" and two
  * features arguing about which station is playing is worse than either.
  */
-const TRIP_EVERY_MS = 15 * 60 * 1000;
+const TRIP_EVERY_MS = 5 * 60 * 1000;
 let tripTimer = null;
 
 async function tripHop({ announce = true } = {}) {
@@ -1192,7 +1191,7 @@ async function startTrip() {
   const b = $("tripBtn");
   b.setAttribute("aria-pressed", "true");
   b.title = t("ctl.tripStop", "Stop travelling");
-  systemLine(t("ctl.tripStarted", "Travelling — a new station every 15 minutes"));
+  systemLine(t("ctl.tripStarted", "Travelling — a new station every 5 minutes"));
   await tripHop();
   if (tripTimer) clearInterval(tripTimer);
   tripTimer = setInterval(async () => {
@@ -5594,7 +5593,7 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("newsBtn"), "headlines");
   Icons.set($("layersBtn"), "layers");
   Icons.set($("favBtn"), "star");
-  Icons.set($("tripBtn"), "earthTrips");
+  Icons.set($("tripBtn"), "plane");
   Icons.set($("setBtn"), "settings");
   Icons.set($("newsSrc"), "source");
   Icons.set($("play"), "play");

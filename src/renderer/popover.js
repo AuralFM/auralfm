@@ -147,25 +147,17 @@ async function readOutputs() {
   } catch { return []; }
 }
 
-/** Bluetooth is only ever readable from the label; see the note in Explore. */
-const BT = /\b(bluetooth|airpods|beats|wireless|bt)\b/i;
-
+/**
+ * One glyph: a speaker. See the note in Explore — the bluetooth and warning
+ * marks fired on a cold start, before the device list existed, so the first
+ * thing the app said was that something had failed when nothing had.
+ */
 function paintOutputIcon() {
   const btn = $("outbtn");
   if (!btn) return;
+  Icons.set(btn, "speakers");
   const dev = outputId ? outDevices.find((d) => d.deviceId === outputId) : null;
-  const gone = !!outputId && !dev;
-  btn.classList.toggle("gone", gone);
-  if (gone) {
-    Icons.set(btn, "bluetoothWarn");
-    btn.title = t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac");
-  } else if (BT.test(dev?.label || "")) {
-    Icons.set(btn, "bluetooth");
-    btn.title = dev.label;
-  } else {
-    Icons.set(btn, "speakers");
-    btn.title = t("ctl.output", "Where the sound comes out");
-  }
+  btn.title = dev?.label || t("ctl.output", "Where the sound comes out");
 }
 
 async function renderOutputs() {
