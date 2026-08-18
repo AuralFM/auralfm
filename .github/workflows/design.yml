@@ -48,15 +48,19 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
-      # TEMPORARY, and under test: the action declares `using: node20`, and the
-      # runner now defaults to Node 24 and says so in the log. The first two runs
-      # failed with "api-key is required" while the log showed `api-key: ***`,
-      # which means a value was passed and masked and the action still could not
-      # read it. This forces the runtime the action was built for, to find out
-      # whether the mismatch is the cause.
-      - uses: rams-design/rams-action@v1
+      # TEMPORARY diagnostic. Three runs have failed with "api-key is required"
+      # while the log shows `api-key: ***` — masked, therefore non-empty. Length
+      # and shape only; neither reveals the key, and both settle whether the
+      # secret reaches the runner at all.
+      - name: Is the secret actually here
         env:
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+          K: ${{ secrets.RAMS_API_KEY }}
+        run: |
+          echo "length: ${#K}"
+          echo "starts with rams_: $(case "$K" in rams_*) echo yes;; *) echo no;; esac)"
+          echo "has whitespace: $(case "$K" in *[[:space:]]*) echo yes;; *) echo no;; esac)"
+
+      - uses: rams-design/rams-action@v1
         with:
           api-key: ${{ secrets.RAMS_API_KEY }}
           fail-on: critical
