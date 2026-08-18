@@ -60,7 +60,7 @@ jobs:
           echo "starts with rams_: $(case "$K" in rams_*) echo yes;; *) echo no;; esac)"
           echo "has whitespace: $(case "$K" in *[[:space:]]*) echo yes;; *) echo no;; esac)"
 
-      - uses: rams-design/rams-action@v1
+      - uses: rams-design/rams-action@master
         with:
           api-key: ${{ secrets.RAMS_API_KEY }}
           fail-on: critical
