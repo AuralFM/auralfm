@@ -1339,6 +1339,7 @@
        does: it puts you down in a place you did not choose. -->
   <button id="tripBtn" title="Take me somewhere" data-i18n-title="ctl.somewhere"></button>
   <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
+         data-i18n-title="app.searchPlaceholder" title="Search a city, country, or station"
          autocomplete="off" spellcheck="false">
   <!-- Last, and on its own: settings are not a way to browse the world, they are
        the box the world is in. -->
@@ -1459,7 +1460,7 @@
 </div>
 
 <div class="now" id="now" hidden>
-  <button id="play"></button>
+  <button id="play" data-i18n-title="ctl.play" title="Play"></button>
   <!-- Order is the layout. The two controls that act on this station sit
        together, then the on-air lamp sits against the name it describes. The
        lamp used to fall between the lock and the star, which read as three
@@ -1484,8 +1485,9 @@
     own, so this writes the preference and the menu bar panel moves the sound.
   -->
   <span class="volwrap">
-    <button id="mute"></button>
-    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8">
+    <button id="mute" data-i18n-title="ctl.mute" title="Mute"></button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"
+           data-i18n-title="ctl.volume" title="Volume">
   </span>
   <!--
     After the volume, before the prices. Where the sound goes and how loud it is

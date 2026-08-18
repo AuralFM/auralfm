@@ -469,13 +469,44 @@ function togglePlay() {
   if (current) audio.paused ? tune(current) : stop();
 }
 
+/**
+ * Glyph and name together, always.
+ *
+ * A design review flagged this button as announcing only "button" — no text, no
+ * label, nothing. Verified in the running app: true here, and true of Explore's
+ * play and mute buttons too. It is the control the whole panel exists for.
+ *
+ * The name is set in the same call as the icon so the two cannot drift: a button
+ * showing a pause glyph while announcing "Play" is worse than one that says
+ * nothing, because it is confidently wrong.
+ */
+function setToggle(state) {
+  Icons.set(toggle, state);
+  /**
+   * The English word, not `t()`.
+   *
+   * `t` is a const declared far below this, and this function is called once at
+   * module scope to draw the initial glyph — reaching for `t` there is a
+   * temporal-dead-zone ReferenceError that kills the entire panel script before
+   * anything renders. I shipped exactly that for one build and caught it by
+   * checking the button in the running app rather than re-reading the diff.
+   *
+   * The translated name arrives a moment later anyway: the markup carries
+   * `data-i18n-title`, and the i18n pass turns it into an `aria-label`. This
+   * keeps the name correct in the gap, and correct in English thereafter.
+   */
+  const label = state === "pause" ? "Pause" : "Play";
+  toggle.setAttribute("aria-label", label);
+  toggle.title = label;
+}
+
 function stop(){
   clearTimeout(watchdog); gen++; live = false;
   clearMediaSession();
   window.auralfm.mediaKeys(false);
   sdrStop();
   audio.pause(); audio.removeAttribute("src"); audio.load();
-  Icons.set(toggle, "play");
+  setToggle("play");
   document.body.classList.remove("playing");
   setStatus("Stopped");
 }
@@ -483,7 +514,7 @@ function stop(){
 function fail(msg){
   clearTimeout(watchdog); live = false;
   document.body.classList.remove("playing");
-  Icons.set(toggle, "play");
+  setToggle("play");
   setStatus(msg, "err");
   autoSkip(msg);
 }
@@ -536,7 +567,7 @@ audio.addEventListener("playing", () => {
   window.auralfm.reportOk(current?.id);
   updateMediaSession();
   window.auralfm.mediaKeys(true);
-  Icons.set(toggle, "pause");
+  setToggle("pause");
   document.body.classList.add("playing");
   setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
 });
@@ -571,7 +602,7 @@ vol.oninput = () => applyVolume(+vol.value);
    Icons.set(toggle, ...) only ran from tune, stop and fail, so before anything
    had ever played the button was an empty circle of accent colour with no glyph
    in it at all -- which is what Melton saw on a fresh launch. */
-Icons.set(toggle, "play");
+setToggle("play");
 let preMute = 0.8;
 $("mute").onclick = () => {
   if (audio.volume > 0) { preMute = audio.volume; applyVolume(0); }
@@ -680,7 +711,7 @@ window.auralfm.onTuneSdr((rx) => {
         if (!live) {
           live = true;
           document.body.classList.add("playing");
-          Icons.set(toggle, "pause");
+          setToggle("pause");
           window.auralfm.mediaKeys(true);
         }
         // Kept so the globe window's on-air dot can breathe with the signal —
@@ -780,6 +811,20 @@ function applyPrefs(p) {
 let T = {};
 const t = (key, fallback) => T[key] || fallback;
 
+/**
+ * Re-name the toggle in the current language, for whichever state it is in.
+ *
+ * `data-i18n-title` names it once at load, which is right until the button
+ * changes state — after that the markup's key is stale and only the state knows
+ * the answer.
+ */
+function retranslateToggle() {
+  const playing = document.body.classList.contains("playing");
+  const label = playing ? t("ctl.pause", "Pause") : t("ctl.play", "Play");
+  toggle.setAttribute("aria-label", label);
+  toggle.title = label;
+}
+
 async function applyStrings() {
   T = (await window.auralfm.strings()) || {};
   for (const el of document.querySelectorAll("[data-i18n]")) {
@@ -790,6 +835,9 @@ async function applyStrings() {
     const v = T[el.dataset.i18nTitle];
     if (v) { el.title = v; el.setAttribute("aria-label", v); }
   }
+  // The toggle's markup key names it for the state it starts in; once it has
+  // changed state only the state knows which word is right.
+  retranslateToggle();
   // After translation, not before. adopt() moves `title` onto `data-tip` and
   // removes it, and running it first captured the untranslated literal that the
   // markup ships as a fallback — the Layers button showed "Layers" instead of

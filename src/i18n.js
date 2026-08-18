@@ -41,6 +41,9 @@ const en = {
   // controls
   "ctl.playPause": "Play or pause what is tuned in",
   "ctl.mute": "Mute",
+  "ctl.play": "Play",
+  "ctl.pause": "Pause",
+  "ctl.unmute": "Unmute",
   "ctl.volume": "Volume",
   "ctl.favorite": "Save to Favorites",
   "ctl.close": "Close",
@@ -326,6 +329,9 @@ const es = {
 
   "ctl.playPause": "Reproducir / pausar",
   "ctl.mute": "Silenciar",
+  "ctl.play": "Reproducir",
+  "ctl.pause": "Pausa",
+  "ctl.unmute": "Activar el sonido",
   "ctl.volume": "Volumen",
   "ctl.favorite": "Favorito",
   "ctl.close": "Cerrar",
@@ -573,6 +579,9 @@ const fr = {
 
   "ctl.playPause": "Lecture / pause",
   "ctl.mute": "Couper le son",
+  "ctl.play": "Lecture",
+  "ctl.pause": "Pause",
+  "ctl.unmute": "Rétablir le son",
   "ctl.volume": "Volume",
   "ctl.favorite": "Favori",
   "ctl.close": "Fermer",
@@ -820,6 +829,9 @@ const de = {
 
   "ctl.playPause": "Wiedergabe / Pause",
   "ctl.mute": "Stumm",
+  "ctl.play": "Wiedergabe",
+  "ctl.pause": "Pause",
+  "ctl.unmute": "Ton an",
   "ctl.volume": "Lautstärke",
   "ctl.favorite": "Favorit",
   "ctl.close": "Schließen",
@@ -1067,6 +1079,9 @@ const pt = {
 
   "ctl.playPause": "Tocar / pausar",
   "ctl.mute": "Silenciar",
+  "ctl.play": "Reproduzir",
+  "ctl.pause": "Pausa",
+  "ctl.unmute": "Ativar o som",
   "ctl.volume": "Volume",
   "ctl.favorite": "Favorito",
   "ctl.close": "Fechar",

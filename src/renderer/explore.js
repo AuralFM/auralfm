@@ -718,7 +718,9 @@ window.auralfm.onPlayerState((s) => {
     // Pending is over the moment there is an answer, either way.
     if (s.playing || s.error) clearPending(); else markPending(s.channel.id);
     $("dot").style.display = s.playing ? "" : "none";
-    Icons.set($("play"), s.playing ? "pause" : "play");
+    // Glyph and name in one call: a pause glyph announcing "Play" is worse than
+    // no name at all, because it is confidently wrong.
+    setPlayName(s.playing);
     if (typeof s.volume === "number") paintVolume(s.volume);
     // Headlines from wherever the station is broadcasting from.
     loadNews(s.playing ? s.channel.country : null);
@@ -882,6 +884,21 @@ function paintOutputIcon(devs, chosen, present) {
     outputWasGone = gone;
     if (gone) systemLine(t("ctl.outputGone", "The speaker you chose is not here — playing out of this Mac"));
   }
+}
+
+/**
+ * The play button's glyph and its name, together.
+ *
+ * Flagged by a design review as announcing only "button", and confirmed in the
+ * running app — this and the menu-bar panel's toggle and the mute button were
+ * all nameless. Set in one place so the picture and the announcement cannot
+ * disagree.
+ */
+function setPlayName(playing) {
+  Icons.set($("play"), playing ? "pause" : "play");
+  const label = playing ? t("ctl.pause", "Pause") : t("ctl.play", "Play");
+  $("play").setAttribute("aria-label", label);
+  $("play").title = label;
 }
 
 function paintOutMenu() {
@@ -1081,6 +1098,11 @@ let preMute = 0.8;
 function paintVolume(v) {
   $("vol").value = v;
   Icons.set($("mute"), v === 0 ? "volumeOff" : v < 0.5 ? "volumeLow" : "volumeHigh");
+  // Muted or not is the whole meaning of this control, and it was carried by the
+  // glyph alone — which the design system already forbids in words.
+  const mlabel = v === 0 ? t("ctl.unmute", "Unmute") : t("ctl.mute", "Mute");
+  $("mute").setAttribute("aria-label", mlabel);
+  $("mute").title = mlabel;
 }
 $("vol").oninput = () => {
   const v = +$("vol").value;
@@ -5609,7 +5631,7 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("tripBtn"), "plane");
   Icons.set($("setBtn"), "settings");
   Icons.set($("newsSrc"), "source");
-  Icons.set($("play"), "play");
+  setPlayName(false);
   Icons.set($("lock"), "unlock");
   Icons.set($("mute"), "volumeHigh");
   Icons.set($("nowStar"), "star");
