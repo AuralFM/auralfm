@@ -1269,6 +1269,101 @@ console.log("\nlight theme agrees with itself");
   }
 }
 
+// ── nothing calls a function that does not exist ────────────────────────────
+// `sdrEnded` was called twice in popover.js and defined nowhere, so any KiwiSDR
+// session that errored or disconnected threw a ReferenceError instead of ending
+// cleanly. It was in the shipped app's own error log three times before anyone
+// noticed, because the throw happens inside a callback where nothing is watching.
+//
+// This replaces a narrower check that only read onclick handlers in Explore —
+// which would never have found this one. Every script a window loads, every call
+// to a bare identifier.
+//
+// Getting it quiet took more work than getting it loud, and that was the point:
+// a check that is permanently red is a check people learn to skip. Method
+// definitions (`connect(a, b) {`) are definitions, not calls. `new X(` is a
+// constructor. Vendored bundles are named rather than parsed — an attempt to
+// regex globe.gl.min.js did not terminate.
+{
+  console.log("\nnothing calls a function that does not exist");
+const AMBIENT = new Set(["window","document","console","Math","JSON","Date","Number","String",
+  "Array","Object","Set","Map","WeakMap","Promise","Boolean","RegExp","Error","URL","Blob",
+  "Image","Audio","AudioContext","Intl","isNaN","parseInt","parseFloat","structuredClone",
+  "setTimeout","clearTimeout","setInterval","clearInterval","requestAnimationFrame",
+  "cancelAnimationFrame","navigator","location","fetch","alert","confirm","prompt","atob","btoa",
+  "encodeURIComponent","decodeURIComponent","getComputedStyle","matchMedia","queueMicrotask",
+  "Uint8Array","Int8Array","Float32Array","Uint8ClampedArray","ArrayBuffer","DataView","BigInt",
+  "Symbol","Proxy","Reflect","TextEncoder","TextDecoder","WebSocket","Event","CustomEvent",
+  "MediaMetadata","ResizeObserver","IntersectionObserver","MutationObserver","Notification",
+  "performance","crypto","localStorage","sessionStorage","name","length","eval","top","self",
+  "async","Int16Array","Int32Array","Float64Array","Uint16Array","Uint32Array","define","require",
+  "addEventListener","removeEventListener","dispatchEvent","postMessage","open","close","print"]);
+const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof","await","new",
+  "function","else","do","throw","case","in","of","delete","void","instanceof","yield","super","this"]);
+
+  // Blank comments and strings, keeping every newline so line numbers survive.
+  const keepLines = (m) => m.replace(/[^\n]/g, " ");
+  const strip = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, keepLines)
+    .replace(/^\s*\/\/.*$/gm, " ")
+    .replace(/`(?:\\.|[^`\\])*`/g, keepLines)
+    .replace(/'(?:\\.|[^'\\\n])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\\n])*"/g, '""');
+
+  const scan = (htmlFile) => {
+    const html = fs.readFileSync(R(htmlFile), "utf8");
+    const dir = path.dirname(R(htmlFile));
+    const scripts = [...html.matchAll(/<script src="([\w./-]+)"/g)].map((m) => m[1]);
+    // Named rather than parsed: `Globe` is injected at runtime by explore.js,
+    // `qrcode` by a script tag, and both are minified UMD.
+    const defined = new Set([...AMBIENT, "Globe", "qrcode"]);
+    const sources = [];
+    for (const rel of scripts) {
+      const f = path.join(dir, rel);
+      if (!fs.existsSync(f) || rel.includes("vendor/")) continue;
+      const raw = fs.readFileSync(f, "utf8");
+      const code = strip(raw);
+      sources.push({ rel, code, raw });
+      for (const m of code.matchAll(/(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/g)) defined.add(m[1]);
+      for (const m of code.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) defined.add(m[1]);
+      for (const m of code.matchAll(/class\s+([A-Za-z_$][\w$]*)/g)) defined.add(m[1]);
+      for (const m of code.matchAll(/window\.([A-Za-z_$][\w$]*)\s*=/g)) defined.add(m[1]);
+      for (const m of code.matchAll(/(?:const|let|var)\s*[\{\[]([^\}\]]*)[\}\]]/g))
+        for (const q of m[1].split(",")) { const n = q.split(":").pop().split("=")[0].trim(); if (/^[A-Za-z_$][\w$]*$/.test(n)) defined.add(n); }
+      for (const m of code.matchAll(/(?:function\s*\*?\s*[\w$]*\s*|\)\s*=>|catch\s*)\(([^)]*)\)/g))
+        for (const q of m[1].split(",")) { const n = q.split(":").pop().split("=")[0].replace(/[.]{3}/, "").trim(); if (/^[A-Za-z_$][\w$]*$/.test(n)) defined.add(n); }
+      for (const m of code.matchAll(/\(?\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>/g)) defined.add(m[1]);
+      for (const m of code.matchAll(/(?:^|[\s,{])(?:async\s+|get\s+|set\s+|\*\s*)?([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/gm)) defined.add(m[1]);
+    }
+    // Detect in the stripped source, report from the original: blanking loses
+    // lines, and a location that is confidently wrong costs more than none.
+    const realLine = (raw, name) => {
+      const at = raw.split("\n").findIndex((l) => new RegExp(`(?:^|[^\\w.$])${name}\\s*\\(`).test(l));
+      return at < 0 ? "?" : at + 1;
+    };
+    const missing = new Map();
+    for (const { rel, code, raw } of sources) {
+      code.split("\n").forEach((line) => {
+        for (const m of line.matchAll(/(?:^|[^\w.$?])([A-Za-z_$][\w$]*)\s*\(/g)) {
+          const n = m[1];
+          if (defined.has(n) || KEYWORDS.has(n)) continue;
+          if (/\bnew\s+$/.test(line.slice(0, m.index + m[0].length - n.length - 1))) continue;
+          if (!missing.has(n)) missing.set(n, `${rel}:${realLine(raw, n)}`);
+        }
+      });
+    }
+    return missing;
+  };
+
+  const broken = [];
+  for (const html of ["src/renderer/popover.html", "src/renderer/explore.html"])
+    for (const [name, where] of scan(html)) broken.push(`${name}() at ${where}`);
+
+  broken.length
+    ? fail("a call with nothing behind it", [...new Set(broken)].join("; "))
+    : pass("every call in both renderers resolves to something defined");
+}
+
 // ── every button in a toolbar calls something that exists ────────────────────
 // The travel globe shipped calling `playChannel(pick)`. There is no such
 // function in explore.js — it threw on click and the button did nothing at all,

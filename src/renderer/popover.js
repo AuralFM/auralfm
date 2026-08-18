@@ -500,6 +500,31 @@ function setToggle(state) {
   toggle.title = label;
 }
 
+/**
+ * A shortwave session that ended without being asked to.
+ *
+ * Called from the receiver's own state callback when the far end errors or drops
+ * — and it did not exist. Two call sites, no definition, so instead of ending
+ * cleanly the session threw a ReferenceError inside a callback where nothing was
+ * watching. It reached the shipped app's error log three times.
+ *
+ * The same teardown `stop` does, minus the audio element: a receiver session
+ * plays through kiwi.js and never touches it. The message is the receiver's own
+ * words, and `autoSkip` is deliberately not called — that walks to the next
+ * station in a *place*, and a shortwave receiver going down is no reason to
+ * start playing an FM stream.
+ */
+function sdrEnded(message, cls = "") {
+  clearTimeout(watchdog);
+  live = false;
+  clearMediaSession();
+  window.auralfm.mediaKeys(false);
+  sdrStop();
+  setToggle("play");
+  document.body.classList.remove("playing");
+  setStatus(message, cls);
+}
+
 function stop(){
   clearTimeout(watchdog); gen++; live = false;
   clearMediaSession();
