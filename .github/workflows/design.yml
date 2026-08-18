@@ -5,20 +5,30 @@
 # second opinion on the interface, it costs a metered review per run, and it
 # blocks only on `critical`.
 #
-# **Why not on push.** The plan is 30 reviews per rolling 30 days, shared with
-# the GitHub App. Eight commits touched src/renderer on a single day recently, so
-# running this per push would spend the month in under a week and then fail
-# closed on the day it was actually needed. Pull requests and a manual trigger
-# fit the budget; `npm run audit` remains the thing that guards every push.
+# **It runs on pushes to main, and that has a budget.** The plan is 30 reviews per
+# rolling 30 days, shared with the GitHub App. Work here goes straight to main
+# rather than through pull requests, so a PR-only trigger would have meant this
+# never ran at all — a check that cannot fire is worse than no check, because it
+# looks like coverage.
 #
-# The everyday path is not this file. It is a local `quick_review` while editing,
-# which costs a fifth of a review — see CLAUDE.md. This is the once-per-change
-# check that produces a score.
+# The arithmetic is real though: eight commits touched src/renderer on a single
+# day recently, and at that rate the month is gone inside a week. Two things keep
+# it honest. The paths filter below means only interface changes spend anything.
+# And the everyday pass is not this file at all — it is a local `quick_review`
+# while editing, at a fifth of a review, per CLAUDE.md.
+#
+# If the quota starts running out before the month does, the knob is here: drop
+# `push` and keep `pull_request`, and it becomes a merge gate instead.
 name: design
 
 on:
-  pull_request:
+  push:
+    branches: [main]
     # A review of unchanged interface is a spent credit and a wasted minute.
+    paths:
+      - "src/renderer/**"
+      - ".github/workflows/design.yml"
+  pull_request:
     paths:
       - "src/renderer/**"
       - ".github/workflows/design.yml"
