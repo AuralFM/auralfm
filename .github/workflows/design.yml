@@ -1,0 +1,44 @@
+# Design review, on changes to the interface.
+#
+# Separate from audit.yml on purpose. That one is the gate: it runs on every
+# push, it is free, and a red build there means something is broken. This is a
+# second opinion on the interface, it costs a metered review per run, and it
+# blocks only on `critical`.
+#
+# **Why not on push.** The plan is 30 reviews per rolling 30 days, shared with
+# the GitHub App. Eight commits touched src/renderer on a single day recently, so
+# running this per push would spend the month in under a week and then fail
+# closed on the day it was actually needed. Pull requests and a manual trigger
+# fit the budget; `npm run audit` remains the thing that guards every push.
+#
+# The everyday path is not this file. It is a local `quick_review` while editing,
+# which costs a fifth of a review — see CLAUDE.md. This is the once-per-change
+# check that produces a score.
+name: design
+
+on:
+  pull_request:
+    # A review of unchanged interface is a spent credit and a wasted minute.
+    paths:
+      - "src/renderer/**"
+      - ".github/workflows/design.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 because the action reviews what changed against the base,
+      # and a shallow clone has no base to diff against.
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: rams-design/rams-action@v1
+        with:
+          api-key: ${{ secrets.RAMS_API_KEY }}
+          fail-on: critical
