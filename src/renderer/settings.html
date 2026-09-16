@@ -40,7 +40,7 @@
     /* The error colour, and what is legible on it. Both are needed because
        the answer flips: silk white clears 4.5:1 on the light-theme red and
        fails on the dark-theme one, and near-black does the exact opposite. */
-    --err:#E0574A; --on-err:#12100F;
+    --err:#E0574A; --on-err:#12100F; --knob:#FAF7F2;
     --edge-hi:rgba(247,244,238,.13); --edge-lo:rgba(0,0,0,.55);
     /* Motion tokens, same set as explore.html. */
     --ease-out:cubic-bezier(.23,1,.32,1);
@@ -77,7 +77,7 @@
     --line:rgba(233,226,212,.11);
     --bg:#0C0B0B; --card:rgba(233,226,212,.045);
     --accent:#E9E2D4; --on-accent:#12100F;
-    --err:#E0574A; --on-err:#12100F;
+    --err:#E0574A; --on-err:#12100F; --knob:#FAF7F2;
   }
   /* Increased contrast follows the system setting until it is forced on here. */
   @media (prefers-contrast: more){
@@ -306,7 +306,7 @@
   }
   .sw::after{
     content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
-    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);
+    background:var(--knob);box-shadow:0 1px 2px rgba(0,0,0,.3);
     transition:transform var(--dur-panel) var(--ease-drawer);
   }
   .sw[aria-checked="true"]{background:var(--accent)}
