@@ -161,7 +161,7 @@ async function loadPlaces(query = "") {
   stationListEl.hidden = true;
   placeListEl.innerHTML = "";
   if (!places.length) {
-    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">${t("empty.noPlace", "No place matches that.")}</div>`;
+    placeListEl.innerHTML = `<div class="empty">${t("empty.noPlace", "No place matches that.")}</div>`;
     return;
   }
   // The same row the search results use, rather than a second hand-built copy.

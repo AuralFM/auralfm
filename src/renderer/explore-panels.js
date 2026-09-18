@@ -33,7 +33,7 @@ async function showFavorites() {
   placeListEl.innerHTML = "";
   if (!favorites.length) {
     placeListEl.innerHTML =
-      `<div class="empty" style="padding:30px 16px">${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap the star beside a station to save it.")}</div>`;
+      `<div class="empty">${t("empty.favorites", "No favorites yet.")}<br>${t("empty.favoritesHint", "Tap the star beside a station to save it.")}</div>`;
     return;
   }
   for (const f of favorites) placeListEl.appendChild(stationResultRow(f));
@@ -314,7 +314,7 @@ async function renderNewsPanel() {
   }
 
   if (!items?.length) {
-    list.innerHTML = `<div class="empty" style="padding:22px 12px">`
+    list.innerHTML = `<div class="empty">`
       + (country ? "No headlines for here." : "Headlines unavailable right now.")
       + `</div>`;
     return;

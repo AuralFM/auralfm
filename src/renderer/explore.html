@@ -868,6 +868,18 @@
   @keyframes eq{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
 
   .empty{padding:56px 28px;text-align:center;color:var(--label3);font-size:13px;line-height:1.7}
+  /* Empty states take their padding from where they sit, not from inline styles
+     scattered across four scripts with four slightly different numbers. The
+     station list keeps the roomy default; the narrower lists get less. */
+  #placelist .empty{padding:32px 16px}
+  .newslist .empty{padding:22px 12px}
+  /* Shortwave's explanatory lines borrow .empty's colour and type but read as
+     left-aligned prose inside the list, not as a centred empty state. */
+  .empty.swline{padding:2px 15px 8px;text-align:left}
+  .empty.swline.strong{padding:12px 15px 2px;font-weight:590;color:var(--label)}
+  .empty.swnote{padding:6px 15px 10px;text-align:left}
+  .empty.swhead{padding:14px 15px 4px;text-align:left;font-weight:590;color:var(--label2)}
+  .empty.swmore{padding:8px 15px;text-align:left}
 
   /* Now-playing strip, mirroring the popover's transport bar. */
   button svg{display:block}

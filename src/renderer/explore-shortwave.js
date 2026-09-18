@@ -184,9 +184,7 @@ function paintFrequency(nearby) {
 
   const line = (text, strong = false) => {
     const d = document.createElement("div");
-    d.className = "empty";
-    d.style.cssText = `padding:${strong ? "12px 15px 2px" : "2px 15px 8px"};text-align:left`
-      + (strong ? ";font-weight:590;color:var(--label)" : "");
+    d.className = strong ? "empty swline strong" : "empty swline";
     d.textContent = text;
     list.append(d);
     return d;
@@ -337,8 +335,7 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
 
   stationListEl.innerHTML = "";
   const note = document.createElement("div");
-  note.className = "empty";
-  note.style.cssText = "padding:6px 15px 10px;text-align:left";
+  note.className = "empty swnote";
   const base = daylight
     ? t("sdr.day", "In daylight — the higher bands carry furthest right now.")
     : t("sdr.night", "In darkness — the lower bands carry furthest right now.");
@@ -379,8 +376,7 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
 
   const heading = (text) => {
     const h = document.createElement("div");
-    h.className = "empty";
-    h.style.cssText = "padding:14px 15px 4px;text-align:left;font-weight:590;color:var(--label2)";
+    h.className = "empty swhead";
     h.textContent = text;
     stationListEl.append(h);
   };
@@ -437,8 +433,7 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
     // Never let a cap read as "that is all there is".
     if (scored.length > SHOW) {
       const more = document.createElement("div");
-      more.className = "empty";
-      more.style.cssText = "padding:8px 15px;text-align:left";
+      more.className = "empty swmore";
       more.textContent =
         `${scored.length - SHOW} ${t("sdr.more", "more are on air; the bands below tune anywhere.")}`;
       stationListEl.append(more);

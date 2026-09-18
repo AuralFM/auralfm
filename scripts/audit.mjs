@@ -32,6 +32,7 @@
  *   prefs:set takes only real preferences ... any key, any type, written to disk
  *   every clickable row works by keyboard .. no way to pick a station without a mouse
  *   no button is named by a glyph ........... the headline Close announced as "times"
+ *   empty states are styled in the sheet .... four inline paddings, four numbers
  *
  * **Correctness and content**
  *   every polled service has a cooldown ..... Celestrak IP-blocked this project
@@ -1925,6 +1926,23 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/\.st:focus-within \.star/.test(html)) nameless.push("the station row star is not shown on focus");
   nameless.length ? fail("button names", nameless.join("; "))
                   : pass("every glyph-only button is named in words, and the row star shows on focus");
+}
+
+// ── empty states are styled in the stylesheet ────────────────────────────────
+// Flagged by a Rams review: the same empty state carried padding:32px 16px in
+// two scripts, 30px 16px in a third and 22px 12px in a fourth, and shortwave set
+// five more by hand. The numbers live with .empty in explore.html now.
+{
+  console.log("\nempty states are styled in the stylesheet");
+  const bad = [];
+  for (const f of EXPLORE_FILES) {
+    const src = fs.readFileSync(R(f), "utf8");
+    const at = (i) => `${path.basename(f)}:${src.slice(0, i).split("\n").length}`;
+    for (const m of src.matchAll(/class="empty[^"]*"\s+style=/g)) bad.push(at(m.index));
+    for (const m of src.matchAll(/(\w+)\.className = "empty[^"]*";[^\n]*\n(?:[^\n]*\n){0,2}?\s*\1\.style\.cssText/g)) bad.push(at(m.index));
+  }
+  bad.length ? fail("empty-state styles", `inline style on an empty state at ${bad.join(", ")} — put it in explore.html`)
+             : pass("no empty state in Explore carries an inline style");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

@@ -146,8 +146,7 @@ async function paintColdOpen() {
   if (selection.placeIndex !== null || sdrSel || showingFavorites) return;
   const el = document.createElement("div");
   el.className = "empty";
-  el.id = "coldopen";
-  el.style.cssText = "padding:0;text-align:left";
+  el.id = "coldopen";                   // #coldopen in the stylesheet undoes .empty's centring
 
   let places = [], stats = null;
   try {

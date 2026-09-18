@@ -43,7 +43,7 @@ async function runSearch(query) {
     for (const ch of stations) placeListEl.appendChild(stationResultRow(ch));
   }
   if (!places.places.length && !stations.length) {
-    placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">${t("empty.noMatch", "Nothing matches that.")}</div>`;
+    placeListEl.innerHTML = `<div class="empty">${t("empty.noMatch", "Nothing matches that.")}</div>`;
   }
 }
 
