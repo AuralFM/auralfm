@@ -30,6 +30,8 @@
  *   links leave only as http(s) ............. station links handed file: to the OS
  *   the resolver keeps no cookies ........... Google's cookies in the app's session
  *   prefs:set takes only real preferences ... any key, any type, written to disk
+ *   every clickable row works by keyboard .. no way to pick a station without a mouse
+ *   no button is named by a glyph ........... the headline Close announced as "times"
  *
  * **Correctness and content**
  *   every polled service has a cooldown ..... Celestrak IP-blocked this project
@@ -1867,6 +1869,62 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   problems.length ? fail("prefs:set", problems.join("; "))
                   : pass("unknown keys and wrong types never reach the store");
+}
+
+// ── keyboard and names in Explore ────────────────────────────────────────────
+// Found by a Rams review and confirmed in the running app's accessibility tree:
+// station, place, search, headline and receiver rows were divs with an onclick,
+// so a keyboard could not pick anything to play. The row star was a nameless SVG
+// that stayed invisible when focused, and the headline Close and the dial's
+// arrows were named by their glyphs.
+{
+  console.log("\nevery clickable row works by keyboard");
+  const bad = [];
+  for (const f of EXPLORE_FILES) {
+    const src = fs.readFileSync(R(f), "utf8");
+    for (const m of src.matchAll(/const (\w+) = document\.createElement\("(?:div|span)"\)/g)) {
+      const v = m[1];
+      // Up to the next element built under the same name, which is the next row.
+      const rest = src.slice(m.index + m[0].length);
+      const next = rest.search(new RegExp(`const ${v} = document\\.createElement\\(`));
+      const body = rest.slice(0, next < 0 ? 2500 : Math.min(next, 2500));
+      const clickable = new RegExp(`\\b${v}\\.(onclick\\s*=|addEventListener\\("click")`).test(body);
+      if (!clickable) continue;
+      const helped = new RegExp(`activatable\\(\\s*${v}\\b`).test(body);
+      const byHand = new RegExp(`\\b${v}\\.tabIndex = 0`).test(body)
+        && new RegExp(`\\b${v}\\.(onkeydown\\s*=|addEventListener\\("keydown")`).test(body);
+      if (!helped && !byHand) bad.push(`${path.basename(f)}:${src.slice(0, m.index).split("\n").length} ${v}`);
+    }
+  }
+  bad.length ? fail("keyboard rows", `clickable but not focusable or keyable: ${bad.join(", ")} — use activatable()`)
+             : pass("every clickable row in Explore can be reached and pressed from the keyboard");
+
+  console.log("\nno button is named by a glyph");
+  const html = fs.readFileSync(R("src/renderer/explore.html"), "utf8");
+  const nameless = [];
+  for (const m of html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)) {
+    const [, attrs, inner] = m;
+    // An entity is a glyph (&laquo; is «), not nothing — deleting it made the
+    // dial's arrows look like empty icon buttons and pass unnamed.
+    const text = inner.replace(/<[^>]+>/g, "").replace(/&#?\w+;/g, "\u2022").trim();
+    if (/\p{L}/u.test(text)) continue;                              // has words
+    if (!text) continue;                                             // icon filled at runtime, named by title/i18n
+    if (/aria-label=|data-i18n-title=/.test(attrs)) continue;
+    nameless.push(`${(attrs.match(/id="([^"]+)"/) || attrs.match(/class="([^"]+)"/) || [,"?"])[1]} "${text}"`);
+  }
+  const src = exploreSrc;
+  // Buttons built in script, whose whole text is a glyph: the remove button on
+  // your own stations was a bare "−" and announced as "minus".
+  for (const m of src.matchAll(/const (\w+) = document\.createElement\("button"\);[\s\S]{0,300}?\1\.textContent = "([^"]{1,3})";/g)) {
+    const [, v, glyph] = m;
+    if (/\p{L}/u.test(glyph)) continue;
+    const after = src.slice(m.index, m.index + m[0].length + 400);
+    if (!new RegExp(`${v}\\.setAttribute\\("aria-label"`).test(after)) nameless.push(`script-built button "${glyph}" (${v})`);
+  }
+  if (!/\.star"\)[\s\S]{0,300}?setAttribute\("aria-label"/.test(src)) nameless.push("the station row star has no aria-label");
+  if (!/\.st:focus-within \.star/.test(html)) nameless.push("the station row star is not shown on focus");
+  nameless.length ? fail("button names", nameless.join("; "))
+                  : pass("every glyph-only button is named in words, and the row star shows on focus");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

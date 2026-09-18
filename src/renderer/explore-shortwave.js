@@ -237,8 +237,6 @@ function paintFrequency(nearby) {
   for (const { rx, o } of candidates) {
     const el = document.createElement("div");
     el.className = "st";
-    el.tabIndex = 0;
-    el.setAttribute("role", "button");
     el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
     el.querySelector(".sn").textContent = rx.loc || rx.name;
     el.querySelector(".stags").textContent =
@@ -258,11 +256,7 @@ function paintFrequency(nearby) {
      * The receiver's own interface is the thing that was wanted anyway; this
      * just arrives at it already on the right frequency.
      */
-    const go = () => selectReceiver(rx, { tuneTo: khz });
-    el.addEventListener("click", go);
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
-    });
+    activatable(el, () => selectReceiver(rx, { tuneTo: khz }));
     list.append(el);
   }
 }
@@ -282,7 +276,7 @@ function renderNearbyReceivers(nearby) {
     el.querySelector(".stags").textContent =
       `${dist(rx.km)} away · ${rx.slots} ${rx.slots === 1
         ? t("sdr.slot", "listener slot") : t("sdr.slots", "listener slots")}`;
-    el.onclick = () => selectReceiver(rx);
+    activatable(el, () => selectReceiver(rx));
     stationListEl.append(el);
   }
 }
@@ -380,10 +374,7 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
       for (const sib of stationListEl.querySelectorAll(".st")) sib.setAttribute("aria-current", "false");
       el.setAttribute("aria-current", "true");
     };
-    el.addEventListener("click", go);
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
-    });
+    activatable(el, go);
   };
 
   const heading = (text) => {
@@ -429,8 +420,6 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
     for (const { e, o } of scored.slice(0, SHOW)) {
       const el = document.createElement("div");
       el.className = "st";
-      el.setAttribute("role", "button");
-      el.tabIndex = 0;
       el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
       el.querySelector(".sn").textContent = e.station;
       // kHz, to match the tuner readout and the schedule this came from.
@@ -460,8 +449,6 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
   for (const b of bands) {
     const el = document.createElement("div");
     el.className = "st";
-    el.setAttribute("role", "button");
-    el.tabIndex = 0;
     const o = look(b);
     const open = o.open;
     // Same markup as a station row — this is the station list, and a band is

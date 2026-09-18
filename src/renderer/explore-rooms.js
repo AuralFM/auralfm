@@ -2,10 +2,9 @@
  * Explore, part 12 of 17: Private messages, the roster, conversations, hubs and name completion.
  *
  * Explore is one page split across plain scripts that share a global scope, in
- * the order explore.html loads them. Declarations live here; anything that runs
- * at load — listeners, IPC subscriptions, one-off calls — is in wireRooms(),
- * which explore.js calls once every part has loaded. That keeps the original
- * single-file behaviour: no handler can fire into a part that has not loaded.
+ * the order explore.html loads them. This part only declares: nothing in it runs
+ * at load, so it has no wire function. The parts that do run something at load
+ * keep it in a wire function that explore.js calls once every part has loaded.
  */
 
 /**

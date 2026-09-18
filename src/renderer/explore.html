@@ -824,6 +824,14 @@
     transition:opacity var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .st:hover .star{opacity:1}
+  /* Hover was the only way to reveal it, so a keyboard user could tab onto a
+     star they could not see. Focus anywhere in the row shows it too. */
+  .st:focus-within .star,.star:focus-visible{opacity:1}
+  .star:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  /* Rows are keyboard targets now (activatable() in explore-core.js). The ring
+     sits inside the row so it is not clipped by the list's own edges. */
+  .st[role="button"]:focus-visible,.place:focus-visible,.story:focus-visible,
+  .st .smeta:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--r-md)}
   /* The accent, not `--star`. A favourite is the app's own mark and should wear
      the theme; a fixed amber was the one thing on screen that ignored the
      palette entirely. */
@@ -1366,7 +1374,9 @@
         <div class="newshead">
           <b id="newsplace">Headlines</b>
           <button id="newsSrc" title="Change source" data-i18n-title="ctl.changeSource"></button>
-          <button id="newsClose">×</button>
+          <!-- A bare × announced as "times". The name comes from the same key the
+               share sheet's Close uses. -->
+          <button id="newsClose" title="Close" aria-label="Close" data-i18n-title="ctl.close">×</button>
         </div>
         <div class="newslist" id="newslist"></div>
       </aside>
@@ -1391,11 +1401,13 @@
         <div id="wfwait" data-i18n="tuner.waiting">Listening for the spectrum…</div>
       </div>
       <div class="trow">
-        <button class="tb" data-hz="-coarse">&laquo;</button>
-        <button class="tb" data-hz="-fine">&lsaquo;</button>
+        <!-- Glyphs on screen, words for everyone else. paintDial() replaces these
+             with the exact step once the mode is known. -->
+        <button class="tb" data-hz="-coarse" aria-label="Tune down, large step">&laquo;</button>
+        <button class="tb" data-hz="-fine" aria-label="Tune down, small step">&lsaquo;</button>
         <b id="tfreq">—</b>
-        <button class="tb" data-hz="+fine">&rsaquo;</button>
-        <button class="tb" data-hz="+coarse">&raquo;</button>
+        <button class="tb" data-hz="+fine" aria-label="Tune up, small step">&rsaquo;</button>
+        <button class="tb" data-hz="+coarse" aria-label="Tune up, large step">&raquo;</button>
       </div>
       <div class="trow" id="bw">
         <button data-w="narrow" data-i18n="sdr.narrow">Narrow</button>

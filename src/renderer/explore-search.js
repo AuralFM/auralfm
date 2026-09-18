@@ -57,8 +57,7 @@ function placeRow(p) {
   el.querySelector(".pn").textContent = p.title;
   el.querySelector(".pc").textContent = p.country;
   el.querySelector(".cnt").textContent = p.count;
-  el.onclick = () => goToPlace(p.i);
-  return el;
+  return activatable(el, () => goToPlace(p.i));
 }
 
 /** A station hit: fly to its city, show that city, and play it. */
@@ -68,7 +67,7 @@ function stationResultRow(ch) {
   el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>`;
   el.querySelector(".pn").textContent = ch.title;
   el.querySelector(".pc").textContent = [ch.place, ch.country].filter(Boolean).join(" · ");
-  el.onclick = async () => {
+  activatable(el, async () => {
     // Leaving the favourites view is part of picking from it. `showingFavorites`
     // gates globe-follow and the chat panel, so a click that tuned a station but
     // left the flag set played audio into a rail still showing the favourites
@@ -90,7 +89,7 @@ function stationResultRow(ch) {
              || list.places[0];
     if (hit) await goToPlace(hit.i);
     window.auralfm.tune(ch);
-  };
+  });
   return el;
 }
 

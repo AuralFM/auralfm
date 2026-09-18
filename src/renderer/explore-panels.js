@@ -327,7 +327,7 @@ async function renderNewsPanel() {
     el.innerHTML = `<div class="h"></div><div class="m"></div>`;
     el.querySelector(".h").textContent = it.title;
     el.querySelector(".m").textContent = [it.source, relTime(it.at)].filter(Boolean).join(" · ");
-    if (it.link) el.onclick = () => openReader(it);
+    if (it.link) activatable(el, () => openReader(it));
     list.appendChild(el);
   }
 }

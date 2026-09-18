@@ -129,6 +129,8 @@ function paintDial() {
     const hz = st[b.dataset.hz.slice(1)];
     b.title = `${b.dataset.hz[0] === "-" ? "Down" : "Up"} ` +
               `${Math.abs(hz) >= 1000 ? `${Math.abs(hz) / 1000} kHz` : `${Math.abs(hz)} Hz`}`;
+    // The glyph is the content, so it would otherwise be the name: "«".
+    b.setAttribute("aria-label", b.title);
   }
 }
 

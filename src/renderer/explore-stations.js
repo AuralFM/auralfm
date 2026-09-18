@@ -2,10 +2,9 @@
  * Explore, part 2 of 17: The station rail: what a place broadcasts, nearby receivers, your own stations.
  *
  * Explore is one page split across plain scripts that share a global scope, in
- * the order explore.html loads them. Declarations live here; anything that runs
- * at load — listeners, IPC subscriptions, one-off calls — is in wireStations(),
- * which explore.js calls once every part has loaded. That keeps the original
- * single-file behaviour: no handler can fire into a part that has not loaded.
+ * the order explore.html loads them. This part only declares: nothing in it runs
+ * at load, so it has no wire function. The parts that do run something at load
+ * keep it in a wire function that explore.js calls once every part has loaded.
  */
 
 // ── stations ─────────────────────────────────────────────────────────────────
@@ -219,20 +218,28 @@ function renderStations() {
                     <span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".sn").textContent = ch.title;
     el.querySelector(".stags").textContent = ch.tags.length ? ch.tags.slice(0, 4).join(" · ") : "";
-    el.onclick = (e) => {
-      if (e.target.closest(".star")) return;
+    // The name area takes focus rather than the row, because the row holds the
+    // star (and for your own stations a remove button): see activatable().
+    activatable(el, (e) => {
+      if (e?.target?.closest?.(".star, .rm")) return;
       window.auralfm.tune(ch);           // an explicit pick always plays
       window.Tip?.donate("stationPlayed");
       markPending(ch.id);                // and says so now, not in eleven seconds
       if (locked) setLocked(true);       // and becomes the new locked station
-    };
-    el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
+    }, el.querySelector(".smeta"));
+    const star = el.querySelector(".star");
+    // It was an SVG and nothing else, so it announced as "button".
+    star.setAttribute("aria-label", t("ctl.favorite", "Favorite"));
+    star.setAttribute("aria-pressed", String(isFav(ch.id)));
+    star.onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
     // A station you added can be removed again; one you did not, cannot.
     if (ch.mine) {
       const rm = document.createElement("button");
       rm.className = "rm";
       rm.textContent = "−";
       rm.title = t("mine.remove", "Remove this station");
+      // The glyph is the content, so without this the name is "minus".
+      rm.setAttribute("aria-label", rm.title);
       rm.onclick = (e) => {
         e.stopPropagation();
         armRemoval(el, ch);
@@ -279,17 +286,10 @@ function renderStations() {
 function placeSuggestion(p, subtitle) {
   const row = document.createElement("div");
   row.className = "st";
-  row.setAttribute("role", "button");
-  row.tabIndex = 0;
   row.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
   row.querySelector(".sn").textContent = p.title;
   row.querySelector(".stags").textContent = subtitle;
-  const go = () => goToPlace(p.i, { play: false });
-  row.addEventListener("click", go);
-  row.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
-  });
-  return row;
+  return activatable(row, () => goToPlace(p.i, { play: false }));
 }
 
 const NEARBY_WHEN_UNDER = 8;

@@ -2,10 +2,9 @@
  * Explore, part 1 of 17: Selection, journeys, places and the filter chips.
  *
  * Explore is one page split across plain scripts that share a global scope, in
- * the order explore.html loads them. Declarations live here; anything that runs
- * at load — listeners, IPC subscriptions, one-off calls — is in wireCore(),
- * which explore.js calls once every part has loaded. That keeps the original
- * single-file behaviour: no handler can fire into a part that has not loaded.
+ * the order explore.html loads them. This part only declares: nothing in it runs
+ * at load, so it has no wire function. The parts that do run something at load
+ * keep it in a wire function that explore.js calls once every part has loaded.
  */
 
 const $ = (id) => document.getElementById(id);
@@ -87,6 +86,33 @@ let debounce = null, seq = 0;
 const isFav = (id) => favorites.some((f) => f.id === id);
 
 /**
+ * Make a clickable row work from the keyboard too.
+ *
+ * Most rows in this window were divs with an onclick: a mouse could pick a
+ * station, a place or a headline and a keyboard could not reach any of them, so
+ * without a pointer there was no way to play anything. Three row kinds already
+ * did this by hand (suggestions, frequency results, bands); this is that pattern
+ * once, so the next row cannot forget half of it.
+ *
+ * `focusEl` is for rows that hold buttons of their own. A station row carries a
+ * star and sometimes a remove button, and a button inside a button is its own
+ * accessibility error, so there the name area takes focus and the row keeps the
+ * click. Keys are only taken when the focus target itself has them, so Enter on
+ * the star does not also play the station.
+ */
+function activatable(el, go, focusEl = el) {
+  focusEl.setAttribute("role", "button");
+  focusEl.tabIndex = 0;
+  el.addEventListener("click", go);
+  focusEl.addEventListener("keydown", (e) => {
+    if (e.target !== focusEl || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    go(e);
+  });
+  return el;
+}
+
+/**
  * The third state, for any list that can be waited on.
  *
  * Loading and empty were the only two states these lists had. A rejected IPC
@@ -138,19 +164,8 @@ async function loadPlaces(query = "") {
     placeListEl.innerHTML = `<div class="empty" style="padding:32px 16px">${t("empty.noPlace", "No place matches that.")}</div>`;
     return;
   }
-  for (const p of places) {
-    const el = document.createElement("div");
-    el.className = "place";
-    el.dataset.i = p.i;
-    el.setAttribute("aria-selected", p.i === selection.placeIndex);
-    el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>
-                    <span class="cnt"></span>`;
-    el.querySelector(".pn").textContent = p.title;
-    el.querySelector(".pc").textContent = p.country;
-    el.querySelector(".cnt").textContent = p.count;
-    el.onclick = () => goToPlace(p.i);
-    placeListEl.appendChild(el);
-  }
+  // The same row the search results use, rather than a second hand-built copy.
+  for (const p of places) placeListEl.appendChild(placeRow(p));
   markPlaceSelection();
 }
 
