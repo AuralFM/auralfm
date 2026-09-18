@@ -485,6 +485,8 @@ async function paintRelays() {
       const x = document.createElement("button");
       x.textContent = "×";
       x.title = T["set.relayRemove"] || "Remove";
+      // The glyph is the content, so without this the name is "times".
+      x.setAttribute("aria-label", `${x.title} ${url.replace(/^wss:\/\//, "")}`);
       x.onclick = async () => {
         await set({ relays: (P.relays || []).filter((u) => u !== url) });
         paintRelays();

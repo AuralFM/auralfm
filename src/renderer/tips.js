@@ -109,6 +109,18 @@
         const text = node.getAttribute("title");
         if (!text) { node.removeAttribute("title"); continue; }
         node.setAttribute("data-tip", text);
+        /**
+         * Keep the name. For a control with nothing else to go by — an icon, a
+         * glyph — `title` was its accessible name, and removing it left the
+         * popover's favourite star announcing as "button". So the text becomes
+         * the aria-label first. Only when there is no other name: a label that
+         * is already there, or real text in the control, wins. `data-tip-named`
+         * marks names this wrote, so a title that changes later (Lock / Locked)
+         * updates the name instead of leaving a stale one.
+         */
+        const named = node.hasAttribute("aria-labelledby") || node.textContent.trim()
+          || (node.hasAttribute("aria-label") && !node.hasAttribute("data-tip-named"));
+        if (!named) { node.setAttribute("aria-label", text); node.setAttribute("data-tip-named", ""); }
         node.removeAttribute("title");        // or macOS draws its own as well
       }
     } else {

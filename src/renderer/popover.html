@@ -51,6 +51,10 @@
     --err:#E0574A;             /* warmed off systemRed */
     --star:#F5F0E4;
     --on-accent:#12100F;
+    /* The raised surface the output menu sits on. It was used and never
+       defined here, so the menu drew with no background at all, straight over
+       the favourites. Same values as explore.html. */
+    --pane:rgba(30,27,25,.62);
     /* Motion tokens, same set as explore.html. */
     --ease-out:cubic-bezier(.23,1,.32,1);
     --ease-in-out:cubic-bezier(.77,0,.175,1);
@@ -72,6 +76,7 @@
     --star:#8A6D1F;
     --on-accent:#F7F4EE;
     --bg:#F2EFE9;
+    --pane:rgba(250,248,244,.60);
     }
   }
   :root[data-theme="light"]{
@@ -84,6 +89,7 @@
     --star:#8A6D1F;
     --on-accent:#F7F4EE;
     --bg:#F2EFE9;
+    --pane:rgba(250,248,244,.60);
   }
   /* A forced theme has to paint its own backdrop: the vibrancy material behind
      the window still follows the OS, so transparency would show the wrong one. */
@@ -95,6 +101,7 @@
     --fill:rgba(233,226,212,.08); --fill-hi:rgba(233,226,212,.13);
     --line:rgba(233,226,212,.11);
     --accent:#E9E2D4; --err:#E0574A; --star:#F5F0E4; --on-accent:#12100F; --bg:#0C0B0B;
+    --pane:rgba(30,27,25,.62);
   }
   /* Vibrancy is a real material here; if the user has asked for less of it,
      go frosty-solid rather than shipping unreadable text over a busy desktop. */
@@ -268,6 +275,9 @@
     transition:opacity var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .row:hover .star{opacity:1}
+  /* Hover was the only way to see it; a keyboard user tabbing onto it could not. */
+  .row:focus-within .star,.star:focus-visible{opacity:1}
+  .star:focus-visible,.row .meta:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:var(--r-sm)}
   .star.on{opacity:1;color:var(--star)}
   .star:hover{color:var(--star)}
   .star:active{transform:scale(.85)}
@@ -403,6 +413,7 @@
 <script src="tips.js"></script>
 <script src="icons.js"></script>
 <script src="kiwi.js"></script>
+<script src="activatable.js"></script>
 <script src="popover.js"></script>
 </body>
 </html>

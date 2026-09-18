@@ -336,11 +336,17 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
     const tags = showTags && ch.tags?.length ? ch.tags.slice(0, 2).join(", ") : null;
     el.querySelector(".sub").textContent =
       [ch.place, tags || ch.country].filter(Boolean).join(" · ");
-    el.onclick = (e) => {
-      if (e.target.closest(".star")) return;
+    // Reachable by Tab as well as by 1-9: the digits stop at nine and search
+    // only ever played the first result. The name area takes focus because the
+    // row holds the star button; see activatable.js.
+    activatable(el, (e) => {
+      if (e?.target?.closest?.(".star")) return;
       if (current?.id === ch.id && !audio.paused) stop(); else tune(ch);
-    };
-    el.querySelector(".star").onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
+    }, el.querySelector(".meta"));
+    const star = el.querySelector(".star");
+    star.setAttribute("aria-label", t("ctl.favorite", "Favorite"));
+    star.setAttribute("aria-pressed", String(isFav(ch.id)));
+    star.onclick = (e) => { e.stopPropagation(); toggleFav(ch); };
     listEl.appendChild(el);
   });
   fitHeight();

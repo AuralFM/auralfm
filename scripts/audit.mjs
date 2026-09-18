@@ -32,6 +32,9 @@
  *   prefs:set takes only real preferences ... any key, any type, written to disk
  *   every clickable row works by keyboard .. no way to pick a station without a mouse
  *   no button is named by a glyph ........... the headline Close announced as "times"
+ *   every input has a name ................... the nickname field announced as "Anonymous"
+ *   every var() a page uses is defined ....... the output menu drew with no background
+ *   help tags keep a control's name .......... the popover star announced as "button"
  *   Explore's styles live in the sheet ...... four inline paddings, four numbers
  *
  * **Correctness and content**
@@ -1881,7 +1884,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 {
   console.log("\nevery clickable row works by keyboard");
   const bad = [];
-  for (const f of EXPLORE_FILES) {
+  // The popover's favourites were the same divs with an onclick.
+  for (const f of [...EXPLORE_FILES, "src/renderer/popover.js"]) {
     const src = fs.readFileSync(R(f), "utf8");
     for (const m of src.matchAll(/const (\w+) = document\.createElement\("(?:div|span)"\)/g)) {
       const v = m[1];
@@ -1897,23 +1901,40 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       if (!helped && !byHand) bad.push(`${path.basename(f)}:${src.slice(0, m.index).split("\n").length} ${v}`);
     }
   }
+  // A key the row used must stop there: a Space on a popover row also reached
+  // the panel's Space shortcut and toggled play right after the row tuned.
+  const helper = fs.readFileSync(R("src/renderer/activatable.js"), "utf8");
+  if (!/addEventListener\("keydown"[\s\S]*?stopPropagation\(\)[\s\S]*?go\(e\)/.test(helper)) {
+    bad.push("activatable.js lets a handled key reach the window's own shortcuts");
+  }
   bad.length ? fail("keyboard rows", `clickable but not focusable or keyable: ${bad.join(", ")} — use activatable()`)
-             : pass("every clickable row in Explore can be reached and pressed from the keyboard");
+             : pass("every clickable row in Explore and the popover can be reached and pressed from the keyboard");
 
   console.log("\nno button is named by a glyph");
-  const html = fs.readFileSync(R("src/renderer/explore.html"), "utf8");
   const nameless = [];
-  for (const m of html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)) {
+  const PAGES = ["explore", "popover", "settings"];
+  const pageScripts = (page) => (page === "explore" ? exploreSrc
+    : fs.readFileSync(R(`src/renderer/${page}.js`), "utf8"));
+  const html = fs.readFileSync(R("src/renderer/explore.html"), "utf8");
+  for (const page of PAGES) {
+  const doc = fs.readFileSync(R(`src/renderer/${page}.html`), "utf8");
+  for (const m of doc.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)) {
     const [, attrs, inner] = m;
     // An entity is a glyph (&laquo; is «), not nothing — deleting it made the
     // dial's arrows look like empty icon buttons and pass unnamed.
     const text = inner.replace(/<[^>]+>/g, "").replace(/&#?\w+;/g, "\u2022").trim();
     if (/\p{L}/u.test(text)) continue;                              // has words
-    if (!text) continue;                                             // icon filled at runtime, named by title/i18n
-    if (/aria-label=|data-i18n-title=/.test(attrs)) continue;
-    nameless.push(`${(attrs.match(/id="([^"]+)"/) || attrs.match(/class="([^"]+)"/) || [,"?"])[1]} "${text}"`);
+    // Empty buttons get an icon at runtime, so the name has to be an attribute.
+    // Privacy, Terms and Licences in Settings were empty with none.
+    if (/aria-label=|aria-labelledby=|data-i18n-title=/.test(attrs)) continue;
+    // Empty in the markup because script writes words into it (the chat's
+    // "3 private"), which is a name, not an icon.
+    const id = (attrs.match(/id="([^"]+)"/) || [])[1];
+    if (!text && id && new RegExp(`\\$\\("${id}"\\)[\\s\\S]{0,400}?\\.textContent\\s*=`).test(pageScripts(page))) continue;
+    nameless.push(`${page}.html ${(attrs.match(/id="([^"]+)"/) || attrs.match(/class="([^"]+)"/) || [,"?"])[1]} "${text || "(empty)"}"`);
   }
-  const src = exploreSrc;
+  }
+  const src = [exploreSrc, ...["popover", "settings"].map((p) => fs.readFileSync(R(`src/renderer/${p}.js`), "utf8"))].join("\n");
   // Buttons built in script, whose whole text is a glyph: the remove button on
   // your own stations was a bare "−" and announced as "minus".
   for (const m of src.matchAll(/const (\w+) = document\.createElement\("button"\);[\s\S]{0,300}?\1\.textContent = "([^"]{1,3})";/g)) {
@@ -1946,6 +1967,64 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   bad.length ? fail("inline styles", `a block of inline style at ${bad.join(", ")} — put it in explore.html`)
              : pass("no Explore script writes a block of inline style");
+}
+
+// ── inputs, tokens and help tags across the three windows ────────────────────
+// From a Rams review of the popover and Settings, confirmed in the running app.
+// The nickname field announced as "Anonymous" (its placeholder), the popover's
+// output menu used var(--pane) and that page never defined it, and turning help
+// tags on stripped `title` — the only name the popover's row star had.
+{
+  const PAGES = ["explore", "popover", "settings"];
+  const read = (f) => fs.readFileSync(R(f), "utf8");
+
+  console.log("\nevery input has a name");
+  const unnamed = [];
+  for (const page of PAGES) {
+    const doc = read(`src/renderer/${page}.html`);
+    for (const m of doc.matchAll(/<input\b([^>]*)>/g)) {
+      const a = m[1];
+      if (/type="hidden"/.test(a)) continue;
+      const id = (a.match(/id="([^"]+)"/) || [])[1];
+      // A placeholder is not a name: it disappears on the first keystroke and
+      // says what to type, not what the field is.
+      const named = /aria-label=|aria-labelledby=|data-i18n-title=/.test(a)
+        || (id && new RegExp(`<label[^>]*for="${id}"`).test(doc));
+      if (!named) unnamed.push(`${page}.html ${id || "(no id)"}`);
+    }
+  }
+  unnamed.length ? fail("input names", `named only by a placeholder: ${unnamed.join(", ")}`)
+                 : pass("every input in the three windows has a label, not just a placeholder");
+
+  console.log("\nevery var() a page uses is defined");
+  const undef = [];
+  for (const page of PAGES) {
+    const doc = read(`src/renderer/${page}.html`);
+    const scripts = [...doc.matchAll(/<script src="([\w./-]+)"/g)]
+      .map((m) => R(`src/renderer/${m[1]}`)).filter((f) => fs.existsSync(f))
+      .map((f) => fs.readFileSync(f, "utf8")).join("\n");
+    const defined = new Set([
+      ...[...doc.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]),
+      ...[...scripts.matchAll(/setProperty\(\s*["'](--[\w-]+)["']/g)].map((m) => m[1]),
+    ]);
+    // Only uses with no fallback: var(--x, y) is written to survive an absence.
+    for (const m of doc.matchAll(/var\((--[\w-]+)\)/g)) {
+      if (!defined.has(m[1])) undef.push(`${page}.html ${m[1]}`);
+    }
+  }
+  const uniq = [...new Set(undef)];
+  uniq.length ? fail("undefined tokens", `used with no fallback and never defined: ${uniq.join(", ")}`)
+              : pass("every var() used without a fallback is defined in its own page");
+
+  console.log("\nhelp tags keep a control's name");
+  const tips = read("src/renderer/tips.js");
+  const adopt = tips.match(/function adopt\([\s\S]*?\n  \}/);
+  const body = adopt ? adopt[0] : "";
+  const keeps = body.indexOf('setAttribute("aria-label"'), strips = body.indexOf('removeAttribute("title")', body.indexOf("data-tip"));
+  !adopt ? fail("help tags", "adopt() is gone")
+  : keeps < 0 || strips < 0 || keeps > strips
+    ? fail("help tags", "adopt() removes title without first keeping it as the name of a control that has no other")
+    : pass("adopt() gives a nameless control its title as aria-label before removing the title");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

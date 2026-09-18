@@ -423,7 +423,7 @@
       <div class="row"><span class="name sub" id="relay-head" data-i18n="set.relays">Relays</span></div>
       <div id="relaylist"></div>
       <div class="row">
-        <input id="relay-add" type="text" spellcheck="false" autocomplete="off"
+        <input id="relay-add" type="text" spellcheck="false" autocomplete="off" aria-label="Add a relay"
                placeholder="wss://relay.example.com" data-i18n-ph="set.relayAdd">
         <button id="relay-btn" data-i18n="set.relayAddBtn">Add</button>
       </div>
@@ -436,8 +436,10 @@
     <h2 data-i18n="set.privacy2">Privacy</h2>
     <div class="card">
       <div class="row">
-        <span class="name" data-i18n="set.nickname">Nickname</span>
-        <input id="nickname" type="text" maxlength="32" spellcheck="false"
+        <span class="name" id="nickname-lbl" data-i18n="set.nickname">Nickname</span>
+        <!-- Labelled by the word beside it. Without this its name was its
+             placeholder, so it announced itself as "Anonymous". -->
+        <input id="nickname" type="text" maxlength="32" spellcheck="false" aria-labelledby="nickname-lbl"
                autocomplete="off" placeholder="Anonymous" data-i18n-ph="set.nicknamePh">
       </div>
       <div class="row">
@@ -520,7 +522,7 @@
         <button class="link" id="filterreset" data-i18n="set.filterReset">Reset</button>
       </div>
       <div class="row">
-        <input id="filterterm" type="text" maxlength="40" spellcheck="false" autocomplete="off"
+        <input id="filterterm" type="text" maxlength="40" spellcheck="false" autocomplete="off" aria-label="Add a word to the list"
                placeholder="add a word" data-i18n-ph="set.filterAdd">
         <button class="link" id="filteradd" data-i18n="set.filterAddDo">Add</button>
       </div>
@@ -554,8 +556,8 @@
     <h2 data-i18n="set.help">Help</h2>
     <div class="card">
       <div class="row">
-        <span class="name" data-i18n="set.tips">Help tags</span>
-        <button class="sw" id="tips" role="switch" aria-checked="true"></button>
+        <span class="name" id="tips-lbl" data-i18n="set.tips">Help tags</span>
+        <button class="sw" id="tips" role="switch" aria-checked="true" aria-labelledby="tips-lbl"></button>
       </div>
       <div class="row">
         <span class="name" data-i18n="set.replayTour">Show the introduction again</span>
@@ -571,16 +573,17 @@
         <button class="link" id="mail">meltonbell@icloud.com</button>
       </div>
       <div class="row">
-        <span class="name" data-i18n="set.privacy">Privacy Policy</span>
-        <button class="link" id="privacy"></button>
+        <!-- The three below are icons; the words beside them are their names. -->
+        <span class="name" id="privacy-lbl" data-i18n="set.privacy">Privacy Policy</span>
+        <button class="link" id="privacy" aria-labelledby="privacy-lbl"></button>
       </div>
       <div class="row">
-        <span class="name" data-i18n="set.terms">Terms of Service</span>
-        <button class="link" id="terms"></button>
+        <span class="name" id="terms-lbl" data-i18n="set.terms">Terms of Service</span>
+        <button class="link" id="terms" aria-labelledby="terms-lbl"></button>
       </div>
       <div class="row">
-        <span class="name" data-i18n="set.licences">Open source licenses</span>
-        <button class="link" id="licences"></button>
+        <span class="name" id="licences-lbl" data-i18n="set.licences">Open source licenses</span>
+        <button class="link" id="licences" aria-labelledby="licences-lbl"></button>
       </div>
     </div>
     <p class="promise" data-i18n="set.promise">No servers. No accounts. No analytics. Nothing about what you listen to leaves this Mac.</p>

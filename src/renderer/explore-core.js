@@ -85,32 +85,8 @@ let debounce = null, seq = 0;
 
 const isFav = (id) => favorites.some((f) => f.id === id);
 
-/**
- * Make a clickable row work from the keyboard too.
- *
- * Most rows in this window were divs with an onclick: a mouse could pick a
- * station, a place or a headline and a keyboard could not reach any of them, so
- * without a pointer there was no way to play anything. Three row kinds already
- * did this by hand (suggestions, frequency results, bands); this is that pattern
- * once, so the next row cannot forget half of it.
- *
- * `focusEl` is for rows that hold buttons of their own. A station row carries a
- * star and sometimes a remove button, and a button inside a button is its own
- * accessibility error, so there the name area takes focus and the row keeps the
- * click. Keys are only taken when the focus target itself has them, so Enter on
- * the star does not also play the station.
- */
-function activatable(el, go, focusEl = el) {
-  focusEl.setAttribute("role", "button");
-  focusEl.tabIndex = 0;
-  el.addEventListener("click", go);
-  focusEl.addEventListener("keydown", (e) => {
-    if (e.target !== focusEl || (e.key !== "Enter" && e.key !== " ")) return;
-    e.preventDefault();
-    go(e);
-  });
-  return el;
-}
+// activatable(), which makes rows keyboard-operable, lives in activatable.js:
+// the menu-bar popover needs it too.
 
 /**
  * The third state, for any list that can be waited on.
