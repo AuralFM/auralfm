@@ -411,7 +411,6 @@ assets/                  source icons, fonts, licences, attribution
 data/                    receivers, schedule, relays and word filter are
                          tracked; the station bundle is generated (gitignored)
 docs/                    privacy, terms, receivers, legal and security
-plans/                   design and implementation plans
 ```
 
 ## Scripts
