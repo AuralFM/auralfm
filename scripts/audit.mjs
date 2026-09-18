@@ -35,6 +35,7 @@
  *   every input has a name ................... the nickname field announced as "Anonymous"
  *   every var() a page uses is defined ....... the output menu drew with no background
  *   help tags keep a control's name .......... the popover star announced as "button"
+ *   the Settings reader holds focus .......... Tab walked into the settings behind it
  *   Explore's styles live in the sheet ...... four inline paddings, four numbers
  *
  * **Correctness and content**
@@ -2032,6 +2033,20 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (/removeAttribute\("title"\)/.test(tips.replace(take?.[0] || "", ""))) problems.push("a title is removed somewhere other than take()");
   problems.length ? fail("help tags", problems.join("; "))
     : pass("every title help tags take over, at load or later, keeps a nameless control named");
+
+  console.log("\nthe Settings reader holds focus");
+  // aria-modal only tells a screen reader. Tab walked out of the reader into the
+  // settings underneath, and closing it left focus on nothing.
+  const set = read("src/renderer/settings.js");
+  const open = set.match(/function openDocView\([\s\S]*?\n\}/);
+  const close = set.match(/function closeDocView\([\s\S]*?\n\}/);
+  const gaps = [];
+  if (!open || !/\$\("main"\)\.inert = true/.test(open[0])) gaps.push("opening does not make the list inert");
+  if (!open || !/docOpener = document\.activeElement/.test(open[0])) gaps.push("opening does not remember the opener");
+  if (!close || !/\$\("main"\)\.inert = false/.test(close[0])) gaps.push("closing leaves the list inert");
+  if (!close || !/docOpener\?\.focus\(\)/.test(close[0])) gaps.push("closing does not return focus");
+  gaps.length ? fail("settings reader", gaps.join("; "))
+    : pass("the reader keeps Tab inside and hands focus back when it closes");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

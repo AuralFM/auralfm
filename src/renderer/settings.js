@@ -540,9 +540,16 @@ async function loadDocs() {
   }
 }
 
+// What opened the reader, so closing it puts focus back there rather than on
+// nothing. The settings list goes inert while it is open: aria-modal only tells
+// a screen reader, and Tab was walking into the controls hidden underneath.
+let docOpener = null;
+
 function openDocView(id) {
   const doc = DOCBODY.get(id);
   if (!doc) return;
+  docOpener = document.activeElement;
+  $("main").inert = true;
   $("#doctitle").textContent = doc.title;
   // Built in the main process from a fixed tag set with everything escaped
   // first, so a document cannot contribute markup of its own.
@@ -555,6 +562,9 @@ function openDocView(id) {
 function closeDocView() {
   $("#docs").classList.remove("open");
   $("#docbody").textContent = "";
+  $("main").inert = false;
+  docOpener?.focus();
+  docOpener = null;
 }
 
 $("#docback").addEventListener("click", closeDocView);
