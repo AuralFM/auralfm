@@ -146,7 +146,11 @@ function paintConvos() {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "row";
-    row.setAttribute("role", "listitem");
+    // The list item wraps the button rather than being it: role="listitem" on
+    // the button itself replaced its role, so it stopped announcing as one.
+    const item = document.createElement("div");
+    item.setAttribute("role", "listitem");
+    item.append(row);
 
     const nm = document.createElement("span");
     nm.className = "nm";
@@ -170,7 +174,7 @@ function paintConvos() {
       row.append(d);
     }
     row.onclick = () => { closeConvos(); enterDm({ pubkey: c.pubkey, nick: c.name }); };
-    box.append(row);
+    box.append(item);
   }
 }
 
@@ -267,7 +271,6 @@ function showNames(word, fragment) {
   for (const p of hits) {
     const b = document.createElement("button");
     b.type = "button";
-    b.setAttribute("role", "option");
     const n = document.createElement("span");
     n.textContent = p.nick || p.from;
     b.append(n);

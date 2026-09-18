@@ -208,6 +208,7 @@ function paintOutMenu() {
     const tick = document.createElement("span");
     tick.className = "tick";
     tick.textContent = "\u2713";
+    tick.setAttribute("aria-hidden", "true");   // the name is the device, not "✓ device"
     const name = document.createElement("span");
     name.className = "devname";
     name.textContent = label;
@@ -262,12 +263,17 @@ function closeOutMenu({ refocus = false } = {}) {
  */
 let sheetPng = null;
 
+// Everything under the sheet. aria-modal only tells a screen reader; Tab walked
+// straight out of the card into the toolbar behind it.
+const behindSheet = () => [document.querySelector(".toolbar"), document.querySelector(".cols"), $("now")];
+
 async function openShareSheet() {
   if (!playing) return;
   const sheet = $("sheet"), said = $("sheetsaid");
   said.textContent = "";
   $("sheetimg").removeAttribute("src");
   sheet.hidden = false;
+  for (const el of behindSheet()) if (el) el.inert = true;
   $("sheetclose").focus();
   try {
     const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
@@ -320,6 +326,7 @@ async function openShareSheet() {
 
 function closeShareSheet() {
   $("sheet").hidden = true;
+  for (const el of behindSheet()) if (el) el.inert = false;
   sheetPng = null;
   $("nowShare")?.focus();
 }

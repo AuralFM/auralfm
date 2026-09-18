@@ -36,6 +36,8 @@
  *   every var() a page uses is defined ....... the output menu drew with no background
  *   help tags keep a control's name .......... the popover star announced as "button"
  *   the Settings reader holds focus .......... Tab walked into the settings behind it
+ *   the share sheet holds focus .............. Tab walked out of the card into the toolbar
+ *   an output's tick is not its name ......... every option announced as "✓ System output"
  *   Explore's styles live in the sheet ...... four inline paddings, four numbers
  *
  * **Correctness and content**
@@ -2047,6 +2049,33 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!close || !/docOpener\?\.focus\(\)/.test(close[0])) gaps.push("closing does not return focus");
   gaps.length ? fail("settings reader", gaps.join("; "))
     : pass("the reader keeps Tab inside and hands focus back when it closes");
+
+  console.log("\nthe share sheet holds focus");
+  // Same defect as the reader, in Explore: Tab walked out of the card into the
+  // toolbar behind it.
+  const play = read("src/renderer/explore-playback.js");
+  const openSheet = play.match(/async function openShareSheet\([\s\S]*?\n\}/);
+  const closeSheet = play.match(/function closeShareSheet\([\s\S]*?\n\}/);
+  const holes = [];
+  if (!/const behindSheet = \(\) => \[[^\]]*\.toolbar[^\]]*\.cols[^\]]*\$\("now"\)\]/.test(play)) holes.push("behindSheet() does not cover the toolbar, the columns and the transport");
+  if (!openSheet || !/el\.inert = true/.test(openSheet[0])) holes.push("opening does not make the page inert");
+  if (!closeSheet || !/el\.inert = false/.test(closeSheet[0])) holes.push("closing leaves the page inert");
+  holes.length ? fail("share sheet", holes.join("; "))
+    : pass("the share sheet keeps Tab inside while it is open");
+
+  console.log("\nan output's check mark is not part of its name");
+  // The ✓ is drawn for the chosen output, and without aria-hidden it was read
+  // as part of every option's name: "✓ System output".
+  const loud = [];
+  for (const f of ["src/renderer/popover.js", "src/renderer/explore-playback.js"]) {
+    const src = read(f);
+    const ticks = (src.match(/tick\.textContent = "\\u2713";/g) || []).length;
+    const hushed = (src.match(/tick\.setAttribute\("aria-hidden", "true"\)/g) || []).length;
+    if (!ticks) loud.push(`${f}: no tick found to check`);
+    else if (hushed < ticks) loud.push(`${f}: ${ticks - hushed} tick(s) not aria-hidden`);
+  }
+  loud.length ? fail("output ticks", loud.join("; "))
+    : pass("every output menu hides its tick from the accessible name");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

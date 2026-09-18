@@ -721,7 +721,8 @@
     position:fixed;z-index:8990;pointer-events:none;border-radius:var(--r-lg);
     border:1.5px solid var(--accent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent);
-    transition:all var(--dur-panel) var(--ease-drawer);
+    transition:left var(--dur-panel) var(--ease-drawer),top var(--dur-panel) var(--ease-drawer),
+               width var(--dur-panel) var(--ease-drawer),height var(--dur-panel) var(--ease-drawer);
   }
   /* A rotated square borrowing the card's own fill and border, so only the two
      outward edges show and it reads as part of the card rather than a decoration
@@ -729,7 +730,7 @@
   .tourarrow{
     position:fixed;z-index:9002;pointer-events:none;width:10px;height:10px;
     background:var(--pane);transform:rotate(45deg);
-    transition:all var(--dur-panel) var(--ease-drawer);
+    transition:left var(--dur-panel) var(--ease-drawer),top var(--dur-panel) var(--ease-drawer);
   }
   .tourarrow.up{border-left:1px solid var(--line);border-top:1px solid var(--line)}
   .tourarrow.down{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -1465,8 +1466,9 @@
         <button type="button" id="chatdmout" data-i18n="chat.leaveDm">Back to the room</button>
       </div>
       <div class="scroll" id="chatlog"></div>
-      <!-- Names you can act on, offered rather than guessed at. -->
-      <div class="cmdnames" id="chatnames" hidden role="listbox"
+      <!-- Names you can act on, offered rather than guessed at. A group of
+           buttons, not a listbox: nothing here moves with the arrow keys. -->
+      <div class="cmdnames" id="chatnames" hidden role="group"
            aria-label="People here"></div>
       <form id="chatform" autocomplete="off">
         <input id="chatinput" type="text" maxlength="400" aria-label="Message"
