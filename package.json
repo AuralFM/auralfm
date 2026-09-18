@@ -31,13 +31,14 @@
     "test:app-inbound": "node scripts/relay-test/app-inbound.mjs"
   },
   "devDependencies": {
-    "electron": "^43.3.0",
+    "electron": "^43.7.2",
     "electron-builder": "^26.15.3",
     "qrcode-generator": "^2.0.4",
     "globe.gl": "^2.46.1"
   },
   "repository": {
-    "type": "git"
+    "type": "git",
+    "url": "git+https://github.com/meltonbell3/auralfm.git"
   },
   "homepage": "https://github.com/meltonbell3/auralfm",
   "dependencies": {

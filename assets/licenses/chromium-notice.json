@@ -15,15 +15,15 @@
     "then update electron/chromium/fetched/sha256 here. npm run audit fails until the",
     "electron version recorded here matches the installed one."
   ],
-  "electron": "43.3.0",
-  "chromium": "150.0.7871.212",
-  "source": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.212/LICENSE",
-  "verified": "identical to chromium/src HEAD on the same day",
-  "fetched": "2026-08-08",
+  "electron": "43.7.2",
+  "chromium": "150.0.7871.250",
+  "source": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.250/LICENSE",
+  "verified": "byte-identical to the 150.0.7871.212 notice it replaced",
+  "fetched": "2026-09-17",
   "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b",
   "fullCredits": {
     "file": "LICENSES.chromium.html (19 MB, in the Electron distribution)",
-    "electronRelease": "https://github.com/electron/electron/releases/tag/v43.3.0",
-    "chromiumSource": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.212/"
+    "electronRelease": "https://github.com/electron/electron/releases/tag/v43.7.2",
+    "chromiumSource": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.250/"
   }
 }
