@@ -103,26 +103,33 @@
    * re-rendered, so rows built after start-up are covered too. Idempotent: an
    * element that already has `data-tip` is left alone.
    */
+  /**
+   * Move one element's `title` onto `data-tip`, keeping its name.
+   *
+   * For a control with nothing else to go by — an icon, a glyph — `title` was
+   * its accessible name, and removing it left the popover's favourite star
+   * announcing as "button". So the text becomes the aria-label first. Only when
+   * there is no other name: a label that is already there, or real text in the
+   * control, wins. `data-tip-named` marks names written here, so a title that
+   * changes later (Lock / Locked) updates the name instead of leaving it stale.
+   *
+   * The one place this happens. The observer below used to strip titles set
+   * after load with its own two lines, which kept none of this, so any control
+   * named by a title set from script lost its name the moment it got one.
+   */
+  function take(node) {
+    const text = node.getAttribute("title");
+    node.removeAttribute("title");          // or macOS draws its own as well
+    if (!text) return;
+    node.setAttribute("data-tip", text);
+    const named = node.hasAttribute("aria-labelledby") || node.textContent.trim()
+      || (node.hasAttribute("aria-label") && !node.hasAttribute("data-tip-named"));
+    if (!named) { node.setAttribute("aria-label", text); node.setAttribute("data-tip-named", ""); }
+  }
+
   function adopt(root = document) {
     if (enabled) {
-      for (const node of root.querySelectorAll("[title]")) {
-        const text = node.getAttribute("title");
-        if (!text) { node.removeAttribute("title"); continue; }
-        node.setAttribute("data-tip", text);
-        /**
-         * Keep the name. For a control with nothing else to go by — an icon, a
-         * glyph — `title` was its accessible name, and removing it left the
-         * popover's favourite star announcing as "button". So the text becomes
-         * the aria-label first. Only when there is no other name: a label that
-         * is already there, or real text in the control, wins. `data-tip-named`
-         * marks names this wrote, so a title that changes later (Lock / Locked)
-         * updates the name instead of leaving a stale one.
-         */
-        const named = node.hasAttribute("aria-labelledby") || node.textContent.trim()
-          || (node.hasAttribute("aria-label") && !node.hasAttribute("data-tip-named"));
-        if (!named) { node.setAttribute("aria-label", text); node.setAttribute("data-tip-named", ""); }
-        node.removeAttribute("title");        // or macOS draws its own as well
-      }
+      for (const node of root.querySelectorAll("[title]")) take(node);
     } else {
       for (const node of root.querySelectorAll("[data-tip]")) {
         node.setAttribute("title", node.getAttribute("data-tip"));
@@ -152,9 +159,7 @@
     if (!enabled) return;
     for (const rec of records) {
       if (rec.type === "attributes" && rec.target.hasAttribute?.("title")) {
-        const text = rec.target.getAttribute("title");
-        rec.target.removeAttribute("title");
-        if (text) rec.target.setAttribute("data-tip", text);
+        take(rec.target);
       } else if (rec.type === "childList") {
         for (const node of rec.addedNodes) {
           if (node.nodeType === 1 && (node.hasAttribute("title") || node.querySelector?.("[title]"))) {

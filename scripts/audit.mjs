@@ -2017,14 +2017,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
               : pass("every var() used without a fallback is defined in its own page");
 
   console.log("\nhelp tags keep a control's name");
+  // Both routes a title takes must go through take(), which keeps the name:
+  // adopt() for what is there at load, and the observer for titles set later.
+  // The observer had its own copy of the strip, without the name, which is how
+  // a fix to adopt() alone left every title set from script still nameless.
   const tips = read("src/renderer/tips.js");
+  const take = tips.match(/function take\(node\) \{[\s\S]*?\n  \}/);
   const adopt = tips.match(/function adopt\([\s\S]*?\n  \}/);
-  const body = adopt ? adopt[0] : "";
-  const keeps = body.indexOf('setAttribute("aria-label"'), strips = body.indexOf('removeAttribute("title")', body.indexOf("data-tip"));
-  !adopt ? fail("help tags", "adopt() is gone")
-  : keeps < 0 || strips < 0 || keeps > strips
-    ? fail("help tags", "adopt() removes title without first keeping it as the name of a control that has no other")
-    : pass("adopt() gives a nameless control its title as aria-label before removing the title");
+  const observer = tips.match(/new MutationObserver\([\s\S]*?\}\)\.observe/);
+  const problems = [];
+  if (!take || !/setAttribute\("aria-label"/.test(take[0])) problems.push("take() does not keep the name");
+  if (!adopt || !/\btake\(node\)/.test(adopt[0])) problems.push("adopt() does not go through take()");
+  if (!observer || !/\btake\(rec\.target\)/.test(observer[0])) problems.push("the title observer does not go through take()");
+  if (/removeAttribute\("title"\)/.test(tips.replace(take?.[0] || "", ""))) problems.push("a title is removed somewhere other than take()");
+  problems.length ? fail("help tags", problems.join("; "))
+    : pass("every title help tags take over, at load or later, keeps a nameless control named");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

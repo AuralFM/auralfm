@@ -163,6 +163,7 @@ function paintOutMenu() {
     const tick = document.createElement("span");
     tick.className = "tick";
     tick.textContent = "\u2713";
+    tick.setAttribute("aria-hidden", "true");
     const name = document.createElement("span");
     name.className = "devname";
     name.textContent = label;
