@@ -1,9 +1,10 @@
 /**
  * Presence over Nostr — "someone near here is listening too", with no server.
  *
- * `presence.js` does the same job over HTTP and needs somewhere to run, which is
- * why #10 has sat open: standing up a server contradicts the whole position.
- * This is the version that does not need one.
+ * An HTTP version (`presence.js` plus `server/presence.mjs`) came first and
+ * needed somewhere to run, which is why #10 sat open: standing up a server
+ * contradicts the whole position. It never shipped switched on and has been
+ * removed; this is the version that does not need one.
  *
  * Three properties make Nostr right for this specifically:
  *

@@ -26,6 +26,10 @@
  *   no Electron imports outside main/preload  a renderer reaching past the bridge
  *   state:set takes patches, not snapshots .. a stale popover copy deleted favorites
  *   every chat channel goes through visible() a safety rule covering 2 surfaces of 3
+ *   every window is locked down ............. target=_blank would open a bare window
+ *   links leave only as http(s) ............. station links handed file: to the OS
+ *   the resolver keeps no cookies ........... Google's cookies in the app's session
+ *   prefs:set takes only real preferences ... any key, any type, written to disk
  *
  * **Correctness and content**
  *   every polled service has a cooldown ..... Celestrak IP-blocked this project
@@ -297,7 +301,7 @@ for (const { file, src } of mainFiles) {
 console.log("\ni18n keys resolve");
 // A missing key renders as nothing, which looks like a layout bug rather than a
 // translation bug and gets diagnosed as the wrong thing.
-const { strings, LANGUAGES } = await import(`file://${R("src/i18n.js")}`).then((m) => m.default || m);
+const { strings, LANGUAGES } = await import(pathToFileURL(R("src/i18n.js")).href).then((m) => m.default || m);
 const en = strings("en", "en");
 for (const { code, name } of LANGUAGES) {
   const t = strings(code, "en");
@@ -504,7 +508,9 @@ console.log("\nlight theme agrees with itself");
       return merged;
     };
     const a = all(/@media \(prefers-color-scheme: light\)\{\s*\n\s*:root:not\(\[data-theme="dark"\]\)\{([\s\S]*?)\n\s*\}/g);
-    const b = all(/:root\[data-theme="light"\]\{([\s\S]*?)\n\s*\}/g);
+    // \{\s*\n skips the `{ color-scheme: light; }` one-liner: with no newline
+    // before its brace, the lazy match ran on into the dark base block.
+    const b = all(/:root\[data-theme="light"\]\{\s*\n([\s\S]*?)\n\s*\}/g);
     if (!Object.keys(a).length || !Object.keys(b).length) continue;
     // Tokens that exist only under an explicit theme are not drift: the motion
     // and radius scales are appearance-independent and live in the base :root.
@@ -1761,6 +1767,81 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   problems.length
     ? fail("sender labels", problems.join("; "))
     : pass("every record the chat log paints carries a `from`");
+}
+
+// ── windows, links and the news resolver ────────────────────────────────────
+// Three holes found in one audit, all in main.js and all silent until used.
+// Only the popover had a window-open handler, so `target="_blank"` in Settings
+// (the in-app docs render links that way) would have opened a remote page in a
+// bare Electron window. That one handler passed any URL to shell.openExternal,
+// including file: and smb: from crawled station data. And the hidden window that
+// resolves Google News links ran Google's JavaScript in the default session, so
+// its cookies persisted across launches — where PRIVACY.md says Google gets an
+// IP address.
+{
+  console.log("\nevery window is locked down");
+  const problems = [];
+  for (const m of main.matchAll(/(?:let |const )?(\w+) = new BrowserWindow\(\{([\s\S]*?)\n\s*\}\);/g)) {
+    const [, name, opts] = m;
+    if (/partition:/.test(opts)) continue;   // the resolver, checked below
+    if (!new RegExp(`lockDown\\(${name}\\)`).test(main)) problems.push(`${name} is never passed to lockDown()`);
+  }
+  const lock = main.match(/function lockDown\(w\) \{([\s\S]*?)\n\}/);
+  if (!lock) problems.push("lockDown() is gone");
+  else {
+    if (!/setWindowOpenHandler/.test(lock[1])) problems.push("lockDown() sets no window-open handler");
+    if (!/will-navigate[\s\S]*preventDefault/.test(lock[1])) problems.push("lockDown() does not stop navigation");
+  }
+  problems.length ? fail("window lockdown", problems.join("; "))
+                  : pass("every window denies new windows and navigation");
+
+  console.log("\nlinks leave only as http(s)");
+  const bad = [];
+  const outside = main.match(/function openOutside\(url\) \{([\s\S]*?)\n\}/);
+  if (!outside || !/\^https\?:/.test(outside[1])) bad.push("openOutside() no longer checks for http(s)");
+  for (const c of main.matchAll(/shell\.openExternal\(/g)) {
+    const line = main.slice(0, c.index).split("\n").length;
+    const before = main.slice(Math.max(0, c.index - 600), c.index);
+    const inOutside = outside && c.index > outside.index && c.index < outside.index + outside[0].length;
+    // mailto: drafts are built in main from a literal address; nothing else is.
+    const mailto = /["'`]mailto:/.test(main.slice(c.index, c.index + 120)) || /const url = "mailto:/.test(before);
+    if (!inOutside && !mailto) bad.push(`main.js:${line} opens a URL without openOutside()`);
+  }
+  bad.length ? fail("external links", bad.join("; "))
+             : pass("every shell.openExternal is http(s)-checked or a mailto: we built");
+
+  console.log("\nthe resolver keeps no cookies");
+  const res = main.match(/new BrowserWindow\(\{[\s\S]*?partition:\s*(\w+)[\s\S]*?\n\s*\}\);([\s\S]{0,200})/);
+  const val = res && main.match(new RegExp(`const ${res[1]} = "([^"]*)"`));
+  !res ? fail("resolver session", "the news resolver has no partition, so it shares the default session")
+  : !val ? fail("resolver session", `${res[1]} is not a string constant this check can read`)
+  : val[1].startsWith("persist:") ? fail("resolver session", `partition "${val[1]}" is written to disk`)
+  : !/setWindowOpenHandler/.test(res[2]) ? fail("resolver session", "the resolver window can open windows")
+  : pass(`the resolver runs in "${val[1]}", in memory only, and opens no windows`);
+}
+
+// ── prefs:set ────────────────────────────────────────────────────────────────
+// normalize() guarded reads; nothing guarded writes. prefs:set stored any key of
+// any type, and setPrefs branches on `"x" in patch` — a string durableIdentity
+// could mint or destroy the key.
+{
+  console.log("\nprefs:set takes only real preferences");
+  const { createRequire } = await import("node:module");
+  const prefs = createRequire(import.meta.url)(R("src/prefs.js"));
+  const problems = [];
+  if (typeof prefs.pick !== "function") problems.push("prefs.pick is gone");
+  else {
+    const got = prefs.pick({ theme: "light", bogus: 1, durableIdentity: "yes", relays: { a: 1 } });
+    if (JSON.stringify(got) !== '{"theme":"light"}') problems.push(`pick let through ${JSON.stringify(got)}`);
+    if (JSON.stringify(prefs.pick({ relays: ["wss://a"] })) !== '{"relays":["wss://a"]}') problems.push("pick drops a valid relays array");
+    if (Object.keys(prefs.pick(null)).length || Object.keys(prefs.pick([1])).length) problems.push("pick accepts a non-object");
+  }
+  const body = main.match(/function setPrefs\((\w+)\) \{([\s\S]*?)\n\}/);
+  if (!body || !/^\s*(?:\/\/[^\n]*\n\s*)*const patch = prefs\.pick\(/.test(body[2])) {
+    problems.push("setPrefs no longer filters through prefs.pick before anything else");
+  }
+  problems.length ? fail("prefs:set", problems.join("; "))
+                  : pass("unknown keys and wrong types never reach the store");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

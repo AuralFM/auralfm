@@ -177,4 +177,27 @@ function normalize(saved = {}) {
   return out;
 }
 
-module.exports = { DEFAULTS, normalize };
+/**
+ * The part of a patch from a renderer that is a real preference, of the right kind.
+ *
+ * `normalize` protected reads and nothing protected writes: `prefs:set` stored
+ * whatever keys it was handed, and every side effect keyed on `"x" in patch`
+ * ran on them — so a string `durableIdentity` could mint or destroy a key.
+ * `state:set` has had an allowlist since it cost somebody their favourites;
+ * this is the same boundary for the other writable object.
+ *
+ * Arrays are checked as arrays, because `typeof []` is "object" and `relays`
+ * would otherwise take any object at all.
+ */
+const sameKind = (v, d) => Array.isArray(d) ? Array.isArray(v) : typeof v === typeof d && !Array.isArray(v);
+
+function pick(patch) {
+  const out = {};
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) return out;
+  for (const k of Object.keys(DEFAULTS)) {
+    if (Object.hasOwn(patch, k) && sameKind(patch[k], DEFAULTS[k])) out[k] = patch[k];
+  }
+  return out;
+}
+
+module.exports = { DEFAULTS, normalize, pick };

@@ -62,7 +62,6 @@ function visible(list) {
 }
 const i18n = require("./i18n");
 const failures = require("./failures");
-const presence = require("./presence");
 const nostr = require("./presence-nostr");
 const clouds = require("./clouds");
 const iss = require("./iss");
@@ -191,6 +190,37 @@ function save(state) {
   } catch (err) { console.error("save failed:", err.message); return false; }
 }
 
+// ── window hardening ─────────────────────────────────────────────────────────
+/**
+ * Hand a link to the browser, http(s) only.
+ *
+ * Station homepages come from crawled third-party listings, so a link can say
+ * anything — `file:`, `smb:`, an app's own URL scheme — and `shell.openExternal`
+ * will open whatever it is handed. `open:external` already had this check; the
+ * popover's window-open handler did not.
+ */
+function openOutside(url) {
+  if (/^https?:\/\//i.test(String(url || ""))) shell.openExternal(url);
+}
+
+/**
+ * No window of ours opens another window or navigates away from its own page.
+ *
+ * Without a handler Electron answers `target="_blank"` and `window.open` with a
+ * new BrowserWindow loading the remote page inside the app, and a stray link or
+ * a dropped file navigates the window itself — with the preload still attached.
+ * Only the popover had a handler. The in-app Privacy and Terms render links as
+ * `target="_blank"`, so the first document to gain one would have opened a bare
+ * Electron window over Settings. Both paths now go to the browser, or nowhere.
+ *
+ * Reloads do not raise `will-navigate`, so the View menu's Reload still works.
+ */
+function lockDown(w) {
+  w.webContents.setWindowOpenHandler(({ url }) => { openOutside(url); return { action: "deny" }; });
+  w.webContents.on("will-navigate", (e, url) => { e.preventDefault(); openOutside(url); });
+  return w;
+}
+
 // ── popover ───────────────────────────────────────────────────────────────────
 function createWindow() {
   win = new BrowserWindow({
@@ -230,11 +260,8 @@ function createWindow() {
   // Keep the window alive across close attempts until we're really quitting.
   win.on("close", (e) => { if (!quitting) { e.preventDefault(); hide(); } });
 
-  // Radio station links should open in the real browser, not inside the popover.
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: "deny" };
-  });
+  // Radio station links open in the real browser, not inside the popover.
+  lockDown(win);
 }
 
 function maxPopoverHeight() {
@@ -301,6 +328,7 @@ function openExplore() {
       nodeIntegration: false,
     },
   });
+  lockDown(explore);
   explore.loadFile(path.join(__dirname, "renderer", "explore.html"));
 
   // A menu bar app runs as an "accessory" with no Dock icon, which also means
@@ -413,6 +441,7 @@ function showSplash() {
     backgroundColor: "#00000000",
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
+  lockDown(splash);
   splash.loadFile(path.join(__dirname, "renderer", "splash.html"));
   splash.once("ready-to-show", () => {
     if (!splash || splash.isDestroyed()) return;
@@ -627,8 +656,12 @@ function buildMenu() {
 // ── preferences ───────────────────────────────────────────────────────────────
 const getPrefs = () => prefs.normalize(load().prefs);
 
-function setPrefs(patch) {
+function setPrefs(incoming) {
+  // Known keys of the right kind only; see prefs.pick. Everything below branches
+  // on which keys are present, so the filtering has to come first.
+  const patch = prefs.pick(incoming);
   const st = load();
+  if (!Object.keys(patch).length) return getPrefs();
   st.prefs = { ...getPrefs(), ...patch };
   save(st);
   if ("theme" in patch) applyThemeSource(st.prefs.theme);
@@ -687,6 +720,7 @@ function openSettings() {
       nodeIntegration: false,
     },
   });
+  lockDown(settingsWin);
   settingsWin.loadFile(path.join(__dirname, "renderer", "settings.html"));
   settingsWin.on("closed", () => { settingsWin = null; });
 }
@@ -1387,7 +1421,16 @@ ipcMain.handle("news:get", (_e, country) => news.get(country));
  *
  * Bounded hard: images and media are blocked so only the document loads, the
  * window is destroyed either way, and eight seconds is the whole budget.
+ *
+ * **Its own session, in memory.** This page runs Google's JavaScript, and in the
+ * default session any cookie it set would persist across launches and be sent
+ * with every later read — a stable identifier, where PRIVACY.md promises Google
+ * gets an IP address and nothing else. A partition without the `persist:`
+ * prefix is never written to disk and dies with the process. It navigates on
+ * purpose, so it gets no `will-navigate` guard, but it never opens a window.
  */
+const RESOLVER_PARTITION = "news-resolver";   // no "persist:" — memory only
+
 function resolveArticle(url) {
   if (!/^https?:\/\//i.test(String(url || ""))) return Promise.resolve(null);
   if (!/(^|\.)news\.google\.com$/i.test(new URL(url).hostname)) return Promise.resolve(url);
@@ -1395,8 +1438,12 @@ function resolveArticle(url) {
   return new Promise((done) => {
     let win = new BrowserWindow({
       show: false,
-      webPreferences: { offscreen: true, javascript: true, images: false, sandbox: true },
+      webPreferences: {
+        offscreen: true, javascript: true, images: false, sandbox: true,
+        partition: RESOLVER_PARTITION,
+      },
     });
+    win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     let settled = false;
     const finish = (result) => {
       if (settled) return;
@@ -1605,7 +1652,7 @@ ipcMain.on("presence:view", (_e, lat, lon) => {
 // Headlines open in the real browser. AuralFM is not a reader and should not
 // pretend to be one — see the note in src/news.js.
 ipcMain.on("open:external", (_e, url) => {
-  if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+  openOutside(url);
 });
 ipcMain.on("explore:open", openExplore);
 
@@ -1623,9 +1670,6 @@ ipcMain.on("player:tune", (_e, channel) => {
 ipcMain.on("player:state", (_e, state) => {
   playerState = state;
   spinTray(!!state.playing);
-  // Presence is opt-in and no-ops entirely when unconfigured.
-  if (state.playing && state.channel?.id) presence.join(state.channel.id);
-  else presence.leave();
   syncNostrPresence();
   // Station name next to the menu bar icon. Truncated so it can't eat the bar.
   const t = state.playing && state.channel?.title ? state.channel.title : "";
@@ -1726,7 +1770,6 @@ if (!app.requestSingleInstanceLock()) {
     sdr.init(app.getPath("userData"));
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
     markets.start();        // live crypto feed; falls back to polling on its own
-    presence.onCountChange((n) => win?.webContents.send("player:listeners", n));
     nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
     // Filtered here, not in the renderer. A muted message never crosses the
     // bridge, so there is nothing in the DOM to hide and nothing to render by
@@ -1758,7 +1801,6 @@ if (!app.requestSingleInstanceLock()) {
       social.noteMutual(pubkey, on);
       explore?.webContents.send("social:changed", social.list());
     });
-    if (presence.enabled()) console.log("presence: enabled");
     buildMenu();
     createWindow();
     createTray();

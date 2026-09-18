@@ -346,37 +346,72 @@ something you ask for rather than something you have to notice and switch off.*
 ## Project layout
 
 ```
-src/
-  main.js              tray, popover, Explore window, IPC
-  preload.js           the entire renderer API surface (context-isolated)
-  catalog.js           bundle loading + ranked search        (main process)
-  resolver.js          3-tier stream URL resolution          (main process)
-  weather.js           current conditions via Open-Meteo      (main process)
-  sdr.js               shortwave receiver list                (main process)
-  wspr.js              propagation reports -> arcs            (main process)
-  space.js             solar flux and geomagnetic activity    (main process)
-  flights.js           aircraft near the view, capped         (main process)
-  presence-nostr.js    optional presence over Nostr, no server(main process)
-  mystations.js        stations you added yourself            (main process)
-  docs.js              privacy/terms/licences, allowlisted   (main process)
-  palettes.js          colour schemes
-  i18n.js              interface strings, 5 languages
-  backoff.js           shared failure cooldown
-  renderer/
-    popover.html       menu bar player — the only thing that makes sound
-    explore.html       the globe
-    settings.html      appearance, colour, language, your stations
-    kiwi.js            KiwiSDR protocol + IMA-ADPCM decoder
-    astro.js           planetary positions (JPL elements)
+src/                     main process unless noted
+  main.js                tray, windows, IPC, deep links
+  preload.js             the entire renderer API surface (context-isolated)
+  prefs.js               preference defaults, and what a write may contain
+  catalog.js             bundle loading + ranked search
+  resolver.js            3-tier stream URL resolution
+  failures.js            reliably dead streams stop being offered first
+  safehost.js            vets hosts a list chose before connecting to them
+  useragent.js           how the app identifies itself to every server
+  backoff.js             shared failure cooldown for polled services
+  weather.js             current conditions via Open-Meteo
+  clouds.js              near-real-time satellite cloud imagery
+  iss.js                 live ISS position
+  satellites.js          orbiting objects and their paths
+  space.js               solar flux and geomagnetic activity
+  flights.js             aircraft near the view, capped
+  wspr.js                propagation reports -> arcs
+  sdr.js                 shortwave receiver list
+  schedule.js            what is on shortwave right now (EiBi)
+  news.js                local headlines
+  markets.js             market ticker
+  geo.js                 great-circle distance
+  presence-nostr.js      optional presence and chat over Nostr, no server
+  nostr-private.js       private messages (bitchat envelope format)
+  hub.js                 private rooms: a name and a password
+  identity.js            optional durable identity, off by default
+  social.js              favorites and verified people
+  muted.js               people you have chosen not to hear from
+  safety.js              the safety tools, and their limits
+  mystations.js          stations you added yourself
+  docs.js                privacy/terms/licences, allowlisted
+  tips.js                rule-based tips
+  palettes.js            colour schemes
+  i18n.js                interface strings, 5 languages
+  renderer/              (renderer process)
+    popover.html/.js     menu bar player — the only thing that makes sound
+    explore.html/.js     the globe, chat, headlines, markets
+    settings.html/.js    appearance, colour, language, your stations
+    splash.html/.js      launch mark
+    kiwi.js              KiwiSDR protocol + IMA-ADPCM decoder
+    astro.js             planetary positions (JPL elements)
+    card.js              the share card
+    tour.js, tips.js,
+    tipcard.js           introduction, help tags, tips
+    icons.js             the icon set
+    reveal.js            show the page once it is on screen
+    errors.js            renderer error capture
 scripts/
-  crawl.mjs            radio.garden -> station bundle (resumable)
-  crawl-sdr.mjs        kiwisdr -> receiver bundle
-  tags.mjs             radio-browser genre tags -> bundle
-  audit.mjs            pre-flight checks (npm run audit)
-  make-icons.js        SVG -> PNG via Electron (keeps alpha)
-assets/                source icons + attribution
-data/                  generated bundle (gitignored)
-phase0/index.html      the original single-file prototype
+  audit.mjs              the test suite (npm run audit)
+  crawl.mjs              radio.garden -> station bundle (resumable)
+  crawl-sdr.mjs          kiwisdr -> receiver bundle
+  tags.mjs               radio-browser genre tags -> bundle
+  fetch-schedule.mjs     EiBi shortwave schedule
+  relays.mjs             geo-located Nostr relay directory
+  sky.mjs, lights.mjs    star bundle, city-lights texture
+  vendor.mjs             copies runtime libraries into renderer/vendor
+  notices.mjs            generates THIRD-PARTY-NOTICES.md
+  make-icons.js          SVG -> PNG via Electron (keeps alpha)
+  release.mjs            gate, build, verify, publish
+  sync-kb.mjs            mirrors docs into the knowledge-base vault
+  relay-test/            manual two-party tests against live relays
+assets/                  source icons, fonts, licences, attribution
+data/                    receivers, schedule, relays and word filter are
+                         tracked; the station bundle is generated (gitignored)
+docs/                    privacy, terms, receivers, legal and security
+plans/                   design and implementation plans
 ```
 
 ## Scripts

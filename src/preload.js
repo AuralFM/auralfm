@@ -185,7 +185,6 @@ contextBridge.exposeInMainWorld("auralfm", {
   reportFailed: (id) => ipcRenderer.send("player:failed", id),
   mediaKeys: (on) => ipcRenderer.send("player:mediakeys", on),
   onMediaKey: (fn) => ipcRenderer.on("player:mediakey", (_e, a) => fn(a)),
-  onListeners: (fn) => ipcRenderer.on("player:listeners", (_e, n) => fn(n)),
   transport: (msg) => ipcRenderer.send("player:transport", msg),
   onTransport: (fn) => ipcRenderer.on("player:transport", (_e, m) => fn(m)),
   reportOk: (id) => ipcRenderer.send("player:ok", id),

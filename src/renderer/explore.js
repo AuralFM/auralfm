@@ -2113,7 +2113,10 @@ function paintGlobeReadout(sunLat, sunLng, m, phase, glyph) {
     const mm = String(Math.floor((h % 1) * 60)).padStart(2, "0");
     // Civil twilight either side, matching the terminator's own softness.
     const lit = h >= 6 && h < 18;
-    bits.push(`<b>${here.title}</b> ${hh}:${mm} ${lit ? t("readout.day", "day") : t("readout.night", "night")}`);
+    // Escaped: for a receiver this is the operator's own name for it, crawled
+    // from a public list, and it is going into innerHTML.
+    const title = String(here.title ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    bits.push(`<b>${title}</b> ${hh}:${mm} ${lit ? t("readout.day", "day") : t("readout.night", "night")}`);
   }
 
   bits.push(`${glyph} <b>${phase} ${Math.round(m.illum * 100)}%</b>`);

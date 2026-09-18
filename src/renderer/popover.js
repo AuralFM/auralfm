@@ -760,13 +760,6 @@ window.auralfm.onTuneSdr((rx) => {
 });
 
 
-// Hardware media keys, forwarded from main.
-// Listener count, when a presence server is configured. Silent otherwise.
-window.auralfm.onListeners((n) => {
-  const el = $("status");
-  if (!n || !live) return;
-  el.textContent = `${el.textContent} · ${n} listening`;
-});
 
 // Explore's transport talks to this player; there is still only one <audio>.
 window.auralfm.onTransport(({ action, value }) => {
