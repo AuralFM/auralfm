@@ -262,7 +262,22 @@ for (const { file, html } of renderers) {
 console.log("\nevery preload method has an IPC handler");
 // A typo here is invisible until a user clicks the thing.
 const preload = fs.readFileSync(R("src/preload.js"), "utf8");
-const main = fs.readFileSync(R("src/main.js"), "utf8");
+// The main process is src/main.js plus the modules in src/main/ it registers
+// (the IPC handlers and the state store). Checks that read "main" read all of it,
+// so a handler moving between those files can never make a check stop looking.
+const MAIN_FILES = ["src/main.js", ...fs.readdirSync(R("src/main"))
+  .filter((f) => f.endsWith(".js")).sort().map((f) => `src/main/${f}`)];
+const main = MAIN_FILES.map((f) => fs.readFileSync(R(f), "utf8")).join("\n");
+
+// Explore is one page split across plain scripts — explore-*.js, then explore.js
+// — that share a global scope. Checks that read "Explore" read all of it, in the
+// order explore.html loads it, so moving code between the parts can never make
+// a check stop looking.
+const EXPLORE = "src/renderer/explore*.js";
+const EXPLORE_FILES = [...fs.readFileSync(R("src/renderer/explore.html"), "utf8")
+  .matchAll(/<script src="(explore[\w-]*\.js)"/g)].map((m) => `src/renderer/${m[1]}`);
+const exploreSrc = EXPLORE_FILES.map((f) => fs.readFileSync(R(f), "utf8")).join("\n");
+const readSrc = (f) => (f === EXPLORE ? exploreSrc : fs.readFileSync(R(f), "utf8"));
 const channels = [...preload.matchAll(/ipcRenderer\.(invoke|send|on)\(\s*"([^"]+)"/g)]
   .map((m) => ({ kind: m[1], name: m[2] }));
 const missing = channels.filter(({ kind, name }) => {
@@ -615,9 +630,10 @@ console.log("\nlight theme agrees with itself");
 // not validate them.
 {
   console.log("\nstate:set only accepts keys the renderers own");
-  const src = fs.readFileSync(R("src/main.js"), "utf8");
+  const src = main;
   const list = src.match(/const RENDERER_KEYS = \[([^\]]*)\]/);
-  const handler = src.match(/ipcMain\.handle\("state:set"[\s\S]{0,1200}?\n\}\);/);
+  // Indentation-tolerant: the handler is inside ipc-app.js's register().
+  const handler = src.match(/ipcMain\.handle\("state:set"[\s\S]{0,1200}?\n\s*\}\);/);
   const problems = [];
   if (!list) problems.push("RENDERER_KEYS is gone");
   else {
@@ -693,7 +709,7 @@ console.log("\nlight theme agrees with itself");
 // funnel; nothing outside it may filter a chat list.
 {
   console.log("\nevery chat channel is filtered in one place");
-  const src = fs.readFileSync(R("src/main.js"), "utf8");
+  const src = main;
   const problems = [];
   if (!/function visible\(list\)/.test(src)) problems.push("visible() is gone");
   // Anything sending a chat payload has to hand it to visible() on the way.
@@ -725,7 +741,7 @@ console.log("\nlight theme agrees with itself");
 // an ordering, and this ordering is the whole bug.
 {
   console.log("\nthe composer keeps your words when a command fails");
-  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const src = exploreSrc;
   const start = src.indexOf('$("chatform").onsubmit');
   const problems = [];
   if (start < 0) problems.push("the submit handler is gone");
@@ -818,7 +834,7 @@ console.log("\nlight theme agrees with itself");
 // quietly sends somebody to the wrong end of the spectrum.
 {
   console.log("\ntyping a frequency answers from local data and dials once");
-  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const src = exploreSrc;
   const problems = [];
 
   const i = src.indexOf("async function showFrequency(");
@@ -1005,7 +1021,7 @@ console.log("\nlight theme agrees with itself");
 // sitting in a city it had nothing to do with. The two scopes stay apart.
 {
   console.log("\nthe room log carries the room, not private conversations");
-  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const src = exploreSrc;
   const problems = [];
   const i = src.indexOf("const merged = (");
   if (i < 0) problems.push("the log's merge is gone or renamed");
@@ -1040,7 +1056,7 @@ console.log("\nlight theme agrees with itself");
 // had most to say. It has to live in a cache and be merged like any other kind.
 {
   console.log("\nwhat the app says outlives the next repaint");
-  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const src = exploreSrc;
   const problems = [];
   const fn = src.slice(src.indexOf("function systemLine("), src.indexOf("function systemLine(") + 500);
   if (!src.includes("function systemLine(")) problems.push("systemLine is gone");
@@ -1208,8 +1224,8 @@ console.log("\nlight theme agrees with itself");
 {
   console.log("\nnothing routes the radio through Web Audio");
   const guilty = [];
-  for (const f of ["src/renderer/popover.js", "src/renderer/explore.js"]) {
-    const src = fs.readFileSync(R(f), "utf8");
+  for (const f of ["src/renderer/popover.js", EXPLORE]) {
+    const src = readSrc(f);
     // In a comment explaining why it is absent: fine. In code: not fine.
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     if (/createMediaElementSource\s*\(/.test(code)) guilty.push(f);
@@ -1231,8 +1247,8 @@ console.log("\nlight theme agrees with itself");
 {
   console.log("\nthe output button does not come and go");
   const bad = [];
-  for (const f of ["src/renderer/explore.js", "src/renderer/popover.js"]) {
-    const src = fs.readFileSync(R(f), "utf8");
+  for (const f of [EXPLORE, "src/renderer/popover.js"]) {
+    const src = readSrc(f);
     const m = src.match(/wrap\.hidden\s*=\s*([^;]+);/);
     if (!m) { bad.push(`${f}: nothing sets wrap.hidden`); continue; }
     // Any threshold above "there is nothing at all" is a control that flickers
@@ -1380,7 +1396,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // defined in the file, on `window`, or on one of the bridges.
 {
   console.log("\nevery click handler calls something that exists");
-  const src = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const src = exploreSrc;
   const defined = new Set();
   /**
    * Every script the page loads counts, not just this one.
@@ -1407,8 +1423,16 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     "parseInt","parseFloat","isNaN","Intl","URL","Boolean","RegExp","Error","structuredClone"]);
   const bad = [];
   // Every `X.onclick = ` handler body, and every arrow assigned to one.
-  for (const m of src.matchAll(/\$\("([\w-]+)"\)\.onclick\s*=\s*(?:async\s*)?\(?\)?\s*=>\s*\{([\s\S]*?)\n\};/g)) {
-    const [, id, body] = m;
+  //
+  // Anchored on the handler's own indentation, because handlers now sit inside
+  // each part's wire function; a column-0 `};` matched none of them and the
+  // check passed having read nothing. A one-line handler ends on its own line —
+  // the lock button's used to run on through 5,000 characters of other code.
+  let handlers = 0;
+  for (const m of src.matchAll(/^( *)\$\("([\w-]+)"\)\.onclick\s*=\s*(?:async\s*)?\(?\)?\s*=>\s*\{(?:([^\n]*)\};[ \t]*$|([\s\S]*?)\n\1\};)/gm)) {
+    handlers++;
+    const [, , id, oneLine, block] = m;
+    const body = oneLine ?? block;
     for (const c of body.matchAll(/(?:^|[^\w.$])([A-Za-z_$][\w$]*)\s*\(/g)) {
       const name = c[1];
       if (defined.has(name) || AMBIENT.has(name)) continue;
@@ -1420,9 +1444,10 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       bad.push(`${name}()`);
     }
   }
-  if (bad.length) fail("handler calls a missing function",
+  if (handlers < 5) fail("handler check", `found only ${handlers} onclick handlers in Explore — the pattern no longer matches the code`);
+  else if (bad.length) fail("handler calls a missing function",
          `Explore calls ${[...new Set(bad)].join(", ")} from a click handler; nothing defines it`);
-  else pass("every onclick handler in Explore calls a function that is defined");
+  else pass(`all ${handlers} onclick handlers in Explore call functions that are defined`);
 }
 
 // ── a favourite remembers where it is ────────────────────────────────────────
@@ -1434,8 +1459,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 {
   console.log("\na favourite remembers where it is");
   const miss = [];
-  for (const f of ["src/renderer/explore.js", "src/renderer/popover.js"]) {
-    const src = fs.readFileSync(R(f), "utf8");
+  for (const f of [EXPLORE, "src/renderer/popover.js"]) {
+    const src = readSrc(f);
     const m = src.match(/favorites\.push\(\{[\s\S]{0,400}?\}\)/);
     if (!m) { miss.push(`${f}: no favorites.push found`); continue; }
     if (!/lat:\s*ch\.lat/.test(m[0]) || !/lon:\s*ch\.lon/.test(m[0])) {
@@ -1760,9 +1785,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     const [, list, body] = m;
     if (!/\bfrom:/.test(body)) problems.push(`${list}.push has no \`from\` — the renderer would show "undefined"`);
   }
-  const renderer = fs.readFileSync(R("src/renderer/explore.js"), "utf8");
+  const renderer = exploreSrc;
   if (!/m\.nick \|\| m\.from/.test(renderer)) {
-    problems.push("explore.js no longer labels with `m.nick || m.from` — this check needs updating");
+    problems.push("Explore no longer labels with `m.nick || m.from` — this check needs updating");
   }
   problems.length
     ? fail("sender labels", problems.join("; "))

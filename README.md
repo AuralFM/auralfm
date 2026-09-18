@@ -347,7 +347,10 @@ something you ask for rather than something you have to notice and switch off.*
 
 ```
 src/                     main process unless noted
-  main.js                tray, windows, IPC, deep links
+  main.js                tray, windows, menus, deep links, start-up
+  main/                  the Electron side of the main process
+    ipc-*.js             IPC handlers, one module per area, registered by main.js
+    store.js             the state file
   preload.js             the entire renderer API surface (context-isolated)
   prefs.js               preference defaults, and what a write may contain
   catalog.js             bundle loading + ranked search
@@ -382,7 +385,10 @@ src/                     main process unless noted
   i18n.js                interface strings, 5 languages
   renderer/              (renderer process)
     popover.html/.js     menu bar player — the only thing that makes sound
-    explore.html/.js     the globe, chat, headlines, markets
+    explore.html         the globe, chat, headlines, markets
+    explore-*.js         Explore, in parts that share one scope; each part's
+                         wiring runs from explore.js once every part has loaded
+    explore.js           wiring and boot
     settings.html/.js    appearance, colour, language, your stations
     splash.html/.js      launch mark
     kiwi.js              KiwiSDR protocol + IMA-ADPCM decoder
