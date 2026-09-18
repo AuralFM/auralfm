@@ -268,8 +268,7 @@ function repaintLog() {
     // some bitchat users are too. Say so, quietly.
     if (m.teleport) {
       const far = document.createElement("span");
-      far.className = "who";
-      far.style.cssText = "opacity:.55;font-weight:400";
+      far.className = "who tuned";         // quieter than the name: see .who.tuned
       far.textContent = `  ${t("chat.tuned", "tuned in")}`;
       el.append(far);
     }

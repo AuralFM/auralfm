@@ -32,7 +32,7 @@
  *   prefs:set takes only real preferences ... any key, any type, written to disk
  *   every clickable row works by keyboard .. no way to pick a station without a mouse
  *   no button is named by a glyph ........... the headline Close announced as "times"
- *   empty states are styled in the sheet .... four inline paddings, four numbers
+ *   Explore's styles live in the sheet ...... four inline paddings, four numbers
  *
  * **Correctness and content**
  *   every polled service has a cooldown ..... Celestrak IP-blocked this project
@@ -1928,21 +1928,24 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
                   : pass("every glyph-only button is named in words, and the row star shows on focus");
 }
 
-// ── empty states are styled in the stylesheet ────────────────────────────────
+// ── Explore's styles live in the stylesheet ─────────────────────────────────
 // Flagged by a Rams review: the same empty state carried padding:32px 16px in
-// two scripts, 30px 16px in a third and 22px 12px in a fourth, and shortwave set
-// five more by hand. The numbers live with .empty in explore.html now.
+// two scripts, 30px 16px in a third and 22px 12px in a fourth, shortwave set
+// five more by hand, and the chat wrote its own for "tuned in". All of them live
+// in explore.html now, so no script writes a block of style: no style="" in a
+// template and no cssText. Single properties that change at runtime (a signal's
+// pulse, a menu's position, a dimmed row) are still set one at a time.
 {
-  console.log("\nempty states are styled in the stylesheet");
+  console.log("\nExplore's styles live in the stylesheet");
   const bad = [];
   for (const f of EXPLORE_FILES) {
     const src = fs.readFileSync(R(f), "utf8");
     const at = (i) => `${path.basename(f)}:${src.slice(0, i).split("\n").length}`;
-    for (const m of src.matchAll(/class="empty[^"]*"\s+style=/g)) bad.push(at(m.index));
-    for (const m of src.matchAll(/(\w+)\.className = "empty[^"]*";[^\n]*\n(?:[^\n]*\n){0,2}?\s*\1\.style\.cssText/g)) bad.push(at(m.index));
+    for (const m of src.matchAll(/<\w+[^>`]*\sstyle="/g)) bad.push(at(m.index));
+    for (const m of src.matchAll(/\.style\.cssText\s*=/g)) bad.push(at(m.index));
   }
-  bad.length ? fail("empty-state styles", `inline style on an empty state at ${bad.join(", ")} — put it in explore.html`)
-             : pass("no empty state in Explore carries an inline style");
+  bad.length ? fail("inline styles", `a block of inline style at ${bad.join(", ")} — put it in explore.html`)
+             : pass("no Explore script writes a block of inline style");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

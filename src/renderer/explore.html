@@ -1103,6 +1103,8 @@
   #chatlog{flex:1;min-height:0;padding:0 17px 6px;overflow-y:auto}
   .msg{padding:3px 0;font-size:12px;line-height:1.42;word-wrap:break-word}
   .msg .who{color:var(--label2);font-weight:590}
+  /* "tuned in" after a name: the same span as the name, said more quietly. */
+  .msg .who.tuned{opacity:.55;font-weight:400}
   /* Your own line is tinted rather than aligned right: a twenty-kilometre
      public square is not a DM thread, and it should not look like one. */
   .msg.mine .who{color:var(--accent)}
