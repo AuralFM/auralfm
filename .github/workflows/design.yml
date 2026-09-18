@@ -50,7 +50,7 @@ jobs:
     steps:
       # fetch-depth: 0 because the action reviews what changed against the base,
       # and a shallow clone has no base to diff against.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
 
       - uses: rams-design/rams-action@v1
