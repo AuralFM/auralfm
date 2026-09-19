@@ -1253,6 +1253,29 @@ console.log("\nlight theme agrees with itself");
     : pass("no renderer routes the playing element through an AudioContext");
 }
 
+// ── the card's levels come from a copy, never from the radio ────────────────
+// The waveform came back by measuring a second, private copy of the stream
+// (levels.js) through a gain of zero. That is only safe while the element it
+// routes through Web Audio is one it created itself: handed the popover's
+// `audio`, it would be the one-in-six silence above with a new file name. So
+// every createMediaElementSource there must name an element built with
+// `new Audio(` in the same file, and the popover must hand it a URL.
+{
+  console.log("\nthe card's levels come from a copy, never from the radio");
+  const code = readSrc("src/renderer/levels.js")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const made = new Set([...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*new Audio\(/g)].map((m) => m[1]));
+  const routed = [...code.matchAll(/createMediaElementSource\s*\(\s*([^)]*?)\s*\)/g)].map((m) => m[1]);
+  const foreign = routed.filter((arg) => !made.has(arg));
+  const pop = readSrc("src/renderer/popover.js").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const handed = [...pop.matchAll(/AuralLevels\??\.sample\s*\(\s*([^,)]+)/g)].map((m) => m[1].trim());
+  if (!routed.length) fail("the card's levels are measured", "levels.js routes nothing — the sampler is gone");
+  else if (foreign.length) fail("the card's levels come from a copy", `levels.js routes ${foreign.join(", ")}, which it did not create`);
+  else if (handed.some((h) => h === "audio" || /\baudio\b/.test(h) && !/Url/.test(h)))
+    fail("the card's levels come from a copy", `popover.js hands the sampler ${handed.join(", ")} rather than a URL`);
+  else pass("the waveform is measured from a private copy of the stream, never the playing element");
+}
+
 // ── the output button does not come and go ──────────────────────────────────
 // It hid whenever fewer than two outputs were enumerated. macOS reports
 // `default` plus the built-in speakers and nothing else once a bluetooth speaker

@@ -83,13 +83,10 @@ let outputId = "";                      // "" means whatever macOS is using
  * media the browser passes silence through that graph. About one station in six
  * went quiet while still reporting that it was playing.
  *
- * If levels are ever wanted again, they cannot come from this element. Anything
- * that reintroduces `createMediaElementSource` here reintroduces the silence,
- * so the audit fails on the call by name.
+ * Levels for the card now come from a private copy of the stream (levels.js),
+ * never from this element. Anything that reintroduces `createMediaElementSource`
+ * here reintroduces the silence, so the audit fails on the call by name.
  */
-function levelHistory() {
-  return null;
-}
 
 async function applyOutput(id) {
   outputId = String(id || "");
@@ -280,8 +277,14 @@ function publish(){
  */
 const persist=(patch)=> window.auralfm.setState({ ...patch });
 
-// Explore draws the card; this window is the one that can hear.
-window.auralfm.onLevelsWanted?.(() => window.auralfm.levelsAre(levelHistory()));
+// Explore draws the card; this window is the one that can hear. The levels come
+// from a private copy of the stream (levels.js), never from `audio` itself.
+window.auralfm.onLevelsWanted?.(async () => {
+  const levels = playingUrl && !audio.paused
+    ? await window.AuralLevels?.sample(playingUrl).catch(() => null)
+    : null;
+  window.auralfm.levelsAre(levels ?? null);
+});
 
 /** Main is the truth. Anything it saves lands here before the next patch. */
 window.auralfm.onStateChanged?.((s)=>{
@@ -446,7 +449,9 @@ async function tune(ch, { chained = false } = {}) {
   start(res.url, my);
 }
 
+let playingUrl = null;   // the stream as resolved, for the card's sampler
 function start(url, my) {
+  playingUrl = url;
   audio.src = url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
   audio.load();
   setStatus("Connecting…");

@@ -292,6 +292,21 @@ async function openShareSheet() {
       const found = await guard("cardWhere", () => window.auralfm.stationById(playing.id), null);
       if (found) { lat = found.lat; lon = found.lon; }
     }
+    /**
+     * And if the station has left the catalogue, its city has not.
+     *
+     * A re-crawl drops stations that stopped answering, and a favourite saved
+     * before that still plays from its stored stream — so the lookup by id comes
+     * back empty and the card lost its globe ("Deeper Shades Of House", Los
+     * Angeles). The place is on the favourite, and a place is enough to put the
+     * Earth under the words.
+     */
+    if ((!Number.isFinite(lat) || !Number.isFinite(lon)) && playing.place) {
+      const q = [playing.place, playing.country].filter(Boolean).join(" ");
+      const hit = (await guard("cardPlace", () => window.auralfm.places(q, 1), null))?.places?.[0]
+        || (await guard("cardPlace", () => window.auralfm.places(playing.place, 1), null))?.places?.[0];
+      if (hit) { lat = hit.lat; lon = hit.lon; }
+    }
     sheetPng = await window.Card.make({
       title: playing.title || "",
       place: playing.place || "",
@@ -334,6 +349,8 @@ function closeShareSheet() {
 let preMute = 0.8;
 function paintVolume(v) {
   $("vol").value = v;
+  // The filled part of the track (explore.html, #vol) is drawn from this.
+  $("vol").style.setProperty("--vol", `${Math.round(v * 100)}%`);
   Icons.set($("mute"), v === 0 ? "volumeOff" : v < 0.5 ? "volumeLow" : "volumeHigh");
   // Muted or not is the whole meaning of this control, and it was carried by the
   // glyph alone — which the design system already forbids in words.

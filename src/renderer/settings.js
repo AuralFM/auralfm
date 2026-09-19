@@ -474,7 +474,10 @@ async function paintRelays() {
     box.append(r);
     return;
   }
-  for (const url of urls) {
+  // The read-only spread is dozens of hosts nobody needs to read one by one:
+  // listed are the relays this place publishes to, and the rest is one line.
+  const readOnly = new Set(s?.readOnly || []);
+  for (const url of urls.filter((u) => !readOnly.has(u))) {
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `<span class="name sub"></span><span class="tag"></span>`;
@@ -494,6 +497,15 @@ async function paintRelays() {
       row.append(x);
     }
     box.append(row);
+  }
+  if (readOnly.size) {
+    const r = document.createElement("div");
+    r.className = "row";
+    r.innerHTML = `<span class="name sub"></span>`;
+    r.querySelector(".sub").textContent =
+      (T["set.relayCoverage"] || "+ {n} more around the world, read only — so chat and listeners anywhere on the globe reach you")
+        .replace("{n}", readOnly.size);
+    box.append(r);
   }
 }
 setInterval(() => { if (!document.hidden) paintRelays(); }, 6000);

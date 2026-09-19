@@ -500,19 +500,20 @@
           }
         }
         /**
-         * Under the code, right-aligned to it.
+         * Under the code, centred on it.
          *
-         * A caption belongs under the thing it captions. It sat above for a
-         * while because the code was low enough that anything beneath it would
-         * have been on the card's edge — so the code moved up rather than the
-         * label staying in the wrong place. Right-aligned because the words are
-         * wider than the code: set from its left edge they ran past the card's
-         * own margin, which is the one line here that has to be straight.
+         * A caption belongs under the thing it captions. It was right-aligned,
+         * because the words are a little wider than the code and centring them
+         * put a few pixels past the card's right margin — but right-aligned it
+         * read as off-centre, which is the thing people actually saw. So it is
+         * centred, and set just small enough to fit inside the code's width,
+         * which keeps the margin straight as well.
          */
         ctx.fillStyle = FAINT;
-        ctx.font = "500 20px Inter, system-ui, sans-serif";
-        ctx.textAlign = "right";
-        ctx.fillText(t_scan, QR_X + QR, QR_Y + QR + 30);
+        const capSize = fitted(ctx, t_scan, 500, 20, 14, QR);
+        ctx.font = `500 ${capSize}px Inter, system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(t_scan, QR_X + QR / 2, QR_Y + QR + 30);
         ctx.textAlign = "left";
       } catch { /* no code rather than a broken one */ }
     }

@@ -187,6 +187,7 @@ const en = {
   "tuner.waiting": "Listening for the spectrum…",
   "chat.browsing": "Listening here would let you reply",
   "set.relays": "Relays",
+  "set.relayCoverage": "+ {n} more around the world, read only — so chat and listeners anywhere on the globe reach you",
   "set.relayConnected": "connected",
   "set.relayYours": "yours",
   "set.relayRemove": "Remove",

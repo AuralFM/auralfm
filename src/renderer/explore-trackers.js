@@ -351,7 +351,7 @@ function centreGlobe(w) {
       ? Math.max(0, Math.min(g.right, r.right) - Math.max(g.left, r.left)) : 0;
   };
   // The rail covers the right, headlines the left; centre between them.
-  const shift = Math.round((cover(document.querySelector(".stations")) -
+  const shift = Math.round((cover(document.querySelector(".railcol")) -
                             cover(document.getElementById("newspanel"))) / 2);
   if (shift) cam.setViewOffset(g.width, g.height, shift, 0, g.width, g.height);
   else cam.clearViewOffset();

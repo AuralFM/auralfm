@@ -248,10 +248,13 @@
     display:flex;flex-direction:column;
   }
 
-  /* Toolbar sits under the traffic lights (titleBarStyle: hiddenInset). */
+  /* Toolbar sits beside the traffic lights (titleBarStyle: hiddenInset).
+     40pt tall with the lights moved to its centre line (trafficLightPosition in
+     main.js): at 52 the lights sat high and the tiles low, with a band of empty
+     bar under both. 78pt clears the three lights and one gap's worth of air. */
   .toolbar{
-    flex:none;height:52px;display:flex;align-items:center;gap:6px;
-    padding:0 14px 0 84px;-webkit-app-region:drag;
+    flex:none;height:40px;display:flex;align-items:center;gap:6px;
+    padding:0 10px 0 78px;-webkit-app-region:drag;
   }
   .toolbar .sp{flex:1}
   /**
@@ -271,14 +274,14 @@
      and a glyph in the secondary label colour. One size for every control in
      the bar, so the search field and the buttons share a baseline and a height.
 
-     32pt tiles with a 15pt glyph rather than the frame's 36 and 18: at the
-     frame's size the glyphs read as the loudest thing in the window, in a bar
-     whose job is to stay out of the way of the globe. */
+     26pt tiles with a 13pt glyph: the size of the play button in the transport
+     bar, so the controls at the top and bottom of the window are one set. At
+     the frame's 36 and 18 the glyphs were the loudest thing in the window. */
   .toolbar button{
-    flex:none;width:32px;height:32px;display:grid;place-items:center;padding:0;
+    flex:none;width:26px;height:26px;display:grid;place-items:center;padding:0;
     background:var(--fill);border:0;color:var(--label2);
     box-shadow:inset 0 0 0 1px var(--line);
-    font-size:15px;line-height:1;border-radius:var(--r-md);cursor:default;
+    font-size:13px;line-height:1;border-radius:var(--r-sm);cursor:default;
     transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .toolbar button:hover{background:var(--fill-hi);color:var(--label)}
@@ -309,8 +312,8 @@
   }
   #tripBtn:disabled{cursor:default}
   .toolbar #q{
-    width:clamp(200px, 24vw, 560px);height:32px;padding:0 11px;border:0;border-radius:var(--r-md);
-    background:var(--fill);color:var(--label);font:inherit;outline:none;
+    width:clamp(200px, 24vw, 560px);height:26px;padding:0 9px;border:0;border-radius:var(--r-sm);
+    background:var(--fill);color:var(--label);font:inherit;font-size:12px;outline:none;
     box-shadow:inset 0 0 0 1px var(--line);
     /* Focus no longer changes the width. It used to grow, which animated a
        layout property in the one bar that also carries the live markets ticker
@@ -640,8 +643,8 @@
     /* `--rail` rather than a literal, because the markets strip in the transport
        has to occupy exactly this column and a second copy of the clamp would
        drift the first time either changed. */
-    flex:none;width:var(--rail);
-    display:flex;flex-direction:column;min-height:0;
+    flex:1;min-height:0;
+    display:flex;flex-direction:column;
     /* Floating on the globe: inset 12pt from the window's edges, the same
        corner radius as every other sheet here, and a translucent material so
        the planet reads through it. The text sits on the material, never on
@@ -651,7 +654,7 @@
        and the light theme's thin pane over black is a muddy grey that the
        labels lose contrast against. 94% of the page colour holds either way,
        and keeps the light theme's panel white rather than grey. */
-    position:absolute;top:12px;right:12px;bottom:12px;z-index:4;
+    position:relative;
     padding-top:12px;overflow:hidden;border-radius:var(--r-xl);
     background:color-mix(in srgb, var(--bg) 94%, transparent);
     -webkit-backdrop-filter:blur(24px) saturate(1.4);
@@ -661,8 +664,25 @@
   }
   /* Solid for anyone who asked for less transparency or more contrast: text
      over a blur of the planet is the thing both settings exist to avoid. */
+  /* Chat is the rail's second card, not a section of the first: the same
+     material, corners and edges, 12pt under the stations. */
+  #chat{
+    border-radius:var(--r-xl);overflow:hidden;
+    background:color-mix(in srgb, var(--bg) 94%, transparent);
+    -webkit-backdrop-filter:blur(24px) saturate(1.4);
+            backdrop-filter:blur(24px) saturate(1.4);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo),
+               0 18px 48px rgba(0,0,0,.38);
+  }
+  /* The column both cards stand in: pinned 12pt from the window's edges, and
+     transparent to the pointer between them so the gap is still globe. */
+  .railcol{
+    position:absolute;top:12px;right:12px;bottom:12px;z-index:4;width:var(--rail);
+    display:flex;flex-direction:column;gap:12px;pointer-events:none;
+  }
+  .railcol > *{pointer-events:auto}
   @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
-    .stations{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
+    .stations,#chat{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
   }
   .placehead{flex:none;padding:0 17px 10px}   /* 17px: the rail's text column */
   /* One line. A long place name used to wrap and take the list with it, which
@@ -1043,7 +1063,38 @@
     padding:2px;border-radius:var(--r-sm);cursor:default;transition:color var(--dur-hover) var(--ease-out);
   }
   #mute:hover{color:var(--label)}
-  #vol{width:84px;accent-color:var(--accent)}
+  /**
+   * The volume slider, drawn by us rather than the engine.
+   *
+   * accent-color left the drawing to the browser, and the browser draws it
+   * differently by platform and theme — the Mac app showed a white knob on an
+   * accent track, the web build a grey knob on a pink one. One track, one knob,
+   * the same everywhere: a 4pt track filled with the accent up to --vol (set by
+   * paintVolume), and a 14pt knob in the bar's own colour with a hairline and a
+   * shadow so it reads on either theme.
+   */
+  #vol{
+    width:84px;height:14px;margin:0;appearance:none;-webkit-appearance:none;
+    background:transparent;cursor:default;
+  }
+  #vol::-webkit-slider-runnable-track{
+    height:4px;border-radius:var(--r-pill);
+    background:linear-gradient(to right,var(--accent) 0 var(--vol,80%),var(--fill-hi) var(--vol,80%) 100%);
+  }
+  #vol::-moz-range-track{height:4px;border-radius:var(--r-pill);background:var(--fill-hi)}
+  #vol::-moz-range-progress{height:4px;border-radius:var(--r-pill);background:var(--accent)}
+  #vol::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:14px;height:14px;margin-top:-5px;
+    border-radius:50%;background:#fff;border:0;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.28),0 1px 3px rgba(0,0,0,.3);
+    transition:transform var(--dur-press) var(--ease-out);
+  }
+  #vol::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:#fff;border:0;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.28),0 1px 3px rgba(0,0,0,.3);
+  }
+  #vol:active::-webkit-slider-thumb{transform:scale(1.1)}
+  #vol:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--r-pill)}
   /* Colour, not opacity, and stated rather than inherited.
      This set no `color` at all, so it took the user agent's button default,
      which is black in both appearances. On the light bar that measured 4.6:1
@@ -1065,7 +1116,6 @@
   /* Large-display breathing room. Must be last in the sheet: an earlier media
      block loses to the equally-specific base rules that follow it. */
   @media (min-width: 2200px){
-    .toolbar{height:60px}
     .placehead{padding:0 26px 16px}
     .placehead h2{font-size:23px}
     .scroll{padding:0 15px 16px}
@@ -1098,15 +1148,12 @@
   /* Chat, under the station list. It shares the rail rather than taking a
      window: this is ambient, and it should never be the thing you are looking
      at when you came here to listen. */
-  #chat{
-    flex:none;display:flex;flex-direction:column;max-height:246px;
-    box-shadow:inset 0 .5px 0 var(--line);
-  }
+  #chat{flex:none;display:flex;flex-direction:column;max-height:246px}
   /* 17px, matching the station names: the list insets rows 7px and each row
      pads its text another 10px. The chat was on 15 and its input on 13, which
      is close enough to read as a mistake rather than as a variation. */
   .chathead{
-    flex:none;display:flex;align-items:baseline;gap:8px;padding:9px 17px 5px;
+    flex:none;display:flex;align-items:baseline;gap:8px;padding:12px 17px 5px;
     font-size:11px;color:var(--label2);letter-spacing:.005em;
   }
   /* The frequency box, sitting where the receiver list begins. Same weight as
@@ -1457,6 +1504,9 @@
        people now, and an interface that assumes otherwise is a large part of
        why this technology reads as inaccessible rather than merely old. -->
 
+  <!-- The right-hand column: stations, and chat under them, as two cards of
+       the same material floating on the globe. -->
+  <div class="railcol">
   <div class="stations">
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="hop" id="hop" hidden></div><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
@@ -1491,6 +1541,8 @@
     <div class="scroll" id="stationlist">
       <div class="empty">Spin the globe, or search for a city.</div>
     </div>
+
+  </div>
 
     <!-- Only ever visible when presence is on and something is playing. -->
     <div id="chat" hidden>

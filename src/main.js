@@ -261,6 +261,9 @@ function openExplore() {
     // colour. Nothing is faster this way; it simply stops being visible.
     show: false,
     titleBarStyle: "hiddenInset",     // traffic lights over our own toolbar
+    // Centred on the 40pt toolbar: the lights are 12pt tall, so 14 puts their
+    // middle on its middle, level with the toolbar's tiles.
+    trafficLightPosition: { x: 14, y: 14 },
     // No vibrancy or transparent backgroundColor here. On a packaged build this
     // combination broke GPU compositing — the window laid out correctly (DOM,
     // canvas and WebGL context all healthy) but never painted, so it showed as a

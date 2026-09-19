@@ -38,8 +38,6 @@
 
 const crypto = require("node:crypto");
 const { haversine } = require("./geo");
-const fs = require("node:fs");
-const path = require("node:path");
 const { schnorr } = require("@noble/curves/secp256k1.js");
 const priv = require("./nostr-private.js");
 const identity_ = require("./identity.js");
@@ -119,8 +117,31 @@ const ANCHORS = [
   "wss://nostr.wine",
 ];
 
-/** How many geographically-near relays to add on top of the anchors. */
+/**
+ * How many geographically-near relays to add on top of the anchors.
+ *
+ * Five because it is bitchat's own number (TransportConfig.nostrGeoRelayCount):
+ * a bitchat user in this cell publishes to, and subscribes on, the five relays
+ * nearest it. Matching it is what puts us in the same room; publishing wider
+ * only spends other people's relays on redundancy nobody reads.
+ */
 const NEARBY = 5;
+
+/**
+ * Relays we read from but never publish to, spread over the whole planet.
+ *
+ * The near set covers the cell we are listening to. The globe shows listeners
+ * everywhere, and the chat follows whatever you are looking at — and a
+ * conversation in Sydney lives on the relays near Sydney, which the near set
+ * for Lisbon never touches. So for each of the 32 first-level geohash cells we
+ * also read from the relays nearest its centre. glub.chat goes further and
+ * reads every relay in the directory; per-cell nearest gets the same
+ * geography from a few dozen sockets rather than several hundred.
+ *
+ * Read-only is the rule that keeps this polite: publish() skips these, so an
+ * announcement still goes where bitchat would put it and nowhere else.
+ */
+const COVERAGE_PER_CELL = 2;
 
 /**
  * The relay directory, and why distance matters.
@@ -138,8 +159,11 @@ let DIRECTORY = null;
 function directory() {
   if (DIRECTORY) return DIRECTORY;
   try {
-    DIRECTORY = JSON.parse(
-      fs.readFileSync(path.join(__dirname, "..", "data", "relays.json"), "utf8")).relays;
+    // require rather than readFileSync, so the web build's bundler inlines the
+    // directory. Read from disk, the browser build had no directory at all and
+    // fell back to the three anchors — which is why it showed 3 relays to the
+    // desktop's 8.
+    DIRECTORY = require("../data/relays.json").relays;
   } catch {
     DIRECTORY = [];        // anchors still work; this only ever adds reach
   }
@@ -284,6 +308,32 @@ function relaysFor(cell) {
     if (!list.includes(url)) list.push(url);
   }
   return list;
+}
+
+/**
+ * The read-only relays: for each first-level geohash cell, the nearest
+ * COVERAGE_PER_CELL relays to its centre, minus any already in `near`.
+ * Deterministic, so every AuralFM reads the same spread.
+ */
+function coverageRelays(near = []) {
+  const dir = directory();
+  if (!dir.length) return [];
+  const out = [];
+  for (const ch of B32) {
+    const c = ungeohash(ch);
+    if (!c) continue;
+    const ranked = dir
+      .map(([url, lat, lon]) => ({ url, km: haversine(c.lat, c.lon, lat, lon) }))
+      .sort((a, b) => a.km - b.km);
+    let took = 0;
+    for (const { url } of ranked) {
+      if (took >= COVERAGE_PER_CELL) break;
+      if (near.includes(url)) { took++; continue; }   // already read, and counts
+      if (out.includes(url)) continue;                // a neighbour's nearest too
+      out.push(url); took++;
+    }
+  }
+  return out;
 }
 
 const BEAT_MS = 60_000;
@@ -717,7 +767,17 @@ function subscribeDms(only) {
 }
 
 /** Push one signed event to relays. */
-const publish = (evt, only) => send(["EVENT", evt], only);
+/**
+ * Events go to the near set only — never to the coverage relays, which exist to
+ * be read. `only` for a coverage socket that has just opened is simply a no-op.
+ */
+function publish(evt, only) {
+  const msg = JSON.stringify(["EVENT", evt]);
+  for (const w of (only ? [only] : alive())) {
+    if (w.readyState !== 1 || w.readOnly) continue;
+    try { w.send(msg); } catch { /* relay went away */ }
+  }
+}
 
 function announce(only) {
   if (!here) return;
@@ -999,13 +1059,16 @@ function takeDm(evt) {
 }
 
 let dialled = [];        // what relaysFor() chose for the cell we are in
+let covering = [];       // the read-only spread, see COVERAGE_PER_CELL
 
 function connect() {
   if (sockets.length) return;
   dialled = relaysFor(here?.geohash);
-  for (const url of dialled) {
+  covering = coverageRelays(dialled);
+  for (const url of [...dialled, ...covering]) {
     let w;
     try { w = new WebSocket(url); } catch { continue; }
+    w.readOnly = !dialled.includes(url);
     sockets.push(w);
     w.onopen = () => {
       // Listen for anyone in any cell, and filter locally. Putting our own
@@ -1236,8 +1299,10 @@ function leave() {
 const sameCell = (a, b) => a.startsWith(b) || b.startsWith(a);
 
 const stats = () => ({
-  relays: dialled.length,
-  relayUrls: dialled.slice(),
+  relays: dialled.length + covering.length,
+  relayUrls: [...dialled, ...covering],
+  // Which of those are read-only, so Settings can tell the two apart.
+  readOnly: covering.slice(),
   connected: alive().length,
   peers: peers.size,
   messages: messages.length,

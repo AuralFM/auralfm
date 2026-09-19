@@ -147,17 +147,20 @@ const CSP = [
 ].join("; ");
 
 /**
- * The logo for the toolbar: the globe and the wordmark, cropped to the globe's
- * height. The full artwork (web/assets/auralfm-logo.svg) also carries the line
- * "A window onto the world", which at toolbar size renders about three pixels
- * tall — so this drops that path. Its fill is currentColor, so the theme picks
- * bone on dark and onyx on light (web/web.css, .brand).
+ * The logo for the toolbar: the globe mark and the AURAL.FM wordmark, from
+ * web/assets/auralfm-logo.svg (bone; -onyx.svg is the same drawing in onyx).
+ * Its fill becomes currentColor, so the theme picks bone on dark and onyx on
+ * light (web/web.css, .brand) from one drawing.
  */
 function toolbarLogo() {
   const svg = fs.readFileSync(R("web", "assets", "auralfm-logo.svg"), "utf8");
   const paths = svg.match(/<path [^>]*\/>/g) || [];
-  if (paths.length !== 3) throw new Error(`web: expected 3 paths in the logo (mark, wordmark, tagline), found ${paths.length}`);
-  return `<svg viewBox="0 94 1112 234" aria-hidden="true" focusable="false">${paths.slice(0, 2).join("")}</svg>`;
+  if (paths.length !== 2) throw new Error(`web: expected 2 paths in the logo (wordmark, globe mark), found ${paths.length}`);
+  const view = svg.match(/viewBox="([^"]+)"/)?.[1];
+  if (!view) throw new Error("web: the logo has no viewBox");
+  // currentColor, so web.css picks bone or onyx by theme from one drawing.
+  const inked = paths.map((p) => p.replace(/fill="#[0-9A-Fa-f]{3,8}"/, 'fill="currentColor"')).join("");
+  return `<svg viewBox="${view}" aria-hidden="true" focusable="false">${inked}</svg>`;
 }
 
 function page(srcName, outName, { title, before, beforeScript, after = {}, logo = false }) {

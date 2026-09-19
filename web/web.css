@@ -14,12 +14,12 @@
 
 /* ── a tab, not a Mac window ──────────────────────────────────────────────── */
 /* No traffic lights to clear, and no window to drag. */
-.toolbar { padding-left: 18px; -webkit-app-region: none; }
+.toolbar { padding-left: 14px; -webkit-app-region: none; }
 
 /* The logo, where the Mac's traffic lights would be. Bone on dark, onyx on
    light — the two colours it is drawn in — whichever way the theme was set. */
 .brand { flex: none; display: flex; align-items: center; color: #F7F4EE; }
-.brand svg { display: block; height: 24px; width: auto; }
+.brand svg { display: block; height: 18px; width: auto; margin-right: 6px; }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .brand { color: #0C0B0B; } }
 :root[data-theme="light"] .brand { color: #0C0B0B; }
 html, body { overscroll-behavior: none; }
@@ -72,16 +72,20 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
      both go back into the flow: no inset, no corners, no material. */
   .cols { flex-direction: column; }
   .globecol { position: relative; inset: auto; flex: none; height: 42dvh; box-shadow: inset 0 -.5px 0 var(--line); }
-  .stations {
-    position: static; width: 100%; flex: 1; min-height: 0;
-    padding-top: 12px; border-radius: 0; background: var(--bg);
+  .railcol {
+    position: static; width: 100%; flex: 1; min-height: 0; gap: 0;
+    display: flex; flex-direction: column;
+  }
+  .stations, #chat {
+    border-radius: 0; background: var(--bg);
     -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
   }
+  #chat { box-shadow: inset 0 .5px 0 var(--line); }
   .globebar { right: 0; }
   #chat { max-height: 38dvh; }
 
   /* Logo and five 44pt buttons in one row on a 375pt screen — the buttons sit
-     edge to edge (their targets stay 44pt) and the logo is 20pt tall — and
+     edge to edge (their targets stay 44pt) and the logo is 18pt tall — and
      search on its own full-width row under them, as in every iOS app. */
   .toolbar {
     height: auto; flex-wrap: wrap; gap: 6px 4px;
@@ -89,7 +93,6 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   }
   .toolbar .sp { flex: 1; }
   .toolbar #q { order: 10; width: 100%; height: 36px; border-radius: var(--r-lg); }
-  .brand svg { height: 20px; }
 
   /* Safari zooms into any field under 16px when it is tapped. */
   input, select, textarea { font-size: 16px !important; }

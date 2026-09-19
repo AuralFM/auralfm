@@ -45,7 +45,9 @@ module.exports = function register(ctx) {
       if (levelsWaiting === entry) levelsWaiting = null;
       resolve(v);
     };
-    entry.timer = setTimeout(() => entry.done(null), 700);
+    // Long enough to open a copy of the stream and measure ~3 seconds of it
+    // (levels.js); a station that never answers still gives up in time.
+    entry.timer = setTimeout(() => entry.done(null), 8000);
     levelsWaiting = entry;
     ctx.win.webContents.send("card:levelsWanted");
   }));
