@@ -44,8 +44,8 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("newsBtn"), "headlines");
   Icons.set($("layersBtn"), "layers");
   Icons.set($("favBtn"), "star");
-  Icons.set($("tripBtn"), "plane");
-  Icons.set($("setBtn"), "settings");
+  Icons.set($("tripBtn"), "shuffle");
+  Icons.set($("setBtn"), "gear");
   Icons.set($("newsSrc"), "source");
   setPlayName(false);
   Icons.set($("lock"), "unlock");

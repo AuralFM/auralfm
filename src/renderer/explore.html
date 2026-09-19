@@ -249,7 +249,7 @@
 
   /* Toolbar sits under the traffic lights (titleBarStyle: hiddenInset). */
   .toolbar{
-    flex:none;height:52px;display:flex;align-items:center;gap:10px;
+    flex:none;height:52px;display:flex;align-items:center;gap:6px;
     padding:0 14px 0 84px;-webkit-app-region:drag;
   }
   .toolbar .sp{flex:1}
@@ -266,12 +266,18 @@
    */
   .toolbar input,
   .toolbar button{-webkit-app-region:no-drag}
+  /* The Figma toolbar: 36pt tiles, 6pt apart, each a faint fill with a hairline
+     edge, and an 18pt glyph in the secondary label colour. One size for every
+     control in the bar, so the search field and the buttons share a baseline
+     and a height instead of the field being a 24pt strip between 22pt icons. */
   .toolbar button{
-    background:none;border:0;color:var(--label2);
-    font-size:16px;line-height:1;padding:3px 6px;border-radius:var(--r-md);cursor:default;
+    flex:none;width:36px;height:36px;display:grid;place-items:center;padding:0;
+    background:var(--fill);border:0;color:var(--label2);
+    box-shadow:inset 0 0 0 1px var(--line);
+    font-size:18px;line-height:1;border-radius:var(--r-md);cursor:default;
     transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
-  .toolbar button:hover{background:var(--fill);color:var(--label)}
+  .toolbar button:hover{background:var(--fill-hi);color:var(--label)}
   .toolbar button[aria-pressed="true"]{color:var(--accent);background:var(--fill)}
   /**
    * What the travel globe is doing, right now.
@@ -289,8 +295,8 @@
                       transform var(--dur-press) var(--ease-out)}
   #tripBtn:active{color:var(--accent);background:var(--fill-hi);transform:scale(.92)}
   #tripBtn.busy{color:var(--accent);background:var(--fill)}
-  /* A slow breath, not a spin: the mark is a globe with a plane through it and
-     rotating it would read as loading rather than as travelling. Stopped
+  /* A slow breath, not a spin: rotating the shuffle mark would read as loading
+     rather than as travelling. Stopped
      entirely for anyone who asked for less motion. */
   #tripBtn.busy svg{animation:tripbreath 1.1s var(--ease-in-out) infinite}
   @keyframes tripbreath{0%,100%{opacity:.55}50%{opacity:1}}
@@ -299,9 +305,9 @@
   }
   #tripBtn:disabled{cursor:default}
   .toolbar #q{
-    width:clamp(280px, 24vw, 560px);height:24px;padding:0 9px;border:0;border-radius:var(--r-md);
+    width:clamp(200px, 24vw, 560px);height:36px;padding:0 12px;border:0;border-radius:var(--r-md);
     background:var(--fill);color:var(--label);font:inherit;outline:none;
-    box-shadow:inset 0 0 0 .5px var(--line);
+    box-shadow:inset 0 0 0 1px var(--line);
     /* Focus no longer changes the width. It used to grow, which animated a
        layout property in the one bar that also carries the live markets ticker
        — so every frame of the grow relaid out prices that are already moving.
@@ -310,9 +316,9 @@
   }
   .toolbar #q:focus{
     background:var(--fill-hi);
-    box-shadow:inset 0 0 0 .5px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent);
+    box-shadow:inset 0 0 0 1px var(--line),0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent);
   }
-  .toolbar #q::placeholder{color:var(--label2)}
+  .toolbar #q::placeholder{color:var(--label3)}
   .toolbar #q::-webkit-search-cancel-button{display:none}
 
   /* Segmented control — the switch between List and Globe. */
@@ -325,7 +331,10 @@
   .seg button[aria-selected="true"]{background:var(--pane);color:var(--label);box-shadow:0 .5px 1.5px rgba(0,0,0,.18)}
   .seg button:disabled{opacity:.4}
 
-  .cols{flex:1;display:flex;min-height:0}
+  /* The globe is the whole window below the toolbar and the rail floats on it,
+     so space is the background of everything rather than a panel beside a
+     panel. `position:relative` is what the globe column and the rail pin to. */
+  .cols{flex:1;display:flex;min-height:0;position:relative}
 
   /* Left: places. Darker material — AppKit uses heavier surfaces for structure. */
   .places{
@@ -384,7 +393,7 @@
   /* The globe is the product, so it is always on screen — never a mode you
      switch into. The right rail is what changes: results while searching,
      stations once a place is chosen. */
-  .globecol{flex:1;min-width:0;display:flex;flex-direction:column;border-right:.5px solid var(--line)}
+  .globecol{position:absolute;inset:0;min-width:0;display:flex;flex-direction:column}
   .globewrap{flex:1;position:relative;min-width:0}
   /* Read-outs sit on chrome above the globe, not over it. White text on bright
      cloud was illegible — which is what the screenshot showed. */
@@ -414,7 +423,7 @@
     /* Flush to the bottom edge. A 10px inset looked right against a black night
        side and showed as a visible band of globe under the line the moment you
        zoomed into anything bright — the Sahara made it obvious. */
-    position:absolute;left:0;right:0;bottom:0;z-index:3;pointer-events:none;
+    position:absolute;left:0;right:calc(var(--rail) + 12px);bottom:0;z-index:3;pointer-events:none;
     padding-bottom:7px;
     display:flex;align-items:center;justify-content:center;gap:0;
     padding:0 18px;font-size:10.5px;color:var(--label3);
@@ -442,7 +451,7 @@
    * because most people set these once.
    */
   #layers{
-    position:absolute;top:14px;right:14px;z-index:5;width:206px;
+    position:absolute;top:14px;right:calc(var(--rail) + 26px);z-index:5;width:206px;
     padding:9px 8px 10px;border-radius:var(--r-xl);
     background:color-mix(in srgb, var(--bg) 88%, transparent);
     -webkit-backdrop-filter:blur(14px) saturate(1.35);
@@ -612,6 +621,26 @@
        drift the first time either changed. */
     flex:none;width:var(--rail);
     display:flex;flex-direction:column;min-height:0;
+    /* Floating on the globe: inset 12pt from the window's edges, the same
+       corner radius as every other sheet here, and a translucent material so
+       the planet reads through it. The text sits on the material, never on
+       the globe itself.
+
+       The Layers panel's material, not --pane: space is black in both themes,
+       and the light theme's thin pane over black is a muddy grey that the
+       labels lose contrast against. 88% of the page colour holds either way. */
+    position:absolute;top:0;right:12px;bottom:12px;z-index:4;
+    padding-top:12px;overflow:hidden;border-radius:var(--r-xl);
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter:blur(24px) saturate(1.4);
+            backdrop-filter:blur(24px) saturate(1.4);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo),
+               0 18px 48px rgba(0,0,0,.38);
+  }
+  /* Solid for anyone who asked for less transparency or more contrast: text
+     over a blur of the planet is the thing both settings exist to avoid. */
+  @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
+    .stations{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
   }
   .placehead{flex:none;padding:0 17px 10px}   /* 17px: the rail's text column */
   /* One line. A long place name used to wrap and take the list with it, which
@@ -1358,8 +1387,8 @@
   <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines"></button>
   <button id="layersBtn" title="Layers" data-i18n-title="ctl.layers" aria-pressed="false"></button>
   <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
-  <!-- Somewhere else. A globe with a plane through it, because that is what this
-       does: it puts you down in a place you did not choose. -->
+  <!-- Somewhere else. A shuffle, because that is what this does: it puts you
+       down in a place you did not choose. -->
   <button id="tripBtn" title="Take me somewhere" data-i18n-title="ctl.somewhere"></button>
   <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
          data-i18n-title="app.searchPlaceholder" title="Search a city, country, or station"

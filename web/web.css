@@ -68,16 +68,23 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 /* ── phones ────────────────────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   /* The globe on top, the station list under it, the player at the bottom. */
+  /* On a phone there is no room for the rail to float beside the planet, so
+     both go back into the flow: no inset, no corners, no material. */
   .cols { flex-direction: column; }
-  .globecol { flex: none; height: 42dvh; border-right: 0; box-shadow: inset 0 -.5px 0 var(--line); }
-  .stations { width: 100%; flex: 1; min-height: 0; }
+  .globecol { position: relative; inset: auto; flex: none; height: 42dvh; box-shadow: inset 0 -.5px 0 var(--line); }
+  .stations {
+    position: static; width: 100%; flex: 1; min-height: 0;
+    padding-top: 12px; border-radius: 0; background: var(--bg);
+    -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
+  }
+  .globebar { right: 0; }
   #chat { max-height: 38dvh; }
 
   /* Logo and five 44pt buttons in one row on a 375pt screen — the buttons sit
      edge to edge (their targets stay 44pt) and the logo is 20pt tall — and
      search on its own full-width row under them, as in every iOS app. */
   .toolbar {
-    height: auto; flex-wrap: wrap; gap: 4px 0;
+    height: auto; flex-wrap: wrap; gap: 6px 4px;
     padding: calc(env(safe-area-inset-top) + 6px) 8px 8px 14px;
   }
   .toolbar .sp { flex: 1; }

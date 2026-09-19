@@ -309,6 +309,7 @@ function sizeGlobe() {
   const w = $("globewrap");
   if (!w.clientWidth || !w.clientHeight) return;
   globe.width(w.clientWidth).height(w.clientHeight);
+  centreGlobe(w);
 
   /**
    * Scale the drawing buffer to fit the pixel budget rather than blindly
@@ -324,6 +325,32 @@ function sizeGlobe() {
   const ratio = Math.max(0.75, Math.min(window.devicePixelRatio || 1,
                                         Math.sqrt(TARGET_PIXELS / Math.max(css, 1))));
   if (Math.abs(r.getPixelRatio() - ratio) > 0.02) r.setPixelRatio(ratio);
+}
+
+/**
+ * Centre the planet in the space the rail leaves, not in the window.
+ *
+ * The globe fills the whole window and the station rail floats over its right
+ * side, so a planet centred in the canvas sits half under the rail. Shifting
+ * the camera's view window by half the covered width moves the picture without
+ * shrinking the canvas — space still runs behind the rail — and three's
+ * raycaster reads the same projection, so clicks still land where they look.
+ *
+ * Measured rather than read from --rail: on a phone the rail sits below the
+ * globe, covers none of it, and the offset has to fall to zero on its own.
+ */
+function centreGlobe(w) {
+  const cam = globe.camera && globe.camera();
+  if (!cam || !cam.setViewOffset) return;
+  const g = w.getBoundingClientRect();
+  const rail = document.querySelector(".stations");
+  const r = rail && rail.offsetParent ? rail.getBoundingClientRect() : null;
+  const covered = r && r.top < g.bottom && r.bottom > g.top
+    ? Math.max(0, Math.min(g.right, r.right) - Math.max(g.left, r.left)) : 0;
+  const shift = Math.round(covered / 2);
+  if (shift) cam.setViewOffset(g.width, g.height, shift, 0, g.width, g.height);
+  else cam.clearViewOffset();
+  cam.updateProjectionMatrix();
 }
 
 /**
