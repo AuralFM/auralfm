@@ -36,6 +36,7 @@
  *   every var() a page uses is defined ....... the output menu drew with no background
  *   help tags keep a control's name .......... the popover star announced as "button"
  *   the Settings reader holds focus .......... Tab walked into the settings behind it
+ *   a refused relay keeps what was typed ..... erased, with the reason in the placeholder
  *   the share sheet holds focus .............. Tab walked out of the card into the toolbar
  *   an output's tick is not its name ......... every option announced as "✓ System output"
  *   the popover's keys yield to its menu ..... Escape in the output menu hid the whole panel
@@ -2056,6 +2057,24 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!close || !/docOpener\?\.focus\(\)/.test(close[0])) gaps.push("closing does not return focus");
   gaps.length ? fail("settings reader", gaps.join("; "))
     : pass("the reader keeps Tab inside and hands focus back when it closes");
+
+  console.log("\na refused relay keeps what was typed and says why");
+  // An invalid address used to be erased, with the reason moved into the
+  // placeholder: the text was lost and a screen reader heard only "invalid".
+  const relayBtn = set.match(/\$\("#relay-btn"\)\.addEventListener\("click", async \(\) => \{([\s\S]*?)\n\}\);/);
+  const setHtml = read("src/renderer/settings.html");
+  const relayGaps = [];
+  if (!relayBtn) relayGaps.push("could not find the relay Add handler");
+  else {
+    const refused = relayBtn[1].split(/\n  showRelayError\(null\);/)[0];
+    if (/input\.value = ""/.test(refused)) relayGaps.push("an invalid address is still erased");
+    if (/input\.placeholder =/.test(refused)) relayGaps.push("the reason still goes in the placeholder");
+    if (!/showRelayError\(/.test(refused)) relayGaps.push("the reason is not shown next to the field");
+  }
+  if (!/id="relay-add"[^>]*aria-describedby="relay-err"/.test(setHtml)) relayGaps.push("#relay-add is not described by #relay-err");
+  if (!/id="relay-err"[^>]*role="alert"/.test(setHtml)) relayGaps.push("#relay-err is not announced");
+  relayGaps.length ? fail("relay error", relayGaps.join("; "))
+    : pass("the address stays and the reason is next to it, read out");
 
   console.log("\nthe share sheet holds focus");
   // Same defect as the reader, in Explore: Tab walked out of the card into the

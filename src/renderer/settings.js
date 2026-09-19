@@ -498,18 +498,30 @@ async function paintRelays() {
 }
 setInterval(() => { if (!document.hidden) paintRelays(); }, 6000);
 
+function showRelayError(message) {
+  const input = $("#relay-add"), err = $("#relay-err");
+  err.textContent = message || "";
+  err.hidden = !message;
+  if (message) input.setAttribute("aria-invalid", "true");
+  else input.removeAttribute("aria-invalid");
+}
+$("#relay-add").addEventListener("input", () => showRelayError(null));
+$("#relay-add").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); $("#relay-btn").click(); }
+});
+
 $("#relay-btn").addEventListener("click", async () => {
   const input = $("#relay-add");
   const url = input.value.trim();
   // Checked here for the message, and again in presence-nostr because a
   // renderer is not where a security rule belongs.
+  // What was typed stays, so it can be corrected rather than retyped.
   if (!/^wss:\/\/[a-z0-9.-]+(:\d{1,5})?(\/\S*)?$/i.test(url)) {
-    input.setAttribute("aria-invalid", "true");
-    input.placeholder = T["set.relayBad"] || "Must start with wss://";
-    input.value = "";
+    showRelayError(T["set.relayBad"] || "Must start with wss://");
+    input.focus();
     return;
   }
-  input.removeAttribute("aria-invalid");
+  showRelayError(null);
   const next = [...new Set([...(P.relays || []), url])].slice(0, 8);
   await set({ relays: next });
   input.value = "";
