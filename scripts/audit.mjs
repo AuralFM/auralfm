@@ -38,6 +38,7 @@
  *   the Settings reader holds focus .......... Tab walked into the settings behind it
  *   the share sheet holds focus .............. Tab walked out of the card into the toolbar
  *   an output's tick is not its name ......... every option announced as "✓ System output"
+ *   the popover's keys yield to its menu ..... Escape in the output menu hid the whole panel
  *   Explore's styles live in the sheet ...... four inline paddings, four numbers
  *
  * **Correctness and content**
@@ -2082,6 +2083,17 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   loud.length ? fail("output ticks", loud.join("; "))
     : pass("every output menu hides its tick from the accessible name");
+
+  console.log("\nthe popover's keys yield to the output menu");
+  // The panel's keydown handler is registered first, so it saw Escape before
+  // the menu did and hid the whole popover; Space toggled playback instead of
+  // choosing the focused device.
+  const pop = read("src/renderer/popover.js");
+  const panelKeys = pop.match(/\/\/ ── keys ─+\ndocument\.addEventListener\("keydown", e => \{\n([\s\S]*?)\n\}\);/);
+  !panelKeys ? fail("popover keys", "could not find the panel's keydown handler")
+    : !/^\s*(\/\/.*\n\s*)*if \(!\$\("outmenu"\)\.hidden\) return;/.test(panelKeys[1])
+      ? fail("popover keys", "the panel's keydown handler does not step aside while the output menu is open")
+      : pass("Escape and Space reach the output menu while it is open");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

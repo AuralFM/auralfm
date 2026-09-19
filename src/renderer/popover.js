@@ -643,6 +643,10 @@ $("mute").onclick = () => {
 
 // ── keys ─────────────────────────────────────────────────────────────────────
 document.addEventListener("keydown", e => {
+  // The output menu has its own keys. This handler runs first, so without this
+  // Escape in the menu hid the whole panel and Space toggled playback instead of
+  // choosing the device under focus.
+  if (!$("outmenu").hidden) return;
   const typing = e.target === qEl;
   if (e.key === "Escape") {
     if (typing && qEl.value) { qEl.value=""; showFavorites(); qEl.blur(); }
