@@ -781,6 +781,11 @@ function publish(evt, only) {
 
 function announce(only) {
   if (!here) return;
+  // A read-only relay would drop both events in publish() anyway, but only
+  // after they were signed — and signing mines proof of work. With the
+  // worldwide spread that was sixty-odd pairs of mined events thrown away on
+  // every connect, which is what made the note-delivery audit time out.
+  if (only?.readOnly) return;
   const created_at = Math.floor(Date.now() / 1000);
 
   // The shared heartbeat. Empty content and a `g` tag, nothing else — the
