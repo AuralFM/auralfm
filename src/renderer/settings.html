@@ -138,8 +138,10 @@
   .pal:active{transform:scale(.98)}
   .pal[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--accent)}
   .pal:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .pal .sw{display:flex;gap:3px;margin-bottom:6px}
-  .pal .sw i{flex:1;height:14px;border-radius:var(--r-sm)}
+  /* .swatch, not .sw: .sw is the switch, and its ::after knob was drawing a
+     white circle over the first colour of every palette. */
+  .pal .swatch{display:flex;gap:3px;margin-bottom:6px}
+  .pal .swatch i{flex:1;height:14px;border-radius:var(--r-sm)}
   .pal .nm{display:block;font-size:11px;font-weight:530;letter-spacing:-.002em}
   #relay-add{
     flex:1;min-width:0;appearance:none;border:0;border-radius:var(--r-md);

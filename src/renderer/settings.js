@@ -373,9 +373,9 @@ async function paintPalettes() {
     b.className = "pal";
     b.setAttribute("role", "radio");
     b.setAttribute("aria-checked", String(P.palette === p.id));
-    b.innerHTML = `<span class="sw"><i></i><i></i><i></i></span>
+    b.innerHTML = `<span class="swatch"><i></i><i></i><i></i></span>
                    <span class="nm"></span>`;
-    [...b.querySelectorAll(".sw i")].forEach((i, k) => { i.style.background = p.swatch[k]; });
+    [...b.querySelectorAll(".swatch i")].forEach((i, k) => { i.style.background = p.swatch[k]; });
     b.querySelector(".nm").textContent = p.name;
     // No tag. Three of these used to read "Supporter" against a paywall that
     // was never switched on and now never will be — see src/palettes.js. A

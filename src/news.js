@@ -157,6 +157,14 @@ function parseItems(xml, limit) {
 const parseTitles = (xml, limit) => parseItems(xml, limit).map((i) => i.title);
 
 /**
+ * Google News' RSS root. The web version cannot read Google News from a page, so
+ * it points this at its own proxy route (setBase); the desktop never changes it.
+ */
+let RSS = "https://news.google.com/rss";
+const WORLD_TOPIC = "CAAqKggKIiRDQkFTRlFvSUwyMHZNRGx1YlY4U0JXVnVMVlZUR2dKVlV5Z0FQAQ";
+const setBase = (base) => { RSS = String(base).replace(/\/+$/, ""); };
+
+/**
  * @param {string|null} country  null or "world" for the international edition
  */
 async function get(country, limit = 12) {
@@ -166,12 +174,14 @@ async function get(country, limit = 12) {
   if (cool.blocked) return hit?.items || [];
 
   // No country means world news, not "whatever the US is reading" — this app is
-  // about the whole globe, and the default should say so.
+  // about the whole globe, and the default should say so. The World topic by its
+  // own address: the section URL used to 302 here, and a redirect is a second
+  // request the web version's proxy would have to follow.
   const url = key === "world"
-    ? "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en"
+    ? `${RSS}/topics/${WORLD_TOPIC}?hl=en-US&gl=US&ceid=US:en`
     : (() => {
         const [gl, hl] = LOCALES[country] || ["US", "en-US"];
-        return `https://news.google.com/rss?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
+        return `${RSS}?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
       })();
 
   try {
@@ -191,7 +201,7 @@ async function get(country, limit = 12) {
   }
 }
 
-module.exports = { get };
+module.exports = { get, setBase };
 
 /**
  * Read an article without opening a browser.

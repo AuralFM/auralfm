@@ -23,3 +23,6 @@ build/icon.iconset/
 # with `npm run dist`, not electron-builder directly, or this will not exist.
 build/icon.icns
 assets/sky.json
+
+# Built by scripts/build-web.mjs
+dist-web/

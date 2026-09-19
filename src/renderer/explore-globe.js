@@ -355,6 +355,9 @@ async function setupDayNight() {
 
 const loadImage = (src) => new Promise((res, rej) => {
   const i = new Image();
+  // A web page draws this onto a canvas that becomes a WebGL texture; a
+  // cross-origin image without CORS would taint it and the upload would throw.
+  if (/^https:/.test(src)) i.crossOrigin = "anonymous";
   i.onload = () => res(i);
   i.onerror = () => rej(new Error("image failed"));
   i.src = src;
@@ -385,7 +388,8 @@ async function loadLiveImagery(TexClass, like) {
     for (const key of ["base", "goesE", "goesW"]) {
       if (!sky[key]) continue;
       try {
-        const img = await loadImage("file://" + sky[key]);
+        // A local file on the desktop, an https address on the web.
+        const img = await loadImage(/^https:/.test(sky[key]) ? sky[key] : "file://" + sky[key]);
         if (key === "base") { ctx.drawImage(img, 0, 0, cv.width, cv.height); continue; }
 
         // Feather the disk instead of pasting it. A hard-edged disk lands as a

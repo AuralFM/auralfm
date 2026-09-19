@@ -1,0 +1,129 @@
+/* AuralFM on the web: what a browser tab and an iPhone need that a Mac window
+   does not. Loaded after the page's own stylesheet, so it only overrides. */
+
+/* ── what this version does not have yet ─────────────────────────────────────
+   Hidden rather than removed, because the page's scripts still wire them up. */
+/* Sharing a card needs the clipboard and file writing the desktop app does in
+   its main process. */
+#nowShare { display: none !important; }
+/* Adding your own stations writes a file on the desktop; not here yet. */
+.addst { display: none !important; }
+/* The Stations / Shortwave tabs hold their space even when empty on the
+   desktop; with no shortwave here they would only ever be empty space. */
+#railtabs { display: none !important; }
+
+/* ── a tab, not a Mac window ──────────────────────────────────────────────── */
+/* No traffic lights to clear, and no window to drag. */
+.toolbar { padding-left: 18px; -webkit-app-region: none; }
+
+/* The logo, where the Mac's traffic lights would be. Bone on dark, onyx on
+   light — the two colours it is drawn in — whichever way the theme was set. */
+.brand { flex: none; display: flex; align-items: center; color: #F7F4EE; }
+.brand svg { display: block; height: 24px; width: auto; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .brand { color: #0C0B0B; } }
+:root[data-theme="light"] .brand { color: #0C0B0B; }
+html, body { overscroll-behavior: none; }
+/* A tap is a tap: no double-tap-zoom wait on anything in the app. */
+button, [role="button"], a, input, select { touch-action: manipulation; }
+
+/* ── the Settings sheet (web/sheet.js) ─────────────────────────────────────── */
+.setsheet { position: fixed; inset: 0; z-index: 9800; }
+.setsheet[hidden] { display: none !important; }
+.setsheet-scrim {
+  position: absolute; inset: 0; background: rgba(0, 0, 0, .46);
+  opacity: 0; transition: opacity var(--dur-panel) var(--ease-out);
+}
+.setsheet.open .setsheet-scrim { opacity: 1; }
+.setsheet-panel {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: min(560px, calc(100vw - 48px)); height: min(740px, calc(100dvh - 96px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); border-radius: var(--r-xl);
+  box-shadow: inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 30px 80px rgba(0, 0, 0, .5);
+  opacity: 0; transform: scale(.96);
+  transition: opacity var(--dur-panel) var(--ease-out), transform .32s var(--ease-drawer);
+}
+.setsheet.open .setsheet-panel { opacity: 1; transform: none; }
+.setsheet-grab {
+  display: none; flex: none; width: 36px; height: 5px; margin: 6px auto 0;
+  border-radius: var(--r-pill); background: var(--label3);
+}
+.setsheet-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 8px 6px 20px; box-shadow: inset 0 -.5px 0 var(--line);
+}
+.setsheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+.setsheet-done {
+  appearance: none; border: 0; background: none; cursor: default;
+  min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--r-md);
+  color: var(--accent); font: inherit; font-size: 17px; font-weight: 600;
+}
+.setsheet-done:hover { background: var(--fill); }
+.setsheet-done:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.setsheet-frame { flex: 1; width: 100%; border: 0; background: var(--bg); color-scheme: normal; }
+
+/* Reduced motion: a cross-fade, and nothing moves. */
+.setsheet.fade .setsheet-panel { transform: none !important; transition: opacity 200ms ease; }
+
+/* ── phones ────────────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  /* The globe on top, the station list under it, the player at the bottom. */
+  .cols { flex-direction: column; }
+  .globecol { flex: none; height: 42dvh; border-right: 0; box-shadow: inset 0 -.5px 0 var(--line); }
+  .stations { width: 100%; flex: 1; min-height: 0; }
+  #chat { max-height: 38dvh; }
+
+  /* Logo and five 44pt buttons in one row on a 375pt screen — the buttons sit
+     edge to edge (their targets stay 44pt) and the logo is 20pt tall — and
+     search on its own full-width row under them, as in every iOS app. */
+  .toolbar {
+    height: auto; flex-wrap: wrap; gap: 4px 0;
+    padding: calc(env(safe-area-inset-top) + 6px) 8px 8px 14px;
+  }
+  .toolbar .sp { flex: 1; }
+  .toolbar #q { order: 10; width: 100%; height: 36px; border-radius: var(--r-lg); }
+  .brand svg { height: 20px; }
+
+  /* Safari zooms into any field under 16px when it is tapped. */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* The player clears the home indicator. iOS will not let a page set volume,
+     so the slider goes; the hardware buttons are the volume control. */
+  .now { padding-bottom: calc(9px + env(safe-area-inset-bottom)); }
+  #vol, .markets { display: none !important; }
+
+  #layers { top: 8px; right: 8px; width: min(220px, calc(100% - 16px)); }
+
+  .setsheet-panel {
+    left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto;
+    height: calc(100dvh - env(safe-area-inset-top) - 12px);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    opacity: 1; transform: translateY(100%); transition: none;
+  }
+  .setsheet.open .setsheet-panel { transform: translateY(0); }
+  .setsheet.open .setsheet-scrim { opacity: var(--dim, 1); transition: none; }
+  .setsheet-grab { display: block; }
+  .setsheet-head, .setsheet-grab { touch-action: none; }
+}
+
+/* ── touch ─────────────────────────────────────────────────────────────────── */
+/* 44 points is the smallest target a finger hits reliably. */
+@media (pointer: coarse) {
+  .toolbar button, #play, #lock, #mute, #nowStar, #outbtn, .star {
+    min-width: 44px; min-height: 44px;
+  }
+  /* The filter chips are a scrolling row of pills; 44pt pills would crowd out
+     the list they filter, so they get the tallest target the row can hold. */
+  .chips { height: auto; padding: 2px 0; }
+  .chips button { min-height: 34px; padding-inline: 12px; }
+  .st, .place, .story { min-height: 44px; }
+  .layrow { min-height: 44px; }
+  /* Hover never comes on a touch screen, so the star is always there. */
+  .st .star { opacity: 1; }
+}
+
+/* ── the Settings page, inside the sheet ──────────────────────────────────── */
+/* The sheet's own header says "Settings" and holds Done, so the page's title
+   and the Mac title-bar spacer go. */
+html.embedded .titlebar, html.embedded main > h1 { display: none; }
+html.embedded main { padding-top: 14px; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }

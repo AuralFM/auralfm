@@ -17,6 +17,8 @@
     "check": "node scripts/crawl.mjs --check",
     "sky": "node scripts/sky.mjs",
     "audit": "node scripts/audit.mjs",
+    "web": "node scripts/build-web.mjs",
+    "web:serve": "node scripts/serve-web.mjs",
     "crawl:sdr": "node scripts/crawl-sdr.mjs",
     "schedule": "node scripts/fetch-schedule.mjs",
     "lights": "node scripts/lights.mjs",
@@ -33,8 +35,9 @@
   "devDependencies": {
     "electron": "^43.7.2",
     "electron-builder": "^26.15.3",
-    "qrcode-generator": "^2.0.4",
-    "globe.gl": "^2.46.1"
+    "esbuild": "^0.25.12",
+    "globe.gl": "^2.46.1",
+    "qrcode-generator": "^2.0.4"
   },
   "repository": {
     "type": "git",

@@ -46,7 +46,8 @@ const fresh = (k) => {
   catch { return false; }
 };
 
-async function fetchLayer(key) {
+/** The WMS request for one layer. The web version loads these directly. */
+function urlFor(key) {
   const spec = LAYERS[key];
   const q = new URLSearchParams({
     SERVICE: "WMS", REQUEST: "GetMap", VERSION: "1.3.0",
@@ -59,8 +60,11 @@ async function fetchLayer(key) {
   // returns the newest frame. (TIME=current returns a blank image — it is not
   // the alias it looks like.)
   if (spec.dated) q.set("TIME", new Date(Date.now() - 864e5).toISOString().slice(0, 10));
+  return `${BASE}?${q}`;
+}
 
-  const res = await fetch(`${BASE}?${q}`, {
+async function fetchLayer(key) {
+  const res = await fetch(urlFor(key), {
     headers: { "User-Agent": "AuralFM/0.1" },
     signal: AbortSignal.timeout(60000),
   });
@@ -96,4 +100,4 @@ async function get() {
   return out;
 }
 
-module.exports = { init, get };
+module.exports = { init, get, urlFor, LAYER_KEYS: Object.keys(LAYERS) };

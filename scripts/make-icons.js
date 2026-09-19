@@ -85,6 +85,11 @@ const JOBS = [
   ["icon.svg",      "dock-bone.png",      512, "app",      "bone"],
   ["icon.svg",      "dock-onair.png",     512, "app",      "onair"],
   ["icon.svg", "dock-earth.png",     512, "app",      "earth"],
+  // The web version on an iPhone home screen: full-bleed squares, which iOS
+  // rounds itself. 180 is what Safari asks for; 192 and 512 are the manifest's.
+  ["icon.svg", "ios-180.png",        180, "ios",      "onyx"],
+  ["icon.svg", "ios-192.png",        192, "ios",      "onyx"],
+  ["icon.svg", "ios-512.png",        512, "ios",      "onyx"],
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -208,8 +213,12 @@ function page(svg, size, style = "template", variant = "onyx") {
   }
 
   const v = VARIANTS[variant] || VARIANTS.onyx;
-  const box = Math.round(size * SQUIRCLE);
-  const glyph = Math.round(box * GLYPH);
+  // iOS rounds a home-screen icon itself and draws no shadow, so its tile fills
+  // the canvas square. The mark is a tenth larger than on the Mac, relative to the
+  // whole icon, because it no longer shares the canvas with a shadow margin.
+  const ios = style === "ios";
+  const box = ios ? size : Math.round(size * SQUIRCLE);
+  const glyph = Math.round((ios ? size * SQUIRCLE * 1.1 : box) * GLYPH);
   const clip = squirclePath(box);
   /**
    * The shadow, matched to the system rather than guessed.
@@ -243,7 +252,7 @@ function page(svg, size, style = "template", variant = "onyx") {
         display:flex;align-items:center;justify-content:center;
       }
       #d{
-        filter: drop-shadow(0 ${px(0.012)} ${px(0.014)} rgba(0,0,0,.32));
+        filter: ${ios ? "none" : `drop-shadow(0 ${px(0.012)} ${px(0.014)} rgba(0,0,0,.32))`};
         display:flex;
       }
       /* Onyx and bone.
@@ -253,7 +262,7 @@ function page(svg, size, style = "template", variant = "onyx") {
          mark from looking like a system glyph borrowed from somewhere else. */
       #s{
         width:${box}px;height:${box}px;
-        clip-path:path("${clip}");
+        ${ios ? "" : `clip-path:path("${clip}");`}
         background:${v.sky
           ? `url("${TEXTURES}/${v.sky}") 50% 46% / 145% no-repeat, #04060B`
           : v.body};

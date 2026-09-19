@@ -26,7 +26,10 @@
 
 const { cooldown } = require("./backoff");
 
-const API = "https://api.adsb.lol/v2";
+// The web version cannot read adsb.lol from a page, so it points this at its own
+// proxy route (setBase); the desktop never changes it.
+let API = "https://api.adsb.lol/v2";
+const setBase = (base) => { API = String(base).replace(/\/+$/, ""); };
 const { UA } = require("./useragent");
 
 const MIN_GAP_MS = 12_000;      // aircraft move; a globe does not need faster
@@ -129,4 +132,4 @@ async function get(lat, lng, spanDeg = 6, want = BUDGET_DEFAULT) {
   }
 }
 
-module.exports = { get, BUDGET_MAX, BUDGET_DEFAULT };
+module.exports = { get, setBase, BUDGET_MAX, BUDGET_DEFAULT };

@@ -43,7 +43,9 @@
    * than a modal in the first ten seconds. "Three buttons and a search box" is
    * what the three anchored steps below already point at.
    */
-  const STEPS = [
+  // A page can supply its own steps: the web build does, because these talk
+  // about this Mac, the menu bar and receivers that a browser tab does not have.
+  const STEPS = window.AuralTourSteps || [
     {
       welcome: true,
       title: "Welcome to AuralFM",
