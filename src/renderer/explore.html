@@ -46,6 +46,7 @@
     --fill:rgba(233,226,212,.07); --fill-hi:rgba(233,226,212,.13);
     --line:rgba(233,226,212,.11); --pane:rgba(30,27,25,.62); --bg:#0C0B0B;
     --accent:#E9E2D4; --star:#F5F0E4; --on-accent:#12100F;
+    --accent-night:#E9E2D4;   /* the accent on the globe, in either theme */
     /* Motion. Named rather than retyped: the drawer curve below was already
        hand-written at three call sites across three files. Values are not
        retuned here -- ease-drawer is exactly what this app already used. */
@@ -71,7 +72,7 @@
       --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
       --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
-    --line:rgba(23,21,20,.10); --pane:rgba(250,248,244,.60); --bg:#F2EFE9;
+    --line:rgba(23,21,20,.10); --pane:rgba(255,255,255,.72); --bg:#FFFFFF;
     --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
     }
   }
@@ -80,7 +81,7 @@
     --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
     --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
-    --line:rgba(23,21,20,.10); --pane:rgba(250,248,244,.60); --bg:#F2EFE9;
+    --line:rgba(23,21,20,.10); --pane:rgba(255,255,255,.72); --bg:#FFFFFF;
     --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
   }
   :root[data-theme="dark"]{
@@ -266,15 +267,18 @@
    */
   .toolbar input,
   .toolbar button{-webkit-app-region:no-drag}
-  /* The Figma toolbar: 36pt tiles, 6pt apart, each a faint fill with a hairline
-     edge, and an 18pt glyph in the secondary label colour. One size for every
-     control in the bar, so the search field and the buttons share a baseline
-     and a height instead of the field being a 24pt strip between 22pt icons. */
+  /* The Figma toolbar: tiles 6pt apart, each a faint fill with a hairline edge
+     and a glyph in the secondary label colour. One size for every control in
+     the bar, so the search field and the buttons share a baseline and a height.
+
+     32pt tiles with a 15pt glyph rather than the frame's 36 and 18: at the
+     frame's size the glyphs read as the loudest thing in the window, in a bar
+     whose job is to stay out of the way of the globe. */
   .toolbar button{
-    flex:none;width:36px;height:36px;display:grid;place-items:center;padding:0;
+    flex:none;width:32px;height:32px;display:grid;place-items:center;padding:0;
     background:var(--fill);border:0;color:var(--label2);
     box-shadow:inset 0 0 0 1px var(--line);
-    font-size:18px;line-height:1;border-radius:var(--r-md);cursor:default;
+    font-size:15px;line-height:1;border-radius:var(--r-md);cursor:default;
     transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .toolbar button:hover{background:var(--fill-hi);color:var(--label)}
@@ -305,7 +309,7 @@
   }
   #tripBtn:disabled{cursor:default}
   .toolbar #q{
-    width:clamp(200px, 24vw, 560px);height:36px;padding:0 12px;border:0;border-radius:var(--r-md);
+    width:clamp(200px, 24vw, 560px);height:32px;padding:0 11px;border:0;border-radius:var(--r-md);
     background:var(--fill);color:var(--label);font:inherit;outline:none;
     box-shadow:inset 0 0 0 1px var(--line);
     /* Focus no longer changes the width. It used to grow, which animated a
@@ -426,7 +430,7 @@
     position:absolute;left:0;right:calc(var(--rail) + 12px);bottom:0;z-index:3;pointer-events:none;
     padding-bottom:7px;
     display:flex;align-items:center;justify-content:center;gap:0;
-    padding:0 18px;font-size:10.5px;color:var(--label3);
+    padding:0 18px;font-size:10.5px;color:rgba(247,244,238,.62);
     letter-spacing:.006em;white-space:nowrap;overflow:hidden;
     font-variant-numeric:tabular-nums;
     text-shadow:0 1px 3px rgba(0,0,0,.7);
@@ -451,7 +455,7 @@
    * because most people set these once.
    */
   #layers{
-    position:absolute;top:14px;right:calc(var(--rail) + 26px);z-index:5;width:206px;
+    position:absolute;top:12px;right:calc(var(--rail) + 24px);z-index:5;width:206px;
     padding:9px 8px 10px;border-radius:var(--r-xl);
     background:color-mix(in srgb, var(--bg) 88%, transparent);
     -webkit-backdrop-filter:blur(14px) saturate(1.35);
@@ -498,10 +502,14 @@
      truncated, rather than the whole line vanishing at once. */
   .globebar > span{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
   /* The accent, not --label: it ties the numbers to the palette, and it is the
-     one thing on this line the eye should be able to find. */
-  .globebar b{font-weight:590;color:var(--accent)}
+     one thing on this line the eye should be able to find.
+
+     The dark theme's accent in both themes, like the rest of this line: the
+     read-outs sit on space, which is black whatever the window is. The light
+     theme's dark accent and label colours were near-invisible there. */
+  .globebar b{font-weight:590;color:var(--accent-night, var(--accent))}
   .globebar > span:not(:empty) ~ span:not(:empty)::before{
-    content:"·"; margin:0 10px; color:var(--label3);
+    content:"·"; margin:0 10px; color:rgba(247,244,238,.34);
   }
   .globebar > span:empty{display:none}
   #globe{position:absolute;inset:0}
@@ -628,10 +636,11 @@
 
        The Layers panel's material, not --pane: space is black in both themes,
        and the light theme's thin pane over black is a muddy grey that the
-       labels lose contrast against. 88% of the page colour holds either way. */
-    position:absolute;top:0;right:12px;bottom:12px;z-index:4;
+       labels lose contrast against. 94% of the page colour holds either way,
+       and keeps the light theme's panel white rather than grey. */
+    position:absolute;top:12px;right:12px;bottom:12px;z-index:4;
     padding-top:12px;overflow:hidden;border-radius:var(--r-xl);
-    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    background:color-mix(in srgb, var(--bg) 94%, transparent);
     -webkit-backdrop-filter:blur(24px) saturate(1.4);
             backdrop-filter:blur(24px) saturate(1.4);
     box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo),

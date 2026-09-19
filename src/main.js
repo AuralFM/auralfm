@@ -352,7 +352,7 @@ function applyThemeSource(pref) {
 function groundColour() {
   const pref = getPrefs().theme;
   const dark = pref === "dark" || (pref !== "light" && nativeTheme.shouldUseDarkColors);
-  return dark ? "#0C0B0B" : "#F2EFE9";
+  return dark ? "#0C0B0B" : "#FFFFFF";
 }
 
 let revealTimer = null;
