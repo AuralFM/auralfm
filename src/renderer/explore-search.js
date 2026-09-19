@@ -42,6 +42,12 @@ async function runSearch(query) {
     placeListEl.appendChild(h);
     for (const ch of stations) placeListEl.appendChild(stationResultRow(ch));
   }
+  if (catalogEmpty) {
+    failureInto(placeListEl, t("places.noCatalog",
+      "No stations are installed in this copy of AuralFM. It was built without its station catalog."));
+    placeHeadEl.textContent = "";
+    return;
+  }
   if (!places.places.length && !stations.length) {
     placeListEl.innerHTML = `<div class="empty">${t("empty.noMatch", "Nothing matches that.")}</div>`;
   }

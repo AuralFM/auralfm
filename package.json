@@ -13,7 +13,7 @@
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
     "vendor": "node scripts/vendor.mjs && node scripts/lights.mjs",
     "postinstall": "node scripts/vendor.mjs",
-    "dist": "npm run vendor && npm run notices && npm run icons && electron-builder --mac",
+    "dist": "npm run vendor && npm run notices && npm run icons && node scripts/audit.mjs --release && electron-builder --mac",
     "check": "node scripts/crawl.mjs --check",
     "sky": "node scripts/sky.mjs",
     "audit": "node scripts/audit.mjs",

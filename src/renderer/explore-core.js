@@ -82,6 +82,7 @@ async function paintDistance() {
 let favorites = [];
 let playing = null;          // channel currently playing, per the popover
 let debounce = null, seq = 0;
+let catalogEmpty = false;     // set by loadPlaces(""), read by search
 
 const isFav = (id) => favorites.some((f) => f.id === id);
 
@@ -132,6 +133,18 @@ async function loadPlaces(query = "") {
     return;
   }
   const { total, places } = res;
+  // No places at all, with nothing typed, is not "no match": the build shipped
+  // without its catalogue. On 18 September it read "0 places · No place matches
+  // that.", which blames the search for a missing file.
+  catalogEmpty = !query && !total;
+  if (catalogEmpty) {
+    placeListEl.hidden = false;
+    stationListEl.hidden = true;
+    placeHeadEl.textContent = "";
+    failureInto(placeListEl, t("places.noCatalog",
+      "No stations are installed in this copy of AuralFM. It was built without its station catalog."));
+    return;
+  }
   placeHeadEl.textContent = `${total.toLocaleString()} places · most stations first`;
   placeListEl.hidden = false;
   stationListEl.hidden = true;

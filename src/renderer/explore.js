@@ -36,7 +36,9 @@ document.addEventListener("keydown", (e) => {
   clearInterval(marketTimer);
   // 1 Hz: the socket is faster than that, but a ticker that changes more often
   // than you can read it is noise, not information.
-  marketTimer = setInterval(renderMarkets, 1000);
+  // Not while the window is hidden: a price nobody can see is a second of work
+  // every second for nothing. The next tick after it is shown catches up.
+  marketTimer = setInterval(() => { if (!document.hidden) renderMarkets(); }, 1000);
 
   // The buttons that never change state get their icon once.
   Icons.set($("newsBtn"), "headlines");
