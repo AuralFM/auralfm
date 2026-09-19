@@ -27,7 +27,11 @@ const F = {
   min:  path.join(DATA, "stations.min.json"),
 };
 
-const RB = "https://de1.api.radio-browser.info/json/stations?limit=100000&offset=0";
+// radio-browser runs several mirrors of one directory. On 18 September de1
+// answered small queries but returned 502 for the full list while de2 served
+// it, so each is tried in turn and the first complete answer wins.
+const RB_MIRRORS = ["de1", "de2"].map(
+  (h) => `https://${h}.api.radio-browser.info/json/stations?limit=100000&offset=0`);
 const offline = process.argv.includes("--offline");
 
 // ── normalisation ────────────────────────────────────────────────────────────
@@ -81,9 +85,18 @@ async function getDump() {
     throw new Error("--offline but no cached dump at data/_radiobrowser.json");
   }
   console.log("radio-browser: downloading full station list…");
-  const res = await fetch(RB, { headers: { "User-Agent": "AuralFM/0.1" } });
-  if (!res.ok) throw new Error(`radio-browser HTTP ${res.status}`);
-  const all = await res.json();
+  let all = null;
+  const tried = [];
+  for (const url of RB_MIRRORS) {
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "AuralFM/0.1" } });
+      if (!res.ok) { tried.push(`${new URL(url).host} HTTP ${res.status}`); continue; }
+      all = await res.json();
+      break;
+    } catch (err) { tried.push(`${new URL(url).host} ${err.message}`); }
+  }
+  if (!all) throw new Error(`radio-browser: no mirror answered (${tried.join("; ")})`);
+  if (tried.length) console.log(`radio-browser: ${tried.join("; ")} — used the next mirror`);
   // Keep only what we need — the raw dump is ~68 MB and we want none of it on disk.
   // Keep untagged stations too now: they still carry a UUID (for click
   // reporting) and a daily check result (for dead-stream detection).
