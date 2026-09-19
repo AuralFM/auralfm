@@ -338,16 +338,21 @@ function sizeGlobe() {
  *
  * Measured rather than read from --rail: on a phone the rail sits below the
  * globe, covers none of it, and the offset has to fall to zero on its own.
+ * Headlines float on the left the same way, so they push the other way.
  */
 function centreGlobe(w) {
   const cam = globe.camera && globe.camera();
   if (!cam || !cam.setViewOffset) return;
   const g = w.getBoundingClientRect();
-  const rail = document.querySelector(".stations");
-  const r = rail && rail.offsetParent ? rail.getBoundingClientRect() : null;
-  const covered = r && r.top < g.bottom && r.bottom > g.top
-    ? Math.max(0, Math.min(g.right, r.right) - Math.max(g.left, r.left)) : 0;
-  const shift = Math.round(covered / 2);
+  // How much of the globe a floating panel covers, from the side it sits on.
+  const cover = (el) => {
+    const r = el && el.offsetParent && !el.hidden ? el.getBoundingClientRect() : null;
+    return r && r.top < g.bottom && r.bottom > g.top
+      ? Math.max(0, Math.min(g.right, r.right) - Math.max(g.left, r.left)) : 0;
+  };
+  // The rail covers the right, headlines the left; centre between them.
+  const shift = Math.round((cover(document.querySelector(".stations")) -
+                            cover(document.getElementById("newspanel"))) / 2);
   if (shift) cam.setViewOffset(g.width, g.height, shift, 0, g.width, g.height);
   else cam.clearViewOffset();
   cam.updateProjectionMatrix();

@@ -99,6 +99,8 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .now { padding-bottom: calc(9px + env(safe-area-inset-bottom)); }
   #vol, .markets { display: none !important; }
 
+  /* Headlines over the whole short globe, not a 300pt card in a 375pt row. */
+  .newspanel { left: 8px; right: 8px; top: 8px; bottom: 8px; width: auto; }
   #layers { top: 8px; right: 8px; width: min(220px, calc(100% - 16px)); }
 
   .setsheet-panel {
@@ -116,7 +118,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 /* ── touch ─────────────────────────────────────────────────────────────────── */
 /* 44 points is the smallest target a finger hits reliably. */
 @media (pointer: coarse) {
-  .toolbar button, #play, #lock, #mute, #nowStar, #outbtn, .star {
+  .toolbar button, #play, #lock, #mute, #nowStar, #outbtn, .star, .newshead button {
     min-width: 44px; min-height: 44px;
   }
   /* The filter chips are a scrolling row of pills; 44pt pills would crowd out

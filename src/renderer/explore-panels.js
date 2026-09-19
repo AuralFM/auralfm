@@ -267,6 +267,7 @@ async function renderNewsPanel() {
   const panel = $("newspanel");
   panel.hidden = !newsOpen;
   document.body.classList.toggle("news-open", newsOpen);
+  sizeGlobe();                          // re-centre the planet between the panels
   $("newsBtn").setAttribute("aria-pressed", newsOpen);
   if (!newsOpen) return;
 
