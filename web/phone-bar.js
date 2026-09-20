@@ -1,21 +1,28 @@
 /**
- * The phone's bottom bar: the five things you reach for, under your thumb.
+ * The phone layout: the globe, and the player and its tabs beneath it.
  *
- * On a Mac every control lives in the title bar, which is where a pointer
- * already is. On a phone that row is the furthest point from your hand, and it
- * put five tiles across the top of the screen competing with the globe —
- * which is the thing people came for.
+ * A Mac puts everything in the title bar, which is where a pointer already is.
+ * On a phone that row is the furthest thing from the hand holding it, and five
+ * tiles across the top were spending the screen's best real estate on chrome.
  *
- * So the browsing controls move down and split around the transport, the way
- * Instagram and YouTube arrange a phone: headlines and chat on the left,
- * favourites and somewhere-else on the right, play in the middle. Search stays
- * at the top, because typing belongs near the keyboard, and Layers joins
- * Settings up there with it — a bottom bar is for places you go, and those two
- * change how the app looks rather than where you are (Material's split between
- * primary and secondary navigation, and five items is its ceiling).
+ * So, after Radio Garden: no top bar at all. The globe runs edge to edge with a
+ * few small controls down its right side, and the bottom carries a player and
+ * five labelled tabs. Labels because an unexplained row of glyphs is a quiz —
+ * Instagram, YouTube and Radio Garden all label theirs.
  *
- * The elements are moved, not rebuilt: every handler in explore-*.js is bound
- * to these ids and travels with the node.
+ *   ┌───────────────────────────────┐
+ *   │  globe                     ≡  │  layers, headlines, somewhere else
+ *   │                            ▤  │
+ *   │                            ⤫  │
+ *   ├───────────────────────────────┤
+ *   │ ◉ Station name         ▶  ⋯  │  the now-playing row: one big button
+ *   ├───────────────────────────────┤
+ *   │  Explore Favorites Chat …     │  tabs
+ *   └───────────────────────────────┘
+ *
+ * Everything here moves existing elements rather than rebuilding them: each id
+ * carries its handlers from explore-*.js with it, and `home` remembers where
+ * every one came from so a window that grows back puts them all back.
  */
 (() => {
   const phone = matchMedia("(max-width: 700px)");
@@ -24,118 +31,179 @@
   const now = $("now");
   if (!toolbar || !now) return;
 
-  // Where each control came from, so a window that grows back puts it back.
   const home = new Map();
   const remember = (el) => el && !home.has(el) && home.set(el, [el.parentNode, el.nextSibling]);
+  const icon = (name) => window.Icons?.svg?.(name) || "";
 
-  const bar = document.createElement("nav");
-  bar.className = "tabbar";
-  bar.hidden = true;
-  bar.setAttribute("aria-label", "Player and browsing");
-  const left = document.createElement("div");
-  const right = document.createElement("div");
-  left.className = right.className = "tabgroup";
-  bar.append(left, right);
-  document.body.append(bar);
+  // ── the controls that stay on the globe ────────────────────────────────────
+  const side = document.createElement("div");
+  side.className = "globeside";
 
-  /**
-   * The strip above the bar: what is on air, and a way back to it.
-   *
-   * The transport used to be a full row floating over the globe with the play
-   * button in it. One line of text and a tap that opens the station sheet says
-   * the same thing in a quarter of the height.
-   */
-  const toSheet = (e) => {
-    if (e.target.closest("button, input, a")) return;
-    window.AuralRailSheet?.open();
-  };
+  // ── the search bar, which is a tab rather than a permanent field ───────────
+  const searchbar = document.createElement("div");
+  searchbar.className = "searchbar";
+  searchbar.hidden = true;
 
-  /**
-   * Chat, as a panel of its own.
-   *
-   * On a Mac it is a section under the station list, which works because the
-   * rail is tall. On a phone the same section sits below the fold of a sheet
-   * that is mostly list. Given its own panel it is one tap away and the list
-   * keeps its room. The node moves rather than being rebuilt, so every handler
-   * and the log itself come with it.
-   */
+  // ── the tabs ───────────────────────────────────────────────────────────────
+  const tabs = document.createElement("nav");
+  tabs.className = "tabbar";
+  tabs.hidden = true;
+  tabs.setAttribute("aria-label", "Sections");
+
   const chatPanel = document.createElement("div");
   chatPanel.className = "chatpanel";
   chatPanel.hidden = true;
-  // Chat only exists while something is playing somewhere real, so the panel
-  // says which of those is missing rather than opening onto nothing.
   const chatNone = document.createElement("p");
   chatNone.className = "chatnone";
   chatNone.textContent = "Play a station to talk to the place it comes from.";
 
-  const chatBtn = document.createElement("button");
-  chatBtn.type = "button";
-  chatBtn.id = "chatBtn";
-  chatBtn.setAttribute("aria-pressed", "false");
-  chatBtn.setAttribute("aria-controls", "chat");
-  chatBtn.setAttribute("aria-label", "Chat");
-  chatBtn.title = "Chat";
-  chatBtn.innerHTML = window.Icons?.svg?.("chat") || "";
-  chatBtn.onclick = () => {
-    const open = chatPanel.hidden;
-    chatPanel.hidden = !open;
-    chatBtn.setAttribute("aria-pressed", String(open));
+  /** One tab: a glyph, a word under it, and whether it is the one you are on. */
+  function tab(name, label, glyph, onPick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab";
+    b.dataset.tab = name;
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML = `<span class="tabicon">${icon(glyph)}</span><span class="tablabel"></span>`;
+    b.querySelector(".tablabel").textContent = label;
+    b.onclick = () => onPick(b);
+    tabs.append(b);
+    return b;
+  }
+
+  /**
+   * Only one of these is open at a time.
+   *
+   * Chat, Search and Favourites each cover the globe, and two of them open at
+   * once is how a phone ends up with a panel nobody meant to leave behind.
+   */
+  let openTab = "explore";
+  const setTab = (name) => {
+    openTab = name;
+    for (const b of tabs.querySelectorAll(".tab")) {
+      b.setAttribute("aria-pressed", String(b.dataset.tab === name));
+    }
+    chatPanel.hidden = name !== "chat";
+    searchbar.hidden = name !== "search";
+    if (name === "search") $("q")?.focus();
+    if (name !== "search") $("q")?.blur();
   };
 
+  const explore = tab("explore", "Explore", "globe", () => {
+    setTab("explore");
+    window.AuralRailSheet?.peek();
+  });
+  tab("favorites", "Favorites", "star", (b) => {
+    setTab("favorites");
+    $("favBtn")?.click();            // the real control, still doing the work
+    b.setAttribute("aria-pressed", $("favBtn")?.getAttribute("aria-pressed") === "true" ? "true" : "false");
+  });
+  tab("chat", "Chat", "chat", () => setTab(openTab === "chat" ? "explore" : "chat"));
+  tab("search", "Search", "search", () => setTab(openTab === "search" ? "explore" : "search"));
+  tab("settings", "Settings", "gear", () => { setTab("explore"); $("setBtn")?.click(); });
+
+  // ── the now-playing row ────────────────────────────────────────────────────
+  /**
+   * The strip is one button, because it does one thing: it shows the station
+   * sheet. It was a div with a click handler, which is a control that exists
+   * for a finger and not for a keyboard or VoiceOver.
+   */
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "nowopen";
+  open.setAttribute("aria-label", "Show the station list");
+
+  /**
+   * Share, through the system's own sheet.
+   *
+   * The desktop offers a card with Copy, Save and Copy link beside it, which is
+   * four buttons doing what iOS already does better — and does with every app
+   * on the phone, not just the ones we thought of. So here the card goes
+   * straight into the share sheet as a file, and the phone takes it from there.
+   * If this browser has no share sheet, the app's own falls back in.
+   */
+  async function shareCard() {
+    // `playing` and `buildCard` are explore-playback.js's own top-level
+    // bindings; these are plain scripts sharing one scope.
+    const ch = typeof playing !== "undefined" ? playing : null;
+    if (!ch) return;
+    let png = null;
+    try { png = await buildCard(); } catch {}
+    if (!png) return;
+    const where = [ch.place, ch.country].filter(Boolean).join(", ");
+    const text = where ? `${ch.title} — ${where}` : ch.title;
+    try {
+      const file = new File([await (await fetch(png)).blob()], "auralfm.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) return await navigator.share({ files: [file], text });
+      if (navigator.share) return await navigator.share({ title: "AuralFM", text, url: location.href });
+    } catch (e) {
+      if (e?.name === "AbortError") return;        // they closed the sheet
+    }
+    openShareSheet();
+  }
+
   function layout(on) {
-    bar.hidden = !on;
+    tabs.hidden = !on;
     document.body.classList.toggle("phonebar", on);
-    const play = $("play");
-    const chat = $("chat");
     if (on) {
-      remember($("newsBtn")); left.append($("newsBtn"));
-      left.append(chatBtn);
-      remember(play); bar.insertBefore(play, right);
-      for (const el of [$("favBtn"), $("tripBtn")]) { remember(el); right.append(el); }
-      // Layers is a view option, not a destination: it belongs with Settings.
-      const layers = $("layersBtn"), set = $("setBtn");
-      if (layers && set) { remember(layers); set.parentNode.insertBefore(layers, set); }
+      // The globe's own controls: what it shows, and where to go next.
+      for (const el of [$("layersBtn"), $("newsBtn"), $("tripBtn")]) { remember(el); side.append(el); }
+      document.querySelector(".globewrap")?.append(side);
+      // Search is a tab now, so the field lives in a bar that tab opens.
+      const q = $("q");
+      if (q) { remember(q); searchbar.append(q); }
+      // Play and share belong with the station, not among the tabs, and they
+      // sit after its name: the row reads as what, then what to do with it.
+      const play = $("play"), share = $("nowShare");
+      if (play) { remember(play); now.append(play); }
+      if (share) { remember(share); now.append(share); share.onclick = shareCard; }
+      now.insertBefore(open, now.firstChild);
       // Lock belongs with the station it holds, which is the sheet's heading.
       const lock = $("lock"), head = $("head");
       if (lock && head) { remember(lock); head.append(lock); }
-      if (chat) { remember(chat); chatPanel.append(chat, chatNone); document.body.append(chatPanel); }
-      now.addEventListener("click", toSheet);
+      const chat = $("chat");
+      if (chat) { remember(chat); chatPanel.append(chat, chatNone); }
+      document.body.append(searchbar, chatPanel, tabs);
+      setTab("explore");
     } else {
-      chatPanel.hidden = true;
-      chatBtn.remove();
-      chatPanel.remove();
+      open.remove(); side.remove();
+      const share = $("nowShare");
+      if (share) share.onclick = openShareSheet;      // the desktop's own sheet
+      searchbar.remove(); chatPanel.remove(); tabs.remove();
       for (const el of home.keys()) {
         const [parent, before] = home.get(el);
         parent.insertBefore(el, before && before.parentNode === parent ? before : null);
       }
       home.clear();
-      now.removeEventListener("click", toSheet);
     }
   }
+
+  // The big button sits under the row's text, so the text has to say what it is.
+  open.addEventListener("click", () => window.AuralRailSheet?.open());
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && openTab === "search") setTab("explore");
+  });
 
   /**
    * How much of the bottom belongs to the player.
    *
-   * The panels anchor to it (--chrome), so headlines, layers and chat stop
-   * above the strip and the bar rather than lying over the transport they were
-   * opened from. Measured rather than guessed: the strip comes and goes with
-   * what is playing, and the bar grows by the home indicator's height.
+   * Panels anchor to it (--chrome), so nothing opens over the transport it was
+   * opened from. Measured, not guessed: the row comes and goes with what is
+   * playing, and iOS grows the bar by the home indicator.
    */
   const chrome = () => {
-    const h = (bar.hidden ? 0 : bar.offsetHeight) + (now.hidden ? 0 : now.offsetHeight);
+    const h = (tabs.hidden ? 0 : tabs.offsetHeight) + (now.hidden ? 0 : now.offsetHeight);
     document.documentElement.style.setProperty("--chrome", `${h}px`);
   };
   if (typeof ResizeObserver !== "undefined") {
     const ro = new ResizeObserver(chrome);
-    ro.observe(bar); ro.observe(now);
+    ro.observe(tabs); ro.observe(now);
   }
   new MutationObserver(chrome).observe(now, { attributes: true, attributeFilter: ["hidden"] });
   addEventListener("resize", chrome);
-  // iOS hides and shows its own bars without firing a window resize; the visual
-  // viewport is the one that notices, and the panels are anchored to this.
   visualViewport?.addEventListener("resize", chrome);
 
   layout(phone.matches);
   chrome();
-  phone.addEventListener?.("change", (e) => layout(e.matches));
+  phone.addEventListener?.("change", (e) => { layout(e.matches); chrome(); });
 })();

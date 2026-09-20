@@ -267,15 +267,17 @@ let sheetPng = null;
 // straight out of the card into the toolbar behind it.
 const behindSheet = () => [document.querySelector(".toolbar"), document.querySelector(".cols"), $("now")];
 
-async function openShareSheet() {
-  if (!playing) return;
-  const sheet = $("sheet"), said = $("sheetsaid");
-  said.textContent = "";
-  $("sheetimg").removeAttribute("src");
-  sheet.hidden = false;
-  for (const el of behindSheet()) if (el) el.inert = true;
-  $("sheetclose").focus();
-  try {
+/**
+ * Draw the card for whatever is playing, and hand back the PNG.
+ *
+ * Separate from the sheet because the sheet is one way of offering it: on a
+ * phone the card goes straight into the system's own share sheet (see
+ * web/phone-bar.js), where copying and saving are the operating system's job
+ * rather than four buttons of our own.
+ */
+async function buildCard() {
+  if (!playing) return null;
+  {
     const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
     /**
      * Find the coordinates if what is playing does not carry them.
@@ -331,7 +333,20 @@ async function openShareSheet() {
        */
       qr: "https://github.com/meltonbell3/auralfm",
     });
-    $("sheetimg").src = sheetPng;
+    return sheetPng;
+  }
+}
+
+async function openShareSheet() {
+  if (!playing) return;
+  const sheet = $("sheet"), said = $("sheetsaid");
+  said.textContent = "";
+  $("sheetimg").removeAttribute("src");
+  sheet.hidden = false;
+  for (const el of behindSheet()) if (el) el.inert = true;
+  $("sheetclose").focus();
+  try {
+    $("sheetimg").src = await buildCard();
     // No waveform is now the normal case, not a symptom of anything, so the
     // sheet no longer tells people to wait for sound that is already playing.
   } catch {

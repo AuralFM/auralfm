@@ -76,217 +76,193 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 /* ── phones ────────────────────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   /**
-   * The globe is the screen, and the stations are a sheet you pull up over it.
+   * The globe is the screen; the player and its tabs are the only chrome.
    *
-   * The stacked version gave the globe 42dvh and the list whatever was left,
-   * which on a Mini was four rows above the player — the stations were the one
-   * thing you could not reach. As a sheet, the list rests low enough to leave
-   * the planet whole and pulls up to fill the screen, which is how Maps and
-   * Music hand a map and a list the same space. web/rail-sheet.js drives it.
+   * After Radio Garden: no title bar at all, a few small controls down the
+   * globe's right edge, and a bottom stack of what is playing and where you can
+   * go. web/phone-bar.js moves the controls; web/rail-sheet.js drags the sheet.
    */
+  .toolbar { display: none; }
   .cols { flex-direction: column; }
   .globecol { position: absolute; inset: 0; }
+
+  /* What the globe shows, and where to go next: on the globe, out of the way. */
+  .globeside {
+    position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 10px; z-index: 5;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .globeside button {
+    width: 40px; height: 40px; display: grid; place-items: center; font-size: 15px;
+    border: 0; border-radius: var(--r-lg); cursor: default; color: var(--label);
+    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+    box-shadow: inset 0 0 0 .5px var(--edge-hi), 0 6px 20px rgba(0, 0, 0, .35);
+  }
+  .globeside button::before { content: none; }
+  .globeside button[aria-pressed="true"] { color: var(--accent); }
+
+  /* Search is a tab, so the field appears when that tab is on. */
+  .searchbar {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 9;
+    padding: calc(env(safe-area-inset-top) + 8px) 12px 10px;
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  }
+  .searchbar[hidden] { display: none; }
+  .searchbar #q { width: 100%; height: 40px; border-radius: var(--r-lg); }
+
+  /**
+   * The station sheet: edge to edge, and flush with the player.
+   *
+   * It was inset with rounded sides, which drew a seam between the list and
+   * the row under it and left a strip of globe nobody could use. Full width,
+   * rounded only where you grab it, and its bottom runs behind the player.
+   */
   .railcol {
     position: absolute; left: 0; right: 0; bottom: 0; top: auto;
-    width: auto; height: 88%; gap: 0; z-index: 4;
-    /* Where the sheet rests, in pixels, written by rail-sheet.js. Until it
-       loads the sheet sits at its peek height, so a first paint with no script
-       is still the right shape rather than a list covering the globe. */
+    width: auto; height: 92%; gap: 0; z-index: 4;
     transform: translate3d(0, var(--sheet-y, 42%), 0);
   }
-  /* Only the two things that drag refuse the browser's own gestures. Claiming
-     the whole sheet would also swallow iOS's edge swipe back, which is a system
-     gesture no app gets to keep. */
   .sheetgrab, .placehead { touch-action: none; }
-  .scroll, .newslist, #chatlog, .convos { overscroll-behavior: contain; }
-  /* With nothing playing there is no transport bar under the sheet, so the last
-     row would sit under the home indicator. */
-  .scroll { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
-  .chips { overscroll-behavior: contain; }
+  .scroll, .newslist, #chatlog, .convos, .chips { overscroll-behavior: contain; }
   .railcol.sliding { transition: none; }
   .railcol.settling { transition: transform .42s cubic-bezier(.32,.72,0,1); }
   @media (prefers-reduced-motion: reduce) { .railcol.settling { transition: none; } }
-
   .stations {
     flex: 1; min-height: 0; padding-top: 18px;
     border-radius: var(--r-xl) var(--r-xl) 0 0;
     background: color-mix(in srgb, var(--bg) 96%, transparent);
-    box-shadow: inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo),
-                0 -10px 40px rgba(0, 0, 0, .45);
+    box-shadow: inset 0 1px 0 var(--edge-hi), 0 -10px 40px rgba(0, 0, 0, .45);
   }
-  /**
-   * Rows at a phone's rhythm.
-   *
-   * 58pt a row put four stations on a Mini's sheet and read as a list with
-   * the air let out of it. 46 keeps the whole row a comfortable target and
-   * fits six, and the star gives its spare width back to the name.
-   */
-  #stationlist .st, #placelist .place { padding: 2px 10px; min-height: 46px; }
-  .st .star { min-width: 34px; min-height: 34px; font-size: 13px; margin-right: 0; }
-
-  /* The grab handle: a real button, 44pt tall, drawn as the usual pill. */
   .sheetgrab {
     display: grid;
     /* 44pt of button with the pill drawn at the top of it: the target is the
-       size a thumb needs to catch a sheet, the drawing is a hairline. It lies
-       over the place name, which drags as well, so nothing is lost beneath. */
+       size a thumb needs to catch a sheet, the drawing is a hairline. */
     position: absolute; top: 0; left: 0; right: 0; height: 44px;
     appearance: none; border: 0; background: none; padding: 0; cursor: default;
-    display: grid; place-items: start center; z-index: 1;
+    place-items: start center; z-index: 1;
   }
   .sheetgrab::before {
     content: ""; margin-top: 7px; width: 36px; height: 5px;
     border-radius: var(--r-pill); background: var(--label3);
   }
   .sheetgrab:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: var(--r-xl); }
-  #chat {
-    flex: none; max-height: 34dvh; border-radius: 0; box-shadow: inset 0 .5px 0 var(--line);
-    background: color-mix(in srgb, var(--bg) 96%, transparent);
-  }
+
+  /* Rows at a phone's rhythm: 46pt fits six where 58 fit four, and the star
+     gives its spare width back to the name. */
+  #stationlist .st, #placelist .place { padding: 2px 10px; min-height: 46px; }
+  .st .star { min-width: 34px; min-height: 34px; font-size: 13px; margin-right: 0; }
+
   /* Read-outs belong to the globe, so they ride above the sheet's top edge. */
-  .globebar { right: 0; bottom: auto; top: 0; padding-top: 6px; }
+  .globebar { right: 0; bottom: auto; top: calc(env(safe-area-inset-top) + 6px); }
   .globebar::after { top: 0; bottom: auto; background: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,0)); }
 
   /**
-   * The bottom bar (web/phone-bar.js): browsing under the thumb.
+   * What is playing: one row, and the whole row is the way back to the list.
    *
-   * Two controls, the transport, two controls. Play is the centre because it
-   * is the one thing pressed without looking, and the row reads as a player
-   * with the world either side of it rather than five equal tiles.
+   * `.nowopen` is a real button laid under the text — the row used to be a div
+   * with a click handler, which is a control that exists for a finger and not
+   * for a keyboard or VoiceOver. The transport sits above it.
    */
-  .tabbar {
-    flex: none; display: flex; align-items: center; justify-content: space-between;
-    gap: 8px; padding: 6px 18px calc(6px + env(safe-area-inset-bottom));
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
+  body.phonebar .now {
+    position: relative; z-index: 5; gap: 10px; font-size: 14px;
+    padding: 8px 12px 8px 14px;
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
     -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: inset 0 .5px 0 var(--line);
   }
-  .tabbar[hidden] { display: none; }
-  /* Solid for anyone who asked for less transparency or more contrast: the
-     player's chrome sits over a moving planet, which is the worst case for
-     text on glass. */
-  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-    .tabbar, body.phonebar .now, .chatpanel {
-      background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
-    }
+  .nowopen {
+    position: absolute; inset: 0; z-index: 0;
+    appearance: none; border: 0; background: none; padding: 0; cursor: default;
   }
-  /* The sheet hangs below the globe area when it is down, so the strip and the
-     bar have to sit above it or the list slides over the player. */
-  .tabbar, body.phonebar .now { position: relative; z-index: 5; }
-  .tabgroup { display: flex; align-items: center; gap: 10px; }
-  /* In the bar the tiles are gone: a toolbar tile inside a tab bar reads as a
-     button inside a button. The glyph and its 44pt target are the control. */
-  .tabbar button::before { content: none; }
-  .tabbar button { width: 44px; height: 44px; font-size: 16px; color: var(--label2); }
-  .tabbar button[aria-pressed="true"] { color: var(--accent); background: none; }
-  .tabbar #play {
-    width: 48px; height: 48px; font-size: 15px; flex: none;
-    color: var(--on-accent); background: var(--accent);
-  }
-  body:not(.playing) .tabbar #play { background: transparent; color: var(--accent); }
-
-  /* What is on air: one line over the bar, and a tap back to the list. */
-  body.phonebar .now {
-    padding: 7px 16px 8px; gap: 8px; font-size: 13px;
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
-  }
+  .nowopen:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+  body.phonebar .now > *:not(.nowopen) { position: relative; z-index: 1; }
+  body.phonebar .now .brand svg { height: 15px; }
   body.phonebar .now b { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   body.phonebar .now #nowStatus { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* Volume and the output picker both belong to iOS here: the hardware keys set
-     one, and Control Centre and AirPlay set the other, from outside any app. A
-     speaker button in the strip is a second, worse copy of a system control. */
-  body.phonebar .now .volwrap, body.phonebar .now #nowStar,
-  body.phonebar .now .outwrap { display: none; }
+  /* Volume and the output picker belong to iOS here: the hardware keys set one
+     and Control Centre sets the other, from outside any app. */
+  body.phonebar .now .volwrap, body.phonebar .now #nowStar, body.phonebar .now .outwrap,
+  body.phonebar .now .brand { display: none; }
+  /* Sharing works here after all: the card goes into the system's share sheet
+     rather than needing a clipboard and a file dialog of our own. */
+  body.phonebar .now #nowShare {
+    display: grid !important; place-items: center; flex: none;
+    width: 36px; height: 36px; min-width: 36px; min-height: 36px;
+    font-size: 14px; color: var(--label2);
+    background: none; border: 0; border-radius: var(--r-md); cursor: default;
+  }
+  body.phonebar .now #nowShare[hidden] { display: none !important; }
+  body.phonebar .now #nowShare:active { background: var(--fill); }
+  /* 34pt: the row is a strip, and a 40pt disc in it read as a button with a
+     line of text beside it rather than a line of text you can play. */
+  body.phonebar .now #play {
+    margin-left: auto; width: 36px; height: 36px; min-width: 36px; min-height: 36px;
+    font-size: 12px;
+  }
   /* Lock rides with the station it holds, in the sheet's heading. */
   body.phonebar .placehead { position: relative; padding-right: 52px; }
   body.phonebar .placehead #lock { position: absolute; top: 0; right: 12px; }
 
-  /**
-   * The toolbar: a 44pt target that does not look 44pt.
-   *
-   * Full-size tiles at finger scale read as five heavy boxes across the top of
-   * a phone. The button keeps its 44pt hit area and draws the tile inset into
-   * it, so the target is the size a finger needs and the drawing is the size
-   * the eye wants.
-   */
-  .toolbar {
-    /* 6pt between targets: adjacent 44pt boxes with no gap are one long strip
-       to a finger, and the wrong icon is the result. */
-    height: auto; flex-wrap: wrap; gap: 6px 6px;
-    padding: calc(env(safe-area-inset-top) + 6px) 6px 8px 12px;
+  /* ── the tabs ─────────────────────────────────────────────────────────────
+     Five, labelled, because an unexplained row of glyphs is a quiz — and five
+     is the ceiling every platform's guidance sets. */
+  .tabbar {
+    position: relative; z-index: 5; flex: none;
+    display: flex; align-items: stretch; justify-content: space-between;
+    padding: 4px 6px calc(2px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: inset 0 .5px 0 var(--line);
   }
-  .toolbar .sp { flex: 1; }
-  .toolbar button { position: relative; background: none; box-shadow: none; font-size: 13px; }
-  .toolbar button::before {
-    content: ""; position: absolute; inset: 5px; border-radius: var(--r-md);
-    background: var(--fill); box-shadow: inset 0 0 0 1px var(--line);
+  .tabbar[hidden] { display: none; }
+  .tab {
+    flex: 1; min-height: 46px; display: grid; gap: 2px; place-items: center;
+    appearance: none; border: 0; background: none; padding: 4px 2px; cursor: default;
+    color: var(--label2); font: inherit;
   }
-  .toolbar button svg { position: relative; }
-  .toolbar button:hover::before { background: var(--fill-hi); }
-  /* Hover never happens on glass; the press is the only feedback there is. */
-  .toolbar button:active::before { background: var(--fill-hi); scale: .92; }
-  .toolbar button::before { transition: background var(--dur-hover) var(--ease-out), scale var(--dur-press) var(--ease-out); }
-  .toolbar button[aria-pressed="true"]::before { background: var(--fill-hi); }
-  /* Search takes the row the four browsing buttons left behind: the logo, the
-     field and Settings, which is all the top of a phone needs. */
-  .toolbar #q { order: 1; flex: 1; width: auto; height: 38px; border-radius: var(--r-lg); }
-  body.phonebar .toolbar { flex-wrap: nowrap; gap: 8px; padding-right: 10px; }
-  body.phonebar .toolbar .sp { display: none; }
-  body.phonebar #setBtn, body.phonebar #layersBtn { order: 2; }
-  .brand svg { height: 16px; }
+  .tabicon { display: grid; place-items: center; font-size: 17px; line-height: 1; }
+  .tablabel { font-size: 10.5px; letter-spacing: .004em; }
+  .tab[aria-pressed="true"] { color: var(--accent); }
+  .tab:active { opacity: .6; }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; border-radius: var(--r-md); }
 
-  /* Safari zooms into any field under 16px when it is tapped. */
-  input, select, textarea { font-size: 16px !important; }
-
-  /* The player clears the home indicator. iOS will not let a page set volume,
-     so the slider goes; the hardware buttons are the volume control. */
-  .now { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
-  #vol, .markets { display: none !important; }
-
-  /**
-   * Headlines and layers as bottom sheets, not covers.
-   *
-   * Both opened as a full-screen panel over the globe, so choosing a layer
-   * meant losing sight of the thing the layer changes. Anchored to the bottom
-   * they behave like every other iOS sheet: near the thumb, and the globe
-   * still visible above them.
-   */
-  /* Panels stop where the player's chrome begins: --chrome is the strip plus
-     the bar, measured by phone-bar.js, so a panel never lies over the transport
-     it was opened from. */
+  /* ── panels ───────────────────────────────────────────────────────────────
+     Headlines, layers and chat all arrive from the bottom, full width, and
+     stop where the player's chrome begins (--chrome, measured in JS). */
   .newspanel, #layers, .chatpanel {
-    position: fixed; left: 8px; right: 8px; top: auto; width: auto;
-    bottom: calc(var(--chrome, 0px) + 8px);
-    max-height: 58dvh; overflow-y: auto; border-radius: var(--r-xl); z-index: 6;
+    position: fixed; left: 0; right: 0; top: auto; width: auto;
+    bottom: var(--chrome, 0px);
+    max-height: 62dvh; overflow-y: auto; z-index: 6;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
   }
-  .newspanel { height: 58dvh; }
-  /* Chat, as its own panel over the globe rather than a strip under the list. */
+  .newspanel { height: 62dvh; }
+  .newshead { padding-left: 14px; }
   .chatpanel {
     display: flex; flex-direction: column; height: 52dvh; overflow: hidden;
-    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    background: color-mix(in srgb, var(--bg) 96%, transparent);
     -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
-    box-shadow: inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 18px 48px rgba(0,0,0,.38);
+    box-shadow: inset 0 1px 0 var(--edge-hi), 0 -10px 40px rgba(0, 0, 0, .45);
   }
   .chatpanel[hidden] { display: none; }
-  /* Nothing playing: the panel is one sentence, so it is one sentence tall. */
   .chatpanel:has(#chat[hidden]) { height: auto; }
   .chatpanel #chat { flex: 1; max-height: none; box-shadow: none; background: none; }
   .chatpanel .chatnone { display: none; margin: 0; padding: 30px 20px; text-align: center;
     color: var(--label2); font-size: 14px; line-height: 1.5; }
   .chatpanel #chat[hidden] + .chatnone { display: block; }
-  .newshead { padding-left: 14px; }
 
-  .setsheet-panel {
-    left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto;
-    height: calc(100dvh - env(safe-area-inset-top) - 12px);
-    border-radius: var(--r-xl) var(--r-xl) 0 0;
-    opacity: 1; transform: translateY(100%); transition: none;
+  /* Solid for anyone who asked for less transparency or more contrast: this
+     chrome sits over a planet, which is the worst case for text on glass. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .tabbar, body.phonebar .now, .chatpanel, .searchbar, .globeside button, .stations {
+      background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
   }
-  .setsheet.open .setsheet-panel { transform: translateY(0); }
-  .setsheet.open .setsheet-scrim { opacity: var(--dim, 1); transition: none; }
-  .setsheet-grab { display: block; }
-  .setsheet-head, .setsheet-grab { touch-action: none; }
+
+  /* Safari zooms into any field under 16px when it is tapped. */
+  input, select, textarea { font-size: 16px !important; }
+  #vol, .markets { display: none !important; }
 }
 
 /* ── touch ─────────────────────────────────────────────────────────────────── */
