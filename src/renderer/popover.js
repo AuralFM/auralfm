@@ -949,8 +949,15 @@ window.auralfm.onShown(() => {
 
   const s = await window.auralfm.stats();
   if (!s.channels) {
+    const { dev } = await window.auralfm.version();
     headEl.textContent = t("app.noCatalog", "No catalog");
-    render([], { empty: "No station data yet.<br>Run <b>npm run crawl</b> to build it." });
+    // A packaged app has the catalogue inside it; if it is missing there, the
+    // reader needs the app fixed, not a command they have no way to run — and
+    // not "check your connection" either, because this file is local and the
+    // network has nothing to do with it.
+    render([], { empty: t("empty.noCatalog", "No station data yet.") + "<br>"
+      + (dev ? "Run <b>npm run crawl</b> to build it."
+             : t("empty.noCatalogHelp", "Reinstalling the app should restore the catalog.")) });
   } else {
     qEl.placeholder = `Search ${s.channels.toLocaleString()} stations`;
   }

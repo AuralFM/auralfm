@@ -29,7 +29,19 @@ function loadGlobeLib() {
     const s = document.createElement("script");
     s.src = "vendor/globe.gl.min.js";
     s.onload = resolve;
-    s.onerror = () => reject(new Error("globe.gl failed to load — run `npm run vendor`"));
+    s.onerror = () => {
+      // Clear the memo before rejecting. This promise is what loadGlobeLib()
+      // hands every later caller, so a rejected one left here means the globe
+      // can never be retried without reloading the page — and the usual reason
+      // it failed is 1.8 MB over a weak connection that has since come back.
+      globeLoading = null;
+      s.remove();
+      // explore.js puts this message on screen, so it has to read as a sentence
+      // to somebody who came here for the radio. `npm run vendor` is a note to
+      // whoever is building the app, and goes where they will actually look.
+      console.error("globe.gl failed to load — run `npm run vendor`");
+      reject(new Error(t("app.globeFailed", "The globe could not be loaded.")));
+    };
     document.head.appendChild(s);
   });
   return globeLoading;

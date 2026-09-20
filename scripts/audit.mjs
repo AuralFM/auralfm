@@ -2236,6 +2236,66 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── no screen tells a listener to run a shell command ───────────────────────
+// Explore appended "catalog N days old — run npm run crawl" to the place
+// heading once the bundle passed 120 days. That is a note to whoever is
+// building the app, and it was being shown to whoever was listening to it: a
+// packaged Mac app cannot run npm, and on the web and the iOS PWA the reader
+// has no terminal at all. Rams flagged it, and the web version is what made it
+// matter — the same string had been fine while this was only a dev build.
+//
+// The signal itself is worth keeping, so the rule is not "never say this", it
+// is "only where it can be acted on": version() already answers that with
+// `dev: !app.isPackaged`, which settings.js has used for the build badge all
+// along, and which the web bridge does not set at all.
+//
+// A proximity check, deliberately. It asks that a `dev` test appear within a
+// dozen lines above the string, which is cheap and would have caught this one.
+// It cannot prove the test actually guards the write.
+{
+  console.log("\nno screen tells a listener to run a shell command");
+  const shouting = [];
+  for (const f of fs.readdirSync(R("src/renderer")).filter((n) => n.endsWith(".js"))) {
+    const lines = fs.readFileSync(R(`src/renderer/${f}`), "utf8").split("\n");
+    lines.forEach((line, i) => {
+      // The comment above a guarded write may name the command; the write is
+      // what ships, so only look at lines that are code.
+      if (/^\s*(\/\/|\*)/.test(line)) return;
+      // The console is a developer's surface, not a screen. Saying it there is
+      // the fix, not the bug.
+      if (/console\.(error|warn|log|info|debug)\s*\(/.test(line)) return;
+      if (!/npm run |yarn |pnpm /.test(line)) return;
+      const above = lines.slice(Math.max(0, i - 12), i + 1).join("\n");
+      if (!/\bdev\b/.test(above)) shouting.push(`${f}:${i + 1} tells the reader to run a command with no dev-build check above it`);
+    });
+  }
+  shouting.length ? fail("no screen tells a listener to run a shell command", shouting.join("; "))
+    : pass("a build instruction on screen is gated on this being a build you can run");
+}
+
+
+// ── a failed globe load can be tried again ──────────────────────────────────
+// loadGlobeLib() memoises its promise in `globeLoading` so concurrent callers
+// share one <script> load. Nothing ever cleared it on failure, so a rejected
+// promise was cached for the life of the page: every later call got the same
+// rejection back, and the globe could not be retried without a reload. The
+// usual reason it failed is 1.8 MB of globe.gl over a weak phone connection —
+// the exact case where trying again a moment later would have worked.
+//
+// Found by a Rams review of the surrounding lines, then confirmed by reading:
+// globeLoading was assigned once and never reset.
+{
+  console.log("\na failed globe load can be tried again");
+  const src = readSrc("src/renderer/explore-globe.js");
+  const onerror = src.match(/onerror\s*=\s*(\([^)]*\)\s*=>\s*\{[\s\S]*?\n    \}|[^;]+);/);
+  !onerror ? fail("a failed globe load can be tried again", "no onerror on the globe.gl script — this check is blind")
+    : !/globeLoading\s*=\s*null/.test(onerror[1])
+      ? fail("a failed globe load can be tried again",
+             "the onerror path leaves the rejected promise in globeLoading, so every retry re-reads the same failure")
+      : pass("a failed globe load clears the memo, so the next call actually tries again");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

@@ -28,6 +28,7 @@ const en = {
   "app.noCatalog": "No catalog",
   "app.loading": "Loading…",
   "app.loadingGlobe": "Loading globe…",
+  "app.globeFailed": "The globe could not be loaded.",
   "app.headlines": "Headlines",
 
   // empty states
@@ -37,6 +38,8 @@ const en = {
   "empty.noStationsFilter": "No stations match that filter here.",
   "empty.noMatch": "Nothing matches that.",
   "empty.nothingOnAir": "Nothing on air here.",
+  "empty.noCatalog": "No station data yet.",
+  "empty.noCatalogHelp": "Reinstalling the app should restore the catalog.",
 
   // controls
   "ctl.playPause": "Play or pause what is tuned in",
@@ -320,6 +323,7 @@ const es = {
   "app.noCatalog": "Sin catálogo",
   "app.loading": "Cargando…",
   "app.loadingGlobe": "Cargando el globo…",
+  "app.globeFailed": "No se pudo cargar el globo.",
   "app.headlines": "Titulares",
 
   "empty.favorites": "Aún no hay favoritos.",
@@ -328,6 +332,8 @@ const es = {
   "empty.noStationsFilter": "Ninguna emisora coincide con ese filtro aquí.",
   "empty.noMatch": "No hay coincidencias.",
   "empty.nothingOnAir": "Nada al aire aquí.",
+  "empty.noCatalog": "Aún no hay datos de emisoras.",
+  "empty.noCatalogHelp": "Reinstalar la app debería restaurar el catálogo.",
 
   "ctl.playPause": "Reproducir / pausar",
   "ctl.mute": "Silenciar",
@@ -571,6 +577,7 @@ const fr = {
   "app.noCatalog": "Aucun catalogue",
   "app.loading": "Chargement…",
   "app.loadingGlobe": "Chargement du globe…",
+  "app.globeFailed": "Le globe n'a pas pu être chargé.",
   "app.headlines": "Actualités",
 
   "empty.favorites": "Aucun favori pour l'instant.",
@@ -579,6 +586,8 @@ const fr = {
   "empty.noStationsFilter": "Aucune station ne correspond à ce filtre ici.",
   "empty.noMatch": "Aucun résultat.",
   "empty.nothingOnAir": "Rien à l'antenne ici.",
+  "empty.noCatalog": "Aucune donnée de station pour l'instant.",
+  "empty.noCatalogHelp": "Réinstaller l'application devrait restaurer le catalogue.",
 
   "ctl.playPause": "Lecture / pause",
   "ctl.mute": "Couper le son",
@@ -822,6 +831,7 @@ const de = {
   "app.noCatalog": "Kein Katalog",
   "app.loading": "Wird geladen…",
   "app.loadingGlobe": "Globus wird geladen…",
+  "app.globeFailed": "Der Globus konnte nicht geladen werden.",
   "app.headlines": "Schlagzeilen",
 
   "empty.favorites": "Noch keine Favoriten.",
@@ -830,6 +840,8 @@ const de = {
   "empty.noStationsFilter": "Hier passt kein Sender zu diesem Filter.",
   "empty.noMatch": "Keine Treffer.",
   "empty.nothingOnAir": "Hier ist nichts auf Sendung.",
+  "empty.noCatalog": "Noch keine Senderdaten.",
+  "empty.noCatalogHelp": "Eine Neuinstallation der App sollte den Katalog wiederherstellen.",
 
   "ctl.playPause": "Wiedergabe / Pause",
   "ctl.mute": "Stumm",
@@ -1073,6 +1085,7 @@ const pt = {
   "app.noCatalog": "Sem catálogo",
   "app.loading": "Carregando…",
   "app.loadingGlobe": "Carregando o globo…",
+  "app.globeFailed": "Não foi possível carregar o globo.",
   "app.headlines": "Manchetes",
 
   "empty.favorites": "Ainda sem favoritos.",
@@ -1081,6 +1094,8 @@ const pt = {
   "empty.noStationsFilter": "Nenhuma estação corresponde a esse filtro aqui.",
   "empty.noMatch": "Nada corresponde.",
   "empty.nothingOnAir": "Nada no ar por aqui.",
+  "empty.noCatalog": "Ainda não há dados de estações.",
+  "empty.noCatalogHelp": "Reinstalar a app deve restaurar o catálogo.",
 
   "ctl.playPause": "Tocar / pausar",
   "ctl.mute": "Silenciar",

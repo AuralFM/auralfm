@@ -75,11 +75,20 @@ document.addEventListener("keydown", (e) => {
     if (el) { el.textContent = err.message; $("globehint").hidden = false; }
   }
 
-  // Quietly flag a stale catalog rather than letting it rot invisibly.
-  const st = await window.auralfm.stats();
-  const days = st.generated ? Math.floor((Date.now() - new Date(st.generated)) / 86400000) : 0;
-  if (days >= 120) {
-    placeHeadEl.textContent =
-      `${placeHeadEl.textContent} · catalog ${days} days old — run npm run crawl`;
+  // Quietly flag a stale catalog rather than letting it rot invisibly — but
+  // only to somebody who can do something about it. A packaged Mac app cannot
+  // run npm, and on the web and the iOS PWA the reader has no terminal at all;
+  // for them a slightly old catalogue is not a fault to report, it is a few
+  // dead streams the auto-skip already handles. version() answers "is this a
+  // build you can rebuild" with the same `dev` the settings badge reads, and
+  // the web bridge does not set it. Everyone else is spared the stats() call.
+  const { dev } = await window.auralfm.version();
+  if (dev) {
+    const st = await window.auralfm.stats();
+    const days = st.generated ? Math.floor((Date.now() - new Date(st.generated)) / 86400000) : 0;
+    if (days >= 120) {
+      placeHeadEl.textContent =
+        `${placeHeadEl.textContent} · catalog ${days} days old — run npm run crawl`;
+    }
   }
 })();
