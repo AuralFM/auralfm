@@ -2207,6 +2207,35 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the catalogue does not index what nobody has searched for ───────────────
+// load() folded all 38,337 titles and all 12,579 place names into two search
+// haystacks before the app could paint. Measured on this machine: 3.2s for the
+// channel haystack and 0.4s for the places, inside a single blocked main
+// thread, on top of 2.2s of JSON.parse. In a browser that was one 8.4-second
+// long task with DOMContentLoaded at 15s — a phone would be worse, and a
+// session that only spins the globe never touches either array.
+//
+// They are built on first use now. bands[] stays eager on purpose: hydrate()
+// reads it for every station shown, so it is wanted immediately and costs 0.4s.
+{
+  console.log("\nthe catalogue does not index what nobody has searched for");
+  const src = readSrc("src/catalog.js").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const body = src.match(/function load\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/);
+  const eager = [];
+  if (!body) eager.push("load() is gone — this check is blind");
+  // Clearing them (`haystack = placeHay = null`) is how load() hands them back
+  // to the lazy builders; anything else assigned in here is the build itself.
+  else for (const m of body[1].matchAll(/\b(haystack|placeHay)\s*=\s*([^;]+);/g)) {
+    // Strike out the words a reset is allowed to be made of. Anything left is
+    // a build: `haystack = placeHay = null` clears, `= channels.map(...)` does not.
+    if (m[2].replace(/null|haystack|placeHay|[\s=]/g, ""))
+      eager.push(`load() builds ${m[1]} before anything has searched`);
+  }
+  eager.length ? fail("the catalogue does not index what nobody has searched for", eager.join("; "))
+    : pass("the search haystacks are built on first use, not at startup");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
