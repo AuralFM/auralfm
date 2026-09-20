@@ -97,21 +97,37 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .globeside {
     position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 10px; z-index: 5;
     display: flex; flex-direction: column; gap: 8px;
+    transition: transform var(--dur-panel) var(--ease-out);
   }
+  /* The search field drops in over this corner, so the controls step down. */
+  body.searching .globeside { transform: translateY(58px); }
   .globeside button {
-    width: 40px; height: 40px; display: grid; place-items: center; font-size: 15px;
+    /* 44pt, like every other target here: these three sit over a moving globe,
+       which is the last place to ask for a precise tap. */
+    width: 44px; height: 44px; display: grid; place-items: center; font-size: 15px;
     border: 0; border-radius: var(--r-lg); cursor: default; color: var(--label);
     background: color-mix(in srgb, var(--bg) 62%, transparent);
     -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
     box-shadow: inset 0 0 0 .5px var(--edge-hi), 0 6px 20px rgba(0, 0, 0, .35);
   }
   .globeside button::before { content: none; }
-  /* On, and being pressed, are both said in the palette's colour. The desktop
-     tints the button's box as well, which over a planet reads as a second,
-     dimmer button sitting on the first. */
+  /* Resting is quiet, and pressing says so in the palette's colour. */
+  .globeside button { color: var(--label2); }
+  .globeside button:active, .globeside button.busy { color: var(--accent); }
+  /**
+   * On is a filled tile, not a tint.
+   *
+   * Colour alone cannot carry this: in Onyx the accent *is* bone, the same
+   * value as the resting glyph, so a locked station looked exactly like an
+   * unlocked one — pressing it appeared to do nothing. Filled, it reads in all
+   * nine palettes, and the glyph flips to the colour that sits on the accent.
+   */
   .globeside button[aria-pressed="true"],
-  .globeside button:active,
-  .globeside button.busy { color: var(--accent); background: color-mix(in srgb, var(--bg) 62%, transparent); }
+  .globeside #lock[aria-pressed="true"],
+  .globeside #layersBtn[aria-pressed="true"] {
+    color: var(--on-accent); background: var(--accent);
+    box-shadow: inset 0 0 0 .5px var(--edge-hi), 0 6px 20px rgba(0, 0, 0, .35);
+  }
 
   /* Search is a tab, so the field appears when that tab is on. */
   .searchbar {
@@ -138,6 +154,15 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     width: auto; height: 92%; gap: 0; z-index: 4;
     transform: translate3d(0, var(--sheet-y, 42%), 0);
   }
+  /**
+   * One thing in the panel area at a time.
+   *
+   * Headlines and chat used to float over a sheet still showing the last place
+   * or the favourites list, so two answers to "what am I looking at" were on
+   * screen at once. While either is open the sheet stands down; Explore and
+   * Favourites are the sheet, so they leave it up.
+   */
+  body.panel-open .railcol { display: none; }
   .sheetgrab, .placehead { touch-action: none; }
   .scroll, .newslist, #chatlog, .convos, .chips { overscroll-behavior: contain; }
   .railcol.sliding { transition: none; }

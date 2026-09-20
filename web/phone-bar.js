@@ -91,6 +91,8 @@
   const act = {
     explore(on) {
       searchbar.hidden = !on;
+      // The field drops in from the top, where the globe's own controls live.
+      document.body.classList.toggle("searching", on);
       if (on) $("q")?.focus(); else $("q")?.blur();
     },
     headlines(on) { if (shown.headlines() !== on) $("newsBtn")?.click(); },
@@ -114,6 +116,9 @@
   };
 
   const setTab = (name) => {
+    // Headlines and chat replace the sheet rather than covering it; Explore and
+    // Favourites *are* the sheet, so it stays.
+    document.body.classList.toggle("panel-open", name === "headlines" || name === "chat");
     // Close the others first: two panels over one globe is how a phone ends up
     // with something open that nobody meant to leave behind.
     for (const key of Object.keys(act)) if (key !== name && shown[key]()) act[key](false);
