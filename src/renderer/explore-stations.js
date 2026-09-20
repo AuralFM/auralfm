@@ -199,7 +199,12 @@ function renderStations() {
   if (!nearby.length) railMode = "stations";
   renderRailTabs(nearby);
 
-  if (railMode === "shortwave") return renderNearbyReceivers(nearby);
+  // Shortwave is not in the web build, and nearbyReceivers() is empty there, so
+  // railMode never reaches "shortwave" — but the name has to be allowed to be
+  // absent, because these scripts share one scope and that file may not be in it.
+  if (railMode === "shortwave" && typeof renderNearbyReceivers === "function") {
+    return renderNearbyReceivers(nearby);
+  }
 
   stationListEl.innerHTML = "";
   if (!channels.length) {

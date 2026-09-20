@@ -482,24 +482,6 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
   refreshGlobeSelection();
 }
 
-async function goToPlace(i, { play = false, fly = true } = {}) {
-  sdrSel = null;                       // a place and a receiver are never both selected
-  tunerStop();                         // and a place has nothing to tune
-  qEl.value = "";
-  showingFavorites = false;
-  $("favBtn").setAttribute("aria-pressed", "false");
-  placeListEl.hidden = true;
-  stationListEl.hidden = false;
-  placeHeadEl.textContent = "";      // the search summary no longer applies
-  await selectPlace(i);
-  if (fly && selection.place) flyTo(selection.place.lat, selection.place.lon);
-  // Prefer a station the directory believes is alive.
-  if (play && !locked && selection.channels.length) {
-    const pick = selection.channels.find((c) => c.ok !== false) || selection.channels[0];
-    window.auralfm.tune(pick);
-  }
-}
-
 function wireShortwave() {
   window.auralfm.sdrStats?.().then((s) => {
     receiverTotal = s?.count ?? null;

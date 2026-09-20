@@ -186,7 +186,11 @@ async function initGlobe() {
     if (moved > 5 || !quick) return;
     const d = pickPoint(e);
     if (!d || !facing(d.lat, d.lng)) return;
-    d.kind === "sdr" ? selectReceiver(d) : goToPlace(d.i, { play: true });
+    // Same as the rail: a web build has no receivers to click, and no
+    // selectReceiver to call, so the name is asked for before it is used.
+    d.kind === "sdr"
+      ? (typeof selectReceiver === "function" && selectReceiver(d))
+      : goToPlace(d.i, { play: true });
   });
 
   // Hover label, throttled to one projection pass per frame.

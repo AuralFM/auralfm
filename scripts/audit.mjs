@@ -2296,6 +2296,60 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the web build defines everything the web build calls ────────────────────
+// Dropping explore-shortwave.js from the web build took goToPlace() with it —
+// a function about places, not receivers, that had simply been written in the
+// shortwave file. It is what every place row, every search hit, the journey
+// buttons and the globe's own click handler call, so the web app loaded,
+// painted, and then did nothing at all when touched. Six call sites across
+// five files, and the boot check meant to cover that removal saw none of them:
+// goToPlace is only reached on interaction, and the page boots fine without it.
+//
+// These renderer scripts share one global scope, so dropping a file drops a
+// file's worth of globals. Every name a still-shipped script calls has to be
+// declared by another still-shipped script — unless that script also says
+// `typeof name`, which is how a page states out loud that a feature may be
+// absent.
+//
+// Scoped to the page that actually loses the globals: explore.html is the one
+// whose scripts share a scope with the dropped files. popover.js and splash.js
+// are their own pages, so their `tune` and `render` are somebody else's.
+{
+  console.log("\nthe web build defines everything the web build calls");
+  const build = fs.readFileSync(R("scripts/build-web.mjs"), "utf8");
+  const listed = build.match(/const DESKTOP_ONLY = \[([^\]]*)\]/);
+  const dropped = listed ? [...listed[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+  const page = fs.readFileSync(R("src/renderer/explore.html"), "utf8");
+  const loaded = [...page.matchAll(/src="([^"]+\.js)"/g)].map((m) => m[1]).filter((f) => !f.includes("/"));
+  const gone = loaded.filter((f) => dropped.includes(f));
+  const shipped = loaded.filter((f) => !dropped.includes(f));
+
+  const read = (f) => fs.readFileSync(R(`src/renderer/${f}`), "utf8");
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const names = (src) => new Set([
+    ...[...src.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]),
+    ...[...src.matchAll(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]),
+  ]);
+  const declared = new Set();
+  for (const f of shipped) for (const n of names(read(f))) declared.add(n);
+
+  const orphans = [];
+  for (const f of gone) {
+    for (const n of names(read(f))) {
+      if (declared.has(n)) continue;                    // a shipped file defines it too
+      for (const g of shipped) {
+        const src = strip(read(g));
+        if (new RegExp(`typeof\\s+${n}\\b`).test(src)) continue;   // declared optional
+        // A bare call, not a method: `auralfm.tune(` is not this file's `tune`.
+        if (new RegExp(`(?<![.\\w$])${n}\\s*\\(`).test(src)) orphans.push(`${g} calls ${n}(), which only ${f} defines`);
+      }
+    }
+  }
+  orphans.length ? fail("the web build defines everything the web build calls", orphans.join("; "))
+    : pass(`nothing in the web build calls a name only ${gone.join(", ") || "a dropped file"} defines`);
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

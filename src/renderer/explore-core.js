@@ -202,6 +202,38 @@ async function selectPlace(i, { keepFilter = false } = {}) {
   refreshGlobeSelection();
 }
 
+/**
+ * Go to a place: the rail's rows, the search hits, the journey buttons and the
+ * globe's own click all end up here.
+ *
+ * It lived in explore-shortwave.js, which reads as an accident of where it was
+ * written rather than a decision — it is about places, and touches a receiver
+ * only to clear one. That mattered the day the web build stopped shipping the
+ * shortwave file: these renderer scripts share one global scope, so the web app
+ * loaded, painted, and then did nothing at all when touched, because every one
+ * of those call sites was reaching for a function that was no longer there.
+ *
+ * `sdrSel` (explore-globe.js) and `tunerStop` (explore-dial.js) are both in
+ * files the web does ship, so nothing here needs a guard.
+ */
+async function goToPlace(i, { play = false, fly = true } = {}) {
+  sdrSel = null;                       // a place and a receiver are never both selected
+  tunerStop();                         // and a place has nothing to tune
+  qEl.value = "";
+  showingFavorites = false;
+  $("favBtn").setAttribute("aria-pressed", "false");
+  placeListEl.hidden = true;
+  stationListEl.hidden = false;
+  placeHeadEl.textContent = "";      // the search summary no longer applies
+  await selectPlace(i);
+  if (fly && selection.place) flyTo(selection.place.lat, selection.place.lon);
+  // Prefer a station the directory believes is alive.
+  if (play && !locked && selection.channels.length) {
+    const pick = selection.channels.find((c) => c.ok !== false) || selection.channels[0];
+    window.auralfm.tune(pick);
+  }
+}
+
 // ── filters ──────────────────────────────────────────────────────────────────
 // Band comes from the station name, the only signal available, so ~46% of
 // channels have no band at all. Those are excluded from AM/FM rather than
