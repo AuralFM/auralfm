@@ -65,6 +65,7 @@ document.addEventListener("keydown", (e) => {
   } catch { sdrPts = []; }
   try {
     await initGlobe();
+    await homeView();          // open on this device's own city, and hold still
   } catch (err) {
     // Reveal the status bar for this: an init failure is the one time the read-out
     // has to be visible whether or not the user asked for it.

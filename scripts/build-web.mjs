@@ -208,7 +208,7 @@ page("explore.html", "index.html", {
   title: "AuralFM",
   beforeScript: "errors.js",
   before: ["web/modules.js", "web/messaging.js", "web/live.js", "web/bridge.js", "web/sheet.js"],
-  after: { "explore.js": ["web/after.js"] },
+  after: { "explore.js": ["web/after.js", "web/rail-sheet.js"] },
   logo: true,
 });
 page("settings.html", "settings.html", {
@@ -222,7 +222,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js")) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
-for (const f of ["bridge.js", "sheet.js", "after.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
+for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "after.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
 // Flights and Google News do not let a web page read them, so here.now fetches

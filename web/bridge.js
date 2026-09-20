@@ -116,7 +116,7 @@
   // absent: an https page may not open a receiver's ws://.
   const LAYERS = [
     ["clouds", true], ["dayNight", true], ["stations", true], ["iss", true],
-    ["flights", false], ["wspr", false], ["constellations", true], ["drift", true],
+    ["flights", false], ["wspr", false], ["constellations", true], ["drift", false],
     ["listeners", true], ["statusBar", true],
   ];
   const layerState = () => {
@@ -299,8 +299,10 @@
   // The few desktop sentences that are about the Mac, said about a browser. Only
   // in English for now; the other languages still name macOS here.
   const WEB_EN = {
-    "set.contrastHint": "Stronger text and borders. Follows your device's setting unless you turn it on here.",
-    "set.tipsHint": "Short descriptions when you rest the pointer on a control. Turn this off and your browser shows its own instead.",
+    "set.contrastHint": "Stronger text and borders. Follows your device unless you turn it on here.",
+    "set.tipsHint": "Short descriptions when you rest the pointer on a control.",
+    "set.mineHint": "Stations you added yourself. They stay in this browser and are never sent anywhere.",
+    "set.appIconHint": "Changes the icon on your home screen.",
     "set.promise": "No accounts. No analytics. Favorites, settings and your chat identity stay in this "
       + "browser — clear its site data and they are gone.",
   };

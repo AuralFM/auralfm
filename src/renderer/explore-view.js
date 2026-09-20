@@ -474,7 +474,10 @@ function nearestPlace(lat, lng) {
  */
 let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
                iss: true, flights: false, wspr: false, constellations: true,
-               drift: true, listeners: true, statusBar: false };
+               // Off: the globe opens still, looking at the listener's own city
+               // (homeView). A turning planet is one you have to chase before
+               // you can aim at a dot, and aiming is the whole interaction.
+               drift: false, listeners: true, statusBar: false };
 
 /**
  * Show and hide the dots without rebuilding them.
@@ -585,4 +588,40 @@ function applyLayers(next) {
 
 function wireView() {
   window.auralfm.onLayers((l) => applyLayers(l));
+}
+
+/**
+ * Where the globe opens: the listener's own city, and still.
+ *
+ * It used to open on a spinning Earth centred on nothing. Two problems in one:
+ * a planet that is turning is a planet you have to chase before you can aim at
+ * a dot, and a view of the mid-Atlantic is nobody's home. So the drift starts
+ * off (see `layers.drift`) and the first frame looks at wherever this device
+ * thinks it is.
+ *
+ * From the time zone, not from geolocation. `America/Chicago` is already on the
+ * machine, costs no permission prompt, no network call and no coordinates about
+ * a person — it names a city, at a resolution of hundreds of kilometres, which
+ * is exactly the resolution this needs. Asking the browser for a real fix would
+ * put a permission sheet in front of somebody before the app has shown them
+ * anything, and this app's whole claim is that it asks for nothing.
+ *
+ * The fallback is the clock: the UTC offset gives a longitude to within a time
+ * zone's width, which still opens on the right side of the world.
+ */
+async function homeView() {
+  if (!globe) return;
+  let tz = "";
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch {}
+  const city = tz.split("/").pop()?.replace(/_/g, " ") || "";
+  if (city) {
+    const hit = (await guard("homeView", () => window.auralfm.places(city, 1), null))?.places?.[0];
+    if (hit && Number.isFinite(hit.lat) && Number.isFinite(hit.lon)) {
+      globe.pointOfView({ lat: hit.lat, lng: hit.lon, altitude: 1.35 }, 0);
+      return;
+    }
+  }
+  // 15° of longitude per hour, and the offset is minutes *behind* UTC.
+  const lng = Math.max(-180, Math.min(180, -new Date().getTimezoneOffset() / 4));
+  globe.pointOfView({ lat: 20, lng, altitude: 1.6 }, 0);
 }
