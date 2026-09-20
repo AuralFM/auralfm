@@ -120,7 +120,15 @@ const DEFAULTS = {
   contrast: "system",    // system | more
   dotSize: "normal",     // normal | large
   language: "system",    // system | en | es
-  palette: "onyx",       // see src/palettes.js
+  /**
+   * Tally, not Onyx, on a first run.
+   *
+   * Onyx is the brand and it is the restrained one: bone on black, which is
+   * right once you live in the app and flat the first time you open it. Tally's
+   * lamp reds and greens say at a glance that the dots are alive. The brand
+   * palette is one tap away, and nobody who has already chosen sees this.
+   */
+  palette: "tally",      // see src/palettes.js
   /**
    * Which app icon to wear.
    *

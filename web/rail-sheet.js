@@ -28,7 +28,7 @@
   const cols = document.querySelector(".cols");
   if (!rail || !cols) return;
 
-  const PEEK = 0.46;                 // of the globe area, left showing at rest
+  const PEEK = 0.40;                 // of the globe area, left showing at rest
   let open = false, y = 0, restY = 0, drag = null, raf = 0, pending = 0;
 
   const stations = rail.querySelector(".stations");

@@ -344,16 +344,37 @@ function centreGlobe(w) {
   const cam = globe.camera && globe.camera();
   if (!cam || !cam.setViewOffset) return;
   const g = w.getBoundingClientRect();
-  // How much of the globe a floating panel covers, from the side it sits on.
-  const cover = (el) => {
+  const box = (el) => {
     const r = el && el.offsetParent && !el.hidden ? el.getBoundingClientRect() : null;
-    return r && r.top < g.bottom && r.bottom > g.top
-      ? Math.max(0, Math.min(g.right, r.right) - Math.max(g.left, r.left)) : 0;
+    return r && r.top < g.bottom && r.bottom > g.top && r.left < g.right && r.right > g.left ? r : null;
   };
+  const acrossG = (r) => Math.max(0, Math.min(g.right, r.right) - Math.max(g.left, r.left));
+  /**
+   * A panel beside the globe takes width; a panel under it takes height.
+   *
+   * This only measured width, which is right for the rail in a Mac window and
+   * wrong for the same rail as a phone sheet: the sheet spans the screen, so
+   * "covered" was the whole canvas and the planet was pushed half a screen off
+   * to the left. Anything as wide as the globe is below it, not beside it, and
+   * what it costs is the bottom of the view rather than one side.
+   */
+  const side = (el) => {
+    const r = box(el);
+    if (!r) return 0;
+    const wide = acrossG(r);
+    return wide > g.width * 0.9 ? 0 : wide;
+  };
+  const below = (el) => {
+    const r = box(el);
+    if (!r || acrossG(r) <= g.width * 0.9) return 0;
+    return Math.max(0, g.bottom - Math.max(r.top, g.top));
+  };
+  const panels = [document.querySelector(".railcol"), document.getElementById("newspanel")];
   // The rail covers the right, headlines the left; centre between them.
-  const shift = Math.round((cover(document.querySelector(".railcol")) -
-                            cover(document.getElementById("newspanel"))) / 2);
-  if (shift) cam.setViewOffset(g.width, g.height, shift, 0, g.width, g.height);
+  const shiftX = Math.round((side(panels[0]) - side(panels[1])) / 2);
+  // Whatever lies across the bottom leaves a view above it; centre in that.
+  const shiftY = Math.round(Math.max(0, ...panels.map(below)) / 2);
+  if (shiftX || shiftY) cam.setViewOffset(g.width, g.height, shiftX, shiftY, g.width, g.height);
   else cam.clearViewOffset();
   cam.updateProjectionMatrix();
 }

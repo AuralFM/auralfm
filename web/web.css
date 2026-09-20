@@ -29,6 +29,11 @@ html { -webkit-tap-highlight-color: transparent; }
 /* A tap is a tap: no double-tap-zoom wait on anything in the app. */
 button, [role="button"], a, input, select { touch-action: manipulation; }
 
+/* The sheet's handle exists only where the sheet does. In a wide window the
+   rail does not move, and an unstyled button above the place name is all that
+   is left of it — the strip sitting over "Chicago IL". */
+.sheetgrab { display: none; }
+
 /* ── the Settings sheet (web/sheet.js) ─────────────────────────────────────── */
 .setsheet { position: fixed; inset: 0; z-index: 9800; }
 .setsheet[hidden] { display: none !important; }
@@ -109,8 +114,19 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     box-shadow: inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo),
                 0 -10px 40px rgba(0, 0, 0, .45);
   }
+  /**
+   * Rows at a phone's rhythm.
+   *
+   * 58pt a row put four stations on a Mini's sheet and read as a list with
+   * the air let out of it. 46 keeps the whole row a comfortable target and
+   * fits six, and the star gives its spare width back to the name.
+   */
+  #stationlist .st, #placelist .place { padding: 2px 10px; min-height: 46px; }
+  .st .star { min-width: 34px; min-height: 34px; font-size: 13px; margin-right: 0; }
+
   /* The grab handle: a real button, 44pt tall, drawn as the usual pill. */
   .sheetgrab {
+    display: grid;
     /* 44pt of button with the pill drawn at the top of it: the target is the
        size a thumb needs to catch a sheet, the drawing is a hairline. It lies
        over the place name, which drags as well, so nothing is lost beneath. */
@@ -132,6 +148,61 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .globebar::after { top: 0; bottom: auto; background: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,0)); }
 
   /**
+   * The bottom bar (web/phone-bar.js): browsing under the thumb.
+   *
+   * Two controls, the transport, two controls. Play is the centre because it
+   * is the one thing pressed without looking, and the row reads as a player
+   * with the world either side of it rather than five equal tiles.
+   */
+  .tabbar {
+    flex: none; display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 6px 18px calc(6px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: inset 0 .5px 0 var(--line);
+  }
+  .tabbar[hidden] { display: none; }
+  /* Solid for anyone who asked for less transparency or more contrast: the
+     player's chrome sits over a moving planet, which is the worst case for
+     text on glass. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .tabbar, body.phonebar .now, .chatpanel {
+      background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
+  }
+  /* The sheet hangs below the globe area when it is down, so the strip and the
+     bar have to sit above it or the list slides over the player. */
+  .tabbar, body.phonebar .now { position: relative; z-index: 5; }
+  .tabgroup { display: flex; align-items: center; gap: 10px; }
+  /* In the bar the tiles are gone: a toolbar tile inside a tab bar reads as a
+     button inside a button. The glyph and its 44pt target are the control. */
+  .tabbar button::before { content: none; }
+  .tabbar button { width: 44px; height: 44px; font-size: 16px; color: var(--label2); }
+  .tabbar button[aria-pressed="true"] { color: var(--accent); background: none; }
+  .tabbar #play {
+    width: 48px; height: 48px; font-size: 15px; flex: none;
+    color: var(--on-accent); background: var(--accent);
+  }
+  body:not(.playing) .tabbar #play { background: transparent; color: var(--accent); }
+
+  /* What is on air: one line over the bar, and a tap back to the list. */
+  body.phonebar .now {
+    padding: 7px 16px 8px; gap: 8px; font-size: 13px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+  }
+  body.phonebar .now b { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.phonebar .now #nowStatus { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Volume and the output picker both belong to iOS here: the hardware keys set
+     one, and Control Centre and AirPlay set the other, from outside any app. A
+     speaker button in the strip is a second, worse copy of a system control. */
+  body.phonebar .now .volwrap, body.phonebar .now #nowStar,
+  body.phonebar .now .outwrap { display: none; }
+  /* Lock rides with the station it holds, in the sheet's heading. */
+  body.phonebar .placehead { position: relative; padding-right: 52px; }
+  body.phonebar .placehead #lock { position: absolute; top: 0; right: 12px; }
+
+  /**
    * The toolbar: a 44pt target that does not look 44pt.
    *
    * Full-size tiles at finger scale read as five heavy boxes across the top of
@@ -146,7 +217,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     padding: calc(env(safe-area-inset-top) + 6px) 6px 8px 12px;
   }
   .toolbar .sp { flex: 1; }
-  .toolbar button { position: relative; background: none; box-shadow: none; font-size: 15px; }
+  .toolbar button { position: relative; background: none; box-shadow: none; font-size: 13px; }
   .toolbar button::before {
     content: ""; position: absolute; inset: 5px; border-radius: var(--r-md);
     background: var(--fill); box-shadow: inset 0 0 0 1px var(--line);
@@ -157,7 +228,12 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .toolbar button:active::before { background: var(--fill-hi); scale: .92; }
   .toolbar button::before { transition: background var(--dur-hover) var(--ease-out), scale var(--dur-press) var(--ease-out); }
   .toolbar button[aria-pressed="true"]::before { background: var(--fill-hi); }
-  .toolbar #q { order: 10; width: 100%; height: 38px; border-radius: var(--r-lg); }
+  /* Search takes the row the four browsing buttons left behind: the logo, the
+     field and Settings, which is all the top of a phone needs. */
+  .toolbar #q { order: 1; flex: 1; width: auto; height: 38px; border-radius: var(--r-lg); }
+  body.phonebar .toolbar { flex-wrap: nowrap; gap: 8px; padding-right: 10px; }
+  body.phonebar .toolbar .sp { display: none; }
+  body.phonebar #setBtn, body.phonebar #layersBtn { order: 2; }
   .brand svg { height: 16px; }
 
   /* Safari zooms into any field under 16px when it is tapped. */
@@ -176,11 +252,29 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
    * they behave like every other iOS sheet: near the thumb, and the globe
    * still visible above them.
    */
-  .newspanel, #layers {
-    left: 8px; right: 8px; top: auto; bottom: 8px; width: auto;
-    max-height: 62dvh; overflow-y: auto; border-radius: var(--r-xl);
+  /* Panels stop where the player's chrome begins: --chrome is the strip plus
+     the bar, measured by phone-bar.js, so a panel never lies over the transport
+     it was opened from. */
+  .newspanel, #layers, .chatpanel {
+    position: fixed; left: 8px; right: 8px; top: auto; width: auto;
+    bottom: calc(var(--chrome, 0px) + 8px);
+    max-height: 58dvh; overflow-y: auto; border-radius: var(--r-xl); z-index: 6;
   }
-  .newspanel { height: 62dvh; }
+  .newspanel { height: 58dvh; }
+  /* Chat, as its own panel over the globe rather than a strip under the list. */
+  .chatpanel {
+    display: flex; flex-direction: column; height: 52dvh; overflow: hidden;
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow: inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 18px 48px rgba(0,0,0,.38);
+  }
+  .chatpanel[hidden] { display: none; }
+  /* Nothing playing: the panel is one sentence, so it is one sentence tall. */
+  .chatpanel:has(#chat[hidden]) { height: auto; }
+  .chatpanel #chat { flex: 1; max-height: none; box-shadow: none; background: none; }
+  .chatpanel .chatnone { display: none; margin: 0; padding: 30px 20px; text-align: center;
+    color: var(--label2); font-size: 14px; line-height: 1.5; }
+  .chatpanel #chat[hidden] + .chatnone { display: block; }
   .newshead { padding-left: 14px; }
 
   .setsheet-panel {
