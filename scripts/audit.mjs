@@ -2350,6 +2350,60 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── on a phone, a panel sits behind the chrome, not over it ─────────────────
+// Headlines, layers and chat were z-index 6 against the tab bar's 5, and threw
+// a downward shadow (0 18px 48px) across it. They read as cards hovering over
+// the app instead of content the bar sits on top of. Melton, testing on his
+// phone: "it's almost like it's hovering, and you see a shadow ... it should be
+// positioned behind the bar of the tab."
+//
+// Favourites was already right, and is the reference: the rail sheet is
+// z-index 4, under the chrome's 5, and its shadow points *up* onto the globe
+// (0 -10px 40px) rather than down onto the bar it must not touch.
+//
+// So: nothing in the phone layout may stack above the chrome except things
+// meant to cover the screen, and a panel's shadow may not fall downward.
+{
+  console.log("\non a phone, a panel sits behind the chrome, not over it");
+  const css = fs.readFileSync(R("web/web.css"), "utf8");
+  const rule = (sel) => {
+    const i = css.indexOf(sel + " {");
+    return i < 0 ? null : css.slice(i, css.indexOf("}", i));
+  };
+  const zOf = (sel) => { const b = rule(sel); const m = b && b.match(/z-index:\s*(\d+)/); return m ? Number(m[1]) : null; };
+  const chrome = zOf(".tabbar");
+  const panels = ".newspanel, #layers, .chatpanel";
+  const panelZ = zOf(panels);
+  const wrong = [];
+  if (chrome === null) wrong.push("no z-index on .tabbar — this check is blind");
+  else if (panelZ === null) wrong.push(`no z-index on ${panels}`);
+  else if (panelZ >= chrome) wrong.push(`${panels} is z-index ${panelZ}, at or above the tab bar's ${chrome}`);
+  // A downward blur on a panel is the shadow that lands on the bar.
+  const body = rule(panels) || "";
+  const down = body.match(/box-shadow:[^;]*?(?:^|[\s,])0\s+(\d+)px\s+\d+px/);
+  if (down) wrong.push(`${panels} casts a shadow ${down[1]}px downward, onto the chrome`);
+  wrong.length ? fail("a phone panel sits behind the chrome", wrong.join("; "))
+    : pass(`the phone's panels are z-index ${panelZ} under the chrome's ${chrome}, and cast nothing downward`);
+}
+
+// ── the three globe buttons rest alike ──────────────────────────────────────
+// #lock is an id and .globeside button is a class, so the desktop rule
+// `#lock{background:none}` outranked the tile every button in that column
+// wears. Measured in the phone layout: layers and shuffle rested on
+// `rgb(.047 .043 .043 / .62)`, the lock on `rgba(0,0,0,0)` — no tile at all.
+// Melton: "when the lock is unchecked, it is almost too transparent. It doesn't
+// match the unchecked layers and the shuffle."
+{
+  console.log("\nthe three globe buttons rest alike");
+  const css = fs.readFileSync(R("web/web.css"), "utf8");
+  // Something in the phone block has to beat the id with its own id.
+  const beats = /\.globeside\s+#lock(?![\[:])[^{]*\{[^}]*background:/.test(css);
+  beats ? pass("the lock rests on the same tile as layers and shuffle")
+    : fail("the three globe buttons rest alike",
+           "nothing in web.css gives .globeside #lock a resting background, so the desktop id rule wins and the lock has no tile");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

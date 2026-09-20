@@ -111,6 +111,16 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     box-shadow: inset 0 0 0 .5px var(--edge-hi), 0 6px 20px rgba(0, 0, 0, .35);
   }
   .globeside button::before { content: none; }
+  /**
+   * The lock's resting tile.
+   *
+   * `#lock` is an id and `.globeside button` is a class, so the desktop rule
+   * `#lock{background:none}` outranked the tile every button in this column
+   * wears: layers and shuffle rested on `--bg` at 62%, the lock on nothing at
+   * all, which is why it read as almost invisible beside them. Same id weight
+   * here hands it back.
+   */
+  .globeside #lock { background: color-mix(in srgb, var(--bg) 62%, transparent); }
   /* Resting is quiet, and pressing says so in the palette's colour. */
   .globeside button { color: var(--label2); }
   .globeside button:active, .globeside button.busy { color: var(--accent); }
@@ -285,13 +295,33 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
      stop where the player's chrome begins (--chrome, measured in JS). */
   .newspanel, #layers, .chatpanel {
     position: fixed; left: 0; right: 0; top: auto; width: auto;
-    bottom: var(--chrome, 0px);
-    height: var(--panel-h); max-height: var(--panel-h); overflow-y: auto; z-index: 6;
+    /**
+     * Behind the chrome, not over it.
+     *
+     * These were z-index 6 against the bar's 5, stopping just short of it and
+     * throwing an 18px downward shadow across it — which reads as a card
+     * hovering over the app rather than content the bar sits on top of.
+     * Favourites always looked right because the rail sheet is z-index 4,
+     * under the chrome, running on underneath it. This is that, exactly.
+     *
+     * Growing the height by --chrome while anchoring to the bottom keeps the
+     * top edge where it already was; only the far end now passes behind.
+     */
+    bottom: 0; z-index: 4;
+    height: calc(var(--panel-h) + var(--chrome, 0px));
+    max-height: calc(var(--panel-h) + var(--chrome, 0px));
+    overflow-y: auto; overscroll-behavior: contain;
+    /* So the last row can still be scrolled out from behind the bar. */
+    padding-bottom: var(--chrome, 0px);
     border-radius: var(--r-xl) var(--r-xl) 0 0;
+    /* Upward, onto the globe. A downward blur lands on the bar, which is the
+       shadow this whole rule exists to stop casting. */
+    box-shadow: inset 0 1px 0 var(--edge-hi), 0 -10px 40px rgba(0, 0, 0, .45);
   }
   .newshead { padding-left: 14px; }
   .chatpanel {
-    display: flex; flex-direction: column; height: 52dvh; overflow: hidden;
+    display: flex; flex-direction: column; overflow: hidden;
+    height: calc(var(--panel-h) + var(--chrome, 0px));
     background: color-mix(in srgb, var(--bg) 96%, transparent);
     -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
     box-shadow: inset 0 1px 0 var(--edge-hi), 0 -10px 40px rgba(0, 0, 0, .45);
@@ -310,6 +340,9 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
    * agreed not to do: cover the globe. Same height, same corner, same place —
    * it just has more in it, so it scrolls.
    */
+  /* 9800 put the whole sheet, scrim included, over the tab bar. On a phone it
+     is one of the five tabs, so it belongs under the bar that switched to it. */
+  .setsheet { z-index: 4; }
   .setsheet-panel {
     left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto;
     height: calc(var(--panel-h) + var(--chrome, 0px));
@@ -326,9 +359,15 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   /* Solid for anyone who asked for less transparency or more contrast: this
      chrome sits over a planet, which is the worst case for text on glass. */
   @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-    .tabbar, body.phonebar .now, .chatpanel, .searchbar, .globeside button, .stations {
+    .tabbar, body.phonebar .now, .chatpanel, .searchbar, .globeside button, .stations,
+    /* #layers blurs like the rest of them and had been left out of this list. */
+    #layers {
       background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
     }
+    /* An id to beat an id: the resting-tile rule above is `.globeside #lock`,
+       which would otherwise keep its glass here while its two neighbours went
+       solid — the same mismatch, wearing the accessibility setting. */
+    .globeside #lock { background: var(--bg); }
   }
 
   /**
