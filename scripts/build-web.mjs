@@ -203,12 +203,27 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
     if (!html.includes(bar)) throw new Error(`web: ${srcName} has no toolbar for the logo`);
     html = html.replace(bar, `${bar}\n  <span class="brand" role="img" aria-label="AuralFM">${toolbarLogo()}</span>`);
   }
+  for (const f of DESKTOP_ONLY) html = html.replaceAll(`<script src="${f}"></script>\n`, "");
   // Every script and stylesheet carries this build's stamp, so a browser that
   // cached the last version fetches the new one instead of mixing the two.
   html = html.replace(/(<script src="[^"?]+)"/g, `$1?v=${BUILD}"`)
              .replace(/(<link rel="stylesheet" href="[^"?]+)"/g, `$1?v=${BUILD}"`);
   fs.writeFileSync(path.join(OUT, outName), html);
 }
+
+/**
+ * Renderer scripts the web version has no use for.
+ *
+ * kiwi.js speaks a KiwiSDR's ws://, which an https page may not open, and the
+ * bridge stubs shortwave out entirely — so the two of them were 51 KB of dead
+ * JavaScript fetched, parsed and run on every launch, wireShortwave() included,
+ * for a feature that cannot exist here. popover.js and splash.js belong to
+ * desktop windows there is no equivalent of: no page ever loaded them, and the
+ * service worker was precaching both onto people's phones.
+ *
+ * Dropped from the copy and from the pages that referenced them.
+ */
+const DESKTOP_ONLY = ["kiwi.js", "explore-shortwave.js", "popover.js", "splash.js"];
 
 page("explore.html", "index.html", {
   title: "AuralFM",
@@ -227,7 +242,7 @@ page("settings.html", "settings.html", {
 
 // ── everything the pages load ────────────────────────────────────────────────
 for (const f of fs.readdirSync(R("src", "renderer"))) {
-  if (f.endsWith(".js")) copy(`src/renderer/${f}`, f);
+  if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
 for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);

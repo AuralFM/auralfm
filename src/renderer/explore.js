@@ -15,7 +15,9 @@ wireChat();
 wireCommands();
 wireTrackers();
 wireSearch();
-wireShortwave();
+// The web build ships no shortwave — an https page may not open a receiver's
+// ws:// — so kiwi.js and explore-shortwave.js are not copied into it.
+if (typeof wireShortwave === "function") wireShortwave();
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.activeElement === qEl && qEl.value) {
