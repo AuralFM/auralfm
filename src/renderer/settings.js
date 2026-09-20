@@ -405,6 +405,10 @@ const APP_ICONS = [
 
 function paintAppIcons() {
   const box = $("#appicons");
+  // The web build has no Dock to change and hides this section; painting it
+  // anyway asked for four images that are not in that bundle, so every visit
+  // logged four 404s for a control nobody can see.
+  if (!box || box.closest("[hidden]")) return;
   box.innerHTML = "";
   for (const [id, name] of APP_ICONS) {
     const b = document.createElement("button");

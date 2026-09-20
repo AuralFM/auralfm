@@ -51,6 +51,17 @@ async function get() {
     cool.ok();
     return last.data;
   } catch {
+    /**
+     * The fallback is plain HTTP, which an HTTPS page may not ask for.
+     *
+     * open-notify serves no HTTPS, so from a page every attempt is refused
+     * before it leaves the browser — by the page's own content policy, and on
+     * an HTTPS site by the browser itself. That was four blocked requests a
+     * minute, logged as errors, for a reply that could never arrive. The
+     * desktop fetches this from its main process, where there is no page and
+     * no such rule, and there it is worth having: the primary API does go down.
+     */
+    if (typeof location !== "undefined") return last.data;
     try {
       const res = await fetch(FALLBACK, { signal: AbortSignal.timeout(6000) });
       const j = await res.json();

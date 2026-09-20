@@ -62,11 +62,16 @@ self.addEventListener("fetch", (e) => {
   // Everything else of ours: the cache first, and fill it as we go. These are
   // build-stamped files, so a hit is the right answer by construction.
   e.respondWith((async () => {
-    // ignoreSearch, because the page asks for its scripts with this build's
-    // cache-busting stamp while the shell is stored under plain names. The
-    // cache itself is named for the build, so a new version never reads an old
-    // file: it starts an empty cache and the old one is deleted above.
-    const hit = await caches.match(request, { ignoreSearch: true });
+    /**
+     * Exact URLs, stamp and all.
+     *
+     * Matching with `ignoreSearch` looked tidier — one cached copy answering
+     * every version of a query — and it meant a page from a *new* build asking
+     * for `bridge.js?v=new` was served the *old* file, because the stamp was
+     * the only thing telling them apart. Scripts are precached under the same
+     * stamped URLs the page asks for, so a new build simply misses and fetches.
+     */
+    const hit = await caches.match(request);
     if (hit) return hit;
     const res = await fetch(request);
     if (res.ok && res.type === "basic") {

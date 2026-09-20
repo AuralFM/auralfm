@@ -331,6 +331,26 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     }
   }
 
+  /**
+   * The share sheet, on a phone.
+   *
+   * It is a centred card sized for a window: on a Mini the buttons wrapped and
+   * the card overflowed. Here it comes up from the bottom like everything else,
+   * the card fits the width it is given, and the buttons are a row you can hit.
+   * Most phones never see it — sharing goes to the system sheet — but a browser
+   * without one falls back here.
+   */
+  .sheet { place-items: end stretch; }
+  .sheetbox {
+    width: 100%; max-height: 92dvh; gap: 10px;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    border-radius: var(--r-xl) var(--r-xl) 0 0; border: 0;
+    background: color-mix(in srgb, var(--bg) 96%, transparent);
+  }
+  #sheetimg { max-height: 58dvh; max-width: 100%; }
+  .sheetrow { width: 100%; gap: 6px; }
+  .sheetbtn { flex: 1; min-height: 44px; font-size: 13px; padding: 7px 8px; }
+
   /* Safari zooms into any field under 16px when it is tapped. */
   input, select, textarea { font-size: 16px !important; }
   #vol, .markets { display: none !important; }

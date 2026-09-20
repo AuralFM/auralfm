@@ -372,8 +372,21 @@ function centreGlobe(w) {
   const panels = [document.querySelector(".railcol"), document.getElementById("newspanel")];
   // The rail covers the right, headlines the left; centre between them.
   const shiftX = Math.round((side(panels[0]) - side(panels[1])) / 2);
-  // Whatever lies across the bottom leaves a view above it; centre in that.
-  const shiftY = Math.round(Math.max(0, ...panels.map(below)) / 2);
+  /**
+   * The planet holds still while panels come and go.
+   *
+   * Measuring whatever happens to be on screen meant the globe re-centred
+   * every time a panel opened or the sheet stood down — tapping through the
+   * tabs slid the Earth around behind them. On a phone the sheet's resting
+   * height is the one number that does not change with what is open, so the
+   * view is centred above that and stays there. --peek is published by
+   * web/rail-sheet.js; without it (the desktop) we measure as before.
+   */
+  const peek = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 0;
+  const shiftY = peek
+    ? Math.round(peek / 2)
+    : Math.round(Math.max(0, ...panels.map(below)) / 2);
   if (shiftX || shiftY) cam.setViewOffset(g.width, g.height, shiftX, shiftY, g.width, g.height);
   else cam.clearViewOffset();
   cam.updateProjectionMatrix();

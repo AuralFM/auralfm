@@ -218,6 +218,7 @@
     const url = urls.shift();
     if (!url) return fail("Stream unavailable here");
     audio.src = url;
+    playingUrl = url;                 // the card's waveform samples a copy of it
     setStatus("Connecting…");
     audio.play().catch((err) => {
       if (my !== gen || err.name === "AbortError") return;
@@ -232,8 +233,10 @@
     }, 12000);
   }
 
+  let playingUrl = null;
   function stop() {
     gen++; clearTimeout(watchdog); live = false;
+    playingUrl = null;
     audio.pause(); audio.removeAttribute("src"); audio.load();
     setStatus("Stopped");
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
@@ -351,6 +354,40 @@
   const noop = () => {};
   const api = {
     // catalogue
+    /**
+     * The share card, in a browser.
+     *
+     * The desktop hands the card to AppKit — the clipboard, a save panel, a
+     * deep link. A page has its own three: the clipboard's image API, a
+     * download, and the address of this site. A phone uses none of them and
+     * goes to the system share sheet instead (web/phone-bar.js).
+     */
+    cardLevels: async () => (live && playingUrl
+      ? await window.AuralLevels?.sample(playingUrl).catch(() => null)
+      : null),
+    cardCopy: async (dataUrl) => {
+      try {
+        const blob = await (await fetch(dataUrl)).blob();
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        return true;
+      } catch { return false; }
+    },
+    cardSave: async (dataUrl) => {
+      try {
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+        a.href = dataUrl; a.download = `AuralFM ${stamp}.png`;
+        document.body.append(a); a.click(); a.remove();
+        return a.download;
+      } catch { return null; }
+    },
+    cardLink: async () => {
+      // The site, not a deep link: auralfm:// means nothing to a browser, and a
+      // link somebody cannot open is worse than no link at all.
+      try { await navigator.clipboard.writeText(location.origin + location.pathname); return true; }
+      catch { return false; }
+    },
+
     stats: cat(() => M.catalog.stats()),
     globePoints: cat(() => M.catalog.globePoints()),
     places: cat((q, limit) => M.catalog.placeSearch(q, limit)),

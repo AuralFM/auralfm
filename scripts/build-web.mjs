@@ -213,7 +213,9 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
 page("explore.html", "index.html", {
   title: "AuralFM",
   beforeScript: "errors.js",
-  before: ["web/modules.js", "web/messaging.js", "web/live.js", "web/bridge.js", "web/sheet.js"],
+  // levels.js before the bridge: the card's waveform is measured from a private
+  // copy of the stream, exactly as the desktop's popover does it.
+  before: ["web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
   after: { "explore.js": ["web/after.js", "web/rail-sheet.js", "web/phone-bar.js"] },
   logo: true,
 });
@@ -318,7 +320,11 @@ fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
   walk("web"); walk("vendor"); walk("data"); walk("assets/icons");
   const stamped = fs.readFileSync(R("web", "sw.js"), "utf8")
     .replace("__BUILD__", BUILD)
-    .replace("__SHELL__", JSON.stringify(shell, null, 2));
+    // The page asks for its own scripts and stylesheet with this build's stamp,
+    // so they are cached under exactly that; everything else keeps a plain name
+    // because that is how the code asks for it.
+    .replace("__SHELL__", JSON.stringify(
+      shell.map((u) => (/\.(js|css)$/.test(u) ? `${u}?v=${BUILD}` : u)), null, 2));
   fs.writeFileSync(path.join(OUT, "sw.js"), stamped);
 }
 
