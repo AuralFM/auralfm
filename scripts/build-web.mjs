@@ -137,7 +137,7 @@ const CSP = [
   "font-src 'self'",
   "img-src 'self' data: blob: https://gibs.earthdata.nasa.gov",
   "media-src https: blob:",
-  "worker-src blob:",
+  "worker-src blob: 'self'",
   "frame-src 'self'",
   "connect-src 'self' https://api.open-meteo.com https://api.coingecko.com "
     + "wss://ws-feed.exchange.coinbase.com https://api.wheretheiss.at "
@@ -273,10 +273,21 @@ fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
   name: "AuralFM",
   short_name: "AuralFM",
   description: "A globe you listen to: live radio from 12,000 places, and the sky over them.",
+  // A stable identity, so the icon somebody added stays the same app when the
+  // start URL or scope ever changes.
+  id: "/",
   start_url: "./",
   scope: "./",
   display: "standalone",
   orientation: "any",
+  /**
+   * The two things worth doing without opening the app first, on the icon's
+   * long press: somewhere else, and what you kept.
+   */
+  shortcuts: [
+    { name: "Take me somewhere", short_name: "Somewhere", url: "./?go=somewhere" },
+    { name: "Favorites", short_name: "Favorites", url: "./?go=favorites" },
+  ],
   background_color: "#0C0B0B",
   theme_color: "#0C0B0B",
   icons: [
@@ -285,6 +296,31 @@ fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
     { src: "assets/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
   ],
 }, null, 2));
+
+/**
+ * The service worker, stamped with this build and told what the shell is.
+ *
+ * The list is the app's own files plus the two big local sources — the globe's
+ * textures and the station catalogue — because those are what make a cold
+ * start slow. It is written from what actually landed in dist-web, so a file
+ * that was renamed cannot quietly fall out of the cache.
+ */
+{
+  const shell = ["./", "index.html", "manifest.webmanifest", "web/web.css"];
+  const walk = (dir, base = "") => {
+    for (const e of fs.readdirSync(path.join(OUT, dir), { withFileTypes: true })) {
+      const rel = `${base}${e.name}`;
+      if (e.isDirectory()) walk(path.join(dir, e.name), `${rel}/`);
+      else if (/\.(js|json|jpg|png|svg|woff2)$/.test(e.name)) shell.push(`${dir}/${rel}`.replace(/^\.\//, ""));
+    }
+  };
+  for (const f of fs.readdirSync(OUT)) if (f.endsWith(".js")) shell.push(f);
+  walk("web"); walk("vendor"); walk("data"); walk("assets/icons");
+  const stamped = fs.readFileSync(R("web", "sw.js"), "utf8")
+    .replace("__BUILD__", BUILD)
+    .replace("__SHELL__", JSON.stringify(shell, null, 2));
+  fs.writeFileSync(path.join(OUT, "sw.js"), stamped);
+}
 
 const size = (dir) => fs.readdirSync(dir, { withFileTypes: true }).reduce((n, e) =>
   n + (e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);

@@ -236,6 +236,7 @@
     gen++; clearTimeout(watchdog); live = false;
     audio.pause(); audio.removeAttribute("src"); audio.load();
     setStatus("Stopped");
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
   }
 
   // Three tries in the same place, as the desktop panel does, before giving up.
@@ -259,13 +260,33 @@
       navigator.mediaSession.metadata = new MediaMetadata({
         title: current.title, album: "AuralFM",
         artist: [current.place, current.country].filter(Boolean).join(" · "),
+        // The lock screen draws this at the size of an album cover; without it
+        // iOS shows a grey rectangle beside the station's name.
+        artwork: [
+          { src: "assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "assets/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
       });
+      navigator.mediaSession.playbackState = "playing";
     }
   });
   audio.addEventListener("waiting", () => { if (live) setStatus("Buffering…"); });
   if ("mediaSession" in navigator) {
     navigator.mediaSession.setActionHandler("play", () => current && tune(current));
     navigator.mediaSession.setActionHandler("pause", stop);
+    navigator.mediaSession.setActionHandler("stop", stop);
+    /**
+     * Next, from the lock screen and the headphones.
+     *
+     * A radio has no track list, so next means the next station in the place
+     * you are listening to — the same thing the rail offers, reachable without
+     * unlocking the phone.
+     */
+    navigator.mediaSession.setActionHandler("nexttrack", async () => {
+      if (!current) return;
+      const next = await catalogReady.then(() => M.catalog.nextInPlace(current, []));
+      if (next) tune(next);
+    });
   }
 
   function transport({ action, value } = {}) {
