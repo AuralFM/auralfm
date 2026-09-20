@@ -83,7 +83,14 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
    * go. web/phone-bar.js moves the controls; web/rail-sheet.js drags the sheet.
    */
   .toolbar { display: none; }
+  /* dvh, not 100%: in standalone iOS the layout viewport is taller than the
+     screen shows, which left a band of dead black under the tab bar. */
+  html, body { height: 100dvh; }
   .cols { flex-direction: column; }
+  /* Every panel is the same card: half the screen, anchored above the player,
+     with the globe still visible over it. A panel that covers the globe is a
+     panel you have to leave to see where you are. */
+  :root { --panel-h: 52dvh; }
   .globecol { position: absolute; inset: 0; }
 
   /* What the globe shows, and where to go next: on the globe, out of the way. */
@@ -254,10 +261,9 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .newspanel, #layers, .chatpanel {
     position: fixed; left: 0; right: 0; top: auto; width: auto;
     bottom: var(--chrome, 0px);
-    max-height: 62dvh; overflow-y: auto; z-index: 6;
+    height: var(--panel-h); max-height: var(--panel-h); overflow-y: auto; z-index: 6;
     border-radius: var(--r-xl) var(--r-xl) 0 0;
   }
-  .newspanel { height: 62dvh; }
   .newshead { padding-left: 14px; }
   .chatpanel {
     display: flex; flex-direction: column; height: 52dvh; overflow: hidden;
@@ -271,6 +277,26 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .chatpanel .chatnone { display: none; margin: 0; padding: 30px 20px; text-align: center;
     color: var(--label2); font-size: 14px; line-height: 1.5; }
   .chatpanel #chat[hidden] + .chatnone { display: block; }
+
+  /**
+   * Settings is a card like the others.
+   *
+   * It came up as a full-height sheet, which is the one thing every panel here
+   * agreed not to do: cover the globe. Same height, same corner, same place —
+   * it just has more in it, so it scrolls.
+   */
+  .setsheet-panel {
+    left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto;
+    height: calc(var(--panel-h) + var(--chrome, 0px));
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    opacity: 1; transform: translateY(100%); transition: none;
+  }
+  .setsheet.open .setsheet-panel { transform: translateY(0); }
+  .setsheet.open .setsheet-scrim { opacity: var(--dim, 1); transition: none; }
+  .setsheet-grab { display: block; }
+  .setsheet-head, .setsheet-grab { touch-action: none; }
+  /* The scrim would blacken the planet this is supposed to sit over. */
+  .setsheet-scrim { background: rgba(0, 0, 0, .28); }
 
   /* Solid for anyone who asked for less transparency or more contrast: this
      chrome sits over a planet, which is the worst case for text on glass. */

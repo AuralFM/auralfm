@@ -72,22 +72,55 @@
   }
 
   /**
-   * Only one of these is open at a time.
+   * One panel at a time, and the tabs say which.
    *
-   * Chat, Search and Favourites each cover the globe, and two of them open at
-   * once is how a phone ends up with a panel nobody meant to leave behind.
+   * Each of these already had a control of its own — the headlines button, the
+   * favourites button, the settings sheet — so this does not reimplement them,
+   * it drives them and then reads back what actually happened. That direction
+   * matters: closing headlines with its own × or settings with Done has to
+   * leave the tabs telling the truth, and a tab that only remembers its own
+   * clicks cannot. Everything below reads the DOM.
    */
-  let openTab = "explore";
-  const setTab = (name) => {
-    openTab = name;
-    for (const b of tabs.querySelectorAll(".tab")) {
-      b.setAttribute("aria-pressed", String(b.dataset.tab === name));
-    }
-    chatPanel.hidden = name !== "chat";
-    searchbar.hidden = name !== "explore";
-    if (name === "explore") $("q")?.focus();
-    else $("q")?.blur();
+  const shown = {
+    explore: () => !searchbar.hidden,
+    headlines: () => !!$("newspanel") && !$("newspanel").hidden,
+    favorites: () => $("favBtn")?.getAttribute("aria-pressed") === "true",
+    chat: () => !chatPanel.hidden,
+    settings: () => !!document.querySelector(".setsheet:not([hidden])"),
   };
+  const act = {
+    explore(on) {
+      searchbar.hidden = !on;
+      if (on) $("q")?.focus(); else $("q")?.blur();
+    },
+    headlines(on) { if (shown.headlines() !== on) $("newsBtn")?.click(); },
+    favorites(on) { if (shown.favorites() !== on) $("favBtn")?.click(); },
+    chat(on) { chatPanel.hidden = !on; },
+    settings(on) { if (on) window.AuralSheet?.open(); else window.AuralSheet?.close(); },
+  };
+
+  /**
+   * Paint the tabs from what is actually open — and only when it changed.
+   *
+   * setAttribute records a mutation even when the value is identical, and this
+   * runs from a MutationObserver watching those same attributes, so writing
+   * unconditionally is an observer feeding itself. It hung the page.
+   */
+  const sync = () => {
+    for (const b of tabs.querySelectorAll(".tab")) {
+      const on = String(!!shown[b.dataset.tab]?.());
+      if (b.getAttribute("aria-pressed") !== on) b.setAttribute("aria-pressed", on);
+    }
+  };
+
+  const setTab = (name) => {
+    // Close the others first: two panels over one globe is how a phone ends up
+    // with something open that nobody meant to leave behind.
+    for (const key of Object.keys(act)) if (key !== name && shown[key]()) act[key](false);
+    if (act[name]) act[name](true);
+    sync();
+  };
+  const toggle = (name) => setTab(shown[name]() ? "none" : name);
 
   /**
    * Explore is the search.
@@ -97,20 +130,26 @@
    * of the two meant "find somewhere". One tab, and it opens the field.
    */
   tab("explore", "Explore", "globe", () => {
-    setTab(openTab === "explore" ? "none" : "explore");
+    toggle("explore");
     window.AuralRailSheet?.peek();
   });
-  tab("headlines", "Headlines", "headlines", () => {
-    setTab("none");
-    $("newsBtn")?.click();           // the real control, still doing the work
+  tab("headlines", "Headlines", "headlines", () => toggle("headlines"));
+  tab("favorites", "Favorites", "star", () => toggle("favorites"));
+  tab("chat", "Chat", "chat", () => toggle("chat"));
+  tab("settings", "Settings", "gear", () => toggle("settings"));
+
+  /**
+   * Anything closed by its own control repaints the tabs.
+   *
+   * The headlines ×, the favourites button in the rail, Done in settings: all
+   * of them change an attribute, and watching the attributes is what keeps a
+   * tab from claiming something is open after it has gone.
+   */
+  const watch = new MutationObserver(sync);
+  watch.observe(document.body, {
+    attributes: true, subtree: true, childList: true,
+    attributeFilter: ["hidden", "aria-pressed", "class"],
   });
-  tab("favorites", "Favorites", "star", (b) => {
-    setTab("none");
-    $("favBtn")?.click();
-    b.setAttribute("aria-pressed", $("favBtn")?.getAttribute("aria-pressed") === "true" ? "true" : "false");
-  });
-  tab("chat", "Chat", "chat", () => setTab(openTab === "chat" ? "none" : "chat"));
-  tab("settings", "Settings", "gear", () => { setTab("none"); $("setBtn")?.click(); });
 
   // ── the now-playing row ────────────────────────────────────────────────────
   /**
@@ -175,7 +214,7 @@
       const chat = $("chat");
       if (chat) { remember(chat); chatPanel.append(chat, chatNone); }
       document.body.append(searchbar, chatPanel, tabs);
-      setTab("none");        // the globe, with nothing over it
+      sync();                // nothing is open; the globe has the screen
     } else {
       open.remove(); side.remove();
       const share = $("nowShare");
@@ -192,7 +231,7 @@
   // The big button sits under the row's text, so the text has to say what it is.
   open.addEventListener("click", () => window.AuralRailSheet?.open());
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && openTab === "explore") setTab("none");
+    if (e.key === "Escape" && shown.explore()) setTab("none");
   });
 
   /**

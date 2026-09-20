@@ -509,12 +509,37 @@ function sign(evt, { pow = POW_TARGET } = {}) {
 
   let id = crypto.createHash("sha256").update(serialize(p, evt, tags)).digest();
   if (pow > 0) {
+    /**
+     * Serialise once, then vary the nonce inside the string.
+     *
+     * Mining rebuilt the whole event as JSON on every attempt — the key, the
+     * tags, the content — to change one number in it. Twelve bits is four
+     * thousand attempts on average, so that was four thousand JSON.stringify
+     * calls per message, and on a loaded machine the search ran past its
+     * deadline and the event went out unmined. Splitting the serialisation
+     * around the nonce leaves a string concatenation and the hash itself,
+     * which is the only work that has to happen per attempt.
+     */
+    // A private-use character: JSON.stringify leaves it alone, where a control
+    // character comes back escaped and the split lands in the wrong place.
+    const MARK = "\uE000";
+    const probe = serialize(p, evt, [...tags, ["nonce", MARK, String(pow)]]);
+    const cut = probe.indexOf(MARK);
+    const head = cut < 0 ? null : probe.slice(0, cut);
+    const tail = cut < 0 ? null : probe.slice(cut + MARK.length);
     const stop = Date.now() + POW_DEADLINE_MS;
     let nonce = 0;
     for (;;) {
-      const tried = [...tags, ["nonce", String(nonce), String(pow)]];
-      const h = crypto.createHash("sha256").update(serialize(p, evt, tried)).digest();
-      if (powBits(hex(h)) >= pow) { tags = tried; id = h; break; }
+      // The fallback is the honest one: if the split failed, serialise properly
+      // rather than mining a string that is not the event.
+      const h = crypto.createHash("sha256").update(
+        head === null ? serialize(p, evt, [...tags, ["nonce", String(nonce), String(pow)]])
+                      : head + nonce + tail).digest();
+      if (powBits(hex(h)) >= pow) {
+        tags = [...tags, ["nonce", String(nonce), String(pow)]];
+        id = h;
+        break;
+      }
       nonce++;
       // Checked rarely: Date.now() in the inner loop costs more than the hash.
       if ((nonce & 0x3ff) === 0 && Date.now() > stop) break;
