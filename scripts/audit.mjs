@@ -2138,6 +2138,40 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       : pass("Escape and Space reach the output menu while it is open");
 }
 
+// ── a network blip holds the station, it does not spend the list ────────────
+// A phone changes network mid-song — wifi to cellular, a tunnel, a lift — and
+// the browser fails the stream exactly as it would for a station that has gone
+// off the air. The answer used to be the same either way: walk this station's
+// other URLs, then walk the place's other stations, then settle on "Stream
+// unavailable here" about a station that was never at fault, over a network
+// that came back ten seconds later. Nothing resumed when it did.
+//
+// Desktop-only code would not have shown this. It is a phone bug, and it is the
+// most likely way a walk out of wifi ends a listening session.
+//
+// So the failure path must ask whether there is a network before it spends the
+// list, and something must listen for the network coming back.
+{
+  console.log("\na network blip holds the station");
+  const src = readSrc("web/bridge.js")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const gaps = [];
+
+  // tryNext is the one choke point every stream failure passes through.
+  const tn = src.match(/function tryNext\s*\([^)]*\)\s*\{([\s\S]*?)\n  \}/);
+  if (!tn) gaps.push("tryNext is gone — the stream-failure path has moved and this check is blind");
+  else if (!/navigator\.onLine/.test(tn[1]))
+    gaps.push("tryNext advances to the next URL without asking whether there is a network");
+
+  // And a way back, or a held station is just a stuck one.
+  if (!/addEventListener\(\s*["']online["']/.test(src))
+    gaps.push("nothing listens for 'online', so a held station never resumes");
+
+  gaps.length ? fail("a network blip holds the station", gaps.join("; "))
+    : pass("a stream that fails with no network holds the station and resumes when it returns");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

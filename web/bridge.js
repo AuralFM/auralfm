@@ -141,6 +141,12 @@
   audio.volume = getState().vol ?? 0.8;
   let current = null, live = false, status = "", isError = false;
   let gen = 0, tried = [], watchdog = null;
+  /**
+   * What is kept while the network is away: the URL that was playing and the
+   * generation it belonged to. Non-null means a hold is in effect and `online`
+   * has something to put back.
+   */
+  let held = null;
 
   const channelOf = (ch) => ch && { id: ch.id, title: ch.title, place: ch.place,
     country: ch.country, lat: ch.lat, lon: ch.lon };
@@ -202,11 +208,16 @@
     const my = ++gen;
     current = ch;
     live = false;
+    // A new choice ends any hold, and drops the URL a resume would have used.
+    held = null; playingUrl = null;
     setState({ lastChannel: ch });
     setStatus("Finding stream…");
     reportClick(ch.rbuuid);
     const urls = await candidates(ch);
     if (my !== gen) return;
+    // candidates() just failed every fetch it made; that is the network, not
+    // the station, and the messages below would both be wrong about it.
+    if (!navigator.onLine) return hold(my);
     // Say why, when the reason is the browser rather than the station.
     if (!urls.length && ch.secure === false) return fail("Only an insecure stream — browsers block it here");
     tryNext(urls, my);
@@ -215,6 +226,9 @@
   function tryNext(urls, my) {
     clearTimeout(watchdog);
     if (my !== gen) return;
+    // A blip is not a broken station. Spending the list here is how walking out
+    // of wifi used to end on "Stream unavailable here".
+    if (!navigator.onLine) return hold(my);
     const url = urls.shift();
     if (!url) return fail("Stream unavailable here");
     audio.src = url;
@@ -234,8 +248,49 @@
   }
 
   let playingUrl = null;
+
+  /**
+   * Keep the station while the network is away.
+   *
+   * `navigator.onLine` is trusted in one direction only: false means there is
+   * genuinely no network, while true can still be a captive portal or a cell
+   * with no data behind it. So false holds, and true falls through to the
+   * ordinary failure path rather than promising something it cannot know.
+   */
+  function hold(my) {
+    if (my !== gen) return;
+    clearTimeout(watchdog);
+    live = false;
+    audio.pause();
+    held = { url: playingUrl, gen: my };
+    setStatus("Reconnecting…");
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
+  }
+
+  // A stream that is already playing stalls rather than erroring when the
+  // network goes, so the event is the only warning. Everything still connecting
+  // reaches hold() through tryNext instead, which is where its failure lands.
+  addEventListener("offline", () => { if (live) hold(gen); });
+
+  addEventListener("online", () => {
+    if (!held || held.gen !== gen || !current) return;
+    const { url } = held;
+    held = null;
+    // The URL that was working is the one to put back. Only when there was none
+    // — the network went while the stream was still being found — is the search
+    // worth running again.
+    if (!url) return tune(current);
+    setStatus("Connecting…");
+    audio.src = url;
+    playingUrl = url;
+    // The network says it is back; this says whether the stream actually is.
+    watchdog = setTimeout(() => { if (!live) tune(current); }, 12000);
+    audio.play().catch(() => tune(current));
+  });
+
   function stop() {
     gen++; clearTimeout(watchdog); live = false;
+    held = null;
     playingUrl = null;
     audio.pause(); audio.removeAttribute("src"); audio.load();
     setStatus("Stopped");
