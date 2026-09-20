@@ -2404,6 +2404,50 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the ticker measures its room against the bar, not itself ────────────────
+// The crypto strip was invisible on every fresh open, on the web and in the
+// app, until you dragged the window wider — then it appeared and stayed.
+// Measured at 1024px: three rows of real prices in the DOM, every one carrying
+// `hidden`, the strip itself 10px wide. Resized to 1180 and back to 1024: all
+// three visible, 210px, at the same width that had just failed.
+//
+// Two faults, and it needed both. fitMarkets() asked `el.clientWidth` how much
+// room it had, but the strip is `flex: 0 1 auto` with `min-width: 0`, so its
+// width IS its content and its content is what fitMarkets decides — measured
+// while the strip was still empty it read ~0 and hid everything "to fit".
+// And renderMarkets' 1 Hz refresh takes a fast path when the symbols have not
+// changed, which returns before fitMarkets, so nothing ever measured again.
+// Only the resize listener broke the loop.
+{
+  console.log("\nthe ticker measures its room against the bar, not itself");
+  const src = readSrc("src/renderer/explore-panels.js");
+  const fit = src.match(/function fitMarkets\s*\(\)\s*\{([\s\S]*?)\n\}/);
+  const bad = [];
+  if (!fit) bad.push("fitMarkets is gone — this check is blind");
+  else if (/\broom\s*=\s*\(\)\s*=>[^;]*\bel\.clientWidth/.test(fit[1]))
+    bad.push("fitMarkets sizes the strip by its own clientWidth, which is the content it is deciding");
+  // And it has to be able to measure a second time.
+  const render = src.match(/async function renderMarkets\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/);
+  if (render && /if \(sameShape\)/.test(render[1])) {
+    const fast = render[1].slice(render[1].indexOf("if (sameShape)"));
+    const upTo = fast.slice(0, fast.indexOf("\n  }"));
+    if (!/fitMarkets\s*\(/.test(upTo))
+      bad.push("the 1 Hz fast path returns without re-fitting, so one bad measurement is permanent");
+  }
+  // The reading that actually caused it: during boot nothing is laid out, so
+  // the bar offers 0 room and all three coins measure 0 wide. A zero is not a
+  // narrow bar, it is no answer, and acting on it is what made this permanent.
+  if (fit && !/if \(room\(\)\s*<=\s*0\)\s*return/.test(fit[1]))
+    bad.push("fitMarkets acts on a zero measurement instead of waiting for a real one");
+  // And something has to ask again once the bar is real, because the 1 Hz tick
+  // does not run while the window is hidden.
+  if (!/new ResizeObserver\([^)]*\)[\s\S]{0,80}observe\(el\.parentElement\)/.test(src))
+    bad.push("nothing re-fits when the bar gets its width");
+  bad.length ? fail("the ticker measures its room against the bar", bad.join("; "))
+    : pass("the strip asks the bar for its room, ignores a zero, and re-fits when the bar is real");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

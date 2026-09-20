@@ -158,6 +158,11 @@ async function renderMarkets() {
       ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(1)}%`;
     });
     el.title = hasStocks ? "" : el.title;
+    // Re-fit on the way out. The numbers change width as they tick, the web
+    // font lands after the first paint, and the bar is not always its final
+    // size when the first strip is built — none of which used to reach this
+    // path, so a single bad measurement lasted until the window was resized.
+    fitMarkets();
     return;
   }
 
@@ -201,20 +206,77 @@ async function renderMarkets() {
  * three prices. Only if it still does not fit do whole symbols go, from the end:
  * SOL first, then ETH, and BTC is the last to leave.
  */
+let marketsWatch = null;
+
 function fitMarkets() {
   const el = $("markets");
   if (!el || !el.children.length) return;
+  // The bar getting its width is the moment this becomes answerable, and it
+  // arrives whether or not anything is refreshing — unlike the 1 Hz tick, which
+  // is off while the window is hidden. The bar spans the window, so its size
+  // does not depend on what this function decides: no loop.
+  if (!marketsWatch && el.parentElement && typeof ResizeObserver !== "undefined") {
+    marketsWatch = new ResizeObserver(() => fitMarkets());
+    marketsWatch.observe(el.parentElement);
+  }
   const kids = [...el.children];
   const deltas = kids.map((k) => k.querySelector(".ch")).filter(Boolean);
 
-  // `clientWidth` is the padding box; the strip's own left padding is inside it.
-  const room = () => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft || 0);
+  /**
+   * How much room the strip has — asked of the bar, never of the strip.
+   *
+   * `el.clientWidth` was the obvious measurement and the wrong one. The strip
+   * is `flex: 0 1 auto` with `min-width: 0`, so its width *is* its content,
+   * and its content is exactly what this function is deciding. Run once while
+   * the strip was still empty it read about nothing, hid all three coins "to
+   * fit", and left the strip 10px wide — which then measured as no room at
+   * all, for good. The ticker was invisible on every fresh open until a window
+   * resize happened to call this again against a settled layout.
+   *
+   * The bar's width does not depend on the strip, so asking it instead is a
+   * fixed point: the same answer whenever this runs.
+   */
+  const room = () => {
+    const bar = el.parentElement;
+    const bs = getComputedStyle(bar), es = getComputedStyle(el);
+    const barGap = parseFloat(bs.columnGap) || parseFloat(bs.gap) || 0;
+    let taken = 0, siblings = 0;
+    for (const c of bar.children) {
+      if (c === el || c.hidden) continue;
+      const w = c.getBoundingClientRect().width;
+      if (w > 0) { taken += w; siblings++; }
+    }
+    const inner = bar.clientWidth - (parseFloat(bs.paddingLeft) || 0) - (parseFloat(bs.paddingRight) || 0);
+    const free = inner - taken - barGap * siblings;
+    const cap = parseFloat(es.maxWidth);
+    return Math.max(0, Math.min(free, Number.isFinite(cap) ? cap : free)
+                       - (parseFloat(es.paddingLeft) || 0));
+  };
   const gap = parseFloat(getComputedStyle(el).gap || 0);
   const total = () => kids.reduce((n, k, i) =>
     k.hidden ? n : n + k.getBoundingClientRect().width + (i ? gap : 0), 0);
 
+  /**
+   * Nothing to decide until there is a bar to decide against.
+   *
+   * The first call happens during boot, before the window has been laid out:
+   * measured then, every coin is 0 wide and the bar offers 0 room, so the old
+   * code dutifully hid all three "to fit" — and that was permanent, because
+   * the 1 Hz refresh takes a fast path and `document.hidden` stops it
+   * entirely while the window is not on screen. A window resize was the only
+   * thing that ever measured again, which is exactly what people found: the
+   * ticker was dark until you dragged the window wider.
+   *
+   * A zero reading is not a narrow bar, it is no answer. Leave the strip alone
+   * and wait for one.
+   */
+  if (room() <= 0) return;
+
   for (const k of kids) k.hidden = false;
   for (const d of deltas) d.hidden = false;
+  // Measure against this state, not the one before it: unhiding is a style
+  // change, and the reads below would otherwise still answer for the old box.
+  void el.offsetWidth;
 
   // Stage one: everything.
   if (total() <= room() + 0.5) return;
