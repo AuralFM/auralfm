@@ -15,7 +15,7 @@
  *   │                            ▤  │
  *   │                            ⤫  │
  *   ├───────────────────────────────┤
- *   │ ◉ Station name         ▶  ⋯  │  the now-playing row: one big button
+ *   │ ◉ Station name      ▶  🔓 ⋯ │  the now-playing row: one big button
  *   ├───────────────────────────────┤
  *   │  Explore Favorites Chat …     │  tabs
  *   └───────────────────────────────┘
@@ -152,15 +152,15 @@
       // Search is a tab now, so the field lives in a bar that tab opens.
       const q = $("q");
       if (q) { remember(q); searchbar.append(q); }
-      // Play and share belong with the station, not among the tabs, and they
-      // sit after its name: the row reads as what, then what to do with it.
-      const play = $("play"), share = $("nowShare");
+      // Play, lock and share belong with the station, not among the tabs, and
+      // they sit after its name: what is on, then what to do with it. Lock
+      // holds a station rather than a city — in the sheet's heading it read as
+      // locking onto the place, which is not a thing it can do.
+      const play = $("play"), lock = $("lock"), share = $("nowShare");
       if (play) { remember(play); now.append(play); }
+      if (lock) { remember(lock); now.append(lock); }
       if (share) { remember(share); now.append(share); share.onclick = shareCard; }
       now.insertBefore(open, now.firstChild);
-      // Lock belongs with the station it holds, which is the sheet's heading.
-      const lock = $("lock"), head = $("head");
-      if (lock && head) { remember(lock); head.append(lock); }
       const chat = $("chat");
       if (chat) { remember(chat); chatPanel.append(chat, chatNone); }
       document.body.append(searchbar, chatPanel, tabs);

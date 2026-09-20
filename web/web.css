@@ -189,21 +189,25 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
      rather than needing a clipboard and a file dialog of our own. */
   body.phonebar .now #nowShare {
     display: grid !important; place-items: center; flex: none;
-    width: 36px; height: 36px; min-width: 36px; min-height: 36px;
-    font-size: 14px; color: var(--label2);
+    width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+    font-size: 13px; color: var(--label2);
     background: none; border: 0; border-radius: var(--r-md); cursor: default;
   }
   body.phonebar .now #nowShare[hidden] { display: none !important; }
   body.phonebar .now #nowShare:active { background: var(--fill); }
   /* 34pt: the row is a strip, and a 40pt disc in it read as a button with a
      line of text beside it rather than a line of text you can play. */
+  /* 30pt: a shade bigger than the line of type beside it, which is what a
+     control inside a strip should be. Lock and share match, so the three read
+     as one set acting on one station. */
   body.phonebar .now #play {
-    margin-left: auto; width: 36px; height: 36px; min-width: 36px; min-height: 36px;
-    font-size: 12px;
+    margin-left: auto; width: 30px; height: 30px; min-width: 30px; min-height: 30px;
+    font-size: 11px;
   }
-  /* Lock rides with the station it holds, in the sheet's heading. */
-  body.phonebar .placehead { position: relative; padding-right: 52px; }
-  body.phonebar .placehead #lock { position: absolute; top: 0; right: 12px; }
+  body.phonebar .now #lock {
+    flex: none; width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+    display: grid; place-items: center; padding: 0; font-size: 13px;
+  }
 
   /* ── the tabs ─────────────────────────────────────────────────────────────
      Five, labelled, because an unexplained row of glyphs is a quiz — and five
