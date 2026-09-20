@@ -113,10 +113,12 @@
 
     // The shackle lifts and shifts right when open — the movement is the whole
     // signal, and it reads at a glance in a way a colour change does not.
-    lock:   SVG(`<rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/>
-                 <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7"/>`),
-    unlock: SVG(`<rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/>
-                 <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0"/>`),
+    /* At the Figma set's weight: these sit beside those glyphs on the globe's
+       edge, and at 1.7 the lock read as a lighter font than its neighbours. */
+    lock:   SVG(`<rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke-width="2.1"/>
+                 <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" stroke-width="2.1"/>`),
+    unlock: SVG(`<rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke-width="2.1"/>
+                 <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0" stroke-width="2.1"/>`),
 
     // Three states, because volume is not a boolean and the middle one is where
     // most people leave it.

@@ -28,7 +28,16 @@
   const cols = document.querySelector(".cols");
   if (!rail || !cols) return;
 
-  const PEEK = 0.40;                 // of the globe area, left showing at rest
+  /**
+   * At rest the sheet shows the place and nothing more.
+   *
+   * It was a share of the globe area, which is a number with no meaning in it:
+   * on one phone it cut the weather line in half, on another it showed three
+   * stations. The sheet now rests exactly where the place's own block ends —
+   * name, coordinates, distance, weather — so the first thing you see is where
+   * you are, and everything below it is what the drag is for.
+   */
+  const PEEK_FALLBACK = 0.40;        // of the globe area, before a place is picked
   let open = false, y = 0, restY = 0, drag = null, raf = 0, pending = 0;
 
   const stations = rail.querySelector(".stations");
@@ -43,7 +52,16 @@
   };
 
   const measure = () => {
-    restY = Math.max(0, Math.round(rail.offsetHeight - cols.clientHeight * PEEK));
+    // The tags scroll sideways under the weather, so they are the line the
+    // resting sheet stops at.
+    const chips = rail.querySelector(".chips");
+    const head = rail.querySelector(".placehead");
+    const peek = chips?.offsetHeight && !head?.hidden
+      ? chips.offsetTop + 6
+      : Math.round(cols.clientHeight * PEEK_FALLBACK);
+    restY = Math.max(0, Math.round(rail.offsetHeight - peek));
+    // The globe's read-out sits above whatever the sheet is showing.
+    document.documentElement.style.setProperty("--peek", `${peek}px`);
   };
   const put = (v) => {
     y = v;
@@ -125,6 +143,10 @@
     if (!phone.matches) { rail.style.removeProperty("--sheet-y"); return; }
     measure(); rail.classList.remove("sliding"); put(open ? 0 : restY);
   };
+  // The place block changes height with every place — two lines of tags, or
+  // none — so the rest it defines is remeasured when the list repaints.
+  const head = rail.querySelector(".placehead");
+  if (head && typeof ResizeObserver !== "undefined") new ResizeObserver(reset).observe(head);
   addEventListener("resize", reset);
   phone.addEventListener?.("change", reset);
   // After the catalogue has painted, so offsetHeight is the real one.

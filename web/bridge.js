@@ -117,7 +117,9 @@
   const LAYERS = [
     ["clouds", true], ["dayNight", true], ["stations", true], ["iss", true],
     ["flights", false], ["wspr", false], ["constellations", true], ["drift", false],
-    ["listeners", true], ["statusBar", true],
+    // Off, as on the desktop: the read-out is a line of figures about the sun
+    // and the ISS, and it is not what somebody opening a radio wants first.
+    ["listeners", true], ["statusBar", false],
   ];
   const layerState = () => {
     const saved = read("layers", {});

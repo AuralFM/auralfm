@@ -11,13 +11,13 @@
  * Instagram, YouTube and Radio Garden all label theirs.
  *
  *   ┌───────────────────────────────┐
- *   │  globe                     ≡  │  layers, headlines, somewhere else
+ *   │  globe                     ≡  │  layers, lock, somewhere else
  *   │                            ▤  │
  *   │                            ⤫  │
  *   ├───────────────────────────────┤
- *   │ ◉ Station name      ▶  🔓 ⋯ │  the now-playing row: one big button
+ *   │ ◉ Station name         ▶  ⋯ │  the now-playing row: one big button
  *   ├───────────────────────────────┤
- *   │  Explore Favorites Chat …     │  tabs
+ *   │  Explore Headlines … Settings │  tabs
  *   └───────────────────────────────┘
  *
  * Everything here moves existing elements rather than rebuilding them: each id
@@ -84,23 +84,33 @@
       b.setAttribute("aria-pressed", String(b.dataset.tab === name));
     }
     chatPanel.hidden = name !== "chat";
-    searchbar.hidden = name !== "search";
-    if (name === "search") $("q")?.focus();
-    if (name !== "search") $("q")?.blur();
+    searchbar.hidden = name !== "explore";
+    if (name === "explore") $("q")?.focus();
+    else $("q")?.blur();
   };
 
-  const explore = tab("explore", "Explore", "globe", () => {
-    setTab("explore");
+  /**
+   * Explore is the search.
+   *
+   * They were two tabs doing one thing: exploring this app *is* looking for a
+   * place, and a magnifying glass beside a globe asked people to guess which
+   * of the two meant "find somewhere". One tab, and it opens the field.
+   */
+  tab("explore", "Explore", "globe", () => {
+    setTab(openTab === "explore" ? "none" : "explore");
     window.AuralRailSheet?.peek();
   });
+  tab("headlines", "Headlines", "headlines", () => {
+    setTab("none");
+    $("newsBtn")?.click();           // the real control, still doing the work
+  });
   tab("favorites", "Favorites", "star", (b) => {
-    setTab("favorites");
-    $("favBtn")?.click();            // the real control, still doing the work
+    setTab("none");
+    $("favBtn")?.click();
     b.setAttribute("aria-pressed", $("favBtn")?.getAttribute("aria-pressed") === "true" ? "true" : "false");
   });
-  tab("chat", "Chat", "chat", () => setTab(openTab === "chat" ? "explore" : "chat"));
-  tab("search", "Search", "search", () => setTab(openTab === "search" ? "explore" : "search"));
-  tab("settings", "Settings", "gear", () => { setTab("explore"); $("setBtn")?.click(); });
+  tab("chat", "Chat", "chat", () => setTab(openTab === "chat" ? "none" : "chat"));
+  tab("settings", "Settings", "gear", () => { setTab("none"); $("setBtn")?.click(); });
 
   // ── the now-playing row ────────────────────────────────────────────────────
   /**
@@ -146,8 +156,10 @@
     tabs.hidden = !on;
     document.body.classList.toggle("phonebar", on);
     if (on) {
-      // The globe's own controls: what it shows, and where to go next.
-      for (const el of [$("layersBtn"), $("newsBtn"), $("tripBtn")]) { remember(el); side.append(el); }
+      // The globe's own controls: what it shows, what is held, and where to go
+      // next. Lock sits here rather than in the player because it is a switch
+      // you set once and then forget, not part of reading what is on.
+      for (const el of [$("layersBtn"), $("lock"), $("tripBtn")]) { remember(el); side.append(el); }
       document.querySelector(".globewrap")?.append(side);
       // Search is a tab now, so the field lives in a bar that tab opens.
       const q = $("q");
@@ -156,15 +168,14 @@
       // they sit after its name: what is on, then what to do with it. Lock
       // holds a station rather than a city — in the sheet's heading it read as
       // locking onto the place, which is not a thing it can do.
-      const play = $("play"), lock = $("lock"), share = $("nowShare");
+      const play = $("play"), share = $("nowShare");
       if (play) { remember(play); now.append(play); }
-      if (lock) { remember(lock); now.append(lock); }
       if (share) { remember(share); now.append(share); share.onclick = shareCard; }
       now.insertBefore(open, now.firstChild);
       const chat = $("chat");
       if (chat) { remember(chat); chatPanel.append(chat, chatNone); }
       document.body.append(searchbar, chatPanel, tabs);
-      setTab("explore");
+      setTab("none");        // the globe, with nothing over it
     } else {
       open.remove(); side.remove();
       const share = $("nowShare");
@@ -181,7 +192,7 @@
   // The big button sits under the row's text, so the text has to say what it is.
   open.addEventListener("click", () => window.AuralRailSheet?.open());
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && openTab === "search") setTab("explore");
+    if (e.key === "Escape" && openTab === "explore") setTab("none");
   });
 
   /**

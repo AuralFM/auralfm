@@ -786,18 +786,41 @@ function announce(only) {
   // worldwide spread that was sixty-odd pairs of mined events thrown away on
   // every connect, which is what made the note-delivery audit time out.
   if (only?.readOnly) return;
-  const created_at = Math.floor(Date.now() / 1000);
+  const at = Math.floor(Date.now() / 1000);
 
-  // The shared heartbeat. Empty content and a `g` tag, nothing else — the
-  // convention says so and other clients read it.
-  publish(sign({ kind: PRESENCE_KIND, created_at, tags: [["g", here.geohash]], content: "" }), only);
-
-  // Ours: the same cell, plus what is playing there.
-  publish(sign({
-    kind: LABEL_KIND, created_at,
-    tags: [["g", here.geohash]],
-    content: JSON.stringify({ l: here.label }),
-  }), only);
+  /**
+   * Mine the pair once a beat, not once a socket.
+   *
+   * `announce(w)` runs for every relay as it opens, and each call signed a
+   * fresh pair — which means mining proof of work twice per socket. Eight
+   * near relays is sixteen minings inside a second or two, and mining has a
+   * deadline: on a busy machine the later ones give up and go out at zero
+   * bits, which is exactly what the audit caught (`kind 20001 mined to only
+   * 0 bits`). Relays on this network hide unmined events, so those were
+   * heartbeats nobody would see.
+   *
+   * The same signed event may go to every relay — that is what an event is —
+   * so one pair is mined and handed to each socket as it arrives.
+   */
+  const stale = !beacon || beacon.cell !== here.geohash || beacon.label !== here.label
+    || at - beacon.at >= BEAT_MS / 1000;
+  if (stale) {
+    beacon = {
+      cell: here.geohash, label: here.label, at,
+      // The shared heartbeat. Empty content and a `g` tag, nothing else — the
+      // convention says so and other clients read it.
+      events: [
+        sign({ kind: PRESENCE_KIND, created_at: at, tags: [["g", here.geohash]], content: "" }),
+        // Ours: the same cell, plus what is playing there.
+        sign({
+          kind: LABEL_KIND, created_at: at,
+          tags: [["g", here.geohash]],
+          content: JSON.stringify({ l: here.label }),
+        }),
+      ],
+    };
+  }
+  for (const e of beacon.events) publish(e, only);
 }
 
 /**
@@ -1063,6 +1086,7 @@ function takeDm(evt) {
   schedule("dms");
 }
 
+let beacon = null;       // the mined heartbeat pair for this cell, this beat
 let dialled = [];        // what relaysFor() chose for the cell we are in
 let covering = [];       // the read-only spread, see COVERAGE_PER_CELL
 

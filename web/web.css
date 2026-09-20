@@ -99,12 +99,19 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     box-shadow: inset 0 0 0 .5px var(--edge-hi), 0 6px 20px rgba(0, 0, 0, .35);
   }
   .globeside button::before { content: none; }
-  .globeside button[aria-pressed="true"] { color: var(--accent); }
+  /* On, and being pressed, are both said in the palette's colour. The desktop
+     tints the button's box as well, which over a planet reads as a second,
+     dimmer button sitting on the first. */
+  .globeside button[aria-pressed="true"],
+  .globeside button:active,
+  .globeside button.busy { color: var(--accent); background: color-mix(in srgb, var(--bg) 62%, transparent); }
 
   /* Search is a tab, so the field appears when that tab is on. */
   .searchbar {
+    /* Full width, like the sheet, and its field starts on the same text column
+       the station names do — the two were a few pixels out of step. */
     position: fixed; left: 0; right: 0; top: 0; z-index: 9;
-    padding: calc(env(safe-area-inset-top) + 8px) 12px 10px;
+    padding: calc(env(safe-area-inset-top) + 8px) 17px 12px;
     background: color-mix(in srgb, var(--bg) 94%, transparent);
     -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
@@ -152,11 +159,16 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   /* Rows at a phone's rhythm: 46pt fits six where 58 fit four, and the star
      gives its spare width back to the name. */
   #stationlist .st, #placelist .place { padding: 2px 10px; min-height: 46px; }
+  /* The tags scroll sideways, so they run to the screen's edge rather than
+     stopping at the heading's margin with the last one cut in half. */
+  .placehead .chips { margin-right: -17px; padding-right: 17px; }
   .st .star { min-width: 34px; min-height: 34px; font-size: 13px; margin-right: 0; }
 
   /* Read-outs belong to the globe, so they ride above the sheet's top edge. */
-  .globebar { right: 0; bottom: auto; top: calc(env(safe-area-inset-top) + 6px); }
-  .globebar::after { top: 0; bottom: auto; background: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,0)); }
+  /* The read-out belongs to the globe, so it rides just above the sheet rather
+     than up among the status bar's own clock and battery. --peek is how much
+     sheet is showing (web/rail-sheet.js). */
+  .globebar { right: 0; top: auto; bottom: calc(var(--peek, 40%) + 8px); padding-bottom: 0; }
 
   /**
    * What is playing: one row, and the whole row is the way back to the list.
@@ -215,7 +227,9 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .tabbar {
     position: relative; z-index: 5; flex: none;
     display: flex; align-items: stretch; justify-content: space-between;
-    padding: 4px 6px calc(2px + env(safe-area-inset-bottom));
+    /* The home indicator's strip is already empty space; the bar does not need
+       to add its own on top, so it keeps only what is left after 8pt of it. */
+    padding: 3px 4px max(2px, calc(env(safe-area-inset-bottom) - 8px));
     background: color-mix(in srgb, var(--bg) 94%, transparent);
     -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: inset 0 .5px 0 var(--line);
@@ -227,7 +241,9 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     color: var(--label2); font: inherit;
   }
   .tabicon { display: grid; place-items: center; font-size: 17px; line-height: 1; }
-  .tablabel { font-size: 10.5px; letter-spacing: .004em; }
+  /* 12px is the floor for text meant to be read; five words at that size fit a
+     375pt screen with Headlines, the longest, still clear of its neighbours. */
+  .tablabel { font-size: 12px; letter-spacing: -.004em; white-space: nowrap; }
   .tab[aria-pressed="true"] { color: var(--accent); }
   .tab:active { opacity: .6; }
   .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; border-radius: var(--r-md); }
