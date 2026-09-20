@@ -32,14 +32,29 @@ self.addEventListener("install", (e) => {
   e.waitUntil((async () => {
     const cache = await caches.open(CACHE);
     await Promise.all(SHELL.map((u) => cache.add(u).catch(() => {})));
-    await self.skipWaiting();
   })());
 });
 
+/**
+ * No skipWaiting here, and no clients.claim below. Both were, and both were
+ * wrong for this app.
+ *
+ * Together they meant a newly deployed worker took over pages that were already
+ * open, then deleted every cache but its own. The running page's scripts are
+ * stamped with the old build's URLs — just thrown away — so each one missed and
+ * went to the network. On a good connection that is invisible. On a phone with
+ * a weak signal it is a dead page: the app's own HTML still on screen with
+ * nothing behind it.
+ *
+ * The default lifecycle is the right one for a radio. A new worker waits until
+ * every page using the old one has closed, so nothing is swapped underneath
+ * somebody who is listening and the cache is dropped only once nothing needs
+ * it. The update lands on the next launch. That is the price, and for an app
+ * whose whole job is not to stop playing, it is the correct one to pay.
+ */
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     for (const key of await caches.keys()) if (key !== CACHE) await caches.delete(key);
-    await self.clients.claim();
   })());
 });
 
@@ -73,11 +88,19 @@ self.addEventListener("fetch", (e) => {
      */
     const hit = await caches.match(request);
     if (hit) return hit;
-    const res = await fetch(request);
-    if (res.ok && res.type === "basic") {
-      const cache = await caches.open(CACHE);
-      cache.put(request, res.clone()).catch(() => {});
+    try {
+      const res = await fetch(request);
+      if (res.ok && res.type === "basic") {
+        const cache = await caches.open(CACHE);
+        cache.put(request, res.clone()).catch(() => {});
+      }
+      return res;
+    } catch {
+      // A miss with no network. respondWith on a rejected promise is not a
+      // failed request, it is a failed *page*, so answer it properly: an older
+      // build's copy of the same file if the install never cached this one,
+      // and an honest error if there is nothing at all.
+      return (await caches.match(request, { ignoreSearch: true })) || Response.error();
     }
-    return res;
   })());
 });

@@ -2172,6 +2172,41 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the worker does not seize a page that is playing ────────────────────────
+// install called skipWaiting() and activate called clients.claim(), so the
+// moment a new build was deployed its worker took over pages already open —
+// and then deleted every cache but its own. The running page's scripts are
+// stamped with the *old* build's URLs, which had just been thrown away, so
+// every one of them missed and went to the network. On a good connection that
+// is invisible. On a phone with a weak signal it is a dead page: ERR_FAILED on
+// every script, the app's own HTML still on screen with nothing behind it.
+//
+// Measured here on 2026-09-20: cache auralfm-mu9egcka still serving while the
+// build was mua7tjon, and a plain fetch() from the page throwing "Failed to
+// fetch" until the worker was unregistered by hand.
+//
+// The lifecycle's default is correct for a radio: a new worker waits until
+// every page using the old one has closed. Nothing is swapped underneath
+// somebody who is listening, and the cache is only dropped once nothing needs
+// it. The update lands on the next launch, which is the price and it is right.
+{
+  console.log("\nthe worker does not seize a page that is playing");
+  const sw = readSrc("web/sw.js").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const seizes = [];
+  if (/skipWaiting\s*\(/.test(sw)) seizes.push("install calls skipWaiting()");
+  if (/clients\.claim\s*\(/.test(sw)) seizes.push("activate calls clients.claim()");
+  // A miss that cannot reach the network must not reject: respondWith on a
+  // rejected promise is ERR_FAILED, which is the dead page above.
+  // The `.catch` on cache.put does not count; it is the fetch that has to be
+  // guarded, because respondWith on a rejected promise is the dead page.
+  const firstPath = sw.slice(sw.indexOf("caches.match(request)"));
+  if (firstPath && !/try\s*\{/.test(firstPath))
+    seizes.push("the cache-first path lets a failed fetch reject respondWith");
+  seizes.length ? fail("the worker does not seize a page that is playing", seizes.join("; "))
+    : pass("a new build waits for the old page to close, and a miss with no network fails soft");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
