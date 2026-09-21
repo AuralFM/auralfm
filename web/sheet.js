@@ -63,7 +63,21 @@
     dragToDismiss(root.querySelector(".setsheet-head"));
   }
 
-  const behind = () => [...document.body.children].filter((el) => el !== root && el.tagName !== "SCRIPT");
+  /**
+   * What goes inert while the sheet is open.
+   *
+   * Everything behind it, as a modal should — except the phone's chrome. On a
+   * phone Settings is not a modal, it is one of five tabs, and it sits under
+   * the bar by design. Inerting the bar took it out of hit-testing entirely:
+   * it was still there, still lit, still showing Settings as the current tab,
+   * and completely dead. Done was the only way out.
+   *
+   * The globe and the rail behind it still go inert, which is the part that
+   * matters — nothing back there should be reachable by touch or by Tab.
+   */
+  const CHROME = ".tabbar, .now";
+  const behind = () => [...document.body.children].filter((el) =>
+    el !== root && el.tagName !== "SCRIPT" && !(phone() && el.matches(CHROME)));
   const place = (y) => { panel.style.transform = `translateY(${y}px)`; root.style.setProperty("--dim", String(Math.max(0, 1 - y / panel.offsetHeight))); };
 
   function open() {
@@ -97,7 +111,10 @@
     root.classList.remove("open", "closing", "fade");
     panel.style.transform = "";
     root.querySelector(".setsheet-frame").src = "about:blank";
-    for (const el of behind()) el.inert = false;
+    // Not behind() — every child. If the window crossed the phone breakpoint
+    // while this was open, behind() no longer names what open() inerted, and
+    // the difference is a permanently dead control.
+    for (const el of document.body.children) el.inert = false;
     opener?.focus?.();
     opener = null;
   }

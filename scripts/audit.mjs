@@ -2448,6 +2448,32 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── on a phone, Settings does not switch off the tab bar ────────────────────
+// The sheet inerts everything behind it, which is right for a desktop modal
+// and wrong for a phone, where Settings IS one of the five tabs and sits under
+// the bar on purpose. `inert` takes the whole subtree out of hit-testing, so
+// the bar was there, lit, showing Settings as the current tab — and dead. Done
+// really was the only way out, which is exactly how Melton described it.
+//
+// Measured: with the sheet shut, a hit test over the bar returns
+// `button.tab, nav.tabbar, …`. With it open, `body, html` — no bar at all.
+{
+  console.log("\non a phone, Settings does not switch off the tab bar");
+  const src = readSrc("web/sheet.js").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const behind = src.match(/const behind = \(\) =>([\s\S]*?);/);
+  const gaps = [];
+  if (!behind) gaps.push("behind() is gone — this check is blind");
+  else if (!/phone\(\)/.test(behind[1]) || !/tabbar/.test(src))
+    gaps.push("behind() inerts the phone's chrome, so the tab bar goes dead while Settings is open");
+  // And the clearing has to cover every child, not just what behind() names
+  // today — the viewport can cross the breakpoint while the sheet is open.
+  if (!/for \(const el of document\.body\.children\) el\.inert = false/.test(src))
+    gaps.push("inert is cleared through behind(), so a viewport change mid-sheet leaves a control dead");
+  gaps.length ? fail("Settings does not switch off the tab bar", gaps.join("; "))
+    : pass("the phone's chrome stays live while Settings is open, so any tab closes it");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

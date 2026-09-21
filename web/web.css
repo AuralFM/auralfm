@@ -340,12 +340,33 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
    * agreed not to do: cover the globe. Same height, same corner, same place —
    * it just has more in it, so it scrolls.
    */
-  /* 9800 put the whole sheet, scrim included, over the tab bar. On a phone it
-     is one of the five tabs, so it belongs under the bar that switched to it. */
-  .setsheet { z-index: 4; }
+  /**
+   * 9800 put the whole sheet, scrim included, over the tab bar. On a phone it
+   * is one of the five tabs, so it belongs under the bar that switched to it.
+   *
+   * And under it for taps as well, which z-index alone does not deliver: the
+   * panel's surface runs behind the chrome by design, and a box that lies over
+   * the bar takes the tap whatever its z-index says — an iframe especially.
+   * That is why every other tab was dead while Settings was open, and Done
+   * really was the only way out. So nothing in the sheet catches a pointer
+   * except the parts you actually press, and the scrim stops above the chrome.
+   */
+  .setsheet { z-index: 4; pointer-events: none; }
+  .setsheet-scrim { pointer-events: auto; bottom: var(--chrome, 0px); }
+  .setsheet-panel { pointer-events: none; }
+  .setsheet-grab, .setsheet-head, .setsheet-frame { pointer-events: auto; }
   .setsheet-panel {
     left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto;
     height: calc(var(--panel-h) + var(--chrome, 0px));
+    /**
+     * The surface runs behind the chrome; the settings themselves stop above
+     * it. Without this the iframe reached the bottom of the screen and sat
+     * over the tab bar — and an iframe takes the tap wherever it lies, whatever
+     * the z-index says, so every tab was dead while Settings was open and the
+     * Done button really was the only way out. The other panels got this
+     * padding when they moved behind the bar; this one was missed.
+     */
+    padding-bottom: var(--chrome, 0px);
     border-radius: var(--r-xl) var(--r-xl) 0 0;
     opacity: 1; transform: translateY(100%); transition: none;
   }

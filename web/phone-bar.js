@@ -139,7 +139,19 @@
     window.AuralRailSheet?.peek();
   });
   tab("headlines", "Headlines", "headlines", () => toggle("headlines"));
-  tab("favorites", "Favorites", "star", () => toggle("favorites"));
+  /**
+   * Favourites is the sheet too, so it rests where the sheet rests.
+   *
+   * Without this it opened wherever the sheet happened to be left — and if
+   * that was all the way up, from the now-playing strip or a drag, Favourites
+   * arrived filling the screen for a list that is usually a few rows. A tab is
+   * a place you go, not a continuation of whatever you were doing, so it
+   * settles to the same peek Explore does.
+   */
+  tab("favorites", "Favorites", "star", () => {
+    toggle("favorites");
+    window.AuralRailSheet?.peek();
+  });
   tab("chat", "Chat", "chat", () => toggle("chat"));
   tab("settings", "Settings", "gear", () => toggle("settings"));
 
