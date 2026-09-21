@@ -532,7 +532,12 @@
     readArticle: none,
     mineList: empty,
     mineAdd: async () => ({ ok: false, error: "Adding your own stations is not in the web version yet." }),
-    docsList: empty,
+    // Privacy, Terms and the open source licences, from the same allowlist and
+    // the same renderer the desktop reads them through. The files are inlined
+    // into the bundle by scripts/build-web.mjs, so this needs no network and
+    // works with none.
+    docsList: async () => M.docs.list(),
+    docsRead: async (id) => M.docs.read(id),
 
     // windows and links
     openSettings: () => window.AuralSheet?.open(),

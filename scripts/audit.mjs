@@ -2503,6 +2503,46 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the web version can show Privacy, Terms and the licences ───────────────
+// src/docs.js exists to put those three in front of somebody before they
+// decide whether to trust the app, and the Settings sheet already has the
+// reader that renders them. The web build simply never carried them: the
+// module was not wrapped, the files were not shipped, and web/bridge.js
+// answered docsList with an empty list — so on the web and the iOS PWA there
+// was no Privacy, no Terms and no licences at all, on an app that is public.
+//
+// The list in src/docs.js is an allowlist for good reasons (BUSINESS.md and
+// DECK.md sit in the same folder), so this checks those three and no more.
+{
+  console.log("\nthe web version can show Privacy, Terms and the licences");
+  const build = fs.readFileSync(R("scripts/build-web.mjs"), "utf8");
+  const bridge = readSrc("web/bridge.js");
+  const docs = fs.readFileSync(R("src/docs.js"), "utf8");
+  const wanted = [...docs.matchAll(/file:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const gaps = [];
+  if (!wanted.length) gaps.push("no documents found in src/docs.js — this check is blind");
+  if (!/MODULES = \[[^\]]*"docs"/s.test(build)) gaps.push("build-web.mjs does not wrap src/docs.js");
+  if (!/EXPOSE = \[[^\]]*"docs"/s.test(build)) gaps.push("build-web.mjs does not expose docs on AuralMods");
+  // Derived from src/docs.js, not listed again — a second copy of an allowlist
+  // is a second place to get it wrong — so what is checked is that it reads
+  // that file, and then what actually came out of the build.
+  if (!/src\/docs\.js/.test(build))
+    gaps.push("build-web.mjs does not take its document list from src/docs.js");
+  const mods = R("dist-web/web/modules.js");
+  if (fs.existsSync(mods)) {
+    const out = fs.readFileSync(mods, "utf8");
+    for (const f of wanted) {
+      const key = f.split("/").pop();
+      if (!out.includes(JSON.stringify(key))) gaps.push(`the built bundle carries no ${key}`);
+    }
+  }
+  if (/docsList:\s*empty/.test(bridge)) gaps.push("web/bridge.js still answers docsList with nothing");
+  if (!/docsRead:/.test(bridge)) gaps.push("web/bridge.js has no docsRead");
+  gaps.length ? fail("the web version can show Privacy, Terms and the licences", gaps.join("; "))
+    : pass(`the web build carries all ${wanted.length} documents and can read them`);
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

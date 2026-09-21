@@ -1,17 +1,20 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 2 August 2026**
+**Last updated: 20 September 2026**
 
-AuralFM is a desktop application that plays internet radio. This policy explains
-what it does and does not do with your information.
+AuralFM plays internet radio. It comes as a Mac application and as a web version
+you can open in a browser or add to a phone's home screen. This policy covers
+both, and says clearly where the two differ — because on one point they do.
 
 Short version: **AuralFM has no servers, no accounts, and no analytics. Nothing
 about what you listen to is sent to us, because there is no "us" to send it to.**
 
 ## What AuralFM stores
 
-Everything AuralFM saves is stored **only on your own computer**, in your macOS
-Application Support folder:
+Nothing is stored anywhere but on the device in front of you. Where exactly
+depends on which version you are using.
+
+**The Mac application** keeps these in your macOS Application Support folder:
 
 | File | Contains |
 |---|---|
@@ -21,6 +24,18 @@ Application Support folder:
 | `sky-*.jpg` / `.png` | Cached satellite imagery |
 
 You can delete any of it at any time. Removing the app removes it all.
+
+**The web version** has no files of its own. Favourites, settings, the last
+station and your chat identity live in your browser's local storage for this
+site, and nowhere else. They do not follow you to another browser or another
+device, because there is no account to carry them. Clearing this site's data in
+your browser is a complete reset, and removing it from your home screen takes
+the same data with it.
+
+If you add the web version to a home screen, it also keeps a copy of the app's
+own files — the page, the code, the globe's textures and the station list — so
+it opens without a network. That cache is the app itself, not anything about
+you.
 
 ## What AuralFM does not do
 
@@ -32,9 +47,12 @@ You can delete any of it at any time. Removing the app removes it all.
 
 ## Third-party services AuralFM contacts
 
-Playing live radio and showing live conditions requires network requests. These
-go **directly from your computer to the service** — they do not pass through any
-server we operate, and we never see them.
+Playing live radio and showing live conditions requires network requests. In the
+Mac application, every one of them goes **directly from your computer to the
+service**; none passes through any server we operate, and we never see them.
+
+**In the web version, two of them do not.** See "What the web version routes
+differently" below. The rest of this table applies to both.
 
 | Service | Purpose | What it necessarily sees |
 |---|---|---|
@@ -53,13 +71,46 @@ Two points worth stating plainly:
 
 1. **Weather requests contain the coordinates of the city you clicked**, chosen
    from a fixed public list — never your own location. AuralFM never requests or
-   uses your device location.
-2. **Play counts are reported to radio-browser.** Their documentation asks
+   uses your device location, and never asks for the location permission.
+2. **The globe opens on a city near you, worked out from your time zone.** Your
+   device's time zone is a name like `Europe/Berlin`, which the app matches
+   against its own list of places so the first thing you see is somewhere
+   plausible rather than the middle of the Pacific. This happens entirely on the
+   device. The time zone is not sent anywhere, and it is a region, not a
+   location — it cannot say which town you are in.
+3. **Play counts are reported to radio-browser.** Their documentation asks
    clients to do this so station popularity rankings stay meaningful. The report
    contains the station's identifier and nothing about you.
 
 Each of these services has its own privacy policy, which governs what they do
 with a request once it reaches them.
+
+## What the web version routes differently
+
+The web version is hosted on [here.now](https://here.now), which serves the page
+and its files. Like any web host, it can see the requests that fetch them — your
+IP address, and which file you asked for. That is the cost of the app being a
+web page at all, and it applies from the moment you open it.
+
+Two features additionally pass **through** that host rather than going straight
+out, because a browser is not allowed to fetch them directly:
+
+| Route | Goes to | What the request carries |
+|---|---|---|
+| Headlines | Google News RSS | Your IP address |
+| Flights | api.adsb.lol | Your IP address, and **the coordinates you are looking at** |
+
+The flights request names a point on the globe and a radius around it, because
+that is what it is asking about. It is where the *view* is pointed, not where
+you are — but if you have flown the globe to your own town to look at it, those
+are coordinates near you, passing through a host, and you should know that
+before you turn the layer on. Flights are off by default.
+
+Neither route is logged by us; we run no server and keep no logs. What here.now
+retains is governed by their policy, not ours.
+
+**The Mac application does neither of these.** It fetches both services
+directly, and nothing it does passes through a host of ours.
 
 ## Shortwave receivers
 

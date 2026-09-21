@@ -1,12 +1,13 @@
 # AuralFM — Terms of Service
 
-**Last updated: 7 August 2026**
+**Last updated: 20 September 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
 ## What AuralFM is
 
-AuralFM is a desktop application that helps you find and play publicly available
+AuralFM is an application — a Mac app, and a web version you can open in a
+browser or add to a phone's home screen — that helps you find and play publicly available
 internet radio streams, and shows public information about the world alongside
 them.
 
