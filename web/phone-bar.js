@@ -93,6 +93,9 @@
       searchbar.hidden = !on;
       // The field drops in from the top, where the globe's own controls live.
       document.body.classList.toggle("searching", on);
+      // And it covers the sky, so the planet owes itself a re-centre. Showing
+      // the field does not resize the globe, so no observer catches this.
+      if (typeof sizeGlobe === "function") requestAnimationFrame(() => sizeGlobe());
       if (on) $("q")?.focus(); else $("q")?.blur();
     },
     headlines(on) { if (shown.headlines() !== on) $("newsBtn")?.click(); },

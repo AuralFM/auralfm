@@ -2474,6 +2474,35 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the search field counts against the globe's centre ──────────────────────
+// centreGlobe centres the planet above the rail sheet's resting height, which
+// is right and deliberate — it is what stops the Earth sliding around as
+// panels come and go. But the search field drops in over the *top* of the
+// globe on a phone, and nothing counted it: the planet stayed centred for the
+// sheet alone, so opening Explore covered the sky and left the Earth sitting
+// high in what was left of the view. "If you hit Explore, the search bar will
+// stay open, which will kind of block the globe."
+//
+// box() above cannot see it either way: the field is `position: fixed`, and
+// offsetParent is null for fixed elements, so it never entered the maths.
+{
+  console.log("\nthe search field counts against the globe's centre");
+  const src = readSrc("src/renderer/explore-trackers.js");
+  const fn = src.match(/function centreGlobe\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/);
+  const gaps = [];
+  if (!fn) gaps.push("centreGlobe is gone — this check is blind");
+  else if (!/searchbar/.test(fn[1]))
+    gaps.push("centreGlobe ignores the search field, which covers the top of the globe on a phone");
+  // And it has to be asked again when the field appears, since showing it does
+  // not resize the globe and so trips no observer.
+  const bar = readSrc("web/phone-bar.js");
+  if (!/sizeGlobe/.test(bar))
+    gaps.push("nothing re-centres the globe when the search field opens or closes");
+  gaps.length ? fail("the search field counts against the globe's centre", gaps.join("; "))
+    : pass("the globe centres in what is left of the view once the search field is over it");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

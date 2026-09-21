@@ -384,9 +384,28 @@ function centreGlobe(w) {
    */
   const peek = parseFloat(
     getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 0;
+  /**
+   * The search field drops in over the top of the globe, and used to cost the
+   * planet nothing: centred for the sheet alone, the Earth sat high in what
+   * was left once the field covered the sky above it.
+   *
+   * box() above cannot see it — the field is `position: fixed`, and
+   * offsetParent is null for fixed elements — so it is measured here instead.
+   * What it takes off the top is worth exactly what the sheet takes off the
+   * bottom, with the opposite sign.
+   */
+  const overTop = (el) => {
+    if (!el || el.hidden) return 0;
+    const r = el.getBoundingClientRect();
+    // Only something lying across the top of the globe, not beside or below it.
+    if (!r.height || r.left > g.right || r.right < g.left) return 0;
+    if (r.top > g.top + g.height / 2) return 0;
+    return Math.max(0, Math.min(r.bottom, g.bottom) - Math.max(r.top, g.top));
+  };
+  const covered = overTop(document.querySelector(".searchbar"));
   const shiftY = peek
-    ? Math.round(peek / 2)
-    : Math.round(Math.max(0, ...panels.map(below)) / 2);
+    ? Math.round((peek - covered) / 2)
+    : Math.round((Math.max(0, ...panels.map(below)) - covered) / 2);
   if (shiftX || shiftY) cam.setViewOffset(g.width, g.height, shiftX, shiftY, g.width, g.height);
   else cam.clearViewOffset();
   cam.updateProjectionMatrix();
