@@ -106,9 +106,7 @@ function wireSearch() {
     clearTimeout(debounce);
     debounce = setTimeout(() => runSearch(qEl.value), 130);
   });
-  // A new order is a new browse: the list repaints from the top.
-  $("placeSort")?.addEventListener("change", (e) => {
-    placeOrder = e.target.value;
-    loadPlaces("");
-  });
+  // Each press is the next order, and a new order is a new browse.
+  if (window.Icons) Icons.set($("placeSort"), "filter");
+  $("placeSort")?.addEventListener("click", nextSort);
 }

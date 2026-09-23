@@ -48,7 +48,9 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("favBtn"), "star");
   Icons.set($("tripBtn"), "shuffle");
   Icons.set($("setBtn"), "gear");
-  Icons.set($("newsSrc"), "source");
+  // A globe: the button chooses whose headlines — the world's, this place's,
+  // or the station's — and it sits where the phone's close button used to.
+  Icons.set($("newsSrc"), "globe");
   setPlayName(false);
   Icons.set($("lock"), "unlock");
   Icons.set($("mute"), "volumeHigh");

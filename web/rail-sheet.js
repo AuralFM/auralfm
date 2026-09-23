@@ -51,6 +51,18 @@
    * there is nothing to show in its place, so it rests at peek as before.
    */
   let rest = "peek", y = 0, restY = 0, downY = 0, drag = null, raf = 0, pending = 0;
+  let cardY = 0, exploreY = 0;
+  /**
+   * Two more rests, for the tabs that hold the sheet up: "card", the height of
+   * the Settings sheet, for Favourites; and "explore", a little under it. Every
+   * panel on a phone now opens to the same height and goes away the same way,
+   * which is the one Settings had: pull it down, or press its tab again.
+   */
+  const EXPLORE_SHARE = 0.86;
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;visibility:hidden;pointer-events:none;height:var(--panel-h,52dvh);width:0;top:0";
+  document.body.append(probe);
+  const panelH = () => probe.offsetHeight || Math.round(innerHeight * 0.52);
   let chosen = false;                  // has anything settled the sheet yet?
 
   const now = document.getElementById("now");
@@ -96,6 +108,10 @@
                    - rail.getBoundingClientRect().top)
       : Math.round(cols.clientHeight * PEEK_FALLBACK);
     restY = Math.max(0, Math.round(rail.offsetHeight - peek));
+    // Favourites stands exactly as tall as Settings, Headlines and Chat — the
+    // --panel-h they all use — and Explore a little under it.
+    cardY = Math.max(0, Math.round(rail.offsetHeight - panelH()));
+    exploreY = Math.max(0, Math.round(rail.offsetHeight - panelH() * EXPLORE_SHARE));
     // Clear of the shadow too, so nothing of it shows above the player.
     downY = rail.offsetHeight + 48;
     // How much of the bottom of the view the sheet takes at its home rest. The
@@ -121,11 +137,16 @@
      */
     rail.inert = phone.matches && rest === "down";
   };
-  const yOf = (r) => (r === "open" ? 0 : r === "peek" ? restY : downY);
+  const yOf = (r) => ({ open: 0, card: cardY, explore: exploreY, peek: restY }[r] ?? downY);
+  const busyNow = () => !!window.AuralRailSheet?.busy?.();
   const settle = (to) => {
-    if (to === "down" && !hasStation()) to = "peek";
+    // Down needs something to show in its place, unless a tab is being put away.
+    if (to === "down" && !hasStation() && !busyNow()) to = "peek";
     rest = to;
     chosen = true;
+    // All the way up, the sheet reaches the globe's own buttons at the top right;
+    // they step aside rather than sit over the list (and its sort button).
+    document.body.classList.toggle("sheet-open", phone.matches && to === "open");
     say();
     rail.classList.remove("sliding");
     rail.classList.add("settling");
@@ -141,7 +162,7 @@
     if (!phone.matches) return;
     // The handle and the heading drag; a control inside the heading does not.
     const inGrab = e.target === grab ||
-                   e.target.closest(".placehead") && !e.target.closest("button, input, a");
+                   e.target.closest(".placehead, .placebar") && !e.target.closest("button, input, a");
     if (!inGrab) return;
     measure();
     // Capture keeps the drag alive when the finger leaves the sheet's box. It
@@ -187,15 +208,30 @@
     const landing = y + project(drag.v);
     drag = null;
     cancelAnimationFrame(raf); raf = 0;
-    // Under a finger's width is a tap on the handle, which toggles.
-    if (moved < 10) return settle(rest === "open" ? "peek" : "open");
-    // The nearest rest to where the flick was going.
-    const rests = ["open", "peek", ...(hasStation() ? ["down"] : [])];
-    settle(rests.reduce((a, b) => (Math.abs(yOf(b) - landing) < Math.abs(yOf(a) - landing) ? b : a)));
+    /**
+     * A tap is not a request for full screen. It used to be — a tap on the
+     * handle or the place toggled the sheet all the way open, which is how a
+     * double tap near the sort sent the list full height with the sort under
+     * the globe's buttons. Now a tap puts the sheet back where it was.
+     */
+    if (moved < 10) return settle(rest);
+    // The nearest rest to where the flick was going. While a tab holds the
+    // sheet, its rests are its own height, full, and gone — and gone closes
+    // the tab, the way pulling Settings down closes Settings.
+    const busy = busyNow();
+    const held = busy ? (rest === "card" || rest === "explore" ? rest : "card") : null;
+    const rests = busy ? ["open", held, "down"] : ["open", "peek", ...(hasStation() ? ["down"] : [])];
+    const to = rests.reduce((a, b) => (Math.abs(yOf(b) - landing) < Math.abs(yOf(a) - landing) ? b : a));
+    settle(to);
+    if (busy && to === "down") window.AuralRailSheet?.onDismiss?.();
   }
 
   // Enter and Space on the handle, for everyone not using a finger.
-  grab.addEventListener("click", (e) => { if (!drag && e.detail === 0) settle(rest === "open" ? "peek" : "open"); });
+  grab.addEventListener("click", (e) => {
+    if (drag || e.detail !== 0) return;
+    const back = busyNow() ? "card" : "peek";
+    settle(rest === "open" ? back : "open");
+  });
   rail.addEventListener("pointerdown", start);
   rail.addEventListener("pointermove", move);
   rail.addEventListener("pointerup", end);
@@ -203,7 +239,7 @@
 
   const reset = () => {
     if (!phone.matches) { rail.style.removeProperty("--sheet-y"); rail.inert = false; return; }
-    if (rest === "down" && !hasStation()) rest = "peek";
+    if (rest === "down" && !hasStation() && !busyNow()) rest = "peek";
     measure(); rail.classList.remove("sliding"); put(yOf(rest));
   };
   // The place block changes height with every place — two lines of tags, or
@@ -247,11 +283,16 @@
     // first paint `rest` is only a default, the sheet is still where CSS left
     // it, and a skipped call recorded nothing for startup to respect.
     open: () => { if (phone.matches) { measure(); settle("open"); } },
-    /** Explore and Favourites: the sheet at its middle rest. */
     peek: () => { if (phone.matches) { measure(); settle("peek"); } },
+    /** Favourites: as tall as Settings. */
+    card: () => { if (phone.matches) { measure(); settle("card"); } },
+    /** Explore: a little under that. */
+    explore: () => { if (phone.matches) { measure(); settle("explore"); } },
     /** Back to where it lives: down with a station, peek without. */
     home: () => { if (phone.matches) { measure(); settle(home()); } },
     /** Set by the tab bar: is Explore or Favourites holding the sheet up? */
     busy: null,
+    /** Set by the tab bar: what pulling a held sheet all the way down means. */
+    onDismiss: null,
   };
 })();

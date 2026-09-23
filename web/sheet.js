@@ -138,6 +138,9 @@
       const y = new DOMMatrix(getComputedStyle(panel).transform).m42;
       spring(y, panel.offsetHeight, typeof velocity === "number" ? velocity : 0,
              { response: 0.3, damping: 0.8, onFrame: place, onDone: finish });
+      // A background tab gets no frames, so the spring alone could leave this
+      // closing forever; the timer finishes it if the spring has not.
+      setTimeout(() => { if (root.classList.contains("closing") && !root.hidden) { cancelAnimationFrame(anim); finish(); } }, 700);
       return;
     }
     root.classList.remove("open");
@@ -148,7 +151,8 @@
   function dragToDismiss(handle) {
     let startY = 0, startT = 0, samples = [];
     handle.addEventListener("pointerdown", (e) => {
-      if (!phone() || still() || e.target.closest("button")) return;
+      // Not gated on reduced motion: the drag is the listener's own movement.
+      if (!phone() || e.target.closest("button")) return;
       cancelAnimationFrame(anim);
       handle.setPointerCapture(e.pointerId);
       // Respect where it was grabbed: move from the sheet's current position.
@@ -173,11 +177,106 @@
       const v = t1 > t0 ? ((y1 - y0) / (t1 - t0)) * 1000 : 0;       // px/s
       const projected = y + (v / 1000) * 0.998 / (1 - 0.998);       // where the flick is going
       if (projected > panel.offsetHeight / 2) close(v);
+      else if (still()) place(0);
       else spring(y, 0, v, { response: 0.3, damping: 0.8, onFrame: place });
     };
     handle.addEventListener("pointerup", release);
     handle.addEventListener("pointercancel", release);
   }
 
-  window.AuralSheet = { open, close };
+  /**
+   * The same sheet, for the other panels.
+   *
+   * Settings was the one panel on a phone that behaved: it rose on a spring,
+   * followed a thumb down and went away when flicked, or stayed when not.
+   * Headlines and Chat opened instantly and would only close from a ×.
+   * These give any bottom panel exactly Settings' motion — the same spring,
+   * the same response and damping, the same projection of the flick — so the
+   * four feel like one thing. Phones only, like Settings' drag; reduced motion
+   * gets no movement at all.
+   *
+   *   rise(panel)            spring up from below, as Settings opens
+   *   sink(panel, done)      spring down, then done() actually closes it
+   *   draggable(panel, handles, close)
+   *                          a thumb on any handle drags it; a flick that would
+   *                          end past half its height calls close(velocity)
+   */
+  const springs = new WeakMap();
+  function springOn(el, from, to, v0, { response, damping, onFrame, onDone }) {
+    cancelAnimationFrame(springs.get(el));
+    const k = (2 * Math.PI / response) ** 2, c = 4 * Math.PI * damping / response;
+    let x = from, v = v0, last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(0.032, (now - last) / 1000); last = now;
+      v += (-k * (x - to) - c * v) * dt; x += v * dt;
+      if (Math.abs(x - to) < 0.5 && Math.abs(v) < 5) { onFrame(to); springs.delete(el); onDone?.(); return; }
+      onFrame(x);
+      springs.set(el, requestAnimationFrame(step));
+    };
+    springs.set(el, requestAnimationFrame(step));
+  }
+  const moveTo = (el) => (y) => { el.style.transform = y ? `translateY(${y}px)` : ""; };
+  const yNow = (el) => new DOMMatrix(getComputedStyle(el).transform).m42;
+
+  /**
+   * Both finish on a timer too. A spring advances on animation frames, and a
+   * browser sends none to a tab it has put in the background — so a panel
+   * asked to close there sat half-closed, still open, until the tab came back.
+   * Whichever comes first, the spring or the timer, finishes it, once.
+   */
+  function rise(el) {
+    if (!phone() || still() || !el || el.hidden) return;
+    const h = el.offsetHeight;
+    moveTo(el)(h);
+    springOn(el, h, 0, 0, { response: 0.35, damping: 1, onFrame: moveTo(el) });
+    setTimeout(() => { if (!springs.has(el)) return; cancelAnimationFrame(springs.get(el)); springs.delete(el); moveTo(el)(0); }, 900);
+  }
+  function sink(el, done, velocity = 0) {
+    if (!phone() || still() || !el || el.hidden) { moveTo(el)(0); done(); return; }
+    let finished = false;
+    const finish = () => { if (finished) return; finished = true; done(); moveTo(el)(0); };
+    springOn(el, yNow(el), el.offsetHeight, velocity, {
+      response: 0.3, damping: 0.8, onFrame: moveTo(el), onDone: finish,
+    });
+    setTimeout(() => { cancelAnimationFrame(springs.get(el)); springs.delete(el); finish(); }, 700);
+  }
+  function draggable(el, handles, close) {
+    let startY = 0, startT = 0, samples = [], id = null;
+    for (const h of handles) {
+      if (!h) continue;
+      h.addEventListener("pointerdown", (e) => {
+        // Reduced motion takes away the animation, not the gesture: the panel
+        // following your own thumb is motion you are making, and a sheet you
+        // could not drag was a sheet with no way to close but its tab.
+        if (!phone() || e.target.closest("button, a, input, select, textarea")) return;
+        cancelAnimationFrame(springs.get(el));
+        id = e.pointerId;
+        try { h.setPointerCapture(id); } catch {}
+        startT = yNow(el); startY = e.clientY; samples = [[e.timeStamp, startT]];
+      });
+      h.addEventListener("pointermove", (e) => {
+        if (e.pointerId !== id) return;
+        let y = startT + e.clientY - startY;
+        if (y < 0) y = -((-y * 60 * 0.55) / (60 + 0.55 * -y));   // resists upward, as Settings does
+        moveTo(el)(y);
+        samples.push([e.timeStamp, y]);
+        if (samples.length > 5) samples.shift();
+      });
+      const release = (e) => {
+        if (e.pointerId !== id) return;
+        id = null;
+        const y = yNow(el);
+        const [t0, y0] = samples[0], [t1, y1] = samples[samples.length - 1];
+        const v = t1 > t0 ? ((y1 - y0) / (t1 - t0)) * 1000 : 0;
+        const projected = y + (v / 1000) * 0.998 / (1 - 0.998);
+        if (projected > el.offsetHeight / 2) close(v);
+        else if (still()) moveTo(el)(0);
+        else springOn(el, y, 0, v, { response: 0.3, damping: 0.8, onFrame: moveTo(el) });
+      };
+      h.addEventListener("pointerup", release);
+      h.addEventListener("pointercancel", release);
+    }
+  }
+
+  window.AuralSheet = { open, close, rise, sink, draggable };
 })();

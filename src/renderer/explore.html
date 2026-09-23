@@ -364,17 +364,18 @@
   }
   .placebar{display:flex;align-items:center;flex:none;gap:8px}
   .placebar .secthead{flex:1;min-width:0}
-  /* A pill, not a form field: it reads as part of the heading it sorts. */
-  .placesort{
-    flex:none;margin:0 11px 4px 0;min-height:28px;padding:0 10px;
-    font:inherit;font-size:12px;font-weight:590;color:var(--label);
-    background:var(--fill);border:0;border-radius:var(--r-pill);
-    box-shadow:inset 0 0 0 .5px var(--line);cursor:default;
+  /* The filter mark, the colour of the heading it changes. */
+  .sortbtn{
+    flex:none;display:grid;place-items:center;width:28px;height:28px;margin:0 9px 3px 0;padding:0;
+    border:0;border-radius:var(--r-md);background:none;color:var(--label2);font-size:14px;cursor:default;
+    transition:background var(--dur-control) var(--ease-out),color var(--dur-control) var(--ease-out);
   }
-  .placesort:hover{background:var(--fill-hi)}
-  .placesort:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .placesort[hidden]{display:none}
-  @media (pointer: coarse){ .placesort{min-height:36px;font-size:13px} }
+  .sortbtn:hover{background:var(--fill);color:var(--label)}
+  .sortbtn:active{transform:scale(.92)}
+  .sortbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .sortbtn[aria-pressed="true"]{color:var(--accent)}
+  .sortbtn[hidden]{display:none}
+  @media (pointer: coarse){ .sortbtn{width:44px;height:44px;margin:-8px 3px -5px 0;font-size:16px} }
   .sublabel{
     padding:10px 8px 4px;font-size:11px;font-weight:590;color:var(--label3);letter-spacing:.005em;
   }
@@ -1549,18 +1550,12 @@
       </div>
     </div>
     <div class="railtabs" id="railtabs" role="radiogroup" hidden></div>
-    <!-- The count, and how the list is ordered. A native select so a phone gets
-         its own picker and a screen reader its own control; hidden except while
-         browsing places, which is the only list it can reorder. -->
+    <!-- The count, and how the list is ordered. One button: each press moves to
+         the next order, and the heading beside it says which one you are on.
+         Hidden except while browsing places, the only list it can reorder. -->
     <div class="placebar">
-      <div class="secthead" id="placehead"></div>
-      <select id="placeSort" class="placesort" hidden aria-label="Sort places" data-i18n-title="sort.label">
-        <option value="stations" data-i18n="sort.stations">Most stations</option>
-        <option value="gems" data-i18n="sort.gems">Hidden gems</option>
-        <option value="near" data-i18n="sort.near">Near here</option>
-        <option value="awake" data-i18n="sort.awake">Awake now</option>
-        <option value="random" data-i18n="sort.random">Shuffle</option>
-      </select>
+      <div class="secthead" id="placehead" aria-live="polite"></div>
+      <button type="button" id="placeSort" class="sortbtn" hidden aria-label="Sort places"></button>
     </div>
     <div class="scroll" id="placelist" hidden></div>
     <div class="scroll" id="stationlist">

@@ -129,7 +129,28 @@ function failureInto(el, message, retry) {
  */
 const sortEl = $("placeSort");
 let placeOrder = "stations";
+/**
+ * One button, pressed to move on. The heading beside it says where you are:
+ * "12,579 places" for the default, the order's own name for the rest — in the
+ * heading's type, not a pop-up of choices. That was a native select, which
+ * on a phone opened a picker over a sheet the tap had also just expanded.
+ */
+const PLACE_ORDERS = ["stations", "gems", "near", "awake", "random"];
+const orderName = (o) => t(`sort.${o}`, { stations: "Most stations", gems: "Hidden gems",
+  near: "Near here", awake: "Awake now", random: "Shuffle" }[o]);
 function showSort(on) { if (sortEl) sortEl.hidden = !on; }
+function paintSort() {
+  if (!sortEl) return;
+  const next = PLACE_ORDERS[(PLACE_ORDERS.indexOf(placeOrder) + 1) % PLACE_ORDERS.length];
+  const label = t("sort.label", "Sort places");
+  sortEl.setAttribute("aria-label", `${label}: ${orderName(placeOrder)}. Next: ${orderName(next)}`);
+  sortEl.title = `${label} · ${orderName(placeOrder)}`;
+  sortEl.setAttribute("aria-pressed", String(placeOrder !== "stations"));
+}
+function nextSort() {
+  placeOrder = PLACE_ORDERS[(PLACE_ORDERS.indexOf(placeOrder) + 1) % PLACE_ORDERS.length];
+  loadPlaces("");
+}
 
 /** Where "near here" is measured from: the middle of the globe, else the place. */
 function sortOpts() {
@@ -205,9 +226,11 @@ async function loadPlaces(query = "") {
       "No stations are installed in this copy of AuralFM. It was built without its station catalog."));
     return;
   }
-  // The order is the control beside this, so the heading is just the count.
-  placeHeadEl.textContent = `${total.toLocaleString()} places`;
+  // The count for the default order, the order's name for the others.
+  placeHeadEl.textContent = placeOrder === "stations"
+    ? `${total.toLocaleString()} places` : orderName(placeOrder);
   showSort(true);
+  paintSort();
   placeListEl.scrollTop = 0;
   placeListEl.hidden = false;
   stationListEl.hidden = true;

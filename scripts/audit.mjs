@@ -1311,12 +1311,13 @@ console.log("\nlight theme agrees with itself");
 //
 // `MARK` takes a weight for exactly this, and the failure mode is forgetting one
 // when adding the next mark. Solid shapes are exempt: `dots` is three filled
-// circles and `globe` is a filled disc, and stroking either would thicken a
-// shape that has no line to thicken.
+// circles, `globe` is a filled disc and `filter` is three filled bars (about
+// 2px each at icon size), and stroking any of them would thicken a shape that
+// has no line to thicken.
 {
   console.log("\nevery outline mark carries a stroke weight");
   const src = fs.readFileSync(R("src/renderer/icons.js"), "utf8");
-  const SOLID = new Set(["dots", "globe"]);
+  const SOLID = new Set(["dots", "globe", "filter"]);
   const missing = [];
   for (const m of src.matchAll(/(\w+): MARK\("([^"]+)",\s*`[\s\S]*?`(,\s*(\d+))?\)/g)) {
     const [, name, , , weight] = m;

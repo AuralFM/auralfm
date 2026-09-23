@@ -113,9 +113,16 @@
         if (typeof restorePlaceView === "function") restorePlaceView();
       }
     },
-    headlines(on) { if (shown.headlines() !== on) $("newsBtn")?.click(); },
+    headlines(on) {
+      const panel = $("newspanel");
+      if (on) { if (!shown.headlines()) $("newsBtn")?.click(); window.AuralSheet?.rise(panel); }
+      else if (shown.headlines()) sinkThen(panel, () => { if (shown.headlines()) $("newsBtn")?.click(); });
+    },
     favorites(on) { if (shown.favorites() !== on) $("favBtn")?.click(); },
-    chat(on) { chatPanel.hidden = !on; },
+    chat(on) {
+      if (on) { chatPanel.hidden = false; window.AuralSheet?.rise(chatPanel); }
+      else if (!chatPanel.hidden) sinkThen(chatPanel, () => { chatPanel.hidden = true; });
+    },
     settings(on) { if (on) window.AuralSheet?.open(); else window.AuralSheet?.close(); },
   };
 
@@ -146,7 +153,14 @@
     }
   };
 
+  /** Down on Settings' spring, then really closed, then the tabs told. */
+  const sinkThen = (panel, close, v = 0) => {
+    const done = () => { close(); sync(); };
+    if (window.AuralSheet?.sink) window.AuralSheet.sink(panel, done, v); else done();
+  };
+
   const setTab = (name) => {
+    if (held && name !== held) held = null;      // another tab takes the sheet's place
     // Headlines and chat replace the sheet rather than covering it; Explore and
     // Favourites *are* the sheet, so it stays.
     document.body.classList.toggle("panel-open", name === "headlines" || name === "chat");
@@ -170,14 +184,31 @@
    * back when they are not: with a station in the player that is all the way
    * down, so closing Explore returns the globe rather than leaving a card up.
    */
-  const raise = (name) => {
-    if (shown[name]()) window.AuralRailSheet?.peek();
-    else window.AuralRailSheet?.home();
+  /**
+   * Which tab is holding the sheet up, from the tap rather than read back.
+   *
+   * It was read back from the DOM right after the tap, and Favourites marks
+   * itself open only once its list has loaded — so the read said "closed",
+   * the sheet went straight back down, and Favourites appeared to do nothing
+   * at all, on and off. The tap already knows what it asked for.
+   */
+  let held = null;
+  const raise = (name, on) => {
+    held = on ? name : (held === name ? null : held);
+    const sheet = window.AuralRailSheet;
+    if (!sheet) return;
+    if (on) name === "favorites" ? sheet.card() : sheet.explore();
+    else sheet.home();
   };
-  if (window.AuralRailSheet) window.AuralRailSheet.busy = () => shown.explore() || shown.favorites();
+  if (window.AuralRailSheet) {
+    window.AuralRailSheet.busy = () => held !== null;
+    // Pulled all the way down: that tab is closed, as Settings closes.
+    window.AuralRailSheet.onDismiss = () => { held = null; setTab("none"); };
+  }
   tab("explore", "Explore", "globe", () => {
+    const on = !shown.explore();
     toggle("explore");
-    raise("explore");
+    raise("explore", on);
   });
   tab("headlines", "Headlines", "headlines", () => toggle("headlines"));
   /**
@@ -190,8 +221,9 @@
    * settles to the same peek Explore does.
    */
   tab("favorites", "Favorites", "star", () => {
+    const on = !shown.favorites();
     toggle("favorites");
-    raise("favorites");
+    raise("favorites", on);
   });
   tab("chat", "Chat", "chat", () => toggle("chat"));
   tab("settings", "Settings", "gear", () => toggle("settings"));
@@ -272,6 +304,18 @@
       const chat = $("chat");
       if (chat) { remember(chat); chatPanel.append(chat, chatNone); }
       document.body.append(searchbar, chatPanel, tabs);
+      // Headlines and Chat get Settings' handle and Settings' drag.
+      for (const [panel, head, close] of [
+        [$("newspanel"), ".newshead", (v) => sinkThen($("newspanel"), () => { if (shown.headlines()) $("newsBtn")?.click(); }, v)],
+        [chatPanel, ".chathead", (v) => sinkThen(chatPanel, () => { chatPanel.hidden = true; }, v)],
+      ]) {
+        if (!panel || panel.querySelector(":scope > .panelgrab")) continue;
+        const grip = document.createElement("div");
+        grip.className = "panelgrab";
+        grip.setAttribute("aria-hidden", "true");
+        panel.prepend(grip);
+        window.AuralSheet?.draggable(panel, [grip, panel.querySelector(head)], close);
+      }
       sync();                // nothing is open; the globe has the screen
     } else {
       open.remove(); side.remove();
