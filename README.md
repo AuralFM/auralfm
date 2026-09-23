@@ -199,7 +199,6 @@ and its target, five kilohertz apart, both on the same list.*
   now. Drawn as arcs bowing off the surface — because that is what the signal
   did — with brightness following signal-to-noise. Rome to New Zealand is 18,512
   km and it is on the globe right now.
-- **Aircraft near where you are looking** — optional, capped, and off by default.
 - **Other listeners and their messages**, if you switch it on — see below.
 - **Live local conditions** — pick a place and see its weather and local time, so
   you know it is 53°F and overcast at 12:45 AM where the station is.
@@ -315,7 +314,6 @@ selected city's coordinates are sent, never the user's location.
 ```
   wspr.live        propagation arcs      one aggregated query / 3 min
   NOAA SWPC        solar flux, Kp        every 20 min
-  adsb.lol         aircraft near view    every 12s, only while the layer is on
   Coinbase         crypto ticker         one WebSocket
   a KiwiSDR        shortwave audio       only when you click that receiver
   Nostr relays     other listeners       only if you switch presence on
@@ -339,9 +337,9 @@ mixed-content blocking kills them silently. A native shell has no such limit.
 
 ![The layer inspector](docs/media/03-layers.png)
 
-*Everything the globe draws, and what it costs. Aircraft and WSPR are dimmed
-because they are off by default — both poll a volunteer service, so they are
-something you ask for rather than something you have to notice and switch off.*
+*Everything the globe draws, and what it costs. WSPR is dimmed because it is off
+by default — it polls a volunteer service, so it is something you ask for rather
+than something you have to notice and switch off.*
 
 ## Project layout
 
@@ -364,7 +362,6 @@ src/                     main process unless noted
   iss.js                 live ISS position
   satellites.js          orbiting objects and their paths
   space.js               solar flux and geomagnetic activity
-  flights.js             aircraft near the view, capped
   wspr.js                propagation reports -> arcs
   sdr.js                 shortwave receiver list
   schedule.js            what is on shortwave right now (EiBi)
@@ -516,7 +513,6 @@ so "kexp", "wwoz" and "new orleans" all work without being exact.
 - Shortwave receivers: the [KiwiSDR](http://kiwisdr.com) community, and the
   operators who pay for the bandwidth
 - Orbital elements: [CelesTrak](https://celestrak.org) and [SatNOGS](https://db.satnogs.org)
-- Aircraft positions: [adsb.lol](https://adsb.lol)
 - Propagation reports: [wspr.live](https://wspr.live), and the amateurs whose
   beacons and receivers make the data exist at all
 - Space weather: [NOAA SWPC](https://www.swpc.noaa.gov)

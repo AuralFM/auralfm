@@ -13,7 +13,7 @@
  *
  * Drawn as slow pulsing rings rather than dots, because a different *shape*
  * reads as a different kind of thing far more reliably than a different colour —
- * and on a globe that already carries station dots, receiver dots, aircraft
+ * and on a globe that already carries station dots, receiver dots, orbit
  * trails and propagation arcs, one more coloured dot would just be noise.
  *
  * A ring is also the honest picture: these are not points, they are geohash

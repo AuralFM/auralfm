@@ -61,6 +61,8 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   padding: 8px 8px 6px 20px; box-shadow: inset 0 -.5px 0 var(--line);
 }
 .setsheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+/* Focused only so the dialog has somewhere to start; it is not a control. */
+.setsheet-head h2:focus { outline: none; }
 .setsheet-done {
   appearance: none; border: 0; background: none; cursor: default;
   min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--r-md);
@@ -374,6 +376,14 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .setsheet.open .setsheet-scrim { opacity: var(--dim, 1); transition: none; }
   .setsheet-grab { display: block; }
   .setsheet-head, .setsheet-grab { touch-action: none; }
+  /* No Done on a phone. The bar is always live under the sheet now, so there
+     were three ways out — another tab, pulling it down, and Done — and on a
+     phone the first two are what every other app has taught. Wide screens keep
+     it: there is no tab bar there, and it is the only visible way out. */
+  .setsheet-done { display: none; }
+  /* Done was what gave the header its height, and the header is also the drag
+     handle — so it keeps a finger's height without it. */
+  .setsheet-head { min-height: 44px; box-sizing: border-box; }
   /* The scrim would blacken the planet this is supposed to sit over. */
   .setsheet-scrim { background: rgba(0, 0, 0, .28); }
 

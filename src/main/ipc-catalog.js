@@ -50,7 +50,7 @@ module.exports = function register(ctx) {
     if (ok) broadcast("mine:changed");
     return ok;
   });
-  ipcMain.handle("catalog:places", (_e, q, limit) => catalog.placeSearch(q, limit));
+  ipcMain.handle("catalog:places", (_e, q, limit, opts) => catalog.placeSearch(q, limit, opts || {}));
   ipcMain.handle("catalog:placeChannels", (_e, i, filter) => {
     const r = catalog.placeChannels(i, filter);
     if (!r.place) return r;

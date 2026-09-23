@@ -27,6 +27,7 @@ async function showFavorites() {
   // unrelated click forced it back. Selecting any place calls renderRailTabs,
   // which unhides them again.
   $("railtabs").hidden = true;
+  showSort(false);                     // favourites are yours, not a browse
   placeHeadEl.textContent = favorites.length
     ? `${favorites.length} favorite${favorites.length === 1 ? "" : "s"}`
     : "Favorites";
@@ -315,6 +316,13 @@ let newsOpen = false;
  */
 const NEWS_SOURCES = ["world", "place", "playing"];
 let newsSource = "world";
+/**
+ * Which render is the current one. Renders overlap — the globe moves the place
+ * every 90ms while it spins, and the World feed is 200 KB through the web's
+ * proxy — and without this the slowest answer won, so a panel headed "France"
+ * could fill with the world edition that was asked for two places ago.
+ */
+let newsSeq = 0;
 
 function relTime(ms) {
   if (!ms) return "";
@@ -356,7 +364,9 @@ async function renderNewsPanel() {
   // both. Empty is a fact about the place; failed is a fact about the network,
   // and only one of them is worth offering a button for.
   const FAILED = Symbol("failed");
+  const my = ++newsSeq;
   const items = await guard("news", () => window.auralfm.news(country), FAILED);
+  if (my !== newsSeq) return;             // a newer render owns the list now
   list.removeAttribute("aria-busy");
   if (!newsOpen) return;
 
@@ -370,7 +380,10 @@ async function renderNewsPanel() {
     const again = document.createElement("button");
     again.className = "retry";
     again.textContent = t("action.retry", "Try again");
-    again.onclick = () => loadNews(country);
+    // Render again, not loadNews(): that only tracks which country is playing,
+    // returns early when it has not changed, and renders nothing for the World
+    // and This place sources — so this button did nothing for either.
+    again.onclick = () => renderNewsPanel();
     box.append(msg, again);
     list.append(box);
     return;
@@ -558,6 +571,7 @@ function wirePanels() {
       // placelist, so hiding that leaves 22px of "6 favorites" sitting above the
       // station list of a place it has nothing to do with.
       placeHeadEl.textContent = "";
+      showSort(false);
       renderRailTabs(nearbyReceivers());
       renderStations();
       syncTunerVisibility();

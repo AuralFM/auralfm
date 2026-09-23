@@ -26,3 +26,6 @@ assets/sky.json
 
 # Built by scripts/build-web.mjs
 dist-web/
+
+# here.now publish state, written by its publish script; local to this machine.
+/.herenow/

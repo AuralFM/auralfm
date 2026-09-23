@@ -98,7 +98,7 @@ const isFav = (id) => favorites.some((f) => f.id === id);
  * slow network and nothing to press.
  *
  * Only for surfaces somebody is waiting on. The background polls — weather,
- * clouds, flights, the ISS — are best-effort by design and degrade by drawing
+ * clouds, the ISS — are best-effort by design and degrade by drawing
  * nothing; a retry button for a 4Hz tick would be noise.
  */
 function failureInto(el, message, retry) {
@@ -120,14 +120,34 @@ function failureInto(el, message, retry) {
 }
 
 // ── places ───────────────────────────────────────────────────────────────────
+/**
+ * How the browse list is ordered (src/catalog.js, PLACE_ORDERS).
+ *
+ * Shown only while the list is the browse list: a search ranks by the match,
+ * favourites are yours, and a place's stations are a different list — so every
+ * path that repaints the heading for something else puts the control away.
+ */
+const sortEl = $("placeSort");
+let placeOrder = "stations";
+function showSort(on) { if (sortEl) sortEl.hidden = !on; }
+
+/** Where "near here" is measured from: the middle of the globe, else the place. */
+function sortOpts() {
+  if (placeOrder !== "near") return { order: placeOrder };
+  const pov = typeof globe !== "undefined" && globe ? globe.pointOfView() : null;
+  const lat = pov?.lat ?? selection.place?.lat, lon = pov?.lng ?? selection.place?.lon;
+  return { order: placeOrder, lat, lon };
+}
+
 async function loadPlaces(query = "") {
   const my = ++seq;
-  const res = await guard("places", () => window.auralfm.places(query, 400), null);
+  const res = await guard("places", () => window.auralfm.places(query, 400, sortOpts()), null);
   if (my !== seq) return;
   if (!res) {
     placeListEl.hidden = false;
     stationListEl.hidden = true;
     placeHeadEl.textContent = "";
+    showSort(false);
     failureInto(placeListEl, t("places.unreachable", "Could not load places."),
                 () => loadPlaces(query));
     return;
@@ -141,11 +161,15 @@ async function loadPlaces(query = "") {
     placeListEl.hidden = false;
     stationListEl.hidden = true;
     placeHeadEl.textContent = "";
+    showSort(false);
     failureInto(placeListEl, t("places.noCatalog",
       "No stations are installed in this copy of AuralFM. It was built without its station catalog."));
     return;
   }
-  placeHeadEl.textContent = `${total.toLocaleString()} places · most stations first`;
+  // The order is the control beside this, so the heading is just the count.
+  placeHeadEl.textContent = `${total.toLocaleString()} places`;
+  showSort(true);
+  placeListEl.scrollTop = 0;
   placeListEl.hidden = false;
   stationListEl.hidden = true;
   placeListEl.innerHTML = "";
@@ -225,6 +249,7 @@ async function goToPlace(i, { play = false, fly = true } = {}) {
   placeListEl.hidden = true;
   stationListEl.hidden = false;
   placeHeadEl.textContent = "";      // the search summary no longer applies
+  showSort(false);
   await selectPlace(i);
   if (fly && selection.place) flyTo(selection.place.lat, selection.place.lon);
   // Prefer a station the directory believes is alive.

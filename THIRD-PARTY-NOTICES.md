@@ -373,7 +373,6 @@ publish it are the reason this app has anything to show.
 - **NOAA Space Weather Prediction Center** — Public domain (US Government work). Solar flux and K-index.
 - **WSPRnet / wspr.live** — Community published. Propagation reports.
 - **radio.garden** — Referenced. Station geography.
-- **adsb.lol** — Community published. Aircraft positions.
 - **CelesTrak / SatNOGS** — Community published. Orbital elements.
 - **The KiwiSDR operators** — Volunteered. 837 receivers, on their hardware and their bandwidth, given away free. Not a licence — a debt.
 - **Inter** — SIL Open Font License 1.1. The interface typeface, vendored at `assets/fonts/InterVariable.woff2`. Copyright (c) 2016 The Inter Project Authors. Full licence at `assets/fonts/Inter-LICENSE.txt`.

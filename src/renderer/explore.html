@@ -362,6 +362,19 @@
   .secthead{
     padding:2px 15px 5px;font-size:11px;font-weight:590;letter-spacing:.005em;color:var(--label2);flex:none;
   }
+  .placebar{display:flex;align-items:center;flex:none;gap:8px}
+  .placebar .secthead{flex:1;min-width:0}
+  /* A pill, not a form field: it reads as part of the heading it sorts. */
+  .placesort{
+    flex:none;margin:0 11px 4px 0;min-height:28px;padding:0 10px;
+    font:inherit;font-size:12px;font-weight:590;color:var(--label);
+    background:var(--fill);border:0;border-radius:var(--r-pill);
+    box-shadow:inset 0 0 0 .5px var(--line);cursor:default;
+  }
+  .placesort:hover{background:var(--fill-hi)}
+  .placesort:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .placesort[hidden]{display:none}
+  @media (pointer: coarse){ .placesort{min-height:36px;font-size:13px} }
   .sublabel{
     padding:10px 8px 4px;font-size:11px;font-weight:590;color:var(--label3);letter-spacing:.005em;
   }
@@ -1536,7 +1549,19 @@
       </div>
     </div>
     <div class="railtabs" id="railtabs" role="radiogroup" hidden></div>
-    <div class="secthead" id="placehead"></div>
+    <!-- The count, and how the list is ordered. A native select so a phone gets
+         its own picker and a screen reader its own control; hidden except while
+         browsing places, which is the only list it can reorder. -->
+    <div class="placebar">
+      <div class="secthead" id="placehead"></div>
+      <select id="placeSort" class="placesort" hidden aria-label="Sort places" data-i18n-title="sort.label">
+        <option value="stations" data-i18n="sort.stations">Most stations</option>
+        <option value="gems" data-i18n="sort.gems">Hidden gems</option>
+        <option value="near" data-i18n="sort.near">Near here</option>
+        <option value="awake" data-i18n="sort.awake">Awake now</option>
+        <option value="random" data-i18n="sort.random">Shuffle</option>
+      </select>
+    </div>
     <div class="scroll" id="placelist" hidden></div>
     <div class="scroll" id="stationlist">
       <div class="empty">Spin the globe, or search for a city.</div>

@@ -2,9 +2,11 @@
  * Settings as a sheet over the app, where the desktop opens a window.
  *
  * A modal task, so it dims what is behind it and takes the focus: the page goes
- * inert while it is open, the way the desktop's reader and share sheet do. Three
- * ways out, all of them expected on iOS and the web — Done, a tap on the dimmed
- * page, Escape — and focus returns to the Settings button, where it came from.
+ * inert while it is open, the way the desktop's reader and share sheet do. On
+ * wide screens, three ways out — Done, a tap on the dimmed page, Escape. On a
+ * phone Done is hidden (web.css): the tab bar stays live under the sheet, so any
+ * tab, the Settings tab again, or pulling the sheet down closes it, as they do
+ * every other panel there. Focus returns to where it came from.
  *
  * Wide screens get a form sheet that grows from the Settings button (motion
  * starts from its source). Phones get a bottom sheet you can drag: it tracks
@@ -49,7 +51,7 @@
       <div class="setsheet-panel" role="dialog" aria-modal="true" aria-labelledby="setsheet-title">
         <div class="setsheet-grab" aria-hidden="true"></div>
         <header class="setsheet-head">
-          <h2 id="setsheet-title">Settings</h2>
+          <h2 id="setsheet-title" tabindex="-1">Settings</h2>
           <button type="button" class="setsheet-done">Done</button>
         </header>
         <iframe class="setsheet-frame" title="Settings" src="about:blank"></iframe>
@@ -88,6 +90,11 @@
     frame.src = "settings.html";
     root.hidden = false;
     for (const el of behind()) el.inert = true;
+    // A modal only where it is one. On a phone it is a tab, and VoiceOver keeps
+    // the reader inside an aria-modal dialog — which, with no Done there, would
+    // leave nothing to swipe to that closes it. Without the flag the tab bar is
+    // reachable, as it is by touch.
+    panel.setAttribute("aria-modal", String(!phone()));
     // Grow from the button that opened it, on wide screens.
     const r = document.getElementById("setBtn")?.getBoundingClientRect();
     if (r) {
@@ -103,7 +110,11 @@
     } else {
       requestAnimationFrame(() => root.classList.add("open"));
     }
-    root.querySelector(".setsheet-done").focus();
+    // Done where there is one; on a phone it is hidden and cannot take focus,
+    // so the dialog's own title does, and VoiceOver starts at "Settings".
+    const done = root.querySelector(".setsheet-done");
+    if (done.offsetParent) done.focus();
+    else root.querySelector("#setsheet-title").focus();
   }
 
   function finish() {

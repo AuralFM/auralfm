@@ -304,6 +304,7 @@ async function selectReceiver(rx, { tuneTo = null } = {}) {
   placeListEl.hidden = true;
   stationListEl.hidden = false;
   placeHeadEl.textContent = "";
+  showSort(false);
   $("chips").innerHTML = "";
   $("wx").textContent = "";
 

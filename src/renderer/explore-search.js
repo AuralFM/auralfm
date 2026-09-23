@@ -29,6 +29,7 @@ async function runSearch(query) {
   placeListEl.hidden = false;
   stationListEl.hidden = true;
   headEl.hidden = true;
+  showSort(false);                     // a search ranks by the match
   placeHeadEl.textContent = `${places.total.toLocaleString()} place${places.total === 1 ? "" : "s"}`
     + (stations.length ? ` · ${stations.length} station${stations.length === 1 ? "" : "s"}` : "");
 
@@ -104,5 +105,10 @@ function wireSearch() {
   qEl.addEventListener("input", () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => runSearch(qEl.value), 130);
+  });
+  // A new order is a new browse: the list repaints from the top.
+  $("placeSort")?.addEventListener("change", (e) => {
+    placeOrder = e.target.value;
+    loadPlaces("");
   });
 }

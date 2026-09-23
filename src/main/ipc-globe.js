@@ -1,5 +1,5 @@
 /**
- * IPC: What the globe shows: clouds, satellites, the ISS, the sky, weather, headlines and the article reader, markets, receivers and the shortwave schedule, flights, WSPR and space weather.
+ * IPC: What the globe shows: clouds, satellites, the ISS, the sky, weather, headlines and the article reader, markets, receivers and the shortwave schedule, WSPR and space weather.
  *
  * Registered once, from main.js, which passes `ctx`: the helpers these
  * handlers share with the rest of the main process, and getters for the windows
@@ -8,7 +8,6 @@
 
 const { BrowserWindow, app, ipcMain } = require("electron");
 const clouds = require("../clouds");
-const flights = require("../flights");
 const fs = require("node:fs");
 const i18n = require("../i18n");
 const iss = require("../iss");
@@ -132,7 +131,6 @@ module.exports = function register(ctx) {
   // the renderer so the 9,289-row table is parsed once, in one process.
   ipcMain.handle("sdr:onair", (_e, opts) => schedule.onAir(new Date(), opts || {}));
   ipcMain.handle("sdr:schedule", () => schedule.meta());
-  ipcMain.handle("flights:get", (_e, lat, lng, span, want) => flights.get(lat, lng, span, want));
   ipcMain.handle("wspr:get", (_e, band) => wspr.get(band));
   ipcMain.handle("space:get", () => space.get());
 };

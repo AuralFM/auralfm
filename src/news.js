@@ -55,8 +55,18 @@ const LOCALES = {
   "Bulgaria": ["BG", "bg"],              "Slovakia": ["SK", "sk"],
 };
 
-// This endpoint is undocumented, so treat an outage as a reason to stop asking.
-const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "news" });
+/**
+ * This endpoint is undocumented, so treat an outage as a reason to stop asking —
+ * briefly.
+ *
+ * It was two minutes doubling to thirty, which is right for a poll and wrong for
+ * this: headlines are only fetched while somebody has the panel open, so every
+ * request is a person waiting. One dropped request on a phone (a tunnel, the app
+ * sent to the background mid-fetch) blanked every country for minutes, and the
+ * panel said "unavailable right now" each time it was reopened. The 15-minute
+ * cache is what protects Google; this only has to stop a retry storm.
+ */
+const cool = cooldown({ min: 15_000, max: 2 * 60_000, label: "news" });
 
 /**
  * HTML entities to text.
@@ -165,13 +175,26 @@ const WORLD_TOPIC = "CAAqKggKIiRDQkFTRlFvSUwyMHZNRGx1YlY4U0JXVnVMVlZUR2dKVlV5Z0F
 const setBase = (base) => { RSS = String(base).replace(/\/+$/, ""); };
 
 /**
+ * Headlines for a country, or throws.
+ *
+ * Throws rather than returning [] when nothing could be fetched, because the
+ * panel tells "this place has no headlines" apart from "the network failed" and
+ * offers Try again only for the second. Returning [] for both meant it never
+ * offered it: a dropped request read as "Headlines unavailable right now", with
+ * no way forward but closing and reopening. An older copy still beats an error.
+ *
  * @param {string|null} country  null or "world" for the international edition
  */
 async function get(country, limit = 12) {
-  const key = country || "world";
+  // A country with no locale here gets the world edition, as the header says.
+  // It used to get the US edition, so a station in Senegal showed American news.
+  const key = country && LOCALES[country] ? country : "world";
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.items;
-  if (cool.blocked) return hit?.items || [];
+  if (cool.blocked) {
+    if (hit) return hit.items;
+    throw new Error(`news: backing off for ${cool.remaining}s`);
+  }
 
   // No country means world news, not "whatever the US is reading" — this app is
   // about the whole globe, and the default should say so. The World topic by its
@@ -180,7 +203,7 @@ async function get(country, limit = 12) {
   const url = key === "world"
     ? `${RSS}/topics/${WORLD_TOPIC}?hl=en-US&gl=US&ceid=US:en`
     : (() => {
-        const [gl, hl] = LOCALES[country] || ["US", "en-US"];
+        const [gl, hl] = LOCALES[key];
         return `${RSS}?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
       })();
 
@@ -190,14 +213,15 @@ async function get(country, limit = 12) {
       redirect: "follow",            // the topic feed 302s to a signed URL
       signal: AbortSignal.timeout(9000),
     });
-    if (!res.ok) { cool.fail(`HTTP ${res.status}`); return []; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const items = parseItems(await res.text(), limit);
     cache.set(key, { at: Date.now(), items });
     cool.ok();
     return items;
   } catch (err) {
     cool.fail(err);
-    return [];
+    if (hit) return hit.items;
+    throw err;
   }
 }
 

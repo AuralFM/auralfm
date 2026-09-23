@@ -2542,6 +2542,47 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`the web build carries all ${wanted.length} documents and can read them`);
 }
 
+// ── headlines say when they failed, and the newest answer wins ──────────────
+// Reported from the iOS PWA on 2026-09-23 as "sometimes it works, sometimes it
+// doesn't". Four faults, each enough on its own:
+//  - news.get() answered a failure with [], so the panel's "Could not reach the
+//    headlines · Try again" state was unreachable: a dropped request on a phone
+//    read as "unavailable right now", with a cooldown behind it of up to 30
+//    minutes across every country;
+//  - Try again called loadNews(), which does nothing for World or This place;
+//  - renders overlapped with no token, so the slowest answer painted last —
+//    a panel headed "France" could fill with the world edition;
+//  - every player status message repainted the panel, flashing it back to
+//    placeholders and fetching again while a station buffered.
+{
+  console.log("\nheadlines say when they failed, and the newest answer wins");
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const news = strip(readSrc("src/news.js"));
+  const panels = strip(readSrc("src/renderer/explore-panels.js"));
+  const playback = strip(readSrc("src/renderer/explore-playback.js"));
+  const gaps = [];
+  const get = news.match(/async function get\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/);
+  if (!get) gaps.push("news.get is gone — this check is blind");
+  else {
+    if (/return\s*\[\s*\]/.test(get[1])) gaps.push("news.get answers a failure with [], which the panel reads as 'no headlines'");
+    if (!/throw\b/.test(get[1])) gaps.push("news.get never throws, so the panel cannot tell a failure from an empty feed");
+  }
+  const render = panels.match(/async function renderNewsPanel\s*\(\)\s*\{([\s\S]*?)\n\}/);
+  if (!render) gaps.push("renderNewsPanel is gone — this check is blind");
+  else {
+    const body = render[1];
+    const token = body.match(/const (\w+) = \+\+(\w+);/);
+    if (!token || !new RegExp(`${token[1]}\\s*!==\\s*${token[2]}`).test(body))
+      gaps.push("renderNewsPanel has no token, so an older answer can paint over a newer one");
+    const retry = body.match(/again\.onclick\s*=\s*([^;]+);/);
+    if (retry && /loadNews/.test(retry[1])) gaps.push("Try again calls loadNews, which does nothing for World or This place");
+  }
+  if (/renderNewsPanel\s*\(/.test(playback))
+    gaps.push("the player's status handler repaints the headlines on every message");
+  gaps.length ? fail("headlines say when they failed", gaps.join("; "))
+    : pass("a failed fetch offers Try again, which retries, and only the newest render paints");
+}
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

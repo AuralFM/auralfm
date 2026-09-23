@@ -1,5 +1,5 @@
 /**
- * Explore, part 14 of 17: Space weather, WSPR, flights, satellites and the ISS — and fitting the globe to its window.
+ * Explore, part 14 of 17: Space weather, WSPR, satellites and the ISS — and fitting the globe to its window.
  *
  * Explore is one page split across plain scripts that share a global scope, in
  * the order explore.html loads them. Declarations live here; anything that runs
@@ -17,7 +17,6 @@
  * SGP4 propagator.
  */
 let issTrail = [], issTimer = null, sats = [], satTimer = null;
-let flightData = [], flightTimer = null, flightBusy = false;
 let wsprData = [], wsprTimer = null, wsprBusy = false;
 
 /**
@@ -38,7 +37,7 @@ async function refreshSpace() {
  * the whole shortwave feature depends on and the one thing the globe could not
  * previously show.
  *
- * Same discipline as the aircraft layer: nothing fetched unless the layer is on,
+ * It polls a volunteer-run service, so: nothing fetched unless the layer is on,
  * nothing fetched while the window is hidden, and the module behind it caps the
  * result and backs off.
  */
@@ -68,74 +67,6 @@ function syncWsprTimer() {
     paintOrbits();
   }
 }
-
-/**
- * Aircraft near where you are looking.
- *
- * Three guards, and all three exist because this polls a volunteer-run feed:
- * nothing is fetched unless the layer is on, nothing is fetched while the window
- * is hidden, and only one request is ever in flight. The module behind it caps
- * the result and backs off on failure.
- *
- * Drawn as short heading trails rather than dots. A dot cannot show which way
- * something is going, and direction is most of what makes a moving aircraft
- * interesting — the traffic over an airport reads as arrivals and departures
- * rather than a swarm.
- */
-/** Start or stop the poll to match the layer, idempotently. */
-function syncFlightTimer() {
-  const wanted = !!layers.flights;
-  const running = !!flightTimer;
-  if (wanted === running) return;
-  clearInterval(flightTimer);
-  flightTimer = null;
-  if (wanted) {
-    tickFlights();
-    flightTimer = setInterval(tickFlights, 12000);
-  } else {
-    flightData = [];
-    paintOrbits();
-  }
-}
-
-async function tickFlights() {
-  if (!layers.flights || !globe) { paintFlights([]); return; }
-  if (document.hidden || flightBusy) return;
-  flightBusy = true;
-  try {
-    const pov = globe.pointOfView();
-    // Roughly the angular radius of what is on screen, which is what the module
-    // turns into a request radius.
-    // The horizon half-angle is what is actually on screen. It used to be
-    // inflated and then capped at 12 degrees, which meant every zoom asked for
-    // the same 250nm circle regardless of how much of the world was visible.
-    const span = Math.max(1.5, Math.acos(1 / (1 + pov.altitude)) * 180 / Math.PI);
-    // The endpoint will not serve beyond 250nm, and over a city the visible area
-    // is far wider than that — so close in, the honest move is to fill the circle
-    // we are allowed to ask for rather than thin it out.
-    const want = pov.altitude <= 0.55 ? 320 : pov.altitude <= 1.2 ? 200 : 120;
-    flightData = (await window.auralfm.flights(pov.lat, pov.lng, span, want)) || [];
-    paintFlights(flightData);
-  } catch { /* best-effort, like everything else live here */ }
-  finally { flightBusy = false; }
-}
-
-/** One short great-circle segment per aircraft, pointing where it is headed. */
-function flightPaths(list) {
-  const rad = Math.PI / 180;
-  return list.map((f) => {
-    // About 90 seconds of travel, so faster aircraft draw longer trails.
-    const km = Math.max(6, ((f.kt || 250) * 1.852) / 40);
-    const d = (km / 6371);
-    const t = (f.track ?? 0) * rad, la = f.lat * rad, lo = f.lng * rad;
-    const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(t));
-    const lon2 = lo + Math.atan2(Math.sin(t) * Math.sin(d) * Math.cos(la),
-                                 Math.cos(d) - Math.sin(la) * Math.sin(lat2));
-    return { flight: f, coords: [[f.lat, f.lng], [lat2 / rad, ((lon2 / rad + 540) % 360) - 180]] };
-  });
-}
-
-function paintFlights() { paintOrbits(); }
 
 /**
  * Orbits, propagated rather than recorded.
@@ -188,11 +119,6 @@ function paintOrbits() {
   const orbitPaths = sats.flatMap((s) =>
     s.path.map((seg) => ({ pts: seg, orbit: true })));
   const issPaths = issTrail.length > 1 ? splitTrail(issTrail).map((seg) => ({ pts: seg })) : [];
-  // Aircraft share the path layer rather than adding one: globe.gl rebuilds a
-  // layer wholesale on every update, and two layers updating on different clocks
-  // is twice the rebuild for no gain.
-  const air = (layers.flights ? flightPaths(flightData) : [])
-    .map((f) => ({ pts: f.coords, air: true, flight: f.flight }));
 
   /**
    * Propagation arcs. globe.gl interpolates a path along the great circle
@@ -212,15 +138,13 @@ function paintOrbits() {
   }
 
   globe
-    .pathsData([...prop, ...orbitPaths, ...issPaths, ...air])
+    .pathsData([...prop, ...orbitPaths, ...issPaths])
     .pathPoints((d) => d.pts)
     .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
-    // Aircraft sit just off the surface — high enough to clear the terrain, far
-    // below the orbits, which is roughly the truth.
     // Propagation arcs bow well off the surface — a shortwave signal really does
     // go up to the ionosphere and come back down, and drawing it flat against
     // the ground would be both uglier and less true.
-    .pathPointAlt((d) => (d.wspr ? 0.16 : d.air ? 0.008 : 0.052))
+    .pathPointAlt((d) => (d.wspr ? 0.16 : 0.052))
     .pathColor((d) => {
       if (d.wspr) {
         // Strength by signal-to-noise. WSPR runs from roughly -30dB, which is
@@ -230,20 +154,14 @@ function paintOrbits() {
         const c = palette?.rx || "#C9A227";
         return [`${hexA(c, 0)}`, `${hexA(c, a)}`, `${hexA(c, 0)}`];
       }
-      return d.air
-        ? ["rgba(255,255,255,0)", "rgba(255,236,190,0.85)"]
-        : d.orbit
+      return d.orbit
         ? ["rgba(120,180,255,0.05)", "rgba(120,180,255,0.4)"]
         : ["rgba(255,255,255,0)", "rgba(255,255,255,0.55)"];
     })
-    .pathStroke((d) => (d.wspr ? 0.45 : d.air ? 0.5 : d.orbit ? 0.7 : 1.1))
+    .pathStroke((d) => (d.wspr ? 0.45 : d.orbit ? 0.7 : 1.1))
     .pathDashLength(1).pathDashGap(0)
     .pathLabel((d) => d.wspr
       ? `${d.spot.tx} → ${d.spot.rx} · ${d.spot.bandName} · ${d.spot.km.toLocaleString()} km · SNR ${d.spot.snr}`
-      : d.air && d.flight?.flight
-      ? `${d.flight.flight} · ${d.flight.altFt.toLocaleString()} ft` +
-        (d.flight.kt ? ` · ${d.flight.kt} kt` : "") +
-        (d.flight.type ? ` · ${d.flight.type}` : "")
       : "")
     .pathTransitionDuration(0);
 
@@ -382,8 +300,11 @@ function centreGlobe(w) {
    * view is centred above that and stays there. --peek is published by
    * web/rail-sheet.js; without it (the desktop) we measure as before.
    */
-  const peek = parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 0;
+  // Null when unpublished (the desktop), which is not the same as 0: a phone
+  // with the sheet tucked down publishes how little it covers, and a falsy 0
+  // used to fall through to measuring whatever sheet happened to be up.
+  const rawPeek = getComputedStyle(document.documentElement).getPropertyValue("--peek").trim();
+  const peek = rawPeek ? parseFloat(rawPeek) || 0 : null;
   /**
    * The search field drops in over the top of the globe, and used to cost the
    * planet nothing: centred for the sheet alone, the Earth sat high in what
@@ -403,7 +324,7 @@ function centreGlobe(w) {
     return Math.max(0, Math.min(r.bottom, g.bottom) - Math.max(r.top, g.top));
   };
   const covered = overTop(document.querySelector(".searchbar"));
-  const shiftY = peek
+  const shiftY = peek !== null
     ? Math.round((peek - covered) / 2)
     : Math.round((Math.max(0, ...panels.map(below)) - covered) / 2);
   if (shiftX || shiftY) cam.setViewOffset(g.width, g.height, shiftX, shiftY, g.width, g.height);
@@ -454,7 +375,6 @@ function wireTrackers() {
    */
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
-    if (layers.flights) tickFlights();
     if (layers.wspr) tickWspr();
   });
 

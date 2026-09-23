@@ -92,21 +92,20 @@ and its files. Like any web host, it can see the requests that fetch them — yo
 IP address, and which file you asked for. That is the cost of the app being a
 web page at all, and it applies from the moment you open it.
 
-Two features additionally pass **through** that host rather than going straight
-out, because a browser is not allowed to fetch them directly:
+here.now also keeps **page-view counts** for the site, and we can read them:
+which page was opened, when, the referring site, and the country. They are
+counts of page loads, not a record of you — nothing in them says which station
+you played, what you favourited or what you wrote in chat, because none of that
+is ever sent. The desktop app has no equivalent: it has no analytics at all.
+
+One feature additionally passes **through** that host rather than going straight
+out, because a browser is not allowed to fetch it directly:
 
 | Route | Goes to | What the request carries |
 |---|---|---|
 | Headlines | Google News RSS | Your IP address |
-| Flights | api.adsb.lol | Your IP address, and **the coordinates you are looking at** |
 
-The flights request names a point on the globe and a radius around it, because
-that is what it is asking about. It is where the *view* is pointed, not where
-you are — but if you have flown the globe to your own town to look at it, those
-are coordinates near you, passing through a host, and you should know that
-before you turn the layer on. Flights are off by default.
-
-Neither route is logged by us; we run no server and keep no logs. What here.now
+It is not logged by us; we run no server and keep no logs. What here.now
 retains is governed by their policy, not ours.
 
 **The Mac application does neither of these.** It fetches both services

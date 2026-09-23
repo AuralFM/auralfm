@@ -225,7 +225,7 @@ is true, and stronger than most apps could claim. Verified in the code:
 **What is nevertheless true and should be said plainly:** an app with no backend
 still makes outbound requests, and every host on the other end sees an IP
 address. There are about twenty across the whole app —
-NOAA, Open-Meteo, CoinGecko, adsb.lol, wspr.live, Celestrak, SatNOGS, NASA GIBS,
+NOAA, Open-Meteo, CoinGecko, wspr.live, Celestrak, SatNOGS, NASA GIBS,
 Google News, Hugging Face, jsDelivr, the Nostr relays, and whichever KiwiSDR is
 tuned. Most are tied to a feature and only fire when it runs.
 

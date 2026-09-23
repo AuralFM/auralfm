@@ -13,8 +13,8 @@
  *
  * What the web version does not do, it says by returning nothing rather than by
  * pretending: no shortwave (receivers speak plain ws://, which an https page may
- * not open), no article reader, no stations of your own. Flights and headlines
- * come through the site's own proxy routes, because neither source lets a web
+ * not open), no article reader, no stations of your own. Headlines come
+ * through the site's own proxy route, because Google News does not let a web
  * page read it directly.
  *
  * Everything that persists — favourites, settings, the last station — lives in
@@ -116,7 +116,7 @@
   // absent: an https page may not open a receiver's ws://.
   const LAYERS = [
     ["clouds", true], ["dayNight", true], ["stations", true], ["iss", true],
-    ["flights", false], ["wspr", false], ["constellations", true], ["drift", false],
+    ["wspr", false], ["constellations", true], ["drift", false],
     // Off, as on the desktop: the read-out is a line of figures about the sun
     // and the ISS, and it is not what somebody opening a radio wants first.
     ["listeners", true], ["statusBar", false],
@@ -367,12 +367,12 @@
       body: "A globe you listen to. Spin it — whatever sits under the middle "
           + "becomes the selection. Click a dot to hear that place." },
     { anchor: "#layersBtn", title: "Globe layers",
-      body: "Live clouds, day and night, the ISS, flights, radio propagation, the stars." },
+      body: "Live clouds, day and night, the ISS, radio propagation, the stars." },
     { anchor: "#newsBtn", title: "Headlines",
       body: "What is being reported where your station broadcasts from." },
     { anchor: "#favBtn", title: "Favorites",
       body: "The star beside a station keeps it here, in this browser." },
-    { welcome: true, title: "Nothing is collected",
+    { welcome: true, title: "What you play stays yours",
       body: "No account, and nothing reports what you played. Favorites and "
           + "settings stay in this browser — clear its site data and they are gone." },
   ];
@@ -384,24 +384,39 @@
     "set.tipsHint": "Short descriptions when you rest the pointer on a control.",
     "set.mineHint": "Stations you added yourself. They stay in this browser and are never sent anywhere.",
     "set.appIconHint": "Changes the icon on your home screen.",
-    "set.promise": "No accounts. No analytics. Favorites, settings and your chat identity stay in this "
-      + "browser — clear its site data and they are gone.",
+  };
+
+  /**
+   * The privacy line, in every language, because the desktop's is not true here.
+   *
+   * The desktop says "No analytics", and means it. On the web the host counts
+   * page views — which page, when, the referring site and the country — the way
+   * any website's host does, and the site's owner can read those counts. So the
+   * web does not repeat the desktop's sentence: it says what is still true (no
+   * account, nothing about what you play) and what the host sees. The other
+   * languages used to fall through to the desktop line, which on the web also
+   * named a Mac.
+   */
+  const WEB_PROMISE = {
+    en: "No accounts, and nothing about what you play is reported. Like any website, the host counts "
+      + "page views: which page, when, and the country. Favorites, settings and your chat identity "
+      + "stay in this browser. The desktop app has no analytics at all.",
+    es: "Sin cuentas, y nada de lo que escuchas se comunica. Como cualquier sitio web, el servidor cuenta "
+      + "las visitas: qué página, cuándo y el país. Favoritos, ajustes y tu identidad del chat se quedan "
+      + "en este navegador. La app de escritorio no tiene analíticas.",
+    fr: "Aucun compte, et rien de ce que vous écoutez n'est transmis. Comme tout site web, l'hébergeur "
+      + "compte les pages vues : quelle page, quand et le pays. Favoris, réglages et votre identité de "
+      + "chat restent dans ce navigateur. L'application de bureau n'a aucune analyse.",
+    de: "Keine Konten, und nichts darüber, was du hörst, wird gemeldet. Wie bei jeder Website zählt der "
+      + "Host Seitenaufrufe: welche Seite, wann und das Land. Favoriten, Einstellungen und deine "
+      + "Chat-Identität bleiben in diesem Browser. Die Desktop-App hat keinerlei Analyse.",
+    pt: "Sem contas, e nada do que você ouve é informado. Como qualquer site, o servidor conta as "
+      + "visualizações: qual página, quando e o país. Favoritos, ajustes e sua identidade no chat "
+      + "ficam neste navegador. O app para desktop não tem análise.",
   };
 
   // ── proxied sources ─────────────────────────────────────────────────────────
   M.news.setBase("/api/news");
-  M.flights.setBase("/api/flights");
-  // Explore asks for flights every 12 seconds. here.now's proxy allows 100
-  // requests an hour per visitor, so on the web the same answer is reused for
-  // 40 seconds — 90 an hour — and planes move a little less often.
-  const FLIGHTS_EVERY_MS = 40_000;
-  let flightsCache = { at: 0, data: [] };
-  async function flightsNow(lat, lng, span, want) {
-    if (Date.now() - flightsCache.at < FLIGHTS_EVERY_MS) return flightsCache.data;
-    flightsCache = { at: Date.now(), data: flightsCache.data };
-    try { flightsCache.data = await M.flights.get(lat, lng, span, want); } catch { /* keep the last */ }
-    return flightsCache.data;
-  }
 
   // ── the bridge ──────────────────────────────────────────────────────────────
   chat = window.AuralChat ? window.AuralChat({ getPrefs, emit }) : null;
@@ -445,7 +460,7 @@
 
     stats: cat(() => M.catalog.stats()),
     globePoints: cat(() => M.catalog.globePoints()),
-    places: cat((q, limit) => M.catalog.placeSearch(q, limit)),
+    places: cat((q, limit, opts) => M.catalog.placeSearch(q, limit, opts || {})),
     search: cat((q, limit, filter) => M.catalog.search(q, limit, filter)),
     // Stations a browser can play first. Nothing is hidden: an http-only one may
     // still have an https copy on radio-browser, found when it is picked.
@@ -470,7 +485,9 @@
     getState: async () => getState(), setState: async (p) => setState(p), onStateChanged: on("state"),
     strings: async () => {
       const t = M.i18n.strings(getPrefs().language, locale);
-      return M.i18n.resolve(getPrefs().language, locale) === "en" ? { ...t, ...WEB_EN } : t;
+      const lang = M.i18n.resolve(getPrefs().language, locale);
+      const promise = { "set.promise": WEB_PROMISE[lang] || WEB_PROMISE.en };
+      return lang === "en" ? { ...t, ...WEB_EN, ...promise } : { ...t, ...promise };
     },
     languages: async () => M.i18n.LANGUAGES,
     palettes: async () => M.palettes.list(),
@@ -495,9 +512,8 @@
     clouds: async () => Object.fromEntries([...M.clouds.LAYER_KEYS.map((k) => [k, M.clouds.urlFor(k)]), ["at", Date.now()]]),
     satellites: async () => (window.AuralLive ? window.AuralLive.satellites.get() : []),
     wspr: (band) => M.wspr.get(band),
-    // Flights and headlines come through the site's proxy routes (see the
-    // manifest in scripts/build-web.mjs); neither source lets a page read it.
-    flights: (lat, lng, span, want) => flightsNow(lat, lng, span, want),
+    // Headlines come through the site's proxy route (see the manifest in
+    // scripts/build-web.mjs); Google News does not let a page read it.
     news: (country) => M.news.get(country),
 
     // shortwave: not in a browser (plain ws:// receivers)
@@ -570,5 +586,32 @@
   addEventListener("DOMContentLoaded", () => {
     const saved = getState().lastChannel;
     if (saved) { current = saved; setStatus("Press play"); }
+    else cueHome();
   });
+
+  /**
+   * A first visit opens with something to press play on.
+   *
+   * A returning listener gets their last station back, paused, and the phone
+   * then rests with the sheet tucked away and the globe clear. A first visit
+   * had nothing to put in that row, so the sheet stood up as a list of cities
+   * instead — the one screen a new listener sees, spent on a table.
+   *
+   * The station is the listener's own city's strongest one that a browser can
+   * play, found the way the globe finds where to open: from the time zone, which
+   * costs no permission prompt and no coordinates. Cued, never played — sound is
+   * still something the listener starts.
+   */
+  async function cueHome() {
+    await catalogReady;
+    if (current) return;                        // something was picked meanwhile
+    let tz = "";
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch {}
+    const city = tz.split("/").pop()?.replace(/_/g, " ") || "";
+    const hit = city && M.catalog.placeSearch(city, 1)?.places?.[0];
+    if (!hit) return;
+    const { channels = [] } = M.catalog.placeChannels(hit.i) || {};
+    const pick = channels.find((c) => c.secure && c.ok !== false) || channels.find((c) => c.secure);
+    if (pick && !current) { current = pick; setStatus("Press play"); }
+  }
 })();

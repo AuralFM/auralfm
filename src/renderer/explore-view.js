@@ -215,7 +215,6 @@ async function initGlobe() {
   watchGlobeSize();
   updateSun();
   layers = (await window.auralfm.layers()) || layers;
-  syncFlightTimer();
   syncWsprTimer();
   drawSky();
   tickISS();
@@ -420,15 +419,11 @@ function throttle(fn, ms) {
 }
 
 const followThrottled = throttle(followCentre, 90);
-// Aircraft are fetched for wherever you are looking, so moving the camera has to
-// ask again — but no faster than the feed's own minimum gap.
-const flightsThrottled = throttle(() => { if (layers.flights) tickFlights(); }, 12000);
 const lodThrottled = throttle(() => applyLod(), 200);
 
 function onCameraChange() {
   lodThrottled();
   followThrottled();
-  flightsThrottled();
 }
 
 /**
@@ -477,7 +472,7 @@ function nearestPlace(lat, lng) {
  * — no dialog, no apply button.
  */
 let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
-               iss: true, flights: false, wspr: false, constellations: true,
+               iss: true, wspr: false, constellations: true,
                // Off: the globe opens still, looking at the listener's own city
                // (homeView). A turning planet is one you have to chase before
                // you can aim at a dot, and aiming is the whole interaction.
@@ -581,10 +576,9 @@ function applyLayers(next) {
 
   globe.controls().autoRotate = layers.drift && !flying;
 
-  // Not `!== prev.flights`: the poll has to start when the layer is already on
-  // at launch, too. Keying it on the transition meant quitting with aircraft
-  // switched on came back to a checked menu item and an empty sky.
-  syncFlightTimer();
+  // Not `!== prev.wspr`: the poll has to start when the layer is already on at
+  // launch, too. Keyed on the transition, quitting with a polled layer switched
+  // on came back to a checked menu item and an empty sky.
   syncWsprTimer();
 
   if (layers.constellations !== prev.constellations) drawSky();

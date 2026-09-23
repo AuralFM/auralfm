@@ -456,9 +456,12 @@ function wirePlayback() {
       // no name at all, because it is confidently wrong.
       setPlayName(s.playing);
       if (typeof s.volume === "number") paintVolume(s.volume);
-      // Headlines from wherever the station is broadcasting from.
-      loadNews(s.playing ? s.channel.country : null);
-      if (newsOpen && newsSource === "playing") renderNewsPanel();
+      // Headlines from wherever the station is broadcasting from. loadNews
+      // repaints the panel itself when the country changes; repainting here
+      // too did it on every status message — buffering, metadata, volume —
+      // flashing the list back to placeholders and asking again each time.
+      // Paused keeps its country: a station you stopped is still "Now playing".
+      loadNews(s.channel.country || null);
     }
     for (const el of stationListEl.children) {
       if (!el.dataset?.id) continue;

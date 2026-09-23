@@ -1,8 +1,9 @@
 /**
  * The station sheet on phones: the list, pulled up over the globe.
  *
- * Two rests, which is all this needs: peek, where the planet is whole and a few
- * stations show under it, and open, where the list fills the screen. The globe
+ * Three rests: down, tucked behind the player with the planet clear (home,
+ * whenever a station is loaded); peek, where the place or the top of the list
+ * shows under the planet; and open, where the list fills the screen. The globe
  * is behind the whole time, so nothing is a mode you have to leave.
  *
  * Rules it follows (Apple's Designing Fluid Interfaces, and the reason each is
@@ -38,7 +39,23 @@
    * you are, and everything below it is what the drag is for.
    */
   const PEEK_FALLBACK = 0.40;        // of the globe area, before a place is picked
-  let open = false, y = 0, restY = 0, drag = null, raf = 0, pending = 0;
+  /**
+   * Three rests: open (the list fills the screen), peek (the place, or the top
+   * of the list), and down — tucked behind the player, globe clear.
+   *
+   * Down is where it lives whenever there is a station in the player. Testers
+   * found it by accident, through a bug that hid the sheet, and it was the
+   * layout they asked to keep: the planet and the row that plays it, and
+   * nothing else until you ask. Explore and Favourites bring it up to peek;
+   * pulling it down, or closing either, puts it away again. With no station
+   * there is nothing to show in its place, so it rests at peek as before.
+   */
+  let rest = "peek", y = 0, restY = 0, downY = 0, drag = null, raf = 0, pending = 0;
+  let chosen = false;                  // has anything settled the sheet yet?
+
+  const now = document.getElementById("now");
+  const hasStation = () => !!(now && !now.hidden && now.offsetHeight);
+  const home = () => (hasStation() ? "down" : "peek");
 
   const stations = rail.querySelector(".stations");
   const grab = document.createElement("button");
@@ -47,8 +64,8 @@
   grab.setAttribute("aria-controls", "stationlist");
   stations?.prepend(grab);
   const say = () => {
-    grab.setAttribute("aria-expanded", String(open));
-    grab.setAttribute("aria-label", open ? "Hide the station list" : "Show the station list");
+    grab.setAttribute("aria-expanded", String(rest === "open"));
+    grab.setAttribute("aria-label", rest === "open" ? "Hide the station list" : "Show the station list");
   };
 
   const measure = () => {
@@ -56,23 +73,63 @@
     // resting sheet stops at.
     const chips = rail.querySelector(".chips");
     const head = rail.querySelector(".placehead");
+    /**
+     * The place list rests on its fourth row.
+     *
+     * With no place picked the sheet is a list of places, and it rested at 40%
+     * of the globe — seven rows of Paris, London, Moscow and on, with the planet
+     * they are on squeezed into what was left. Four is enough to say "this is a
+     * list, pull it up", and the globe is what the screen is for.
+     */
+    const PEEK_ROWS = 4;
+    const places = rail.querySelector("#placelist");
+    const rows = places && !places.hidden ? places.querySelectorAll(".place") : [];
+    /**
+     * The whole row of tags, not the top of it. The rest stopped 6px into the
+     * chips, so at peek they showed as a strip of half-drawn pills above the
+     * player — they are the place's filters, and a cut control is a broken one.
+     */
     const peek = chips?.offsetHeight && !head?.hidden
-      ? chips.offsetTop + 6
+      ? chips.offsetTop + chips.offsetHeight + 10
+      : rows.length
+      ? Math.round(rows[Math.min(PEEK_ROWS, rows.length) - 1].getBoundingClientRect().bottom
+                   - rail.getBoundingClientRect().top)
       : Math.round(cols.clientHeight * PEEK_FALLBACK);
     restY = Math.max(0, Math.round(rail.offsetHeight - peek));
-    // The globe's read-out sits above whatever the sheet is showing.
-    document.documentElement.style.setProperty("--peek", `${peek}px`);
+    // Clear of the shadow too, so nothing of it shows above the player.
+    downY = rail.offsetHeight + 48;
+    // How much of the bottom of the view the sheet takes at its home rest. The
+    // globe centres above this and the read-out sits on it, so it follows the
+    // rest the sheet returns to, not wherever it happens to be — the planet
+    // holds still while Explore comes and goes over it.
+    const covers = `${home() === "down" ? 0 : peek}px`;
+    const root = document.documentElement.style;
+    if (root.getPropertyValue("--peek") !== covers) {
+      root.setProperty("--peek", covers);
+      // The globe's own box has not changed, so nothing else would tell it the
+      // space above the sheet has; a station arriving is exactly this case.
+      if (typeof sizeGlobe === "function") requestAnimationFrame(() => sizeGlobe());
+    }
   };
   const put = (v) => {
     y = v;
     rail.style.setProperty("--sheet-y", `${v}px`);
+    /**
+     * Down is off the screen, so it is out of reach too. Without this VoiceOver
+     * swiped straight into a list nobody could see, and Tab walked through it;
+     * the player row is the way back up, and it is a real button.
+     */
+    rail.inert = phone.matches && rest === "down";
   };
-  const settle = (toOpen) => {
-    open = toOpen;
+  const yOf = (r) => (r === "open" ? 0 : r === "peek" ? restY : downY);
+  const settle = (to) => {
+    if (to === "down" && !hasStation()) to = "peek";
+    rest = to;
+    chosen = true;
     say();
     rail.classList.remove("sliding");
     rail.classList.add("settling");
-    put(toOpen ? 0 : restY);
+    put(yOf(to));
   };
 
   /** Where a flick is heading, the way scroll deceleration ends (Apple's own). */
@@ -106,8 +163,11 @@
     drag.v = ((e.clientY - drag.last) / dt) * 1000;     // px per second
     drag.last = e.clientY; drag.at = e.timeStamp;
     let next = drag.base + (e.clientY - drag.from);
+    // With a station the sheet can go all the way down; without one, peek is
+    // the floor and it rubber-bands past it as before.
+    const floor = hasStation() ? downY : restY;
     if (next < 0) next = band(next, rail.offsetHeight);
-    if (next > restY) next = restY + band(next - restY, rail.offsetHeight);
+    if (next > floor) next = floor + band(next - floor, rail.offsetHeight);
     /**
      * The newest position wins, not the first of the batch.
      *
@@ -128,34 +188,70 @@
     drag = null;
     cancelAnimationFrame(raf); raf = 0;
     // Under a finger's width is a tap on the handle, which toggles.
-    if (moved < 10) return settle(!open);
-    settle(landing < restY / 2);
+    if (moved < 10) return settle(rest === "open" ? "peek" : "open");
+    // The nearest rest to where the flick was going.
+    const rests = ["open", "peek", ...(hasStation() ? ["down"] : [])];
+    settle(rests.reduce((a, b) => (Math.abs(yOf(b) - landing) < Math.abs(yOf(a) - landing) ? b : a)));
   }
 
   // Enter and Space on the handle, for everyone not using a finger.
-  grab.addEventListener("click", (e) => { if (!drag && e.detail === 0) settle(!open); });
+  grab.addEventListener("click", (e) => { if (!drag && e.detail === 0) settle(rest === "open" ? "peek" : "open"); });
   rail.addEventListener("pointerdown", start);
   rail.addEventListener("pointermove", move);
   rail.addEventListener("pointerup", end);
   rail.addEventListener("pointercancel", end);
 
   const reset = () => {
-    if (!phone.matches) { rail.style.removeProperty("--sheet-y"); return; }
-    measure(); rail.classList.remove("sliding"); put(open ? 0 : restY);
+    if (!phone.matches) { rail.style.removeProperty("--sheet-y"); rail.inert = false; return; }
+    if (rest === "down" && !hasStation()) rest = "peek";
+    measure(); rail.classList.remove("sliding"); put(yOf(rest));
   };
   // The place block changes height with every place — two lines of tags, or
   // none — so the rest it defines is remeasured when the list repaints.
   const head = rail.querySelector(".placehead");
-  if (head && typeof ResizeObserver !== "undefined") new ResizeObserver(reset).observe(head);
+  // The place list too: its rows decide the rest when no place is picked, and
+  // it appears and disappears as searches start and are cleared.
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(reset);
+    for (const el of [head, rail.querySelector("#placelist"), now]) if (el) ro.observe(el);
+  }
+  /**
+   * A station arriving in the player sends the sheet home.
+   *
+   * On a first visit the sheet stands at peek because the player is empty; the
+   * moment a station is cued or picked there is a row to show instead, so it
+   * goes down — unless the listener has it up on purpose, for Explore or
+   * Favourites, or has pulled it open.
+   */
+  let had = hasStation();
+  if (now) new MutationObserver(() => {
+    const has = hasStation();
+    if (has && !had && rest === "peek" && !window.AuralRailSheet?.busy?.()) { measure(); settle("down"); }
+    had = has;
+  }).observe(now, { attributes: true, attributeFilter: ["hidden"] });
   addEventListener("resize", reset);
   phone.addEventListener?.("change", reset);
-  // After the catalogue has painted, so offsetHeight is the real one.
-  requestAnimationFrame(() => requestAnimationFrame(reset));
+  /**
+   * After the catalogue has painted, so offsetHeight is the real one — and only
+   * if nothing has placed the sheet in the meantime. A browser holds animation
+   * frames back while the tab is in the background, so this can run seconds
+   * late; it used to send the sheet home over the top of an Explore the
+   * listener had already opened.
+   */
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (!chosen) rest = home(); reset(); }));
   say();
 
-  /** Picking a place on the globe is a request to see its stations. */
   window.AuralRailSheet = {
-    open: () => { if (phone.matches && !open) { measure(); settle(true); } },
-    peek: () => { if (phone.matches && open) { measure(); settle(false); } },
+    /** Picking a place on the globe is a request to see its stations. */
+    // Always settled, never skipped because `rest` already says so: before the
+    // first paint `rest` is only a default, the sheet is still where CSS left
+    // it, and a skipped call recorded nothing for startup to respect.
+    open: () => { if (phone.matches) { measure(); settle("open"); } },
+    /** Explore and Favourites: the sheet at its middle rest. */
+    peek: () => { if (phone.matches) { measure(); settle("peek"); } },
+    /** Back to where it lives: down with a station, peek without. */
+    home: () => { if (phone.matches) { measure(); settle(home()); } },
+    /** Set by the tab bar: is Explore or Favourites holding the sheet up? */
+    busy: null,
   };
 })();

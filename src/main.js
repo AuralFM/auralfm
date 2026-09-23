@@ -64,7 +64,6 @@ const iss = require("./iss");
 const satellites = require("./satellites");
 const sdr = require("./sdr");
 const schedule = require("./schedule");
-const flights = require("./flights");
 const wspr = require("./wspr");
 const space = require("./space");
 
@@ -462,11 +461,8 @@ const LAYERS = [
   { id: "stations",       key: "layer.stations",       default: true },
   { id: "shortwave",      key: "layer.shortwave",      default: true },
   { id: "iss",            key: "layer.iss",            default: true },
-  // Off by default: it polls a volunteer feed, so it should be a thing you ask
-  // for rather than a thing you have to notice and switch off.
-  { id: "flights",        key: "layer.flights",        default: false },
-  // Off by default like flights: it polls a volunteer service, so it should be
-  // a thing you ask for rather than a thing you have to notice and switch off.
+  // Off by default: it polls a volunteer service, so it should be a thing you
+  // ask for rather than a thing you have to notice and switch off.
   { id: "wspr",           key: "layer.wspr",           default: false },
   { id: "constellations", key: "layer.constellations", default: true },
   { id: "drift",          key: "layer.drift",          default: true },

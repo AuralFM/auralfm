@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld("auralfm", {
 
   // catalog
   search: (q, limit, filter) => ipcRenderer.invoke("catalog:search", q, limit, filter),
-  places: (q, limit) => ipcRenderer.invoke("catalog:places", q, limit),
+  places: (q, limit, opts) => ipcRenderer.invoke("catalog:places", q, limit, opts),
   placeChannels: (i, filter) => ipcRenderer.invoke("catalog:placeChannels", i, filter),
   placeFacets: (i) => ipcRenderer.invoke("catalog:placeFacets", i),
   randomStation: () => ipcRenderer.invoke("catalog:random"),
@@ -84,7 +84,6 @@ contextBridge.exposeInMainWorld("auralfm", {
   sdrNearest: (lat, lng, n) => ipcRenderer.invoke("sdr:nearest", lat, lng, n),
   sdrOnAir: (opts) => ipcRenderer.invoke("sdr:onair", opts),
   sdrSchedule: () => ipcRenderer.invoke("sdr:schedule"),
-  flights: (lat, lng, span, want) => ipcRenderer.invoke("flights:get", lat, lng, span, want),
   wspr: (band) => ipcRenderer.invoke("wspr:get", band),
   space: () => ipcRenderer.invoke("space:get"),
   presenceStats: () => ipcRenderer.invoke("presence:stats"),

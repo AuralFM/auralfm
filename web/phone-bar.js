@@ -116,6 +116,19 @@
       const on = String(!!shown[b.dataset.tab]?.());
       if (b.getAttribute("aria-pressed") !== on) b.setAttribute("aria-pressed", on);
     }
+    /**
+     * panel-open follows what is open, not the last tab pressed.
+     *
+     * It was set only by setTab(), so closing Headlines with its own × left it
+     * on: the sheet stayed hidden, the globe stayed centred for a sheet that
+     * was not there, and the only way back was another tab. Read from the DOM
+     * like the tabs are. Guarded, because this runs from an observer watching
+     * class changes and must not write one it does not need.
+     */
+    const panel = shown.headlines() || shown.chat();
+    if (document.body.classList.contains("panel-open") !== panel) {
+      document.body.classList.toggle("panel-open", panel);
+    }
   };
 
   const setTab = (name) => {
@@ -137,9 +150,19 @@
    * place, and a magnifying glass beside a globe asked people to guess which
    * of the two meant "find somewhere". One tab, and it opens the field.
    */
+  /**
+   * Explore and Favourites hold the sheet up while they are on, and give it
+   * back when they are not: with a station in the player that is all the way
+   * down, so closing Explore returns the globe rather than leaving a card up.
+   */
+  const raise = (name) => {
+    if (shown[name]()) window.AuralRailSheet?.peek();
+    else window.AuralRailSheet?.home();
+  };
+  if (window.AuralRailSheet) window.AuralRailSheet.busy = () => shown.explore() || shown.favorites();
   tab("explore", "Explore", "globe", () => {
     toggle("explore");
-    window.AuralRailSheet?.peek();
+    raise("explore");
   });
   tab("headlines", "Headlines", "headlines", () => toggle("headlines"));
   /**
@@ -153,7 +176,7 @@
    */
   tab("favorites", "Favorites", "star", () => {
     toggle("favorites");
-    window.AuralRailSheet?.peek();
+    raise("favorites");
   });
   tab("chat", "Chat", "chat", () => toggle("chat"));
   tab("settings", "Settings", "gear", () => toggle("settings"));

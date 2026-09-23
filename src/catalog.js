@@ -239,7 +239,67 @@ function placeBands(placeIndex) {
  * the cities that actually have radio come first — an alphabetical list of
  * 12,296 places buries every city you'd want.
  */
-function placeSearch(query, limit = 400) {
+/**
+ * The orders a browse can take, for when nothing has been typed.
+ *
+ * Most stations first is the honest default and the worst discovery engine:
+ * Paris, London and Moscow top it every time, so a listener who never searches
+ * never meets Tallahassee. These are the other ways in — small places, near
+ * where you are looking, where people are awake now, or none at all.
+ *
+ *   stations  most stations first
+ *   gems      places with a dozen stations or fewer, in an order that changes
+ *             once a day — stable while you scroll, different tomorrow
+ *   near      nearest to {lat, lon} first
+ *   awake     local solar time between 7:00 and 23:00, most stations first
+ *   random    a fresh shuffle every time
+ */
+const GEM_MAX = 12;
+const PLACE_ORDERS = ["stations", "gems", "near", "awake", "random"];
+
+/** Small, deterministic PRNG, so a day's gems are the same all day. */
+function seeded(seed) {
+  let s = seed >>> 0;
+  return () => ((s = (s + 0x6D2B79F5) >>> 0), (((s ^ (s >>> 15)) * (1 | s)) >>> 0) / 4294967296);
+}
+function shuffle(list, rand = Math.random) {
+  for (let k = list.length - 1; k > 0; k--) {
+    const j = Math.floor(rand() * (k + 1));
+    [list[k], list[j]] = [list[j], list[k]];
+  }
+  return list;
+}
+
+function orderBrowse(out, { order, lat, lon } = {}) {
+  const count = (i) => byPlace[i].length;
+  switch (order) {
+    case "gems": {
+      const today = Math.floor(Date.now() / 86400000);
+      return shuffle(out.filter((i) => count(i) <= GEM_MAX), seeded(today));
+    }
+    case "near": {
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) break;
+      const rad = Math.PI / 180, la = lat * rad, lo = lon * rad;
+      // Cosine of the angle is enough to rank by; no need for the arccos.
+      const near = (i) => {
+        const pla = places[i][3] * rad, plo = places[i][2] * rad;
+        return Math.sin(la) * Math.sin(pla) + Math.cos(la) * Math.cos(pla) * Math.cos(plo - lo);
+      };
+      return out.map((i) => [i, near(i)]).sort((a, b) => b[1] - a[1]).map(([i]) => i);
+    }
+    case "awake": {
+      const utcMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+      // Solar hour from longitude, as the cold open does: no time-zone table.
+      const hour = (i) => ((((utcMin + places[i][2] * 4) / 60) % 24) + 24) % 24;
+      return out.filter((i) => hour(i) >= 7 && hour(i) < 23).sort((a, b) => count(b) - count(a));
+    }
+    case "random":
+      return shuffle(out);
+  }
+  return out.sort((a, b) => count(b) - count(a));
+}
+
+function placeSearch(query, limit = 400, opts = {}) {
   const terms = norm(String(query || "").trim()).split(/\s+/).filter(Boolean);
   const out = [];
   // Browsing places without a query reads no names, so it builds no index.
@@ -256,7 +316,8 @@ function placeSearch(query, limit = 400) {
       (ph[a].startsWith(first) ? 0 : 1) - (ph[b].startsWith(first) ? 0 : 1) ||
       byPlace[b].length - byPlace[a].length);
   } else {
-    out.sort((a, b) => byPlace[b].length - byPlace[a].length);
+    const ordered = orderBrowse(out, opts);
+    return { total: ordered.length, places: ordered.slice(0, limit).map(hydratePlace) };
   }
   return { total: out.length, places: out.slice(0, limit).map(hydratePlace) };
 }
@@ -330,4 +391,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, randomChannel, placeSearch, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats };
+module.exports = { load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats };
