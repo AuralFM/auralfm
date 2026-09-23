@@ -1311,13 +1311,12 @@ console.log("\nlight theme agrees with itself");
 //
 // `MARK` takes a weight for exactly this, and the failure mode is forgetting one
 // when adding the next mark. Solid shapes are exempt: `dots` is three filled
-// circles, `globe` is a filled disc and `filter` is three filled bars (about
-// 2px each at icon size), and stroking any of them would thicken a shape that
-// has no line to thicken.
+// circles and `globe` is a filled disc, and stroking either would thicken a
+// shape that has no line to thicken.
 {
   console.log("\nevery outline mark carries a stroke weight");
   const src = fs.readFileSync(R("src/renderer/icons.js"), "utf8");
-  const SOLID = new Set(["dots", "globe", "filter"]);
+  const SOLID = new Set(["dots", "globe"]);
   const missing = [];
   for (const m of src.matchAll(/(\w+): MARK\("([^"]+)",\s*`[\s\S]*?`(,\s*(\d+))?\)/g)) {
     const [, name, , , weight] = m;
@@ -2568,6 +2567,59 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   gaps.length ? fail("the splash's mark ships", gaps.join("; "))
     : pass(`the splash's ${wants.join(", ")} exists, is committed and is packaged`);
+}
+
+// ── world headlines do not hang on one gatekeeper ───────────────────────────
+// World headlines were Google News' World topic, and on the web that request
+// leaves from here.now's servers. Google answered it, on 2026-09-23, with its
+// 503 "Sorry…" page for automated traffic — while a country edition through the
+// same proxy returned 34 stories. World is where the panel opens, so the panel
+// opened on nothing ("headlines are missing"). World now comes from several
+// newsrooms' own feeds, and each needs a proxy route or it is a silent 404.
+{
+  console.log("\nworld headlines do not hang on one gatekeeper");
+  const news = readSrc("src/news.js").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const build = readSrc("scripts/build-web.mjs");
+  const bridge = readSrc("web/bridge.js");
+  const gaps = [];
+  const feeds = [...(news.match(/const WORLD_FEEDS = \[([\s\S]*?)\];/)?.[1] || "").matchAll(/url:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const hosts = new Set(feeds.map((u) => { try { return new URL(u).hostname; } catch { return u; } }));
+  if (feeds.length < 2) gaps.push("src/news.js has no list of world feeds, so world headlines hang on one source");
+  if ([...hosts].some((h) => /news\.google\./.test(h))) gaps.push("a world feed is Google News again");
+  if (/\/topics\//.test(news)) gaps.push("news.js still asks for a Google News topic");
+  if (!/WORLD_FEEDS/.test(build)) gaps.push("scripts/build-web.mjs does not write the feeds' proxy routes from WORLD_FEEDS");
+  if (!/setFeedBase\(/.test(bridge)) gaps.push("web/bridge.js never points world headlines at the proxy routes");
+  gaps.length ? fail("world headlines do not hang on one gatekeeper", gaps.join("; "))
+    : pass(`world headlines come from ${hosts.size} newsrooms' own feeds, each with a route`);
+}
+
+// ── the phone layout is one question, asked the same way four times ─────────
+// A landscape iPhone is 844pt wide or more, and "phone" was `max-width: 700px`,
+// so a phone on its side got the desktop layout — toolbar, side rail, volume
+// slider and ticker in 390pt of height. The fix is a second clause (a touch
+// screen under 500pt tall), and it has to be in all four places that ask:
+// the stylesheet's phone block and the three scripts that move and drag
+// things. One that still asks the old question lays out a phone while another
+// treats it as a desktop, which is a broken screen, not a style difference.
+{
+  console.log("\nthe phone layout is one question");
+  const css = readSrc("web/web.css");
+  const block = css.match(/\/\* ── phones[\s\S]*?\*\/\s*@media ([^{]+)\{/);
+  const asked = { "web/web.css": block ? block[1].trim() : null };
+  for (const f of ["web/phone-bar.js", "web/rail-sheet.js", "web/sheet.js"]) {
+    const m = readSrc(f).match(/matchMedia\("([^"]+)"\)/);
+    asked[f] = m ? m[1] : null;
+  }
+  const values = new Set(Object.values(asked));
+  const gaps = [];
+  if (Object.values(asked).includes(null))
+    gaps.push(`no phone query found in ${Object.keys(asked).filter((k) => !asked[k]).join(", ")} — this check is blind`);
+  else if (values.size > 1)
+    gaps.push(Object.entries(asked).map(([f, q]) => `${f}: "${q}"`).join("; "));
+  else if (!/max-height/.test([...values][0]))
+    gaps.push("the phone query is width alone, so a phone on its side gets the desktop layout");
+  gaps.length ? fail("the phone layout is one question", gaps.join("; "))
+    : pass(`all four ask "${[...values][0]}"`);
 }
 
 // ── headlines say when they failed, and the newest answer wins ──────────────

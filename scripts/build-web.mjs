@@ -18,6 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
@@ -282,10 +283,27 @@ for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "afte
 const UA = { "User-Agent": `AuralFM/${version} (+https://github.com/meltonbell3/auralfm)` };
 // scripts/serve-web.mjs reads this same file to stand in for here.now locally.
 fs.mkdirSync(path.join(OUT, ".herenow"), { recursive: true });
+/**
+ * The world headlines' feeds, one route each, from the list in src/news.js —
+ * read, not copied, so a feed added there cannot be missing here. A missing
+ * route is not an error anywhere: it is a 404 that reads as "no headlines".
+ *
+ * And a higher ceiling than here.now's default 100 an hour per IP. World asks
+ * four feeds at once; a person testing from one phone passed 100 in an
+ * afternoon. 400 still stops anything that loops.
+ */
+const { WORLD_FEEDS } = createRequire(import.meta.url)(R("src/news.js"));
+if (!Array.isArray(WORLD_FEEDS) || WORLD_FEEDS.length < 2) {
+  console.error("web: src/news.js exports no WORLD_FEEDS — world headlines would have no routes");
+  process.exit(1);
+}
+const LIMIT = "400/hour/ip";
 fs.writeFileSync(path.join(OUT, ".herenow", "proxy.json"), JSON.stringify({
   proxies: {
-    "/api/news": { upstream: "https://news.google.com/rss", method: "GET", headers: UA },
-    "/api/news/*": { upstream: "https://news.google.com/rss", method: "GET", headers: UA },
+    "/api/news": { upstream: "https://news.google.com/rss", method: "GET", headers: UA, rateLimit: LIMIT },
+    "/api/news/*": { upstream: "https://news.google.com/rss", method: "GET", headers: UA, rateLimit: LIMIT },
+    ...Object.fromEntries(WORLD_FEEDS.map((f) =>
+      [`/api/feeds/${f.route}`, { upstream: f.url, method: "GET", headers: UA, rateLimit: LIMIT }])),
   },
 }, null, 2));
 copy("assets/fonts", "assets/fonts");

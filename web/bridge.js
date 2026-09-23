@@ -417,6 +417,8 @@
 
   // ── proxied sources ─────────────────────────────────────────────────────────
   M.news.setBase("/api/news");
+  // World headlines come from the newsrooms' own feeds, each on its own route.
+  M.news.setFeedBase("/api/feeds");
 
   // ── the bridge ──────────────────────────────────────────────────────────────
   chat = window.AuralChat ? window.AuralChat({ getPrefs, emit }) : null;

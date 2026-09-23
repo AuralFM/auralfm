@@ -140,18 +140,24 @@ function readability(source) {
   return 0;
 }
 
-function parseItems(xml, limit) {
+/**
+ * @param {string} [source]  a publisher's own feed names itself; Google's
+ *   aggregate does not, and puts the publisher at the end of each title
+ */
+function parseItems(xml, limit, source = "") {
   const out = [];
-  for (const item of xml.split("<item>").slice(1)) {
+  // `<item rdf:about=…>` as well as `<item>`: DW's feed is RSS 1.0 (RDF).
+  for (const item of xml.split(/<item[\s>]/).slice(1)) {
     const title = pick(item, "title");
     if (!title) continue;
-    // Google formats titles as "Headline - Publisher".
-    const split = title.lastIndexOf(" - ");
+    // Google formats titles as "Headline - Publisher"; a publisher's own feed
+    // does not, and its titles are left whole.
+    const split = source ? -1 : title.lastIndexOf(" - ");
     out.push({
       title: split > 20 ? title.slice(0, split) : title,
-      source: pick(item, "source") || (split > 20 ? title.slice(split + 3) : ""),
+      source: source || pick(item, "source") || (split > 20 ? title.slice(split + 3) : ""),
       link: pick(item, "link"),
-      at: Date.parse(pick(item, "pubDate")) || null,
+      at: Date.parse(pick(item, "pubDate") || pick(item, "dc:date")) || null,
     });
   }
   // Read the whole feed, then order it, then trim. Stopping at `limit` while
@@ -171,8 +177,65 @@ const parseTitles = (xml, limit) => parseItems(xml, limit).map((i) => i.title);
  * it points this at its own proxy route (setBase); the desktop never changes it.
  */
 let RSS = "https://news.google.com/rss";
-const WORLD_TOPIC = "CAAqKggKIiRDQkFTRlFvSUwyMHZNRGx1YlY4U0JXVnVMVlZUR2dKVlV5Z0FQAQ";
 const setBase = (base) => { RSS = String(base).replace(/\/+$/, ""); };
+
+/**
+ * World headlines, from the newsrooms themselves.
+ *
+ * They were Google News' World topic, and on the web that request goes out
+ * from here.now's servers — which Google answers, some of the time, with its
+ * 503 "Sorry…" page for automated traffic (tested 2026-09-23: the World topic
+ * 503'd through here.now while a country edition returned 34 stories). World
+ * is where the panel opens, so the panel opened on nothing: the "sometimes it
+ * works" first reported, and then "headlines are missing".
+ *
+ * Four publishers anyone can read, from four places, each over its own feed:
+ * one failing leaves three. They are taken in rounds, so all four are heard. Country and place headlines stay on
+ * Google's editions, which answer, and which are the only way to have them in
+ * the country's own language.
+ *
+ * `route` is the web version's proxy path (/api/feeds/<route>); the desktop
+ * fetches `url` itself. scripts/build-web.mjs writes the routes from this list.
+ */
+const WORLD_FEEDS = [
+  { name: "BBC", route: "bbc", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+  { name: "Al Jazeera", route: "aljazeera", url: "https://www.aljazeera.com/xml/rss/all.xml" },
+  { name: "France 24", route: "france24", url: "https://www.france24.com/en/rss" },
+  { name: "DW", route: "dw", url: "https://rss.dw.com/rdf/rss-en-world" },
+];
+let FEEDS = null;                  // null: fetch each feed's own url
+const setFeedBase = (base) => { FEEDS = String(base).replace(/\/+$/, ""); };
+
+async function fetchFeed(url, parse) {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "AuralFM/0.1" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parse(await res.text());
+}
+
+async function worldHeadlines(limit) {
+  const results = await Promise.allSettled(WORLD_FEEDS.map((f) =>
+    fetchFeed(FEEDS ? `${FEEDS}/${f.route}` : f.url, (xml) => parseItems(xml, 40, f.name))));
+  const lists = results.filter((r) => r.status === "fulfilled" && r.value.length)
+    .map((r) => r.value.slice().sort((a, b) => (b.at || 0) - (a.at || 0)));
+  if (!lists.length) throw new Error("no world feed answered");
+  /**
+   * In rounds: each outlet's newest, then each one's next, and so on — within
+   * a round, newest first. Strictly newest-first let the outlets that publish
+   * most often fill the list, and DW, which files fewer, longer pieces, showed
+   * once in twelve. The point of four newsrooms is to hear all four.
+   */
+  const out = [];
+  for (let round = 0; out.length < limit; round++) {
+    const next = lists.map((l) => l[round]).filter(Boolean);
+    if (!next.length) break;
+    out.push(...next.sort((a, b) => (b.at || 0) - (a.at || 0)));
+  }
+  return out.slice(0, limit);
+}
 
 /**
  * Headlines for a country, or throws.
@@ -197,24 +260,16 @@ async function get(country, limit = 12) {
   }
 
   // No country means world news, not "whatever the US is reading" — this app is
-  // about the whole globe, and the default should say so. The World topic by its
-  // own address: the section URL used to 302 here, and a redirect is a second
-  // request the web version's proxy would have to follow.
-  const url = key === "world"
-    ? `${RSS}/topics/${WORLD_TOPIC}?hl=en-US&gl=US&ceid=US:en`
-    : (() => {
-        const [gl, hl] = LOCALES[key];
-        return `${RSS}?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
-      })();
-
+  // about the whole globe, and the default should say so. World comes from the
+  // publishers' own feeds (WORLD_FEEDS, above); a country from Google's edition.
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "AuralFM/0.1" },
-      redirect: "follow",            // the topic feed 302s to a signed URL
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const items = parseItems(await res.text(), limit);
+    const items = key === "world"
+      ? await worldHeadlines(limit)
+      : await (() => {
+          const [gl, hl] = LOCALES[key];
+          return fetchFeed(`${RSS}?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`,
+                           (xml) => parseItems(xml, limit));
+        })();
     cache.set(key, { at: Date.now(), items });
     cool.ok();
     return items;
@@ -225,7 +280,7 @@ async function get(country, limit = 12) {
   }
 }
 
-module.exports = { get, setBase };
+module.exports = { get, setBase, setFeedBase, WORLD_FEEDS };
 
 /**
  * Read an article without opening a browser.

@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 20 September 2026**
+**Last updated: 23 September 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -51,7 +51,7 @@ Playing live radio and showing live conditions requires network requests. In the
 Mac application, every one of them goes **directly from your computer to the
 service**; none passes through any server we operate, and we never see them.
 
-**In the web version, two of them do not.** See "What the web version routes
+**In the web version, the headlines do not.** See "What the web version routes
 differently" below. The rest of this table applies to both.
 
 | Service | Purpose | What it necessarily sees |
@@ -61,7 +61,8 @@ differently" below. The rest of this table applies to both.
 | radio-browser.info | Fallback stream lookup; play counts | Your IP address, the station played |
 | NASA GIBS | Satellite cloud imagery | Your IP address |
 | Open-Meteo | Weather for a selected place | Your IP address, the **selected city's** coordinates |
-| Google News RSS | Local headlines | Your IP address |
+| Google News RSS | Headlines for a country or place | Your IP address |
+| BBC, Al Jazeera, France 24, DW (their own RSS feeds) | World headlines | Your IP address |
 | CoinGecko | Crypto prices | Your IP address |
 | wheretheiss.at / Celestrak | ISS and satellite positions | Your IP address |
 | rx.linkfanel.net | The list of shortwave receivers, refreshed at most twice a day | Your IP address |
@@ -103,13 +104,14 @@ out, because a browser is not allowed to fetch it directly:
 
 | Route | Goes to | What the request carries |
 |---|---|---|
-| Headlines | Google News RSS | Your IP address |
+| Headlines for a country or place | Google News RSS | Your IP address |
+| World headlines | The BBC, Al Jazeera, France 24 and DW feeds | Your IP address |
 
 It is not logged by us; we run no server and keep no logs. What here.now
 retains is governed by their policy, not ours.
 
-**The Mac application does neither of these.** It fetches both services
-directly, and nothing it does passes through a host of ours.
+**The Mac application does not do this.** It fetches the headlines directly,
+and nothing it does passes through a host of ours.
 
 ## Shortwave receivers
 

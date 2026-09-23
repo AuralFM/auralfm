@@ -226,7 +226,7 @@ is true, and stronger than most apps could claim. Verified in the code:
 still makes outbound requests, and every host on the other end sees an IP
 address. There are about twenty across the whole app —
 NOAA, Open-Meteo, CoinGecko, wspr.live, Celestrak, SatNOGS, NASA GIBS,
-Google News, Hugging Face, jsDelivr, the Nostr relays, and whichever KiwiSDR is
+Google News, the BBC, Al Jazeera, France 24 and DW world feeds, Hugging Face, jsDelivr, the Nostr relays, and whichever KiwiSDR is
 tuned. Most are tied to a feature and only fire when it runs.
 
 The honest framing, which `docs/PRIVACY.md` mostly already makes: *we* collect
