@@ -105,7 +105,10 @@ img { display: block; max-width: 100%; }
    row of logo, three links and the action no longer fit a 390px screen — the
    page widened to 496px and cut the action off. The links take a second row. */
 @media (max-width: 640px) {
-  .top .shell { flex-wrap: wrap; height: auto; row-gap: 12px; padding: 14px 0; }
+  /* Two rows of 44px targets would pin a fifth of a small phone's screen, so
+     here the header scrolls away with the page instead of sticking. */
+  .top { position: static; }
+  .top .shell { flex-wrap: wrap; height: auto; row-gap: 0; padding: 8px 0; }
   .top .cta { margin-left: auto; }
   .nav { order: 3; width: 100%; margin-left: 0; gap: 16px; }
 }
@@ -132,7 +135,9 @@ img { display: block; max-width: 100%; }
 }
 .slide-kicker {
   font: 400 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
-  color: var(--accent); margin: 0 0 10px;
+  /* Bone in both themes: the slides are always dark, and the light theme's
+     accent is near black, which vanished against them. */
+  color: rgba(247, 244, 238, .82); margin: 0 0 10px;
 }
 .slide-kicker::before { content: "["; }
 .slide-kicker::after { content: "]"; }
@@ -143,10 +148,10 @@ img { display: block; max-width: 100%; }
 .dots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
 .dots button {
   width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%;
-  background: var(--label3); cursor: pointer;
+  background-color: var(--label3); cursor: pointer;
   transition: background var(--ease-out) .2s, transform var(--ease-out) .2s;
 }
-.dots button[aria-current="true"] { background: var(--accent); transform: scale(1.25); }
+.dots button[aria-current="true"] { background-color: var(--accent); transform: scale(1.25); }
 
 /* ── the lede ───────────────────────────────────────────────────────────── */
 .lede { margin: 54px 0 10px; }
@@ -226,4 +231,34 @@ img { display: block; max-width: 100%; }
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .top { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ── touch screens: every tap target a thumb's size ─────────────────────────
+   Measured at 320px: thirteen targets under 44px — the header links at 12px
+   tall, the slide dots at 7px. Nothing is redrawn larger; the area around each
+   grows, so the design is unchanged and the finger still lands. */
+@media (pointer: coarse) {
+  .brand, .nav a, .cta, .foot nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .sidelinks { gap: 0; }
+  .sidelinks a { display: flex; align-items: center; min-height: 44px; }
+  .dots { gap: 0; }
+  /* The dot stays 7px; the button around it becomes 44px. The background is
+     clipped to the content box, whose corners are the border radius less the
+     padding (22 - 18.5 = 3.5px), so what is painted is still a 7px circle. */
+  .dots button {
+    width: 44px; height: 44px; padding: 18.5px; background-clip: content-box;
+  }
+  .dots button[aria-current="true"] { transform: none; padding: 17px; }
+}
+
+/* Phones, the carousel. Here at the end because the base carousel rules come
+   later than the header's phone rules, and a later rule of equal weight wins.
+   A 16:9 frame on a 320px screen is 180px tall, and a four-line title in
+   Space Mono covered all of it: taller, cropped to the globe (left of centre in
+   these captures), and a title with less room to fill. */
+@media (max-width: 640px) {
+  .hero-frame { aspect-ratio: 4 / 5; }
+  .slide img { object-position: 30% center; }
+  .slide-text { padding: 72px 20px 20px; }
+  .slide-title { font-size: 20px; line-height: 1.2; }
 }
