@@ -2542,6 +2542,33 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`the web build carries all ${wanted.length} documents and can read them`);
 }
 
+// ── the splash's mark ships ─────────────────────────────────────────────────
+// splash.js fetches its artwork and, by design, shrugs if the fetch fails —
+// nothing may stop the app starting. That is also why deleting the old line
+// globe (assets/icon-line.svg) went unnoticed: the splash quietly became onyx
+// and a wordmark, with no error anywhere. So the file it asks for must exist,
+// be committed rather than generated, and be inside build.files, or the
+// packaged app would be the one place it is missing.
+{
+  console.log("\nthe splash's mark ships");
+  const src = readSrc("src/renderer/splash.js");
+  const wants = [...src.matchAll(/fetch\(\s*["']\.\.\/\.\.\/(assets\/[^"']+)["']/g)].map((m) => m[1]);
+  const globRe = (g) => new RegExp("^" + g.replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*\*/g, "\u0000").replace(/\*/g, "[^/]*").replace(/\u0000/g, ".*") + "$");
+  const shipped = (f) => pkg.build.files.some((g) => !g.startsWith("!") && globRe(g).test(f)) &&
+                         !pkg.build.files.some((g) => g.startsWith("!") && globRe(g.slice(1)).test(f));
+  const gaps = [];
+  if (!wants.length) gaps.push("splash.js fetches no asset — this check is blind");
+  for (const f of wants) {
+    if (!fs.existsSync(R(f))) { gaps.push(`${f} does not exist`); continue; }
+    try { execFileSync("git", ["ls-files", "--error-unmatch", f], { cwd: R("."), stdio: "ignore" }); }
+    catch { gaps.push(`${f} is not committed`); }
+    if (!shipped(f)) gaps.push(`${f} is outside build.files, so the packaged app has no mark`);
+  }
+  gaps.length ? fail("the splash's mark ships", gaps.join("; "))
+    : pass(`the splash's ${wants.join(", ")} exists, is committed and is packaged`);
+}
+
 // ── headlines say when they failed, and the newest answer wins ──────────────
 // Reported from the iOS PWA on 2026-09-23 as "sometimes it works, sometimes it
 // doesn't". Four faults, each enough on its own:
