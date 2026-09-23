@@ -1,14 +1,27 @@
 /**
  * auralfm.here.now — the page people arrive at.
  *
- * Same tokens as the app, deliberately: onyx, bone, Inter, the same radii and
+ * Same colour tokens as the app, deliberately: onyx, bone, the same radii and
  * the same easing. Somebody who opens the app from here should feel they have
  * stayed in the same place rather than been handed off to a marketing site.
  */
+/* The brand's type, as on the homepage: Space Mono for the brand, headings and
+   labels, Space Grotesk for what is read. Served from here, never from Google.
+   The app keeps its own type; this is the site's, not the app's. */
 @font-face {
-  font-family: "Inter";
-  src: url("assets/InterVariable.woff2") format("woff2-variations");
-  font-weight: 100 900; font-display: swap;
+  font-family: "Space Grotesk";
+  src: url("assets/fonts/SpaceGrotesk-wght.woff2") format("woff2-variations");
+  font-weight: 300 700; font-display: swap;
+}
+@font-face {
+  font-family: "Space Mono";
+  src: url("assets/fonts/SpaceMono-400.woff2") format("woff2");
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: "Space Mono";
+  src: url("assets/fonts/SpaceMono-700.woff2") format("woff2");
+  font-weight: 700; font-display: swap;
 }
 
 :root {
@@ -27,7 +40,7 @@
   /* The reference (blackskyweb.xyz) carries its structure in monospace and
      dotted rules rather than in boxes. Borrowed, because it suits a radio:
      callsigns, frequencies and timestamps are monospace everywhere else too. */
-  --mono: ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
+  --mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --dot: 1px dashed color-mix(in srgb, var(--label) 26%, transparent);
 }
 @media (prefers-color-scheme: light) {
@@ -48,7 +61,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--label);
-  font: 400 16px/1.6 "Inter", system-ui, sans-serif;
+  font: 400 16px/1.6 "Space Grotesk", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
 }
@@ -69,7 +82,7 @@ img { display: block; max-width: 100%; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand svg { height: 17px; width: auto; color: var(--label); }
 .brand span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.nav { display: flex; gap: 20px; margin-left: auto; font: 500 12px/1 var(--mono); letter-spacing: .06em; }
+.nav { display: flex; gap: 20px; margin-left: auto; font: 400 12px/1 var(--mono); letter-spacing: .06em; }
 .nav a {
   color: var(--label2); text-decoration: none; text-transform: uppercase;
   transition: color var(--ease-out) .15s;
@@ -79,7 +92,7 @@ img { display: block; max-width: 100%; }
 /* Bracketed rather than a pill: the reference writes its one action as
    [LAUNCH YOUR COMMUNITY], which reads as a command line and not a banner ad. */
 .cta {
-  font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase;
+  font: 400 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase;
   color: var(--accent); text-decoration: none; white-space: nowrap;
   transition: opacity var(--ease-out) .15s;
 }
@@ -87,6 +100,16 @@ img { display: block; max-width: 100%; }
 .cta::after { content: "]"; }
 .cta:hover { opacity: .7; }
 .cta:active { transform: scale(.97); }
+
+/* Phones: Space Mono is wider than the system monospace it replaced, and one
+   row of logo, three links and the action no longer fit a 390px screen — the
+   page widened to 496px and cut the action off. The links take a second row. */
+@media (max-width: 640px) {
+  .top .shell { flex-wrap: wrap; height: auto; row-gap: 12px; padding: 14px 0; }
+  .top .cta { margin-left: auto; }
+  .nav { order: 3; width: 100%; margin-left: 0; gap: 16px; }
+}
+
 
 /* ── hero ───────────────────────────────────────────────────────────────── */
 /* The stories drift. Each is a real screenshot with a line over it; the point
@@ -108,14 +131,14 @@ img { display: block; max-width: 100%; }
   color: rgba(247, 244, 238, .96);
 }
 .slide-kicker {
-  font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  font: 400 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
   color: var(--accent); margin: 0 0 10px;
 }
 .slide-kicker::before { content: "["; }
 .slide-kicker::after { content: "]"; }
 .slide-title {
   margin: 0; font-size: clamp(22px, 3.4vw, 36px); line-height: 1.12;
-  letter-spacing: -.02em; font-weight: 600; max-width: 20ch;
+  letter-spacing: -.02em; font-family: var(--mono); font-weight: 700; max-width: 20ch;
 }
 .dots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
 .dots button {
@@ -129,10 +152,12 @@ img { display: block; max-width: 100%; }
 .lede { margin: 54px 0 10px; }
 .lede h1 {
   margin: 0 0 14px; font-size: clamp(30px, 5vw, 52px); line-height: 1.06;
-  letter-spacing: -.03em; font-weight: 600; max-width: 18ch;
+  letter-spacing: -.02em; font-family: var(--mono); font-weight: 700; max-width: 18ch;
 }
 .lede p { margin: 0; font-size: clamp(17px, 2vw, 20px); color: var(--label2); max-width: 58ch; }
-.lede .defn { margin-top: 18px; font-size: 15px; color: var(--label3); font-style: italic; }
+.lede .defn { margin-top: 18px; font-size: 15px; color: var(--label3); }
+/* Emphasis by weight: Space Grotesk has no italic, and a synthesised slant is worse than none. */
+.lede .defn em { font-style: normal; font-weight: 600; color: var(--label2); }
 
 /* ── two columns, and a slight sidebar ──────────────────────────────────── */
 .body { display: grid; gap: 40px; margin: 54px 0 80px; }
@@ -154,7 +179,7 @@ img { display: block; max-width: 100%; }
   display: flex; align-items: baseline; justify-content: space-between;
   padding-bottom: 12px; margin-bottom: 0;
 }
-.section-head h2 { margin: 0; font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--label2); }
+.section-head h2 { margin: 0; font: 400 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--label2); }
 .stories { grid-column: 1 / -1; }
 @media (min-width: 900px) { .stories { grid-column: 1; } }
 
@@ -164,9 +189,9 @@ img { display: block; max-width: 100%; }
 .story-thumb { border-radius: var(--r-md); overflow: hidden; background: var(--fill); aspect-ratio: 1; }
 .story-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .story-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.story .meta { font: 500 11px/1.4 var(--mono); letter-spacing: .06em; color: var(--label3); }
+.story .meta { font: 400 11px/1.4 var(--mono); letter-spacing: .06em; color: var(--label3); }
 .story .meta b { color: var(--accent); font-weight: 500; }
-.story h3 { margin: 0; font-size: clamp(19px, 2.2vw, 25px); line-height: 1.1; letter-spacing: -.02em; font-weight: 600; }
+.story h3 { margin: 0; font-family: var(--mono); font-size: clamp(19px, 2.2vw, 25px); line-height: 1.1; letter-spacing: -.02em; font-weight: 700; }
 .story h3 a { text-decoration: none; }
 .story h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .story p { margin: 0; color: var(--label2); font-size: 14px; line-height: 1.55; }
@@ -174,7 +199,7 @@ img { display: block; max-width: 100%; }
 /* ── sidebar ────────────────────────────────────────────────────────────── */
 .side { display: flex; flex-direction: column; gap: 30px; }
 .card { border-top: var(--dot); padding: 18px 0 0; }
-.card h2 { margin: 0 0 10px; font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--label2); }
+.card h2 { margin: 0 0 10px; font: 400 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--label2); }
 .card p { margin: 0 0 12px; font-size: 14px; color: var(--label2); }
 .card p:last-child { margin-bottom: 0; }
 .figures { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
