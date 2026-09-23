@@ -563,21 +563,7 @@ function wirePanels() {
      * With a place selected, restore it. Only fall back to browsing when there is
      * genuinely nothing to go back to.
      */
-    if (selection.placeIndex !== null) {
-      headEl.hidden = false;
-      placeListEl.hidden = true;
-      stationListEl.hidden = false;
-      // The favourites count belongs to the favourites view. It is not inside
-      // placelist, so hiding that leaves 22px of "6 favorites" sitting above the
-      // station list of a place it has nothing to do with.
-      placeHeadEl.textContent = "";
-      showSort(false);
-      renderRailTabs(nearbyReceivers());
-      renderStations();
-      syncTunerVisibility();
-    } else {
-      loadPlaces("");
-    }
+    restorePlaceView();
   };
 
   $("newsBtn").onclick = () => {

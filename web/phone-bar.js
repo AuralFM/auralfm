@@ -96,7 +96,22 @@
       // And it covers the sky, so the planet owes itself a re-centre. Showing
       // the field does not resize the globe, so no observer catches this.
       if (typeof sizeGlobe === "function") requestAnimationFrame(() => sizeGlobe());
-      if (on) $("q")?.focus(); else $("q")?.blur();
+      /**
+       * Explore opens on the list of places, with the sort beside its count,
+       * and closing it puts back the place that was selected (explore-core.js).
+       *
+       * The field is not focused on a touch screen: the keyboard would come up
+       * over the very list Explore opened to show. It is one tap away, at the
+       * top. With a keyboard attached, typing straight away is still the point.
+       */
+      if (on) {
+        if (typeof showBrowse === "function") showBrowse();
+        if (!matchMedia("(pointer: coarse)").matches) $("q")?.focus();
+      } else {
+        const q = $("q");
+        if (q) { q.blur(); q.value = ""; }   // an old query must not greet the next open
+        if (typeof restorePlaceView === "function") restorePlaceView();
+      }
     },
     headlines(on) { if (shown.headlines() !== on) $("newsBtn")?.click(); },
     favorites(on) { if (shown.favorites() !== on) $("favBtn")?.click(); },

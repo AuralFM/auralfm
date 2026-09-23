@@ -139,6 +139,45 @@ function sortOpts() {
   return { order: placeOrder, lat, lon };
 }
 
+/**
+ * The browse list, asked for on purpose.
+ *
+ * On a phone Explore opens here: the places, most stations first or however
+ * the sort beside the count says, four rows showing. It used to open on the
+ * place already selected, and with a station loaded that is always — so the
+ * list, and the sort that exists to get past Paris and London, were only ever
+ * reachable by typing into the search field and deleting it again.
+ *
+ * While it is up the globe does not follow its centre (followCentre), the same
+ * as favourites: spinning to look around must not swap the list for a place.
+ */
+let browsingPlaces = false;
+async function showBrowse() {
+  browsingPlaces = true;
+  headEl.hidden = true;
+  await loadPlaces("");
+}
+
+/**
+ * Back to the place that is selected, or to browsing when there is none. What
+ * leaving favourites does, and now what closing Explore does too.
+ */
+function restorePlaceView() {
+  browsingPlaces = false;
+  if (selection.placeIndex === null) { loadPlaces(""); return; }
+  headEl.hidden = false;
+  placeListEl.hidden = true;
+  stationListEl.hidden = false;
+  // The list's count belongs to the list. It is not inside placelist, so
+  // hiding that alone leaves "6 favorites" or "12,579 places" sitting above
+  // the station list of a place it has nothing to do with.
+  placeHeadEl.textContent = "";
+  showSort(false);
+  renderRailTabs(nearbyReceivers());
+  renderStations();
+  syncTunerVisibility();
+}
+
 async function loadPlaces(query = "") {
   const my = ++seq;
   const res = await guard("places", () => window.auralfm.places(query, 400, sortOpts()), null);
@@ -241,6 +280,7 @@ async function selectPlace(i, { keepFilter = false } = {}) {
  * files the web does ship, so nothing here needs a guard.
  */
 async function goToPlace(i, { play = false, fly = true } = {}) {
+  browsingPlaces = false;              // a place was chosen; the list has done its job
   sdrSel = null;                       // a place and a receiver are never both selected
   tunerStop();                         // and a place has nothing to tune
   qEl.value = "";

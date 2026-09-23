@@ -433,7 +433,7 @@ function onCameraChange() {
  * dot is the gesture that makes sound.
  */
 function followCentre() {
-  if (!globe || !globePts || showingFavorites || flying) return;
+  if (!globe || !globePts || showingFavorites || browsingPlaces || flying) return;
   // Locked means locked: browsing the globe must not pull the list out from
   // under you. Clicking a dot or searching still works — this only stops the
   // globe's own motion from changing what you are looking at.
