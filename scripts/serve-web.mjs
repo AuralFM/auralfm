@@ -19,12 +19,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist-web");
+// An optional folder after the port serves that instead — home/ for the front
+// page — the same way, so every Site is previewed by the one server.
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = path.resolve(REPO, process.argv[3] || "dist-web");
 const PORT = Number(process.argv[2]) || 8765;
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8", ".json": "application/json", ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2",
+  ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8",
 };
 
 const manifest = () => {
