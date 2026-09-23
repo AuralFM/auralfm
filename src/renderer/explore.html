@@ -366,6 +366,10 @@
   .placebar .secthead{flex:1;min-width:0}
   /* The filter mark, the colour of the heading it changes. */
   .sortbtn{
+    /* Above the sheet's drag handle (web/rail-sheet.js), a 44px strip laid over
+       the top of the sheet — on a phone it covered every part of this button
+       but a sliver, and the taps went to the handle, which ignores taps. */
+    position:relative;z-index:2;
     flex:none;display:grid;place-items:center;width:28px;height:28px;margin:0 9px 3px 0;padding:0;
     border:0;border-radius:var(--r-md);background:none;color:var(--label2);font-size:14px;cursor:default;
     transition:background var(--dur-control) var(--ease-out),color var(--dur-control) var(--ease-out);
@@ -375,7 +379,13 @@
   .sortbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .sortbtn[aria-pressed="true"]{color:var(--accent)}
   .sortbtn[hidden]{display:none}
-  @media (pointer: coarse){ .sortbtn{width:44px;height:44px;margin:-8px 3px -5px 0;font-size:16px} }
+  /* A thumb's size, and whole: the negative margins that fitted 44px into a
+     31px row pushed the button's lower half under the first place, so a tap
+     aimed at the filter opened Paris. The row grows to hold it instead. */
+  @media (pointer: coarse){
+    .sortbtn{width:44px;height:44px;margin:0 3px 0 0;font-size:16px}
+    .placebar{min-height:44px;margin-bottom:4px}
+  }
   .sublabel{
     padding:10px 8px 4px;font-size:11px;font-weight:590;color:var(--label3);letter-spacing:.005em;
   }

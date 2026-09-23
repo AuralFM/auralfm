@@ -20,7 +20,8 @@
  */
 (() => {
   "use strict";
-  const phone = () => matchMedia("(max-width: 700px)").matches;
+  // The phone layout: narrow, or a phone on its side (see web/web.css).
+  const phone = () => matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)").matches;
   const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   let root = null, panel = null, opener = null, anim = null;
 

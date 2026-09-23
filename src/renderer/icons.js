@@ -87,9 +87,12 @@
     `aria-hidden="true" focusable="false">${body}</svg>`;
 
   const PATHS = {
-    /* Melton's filter mark (Desktop/filter.svg, 2026-09-23): three rounded bars,
-       each shorter than the last. Drawn in currentColor like every other glyph. */
-    filter: MARK("0 0 83 63", `<path d="M82.666 6.021C82.666 9.346 79.971 12.042 76.645 12.042H6.021C2.696 12.042 0 9.347 0 6.021C0 2.696 2.695 0 6.021 0H76.646C79.971 0 82.666 2.696 82.666 6.021Z"/><path d="M72.666 31.324C72.666 34.649 69.971 37.345 66.645 37.345H16.021C12.696 37.345 10 34.65 10 31.324C10 27.999 12.695 25.303 16.021 25.303H66.646C69.971 25.303 72.666 27.999 72.666 31.324Z"/><path d="M57.666 56.626C57.666 59.951 54.971 62.647 51.645 62.647H31.021C27.696 62.647 25 59.952 25 56.626C25 53.301 27.695 50.605 31.021 50.605H51.646C54.971 50.605 57.666 53.301 57.666 56.626Z"/>`),
+    /* Melton's filter mark (Desktop/filter.svg, 2026-09-23), redrawn as lines.
+       Drawn filled, its bars were 12 units of an 83-unit box — about twice the
+       weight of every glyph beside it. Same proportions (the bars run 100%, 76%
+       and 40% of the width, evenly spaced, round-ended), stroked at 2.1 on the
+       24 grid: the weight search and chat use, and the Figma set's 1.6 of 18. */
+    filter: SVG(`<path d="M4.74 6.8H19.26M6.79 12H17.21M9.88 17.2H14.12" stroke-width="2.1"/>`),
     // Solid shapes, because a transport control should read as a button face
     // rather than an outline at 11px.
     // The share control, and anything else that opens rather than acts.

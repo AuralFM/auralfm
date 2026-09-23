@@ -24,7 +24,8 @@
  * VoiceOver — and the gesture is unchanged by giving it a control to hang on.
  */
 (() => {
-  const phone = matchMedia("(max-width: 700px)");
+  // The phone layout: narrow, or a phone on its side (see web/web.css).
+  const phone = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)");
   const rail = document.querySelector(".railcol");
   const cols = document.querySelector(".cols");
   if (!rail || !cols) return;
@@ -147,6 +148,9 @@
     // All the way up, the sheet reaches the globe's own buttons at the top right;
     // they step aside rather than sit over the list (and its sort button).
     document.body.classList.toggle("sheet-open", phone.matches && to === "open");
+    // Held up by Explore or Favourites. On a phone on its side that height
+    // reaches the globe's buttons too (web.css, landscape).
+    document.body.classList.toggle("sheet-held", phone.matches && (to === "card" || to === "explore"));
     say();
     rail.classList.remove("sliding");
     rail.classList.add("settling");

@@ -25,7 +25,8 @@
  * every one came from so a window that grows back puts them all back.
  */
 (() => {
-  const phone = matchMedia("(max-width: 700px)");
+  // The phone layout: narrow, or a phone on its side (see web/web.css).
+  const phone = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)");
   const $ = (id) => document.getElementById(id);
   const toolbar = document.querySelector(".toolbar");
   const now = $("now");
