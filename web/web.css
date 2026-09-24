@@ -259,6 +259,8 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   }
   body.phonebar .now #nowShare[hidden] { display: none !important; }
   body.phonebar .now #nowShare:active { background: var(--fill); }
+  /* Drawn at 32 to match lock and play; caught at 44, as play is below. */
+  body.phonebar .now #nowShare::before { content: ""; position: absolute; inset: -6px; border-radius: var(--r-md); }
   /* 34pt: the row is a strip, and a 40pt disc in it read as a button with a
      line of text beside it rather than a line of text you can play. */
   /* 30pt: a shade bigger than the line of type beside it, which is what a
@@ -474,8 +476,10 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   .sheetrow { width: 100%; gap: 6px; }
   .sheetbtn { flex: 1; min-height: 44px; font-size: 13px; padding: 7px 8px; }
 
-  /* Safari zooms into any field under 16px when it is tapped. */
-  input, select, textarea { font-size: 16px !important; }
+  /* Safari zooms into any field under 16px when it is tapped. Only a touch
+     screen zooms, and the pointer has to be asked: Settings is an iframe about
+     560px wide, so on a laptop it answers this block's width question too. */
+  @media (pointer: coarse) { input, select, textarea { font-size: 16px !important; } }
   #vol, .markets { display: none !important; }
 }
 

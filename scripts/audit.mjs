@@ -2647,6 +2647,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`all four ask "${[...values][0]}"`);
 }
 
+// ── the phone block does not reach into Settings on a laptop ────────────────
+// web.css is linked into every page, Settings included, and Settings is an
+// iframe about 560px wide. A width query asked inside it is true on a 1440px
+// laptop, so the anti-zoom rule set the language menu in 16px beside 12px
+// controls. Only a touch screen zooms into a field, so the rule has to ask
+// for a coarse pointer as well as a narrow viewport.
+{
+  console.log("\nthe phone block does not reach into Settings on a laptop");
+  const css = readSrc("web/web.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = css.match(/(@media[^{]*\{\s*)?input,\s*select,\s*textarea\s*\{\s*font-size:\s*16px/);
+  !rule ? fail("the phone block does not reach into Settings on a laptop", "no 16px field rule found — this check is blind")
+    : /pointer:\s*coarse/.test(rule[1] || "") ? pass("the 16px field rule asks for a touch screen")
+    : fail("the phone block does not reach into Settings on a laptop", "the 16px field rule answers to width alone, so the Settings iframe on a laptop gets it");
+}
+
 // ── headlines say when they failed, and the newest answer wins ──────────────
 // Reported from the iOS PWA on 2026-09-23 as "sometimes it works, sometimes it
 // doesn't". Four faults, each enough on its own:
