@@ -1,4 +1,15 @@
-# Design review — parked on a manual trigger until the action is fixed.
+# Design review — on a manual trigger, because the free plan's reviews are
+# nearly spent (2 of 30 left on 2026-09-24, lifetime, shared with the local
+# MCP reviews CLAUDE.md asks for). Run it by hand when a review is worth one.
+#
+# **Found (2026-09-24): the action reads its key from the wrong variable.** It
+# looks up `INPUT_API_KEY`, turning the input's hyphen into an underscore, but
+# the runner passes inputs with the hyphen kept — `INPUT_API-KEY` — so the key
+# arrives and is never seen. The step sets `INPUT_API_KEY` itself below. The
+# other inputs have the same fault; their defaults (pr, critical, 20) are the
+# values wanted here, so only the key needs it.
+#
+# What follows is how it was found to fail before that was known.
 #
 # **The action cannot read its own api-key, and it is not our configuration.**
 # Measured rather than assumed: a step in this workflow reported the secret
@@ -57,3 +68,6 @@ jobs:
         with:
           api-key: ${{ secrets.RAMS_API_KEY }}
           fail-on: critical
+        # The name the action actually reads (see the top of this file).
+        env:
+          INPUT_API_KEY: ${{ secrets.RAMS_API_KEY }}
