@@ -2667,20 +2667,77 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${feeds.length} newsrooms' stories read through their own routes; Google links open out`);
 }
 
-// ── the phone layout is one question, asked the same way four times ─────────
+// ── a phone is shown how to install, not a tour of a desktop ────────────────
+// Reported from an iPhone on 2026-09-24: the introduction's Headlines and
+// Favorites tips pointed at the top left corner, because they anchor to the
+// toolbar a phone does not have. And the thing a new phone user needed first —
+// how to put the app on the home screen — was nowhere. This runs web/install.js
+// against a stubbed page as an iPhone in Safari, the installed app, a phone
+// that is not an iPhone, and a laptop.
+{
+  console.log("\na phone is shown how to install, not a tour of a desktop");
+  const src = readSrc("web/install.js");
+  const build = readSrc("scripts/build-web.mjs");
+  const PHONE = "(max-width: 700px), (pointer: coarse) and (max-height: 500px)";
+  const run = ({ ua, phone = false, standalone = false, search = "" }) => {
+    let tourCalls = 0, shown = 0;
+    const timers = [];     // run by hand below: the guide's own steps re-arm forever
+    const el = () => ({ classList: { toggle() {}, contains: () => true }, dataset: {}, style: {},
+      setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], querySelector: () => el(),
+      append() {}, remove() {}, innerHTML: "" });
+    const body = { ...el(), append: () => { shown++; } };
+    const ctx = {
+      navigator: { userAgent: ua, platform: /iPhone/.test(ua) ? "iPhone" : "MacIntel", maxTouchPoints: /iPhone/.test(ua) ? 5 : 0, standalone },
+      matchMedia: (q) => ({ matches: q === PHONE ? phone : q === "(display-mode: standalone)" ? standalone : false }),
+      location: { search }, localStorage: { getItem: () => null, setItem() {} },
+      document: { body, createElement: el }, setTimeout: (f) => timers.push(f), clearTimeout() {},
+      addEventListener() {}, removeEventListener() {}, MutationObserver: class { observe() {} disconnect() {} },
+      URLSearchParams,
+    };
+    ctx.window = ctx;
+    ctx.Tour = { maybeStart: () => { tourCalls++; } };
+    vm.runInNewContext(src, ctx);
+    ctx.Tour.maybeStart({ tourSeen: false });
+    for (let i = 0; i < 3 && i < timers.length; i++) timers[i]();   // show, then a step or two
+    return { tourCalls, shown };
+  };
+  const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1";
+  const ANDROID = "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140.0 Mobile Safari/537.36";
+  const MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/26.0 Safari/605.1.15";
+  const gaps = [];
+  try {
+    const safari = run({ ua: IPHONE, phone: true });
+    if (!safari.shown) gaps.push("an iPhone in Safari is not shown how to add the app");
+    if (safari.tourCalls) gaps.push("an iPhone gets the tour");
+    const home = run({ ua: IPHONE, phone: true, standalone: true });
+    if (home.shown) gaps.push("the home-screen app is told to add itself to the home screen");
+    if (home.tourCalls) gaps.push("the home-screen app on a phone gets the tour");
+    if (run({ ua: ANDROID, phone: true }).tourCalls) gaps.push("a phone that is not an iPhone gets the tour");
+    const laptop = run({ ua: MAC });
+    if (laptop.shown) gaps.push("a laptop is shown the iPhone install steps");
+    if (laptop.tourCalls !== 1) gaps.push("a laptop no longer gets the tour");
+    if (!run({ ua: MAC, search: "?go=install" }).shown) gaps.push("?go=install does not show the guide");
+  } catch (err) { gaps.push(`web/install.js did not run: ${err.message}`); }
+  if (!/"web\/after\.js", "web\/install\.js"/.test(build)) gaps.push("scripts/build-web.mjs does not load web/install.js before explore.js");
+  gaps.length ? fail("a phone is shown how to install, not a tour of a desktop", gaps.join("; "))
+    : pass("iPhone in Safari: install steps, no tour; home-screen app: neither; laptop: the tour");
+}
+
+// ── the phone layout is one question, asked the same way everywhere ────────
 // A landscape iPhone is 844pt wide or more, and "phone" was `max-width: 700px`,
 // so a phone on its side got the desktop layout — toolbar, side rail, volume
 // slider and ticker in 390pt of height. The fix is a second clause (a touch
-// screen under 500pt tall), and it has to be in all four places that ask:
-// the stylesheet's phone block and the three scripts that move and drag
-// things. One that still asks the old question lays out a phone while another
-// treats it as a desktop, which is a broken screen, not a style difference.
+// screen under 500pt tall), and it has to be in every place that asks: the
+// stylesheet's phone block, the three scripts that move and drag things, and
+// the one that keeps the tour off a phone. One that still asks the old question
+// lays out a phone while another treats it as a desktop, which is a broken
+// screen, not a style difference.
 {
   console.log("\nthe phone layout is one question");
   const css = readSrc("web/web.css");
   const block = css.match(/\/\* ── phones[\s\S]*?\*\/\s*@media ([^{]+)\{/);
   const asked = { "web/web.css": block ? block[1].trim() : null };
-  for (const f of ["web/phone-bar.js", "web/rail-sheet.js", "web/sheet.js"]) {
+  for (const f of ["web/phone-bar.js", "web/rail-sheet.js", "web/sheet.js", "web/install.js"]) {
     const m = readSrc(f).match(/matchMedia\("([^"]+)"\)/);
     asked[f] = m ? m[1] : null;
   }
@@ -2693,7 +2750,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   else if (!/max-height/.test([...values][0]))
     gaps.push("the phone query is width alone, so a phone on its side gets the desktop layout");
   gaps.length ? fail("the phone layout is one question", gaps.join("; "))
-    : pass(`all four ask "${[...values][0]}"`);
+    : pass(`all ${Object.keys(asked).length} ask "${[...values][0]}"`);
 }
 
 // ── the phone block does not reach into Settings on a laptop ────────────────

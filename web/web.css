@@ -77,6 +77,68 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 /* Reduced motion: a cross-fade, and nothing moves. */
 .setsheet.fade .setsheet-panel { transform: none !important; transition: opacity 200ms ease; }
 
+/* ── Add to Home Screen (web/install.js) ──────────────────────────────────────
+   A card at the bottom, where Safari's own controls are, over everything the
+   app draws. One step lit at a time, its glyph above with a tap drawn on it. */
+.installhint {
+  position: fixed; z-index: 9900; left: 50%; translate: -50% 0;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  width: min(360px, calc(100vw - 24px)); box-sizing: border-box;
+  padding: 20px 18px 12px; border-radius: var(--r-xl);
+  background: color-mix(in srgb, var(--bg) 96%, transparent); color: var(--label);
+  box-shadow: inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 20px 60px rgba(0, 0, 0, .5);
+  -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
+  animation: installin .42s cubic-bezier(.32,.72,0,1) both;
+}
+@keyframes installin { from { opacity: 0; transform: translateY(24px); } }
+.installhero {
+  position: relative; width: 56px; height: 56px; margin: 0 auto 12px;
+  display: grid; place-items: center; border-radius: var(--r-lg);
+  background: var(--fill); color: var(--accent); font-size: 30px;
+}
+.installhero svg { width: 30px; height: 30px; animation: installpop .42s cubic-bezier(.32,.72,0,1) both; }
+@keyframes installpop { from { opacity: 0; transform: scale(.7); } }
+/* The toggle switches on while it is shown. */
+.installhero[data-step="toggle"] .knob { animation: installknob .5s .6s cubic-bezier(.32,.72,0,1) forwards; }
+@keyframes installknob { to { transform: translateX(9px); fill: currentColor; } }
+/* A finger's tap: a ring that lands on the glyph and spreads. */
+.installtap {
+  position: absolute; inset: 50% auto auto 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  border-radius: 50%; border: 2px solid var(--accent); opacity: 0;
+  animation: installtap 1.2s .9s ease-out 2;
+}
+@keyframes installtap { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(2.2); } }
+.installhint h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.02em; text-align: center; text-wrap: balance; }
+.installsub { margin: 4px 0 14px; font-size: 13px; color: var(--label2); text-align: center; }
+.installsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.installsteps li {
+  display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 10px;
+  /* Full-strength text on every step: they are instructions, and a dimmed one
+     is the step somebody cannot read when they get to it. */
+  border-radius: var(--r-md); color: var(--label);
+  transition: background var(--dur-hover) var(--ease-out), color var(--dur-hover) var(--ease-out);
+}
+.installsteps li.on { background: var(--fill); }
+.installico { flex: none; display: grid; place-items: center; width: 24px; font-size: 20px; color: var(--label2); }
+.installico svg { width: 20px; height: 20px; }
+.installsteps li.on .installico { color: var(--accent); }
+.installtxt { font-size: 15px; line-height: 1.3; }
+.installtxt b { font-weight: 600; }
+/* The hint is what finds a hidden menu, so it keeps most of the text's
+   contrast rather than the secondary colour's. */
+.installtxt small { display: block; font-size: 12px; color: var(--label); opacity: .78; }
+.installlater {
+  display: block; margin: 8px auto 0; min-height: 44px; min-width: 44px; padding: 0 16px;
+  appearance: none; border: 0; background: none; cursor: default;
+  font: inherit; font-size: 15px; color: var(--label2); border-radius: var(--r-md);
+}
+.installlater:hover { color: var(--label); }
+.installlater:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) {
+  .installhint, .installhero svg, .installhero[data-step="toggle"] .knob { animation: none; }
+  .installtap { display: none; }
+}
+
 /* ── phones ──────────────────────────────────────────────────────────────────
    Narrow, or a phone on its side. Width alone sent a landscape iPhone (844pt,
    or 932) to the desktop layout — toolbar, side rail, volume slider and market

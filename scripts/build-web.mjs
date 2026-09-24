@@ -280,7 +280,7 @@ page("explore.html", "index.html", {
   // levels.js before the bridge: the card's waveform is measured from a private
   // copy of the stream, exactly as the desktop's popover does it.
   before: ["web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
-  after: { "explore.js": ["web/after.js", "web/rail-sheet.js", "web/phone-bar.js"] },
+  after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js"] },
   logo: true,
   share: true,
 });
@@ -295,7 +295,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
-for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
+for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
 // Google News does not let a web page read it, so here.now fetches it for the
