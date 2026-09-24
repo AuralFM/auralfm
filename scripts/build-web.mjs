@@ -188,7 +188,30 @@ function toolbarLogo() {
   return `<svg viewBox="${view}" aria-hidden="true" focusable="false">${inked}</svg>`;
 }
 
-function page(srcName, outName, { title, before, beforeScript, after = {}, logo = false }) {
+/**
+ * The link preview: what Messages, WhatsApp and the rest show when somebody
+ * sends the app's address. The image is the brand cover (assets/brand), cropped
+ * to 1200x630, the size every preview reader takes without cropping again.
+ * Absolute URLs, because several readers ignore a relative og:image outright.
+ * A preview reader cannot get past a password, so this shows only once the
+ * site is public — until then every link previews as here.now's sign-in page.
+ */
+const SITE = "https://listen.auralfm.xyz/";
+const TAGLINE = "A window onto the world you can listen to.";
+const SHARE_TAGS = `
+<meta name="description" content="${TAGLINE}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AuralFM">
+<meta property="og:title" content="AuralFM">
+<meta property="og:description" content="${TAGLINE}">
+<meta property="og:url" content="${SITE}">
+<meta property="og:image" content="${SITE}share.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The AuralFM globe on a field of stars">
+<meta name="twitter:card" content="summary_large_image">`;
+
+function page(srcName, outName, { title, before, beforeScript, after = {}, logo = false, share = false }) {
   let html = fs.readFileSync(R("src", "renderer", srcName), "utf8");
   const csp = /<meta http-equiv="Content-Security-Policy"[\s\S]*?>/;
   if (!csp.test(html)) throw new Error(`web: no CSP meta in ${srcName}`);
@@ -210,7 +233,7 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
 <link rel="icon" href="favicon.ico" sizes="48x48">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">`);
+<link rel="icon" href="favicon.svg" type="image/svg+xml">${share ? SHARE_TAGS : ""}`);
   // After the page's own stylesheet, so an override wins where the two are
   // equally specific rather than losing to source order.
   if (!html.includes("</head>")) throw new Error(`web: ${srcName} has no </head>`);
@@ -259,6 +282,7 @@ page("explore.html", "index.html", {
   before: ["web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
   after: { "explore.js": ["web/after.js", "web/rail-sheet.js", "web/phone-bar.js"] },
   logo: true,
+  share: true,
 });
 page("settings.html", "settings.html", {
   title: "AuralFM Settings",
@@ -348,7 +372,7 @@ for (const name of ["apple-touch-icon.png", "apple-touch-icon-precomposed.png",
                     "apple-touch-icon-120x120.png", "apple-touch-icon-120x120-precomposed.png"]) {
   fs.copyFileSync(path.join(OUT, "assets", "icons", "icon-180.png"), path.join(OUT, name));
 }
-for (const f of ["favicon.ico", "favicon.svg"]) fs.copyFileSync(R("assets", "brand", f), path.join(OUT, f));
+for (const f of ["favicon.ico", "favicon.svg", "share.jpg"]) fs.copyFileSync(R("assets", "brand", f), path.join(OUT, f));
 fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
   name: "AuralFM",
   short_name: "AuralFM",
