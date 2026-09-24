@@ -1,0 +1,31 @@
+# Version updates, weekly, as pull requests.
+#
+# Dependabot already answers security alerts on its own (all 15 so far were
+# fixed). This adds the routine updates it otherwise never proposes, including
+# for the Actions in .github/workflows. Grouped so a week is one pull request
+# per ecosystem, not a dozen, and every one runs the audit before it can merge.
+#
+# Electron majors are left out of the npm group: a major is a tested upgrade
+# (the app's context isolation and IPC ride on it), made on purpose, not merged
+# because a bot opened it.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: electron
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm:
+        patterns: ["*"]

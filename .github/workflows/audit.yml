@@ -70,16 +70,22 @@ jobs:
       # Electron is a devDependency by electron-builder convention but its
       # runtime is bundled into the app, so `--omit=dev` above does not cover it
       # and a green gate would be misleading. Printed on every run and never
-      # allowed to block one: the fix is a major version bump, which is a tested
-      # change and not something to be forced by a red build. Tracked as an
-      # issue instead.
+      # allowed to block one: the fix is usually a major version bump, which is a
+      # tested change and not something to be forced by a red build.
+      #
+      # The warning is raised only when there is something to warn about. It used
+      # to print on every run, pointing at an Electron issue (#42) closed in
+      # August, so a clean run carried a warning that meant nothing.
       - name: Advisories in build and runtime tooling (informational)
         continue-on-error: true
         run: |
           echo "::group::npm audit, all dependencies"
-          npm audit --audit-level=high || true
-          echo "::endgroup::"
-          echo "::warning::Electron advisories are tracked in the Electron upgrade issue. This step never fails the build."
+          if ! npm audit --audit-level=high; then
+            echo "::endgroup::"
+            echo "::warning::npm audit found high advisories in build or runtime tooling (Electron included). Open an issue for the upgrade; this step never fails the build."
+          else
+            echo "::endgroup::"
+          fi
 
       # A generator that dirties the tree means something generated is tracked.
       # build/icon.icns was exactly that until it was gitignored, and a 1 MB
