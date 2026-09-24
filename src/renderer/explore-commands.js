@@ -22,7 +22,7 @@ function describeMode() {
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   input.classList.remove("cmdok", "cmdbad");
 
-  if (viewingCell) { hideNames(); return set(t("chat.onlyLooking", "You are looking at this room, not listening to it.")); }
+  if (viewingCell) { hideNames(); return set(t("chat.onlyLooking", "Looking, not listening.")); }
 
   if (text.startsWith("/")) {
     const sp = text.indexOf(" ");
@@ -39,12 +39,12 @@ function describeMode() {
       // how somebody concludes a command does not exist.
       return near.length
         ? set(esc(near.slice(0, 8).join("  ")) + (near.length > 8 ? ` +${near.length - 8}` : ""))
-        : set(`<b>${esc(word)}</b> ${t("chat.notACommand", "is not a command. Type / to see them.")}`, "warn");
+        : set(`<b>${esc(word)}</b> ${t("chat.notACommand", "is not a command. Type /")}`, "warn");
     }
     if (!cmd) {
       hideNames();
       input.classList.add("cmdbad");
-      return set(`<b>${esc(word)}</b> ${t("chat.notACommand", "is not a command. Type / to see them.")}`, "warn");
+      return set(`<b>${esc(word)}</b> ${t("chat.notACommand", "is not a command. Type /")}`, "warn");
     }
 
     if (cmd.needsName) {
@@ -54,7 +54,7 @@ function describeMode() {
         hideNames();
         input.classList.add("cmdok");
         return set(`<b>${esc(word)}</b> → <b>${esc(one.nick || one.from)}</b>`
-                 + (cmd.privately ? ` — ${t("chat.privateOnly", "nobody else in this room sees it")}` : ""),
+                 + (cmd.privately ? ` — ${t("chat.privateOnly", "nobody else sees it")}` : ""),
                    cmd.privately ? "priv" : "");
       }
       showNames(word, frag);
@@ -78,17 +78,17 @@ function describeMode() {
   if (hubIn) {
     input.classList.add("cmdok");
     return set(`${t("chat.hubTo", "To the hub")} <b>${esc(hubIn.name)}</b> — `
-             + t("chat.hubOnly", "only people who know its name and password can read this"), "priv");
+             + t("chat.hubOnly", "only its password holders"), "priv");
   }
   if (dmWith) {
     input.classList.add("cmdok");
     return set(`${t("chat.privateTo", "Private to")} <b>${esc(dmWith.nick)}</b> — `
-             + t("chat.privateOnly", "nobody else in this room sees it"), "priv");
+             + t("chat.privateOnly", "nobody else sees it"), "priv");
   }
   const where = myPlaceName();
   return set(where
     ? `${t("chat.everyoneNear", "Everyone near")} <b>${esc(where)}</b> ${t("chat.willSee", "will see this")}`
-    : t("chat.everyoneHere", "Everyone in this room will see this"));
+    : t("chat.everyoneHere", "Everyone here will see this"));
 }
 
 /**
@@ -104,21 +104,21 @@ function describeMode() {
  */
 const COMMANDS = {
   "/help": {
-    hint: "list these commands",
+    hint: "list commands",
     run: () => systemLine(Object.entries(COMMANDS)
       .map(([k, v]) => `${k} — ${v.hint}`).join("\n")),
   },
   "/who": {
-    hint: "who else is here",
+    hint: "who is here",
     run: () => {
       const n = peers.length;
       systemLine(n
-        ? `${n} ${n === 1 ? "person" : "people"} visible on the relays right now.`
-        : "Nobody else is visible on the relays right now.");
+        ? `${n} here now.`
+        : "Nobody else here.");
     },
   },
   "/clear": {
-    hint: "clear this log (local only)",
+    hint: "clear this log",
     /**
      * Clearing has to empty what the app said as well as what the log showed.
      * Emptying the element alone left `systemCache` holding every line, and the
@@ -128,21 +128,21 @@ const COMMANDS = {
       clearSystemLines();
       chatCache = []; noteCache = []; dmCache = [];
       $("chatlog").textContent = "";
-      systemLine("Cleared. Only here — the relays still have it.");
+      systemLine("Cleared here. Relays keep it.");
     },
   },
   "/me": {
-    hint: "/me is listening — sends as an action",
-    run: (rest) => rest ? { send: `* ${rest}` } : systemLine("Say what you are doing: /me is tuning around."),
+    hint: "send as an action",
+    run: (rest) => rest ? { send: `* ${rest}` } : systemLine("Try: /me is tuning around"),
   },
   "/mute": {
-    hint: "/mute <name> — stop seeing somebody",
+    hint: "hide someone",
     needsName: true,
     run: async (rest) => {
       const who = findPerson(rest, "/mute");
       if (!who) return;
       await guard("muteAdd", () => window.auralfm.muteAdd(who.pubkey));
-      systemLine(`Muted ${name(who)}. Settings can undo it.`);
+      systemLine(`Muted ${name(who)}.`);
     },
   },
 
@@ -158,24 +158,22 @@ const COMMANDS = {
    * what the note asks for, not what anyone can enforce.
    */
   "/drop": {
-    hint: "/drop <note> — leave a note here for a day (public, permanent)",
+    hint: "leave a day-long note",
     run: async (rest) => {
       const body = (rest || "").trim();
-      if (!body) return systemLine("Write the note: /drop the 40m band is busy after dark.");
-      if (!confirm(t("notes.ask",
-        "Leave this note on the relays?\n\nUnlike everything else AuralFM sends, a note is stored and public. "
-        + "It asks to expire in a day, but relays are not required to honour that, and it cannot be unsent."))) return;
+      if (!body) return systemLine("Try: /drop your note");
+      if (!confirm(t("notes.ask", "Post a public note? No unsend."))) return;
       const ok = await guard("noteDrop", () => window.auralfm.noteDrop(body), false);
       systemLine(ok
-        ? "Note left here. Anyone tuning to this place will see it for a day."
-        : "Nothing was sent — no relay is connected, or nothing is playing.");
+        ? "Note left for a day."
+        : "Not sent. No relay or station.");
     },
   },
   "/notes": {
-    hint: "notes left at this place",
+    hint: "notes left here",
     run: async () => {
       const list = await guard("notesHistory", () => window.auralfm.notesHistory(), []);
-      if (!list.length) return systemLine("No notes here. /drop leaves one.");
+      if (!list.length) return systemLine("No notes. /drop leaves one.");
       systemLine(list.map((n) => `${n.nick || n.from}: ${n.text}`).join("\n"));
     },
   },
@@ -195,7 +193,7 @@ const COMMANDS = {
    * Same as bitchat, whose users are in these rooms and already know it.
    */
   "/msg": {
-    hint: "/msg <name> — open a private conversation",
+    hint: "private chat",
     needsName: true,
     privately: true,
     run: async (rest) => {
@@ -205,11 +203,10 @@ const COMMANDS = {
       await enterDm(who);
       const body = words.join(" ").trim();
       if (!body) {
-        return systemLine(`Private with ${name(who)}. Everything you type now goes only to them. `
-          + "Esc, or Back to the room, to leave.");
+        return systemLine(`Private with ${name(who)}. Esc leaves.`);
       }
       const ok = await guard("dmSend", () => window.auralfm.dmSend(who.pubkey, body), false);
-      if (!ok) return systemLine("Not sent — no relay is connected, or they are muted.");
+      if (!ok) return systemLine("Not sent: no relay, or muted.");
     },
   },
   /**
@@ -234,11 +231,11 @@ const COMMANDS = {
    * discourage one.
    */
   "/hub": {
-    hint: '/hub <name> <password> — a private room. Quote a name with spaces: /hub "radio club" <password>',
+    hint: "room with a password",
     run: async (rest) => {
       const body = (rest || "").trim();
       if (!body) {
-        if (!hubIn) return systemLine('Which hub? /hub radioclub shortwave2026 — or quote a name with spaces: /hub "radio club" shortwave2026');
+        if (!hubIn) return systemLine("Try: /hub name password");
         await leaveHub();
         return;
       }
@@ -257,16 +254,14 @@ const COMMANDS = {
       if (quoted) { name = quoted[1]; password = quoted[2].trim(); }
       else {
         const sp = body.indexOf(" ");
-        if (sp < 0) return systemLine(`A hub needs a password too: /hub ${body} <password>`);
+        if (sp < 0) return systemLine(`Needs a password: /hub ${body} …`);
         name = body.slice(0, sp); password = body.slice(sp + 1).trim();
       }
-      if (!password) return systemLine("A hub needs a password too: /hub " + name + " <password>");
+      if (!password) return systemLine(`Needs a password: /hub ${name} …`);
       const got = await guard("hubJoin", () => window.auralfm.hubJoin(name, password), null);
-      if (!got) return systemLine("That did not work — a hub needs both a name and a password.");
+      if (!got) return systemLine("Needs a name and a password.");
       await enterHub(got);
-      systemLine(`In "${got.name}". Everything you type goes only to people who typed the same name and password. `
-        + "Nobody else can read it, including the relays carrying it — but anyone who learns the pair can, "
-        + "including what was said before they knew it.");
+      systemLine(`In "${got.name}". Only the pair can read.`);
     },
   },
   /**
@@ -279,34 +274,33 @@ const COMMANDS = {
    * the one who decided to.
    */
   "/whois": {
-    hint: "/whois <name> — look someone up, if they published a profile",
+    hint: "look someone up",
     needsName: true,
     run: async (rest) => {
       const who = findPerson(rest, "/whois");
       if (!who) return;
-      systemLine(`Asking the relays about ${name(who)}…`);
+      systemLine(`Looking up ${name(who)}…`);
       const p = await guard("profileGet", () => window.auralfm.profileGet(who.pubkey), null);
       if (!p || (!p.name && !p.about && !p.nip05)) {
-        return systemLine(`Nothing published for ${name(who)}. Most people here have no profile — `
-          + "the key is the whole identity, and that is the normal case rather than a gap.");
+        return systemLine(`No profile for ${name(who)}.`);
       }
       knownProfiles[who.pubkey] = p;
       const lines = [`${p.name || name(who)}`];
       // "claims", not "verified": checking a NIP-05 means asking that domain
       // about this person, which is a request we have not made.
-      if (p.nip05) lines.push(`claims ${p.nip05} — unverified, and checking it would ask that domain about them`);
+      if (p.nip05) lines.push(`claims ${p.nip05} (unverified)`);
       if (p.about) lines.push(p.about);
       systemLine(lines.join("\n"));
       repaintLog();
     },
   },
   "/fav": {
-    hint: "/fav <name> — keep somebody, and tell them",
+    hint: "keep someone",
     needsName: true,
     run: (rest) => setFavorite(rest, true),
   },
   "/unfav": {
-    hint: "/unfav <name> — stop keeping somebody",
+    hint: "stop keeping someone",
     needsName: true,
     run: (rest) => setFavorite(rest, false),
   },
@@ -322,7 +316,7 @@ const COMMANDS = {
    * confirm dialog in the middle of a chat is not a security practice.
    */
   "/verify": {
-    hint: "/verify <name> — compare fingerprints in person",
+    hint: "compare fingerprints",
     needsName: true,
     run: async (rest) => {
       const who = findPerson(rest, "/verify");
@@ -333,8 +327,8 @@ const COMMANDS = {
       systemLine([
         `${name(who)}: ${theirs.readable}`,
         mine?.fingerprint ? `you: ${mine.fingerprint}` : null,
-        "Read these to each other. If they match, mark them verified in Settings.",
-        "A fingerprint sent over this chat proves nothing — anyone can type one.",
+        "Match them in person.",
+        "Typed ones prove nothing.",
       ].filter(Boolean).join("\n"));
     },
   },
@@ -347,7 +341,7 @@ const COMMANDS = {
    * and it is deliberately not dressed up as more than it is.
    */
   "/report": {
-    hint: "/report <name> — mute them and draft a report",
+    hint: "mute and report",
     run: async (rest) => {
       const who = findPerson(rest, "/report");
       if (!who) return;
@@ -355,11 +349,11 @@ const COMMANDS = {
       await guard("chatReport", () => window.auralfm.chatReport({
         pubkey: who.pubkey, text: who.text, at: who.at, geohash: who.geohash,
       }));
-      systemLine(`Muted ${name(who)}, and an email draft is open. Nothing was sent automatically.`);
+      systemLine(`Muted ${name(who)}. Report drafted.`);
     },
   },
   "/wipe": {
-    hint: "erase everything, now",
+    hint: "erase everything",
     run: () => { panicWipe(); },
   },
 };
@@ -392,22 +386,22 @@ function findPerson(rest, cmd) {
   if (!want) {
     const all = roster();
     systemLine(all.length
-      ? `Who? ${cmd} <name>. Here now: ${all.slice(0, 8).map((p) => p.nick || p.from).join(", ")}`
-      : `Who? ${cmd} followed by a name — but there is nobody here yet.`);
+      ? `Who? ${cmd} <name>. Here: ${all.slice(0, 8).map((p) => p.nick || p.from).join(", ")}`
+      : "Who? Nobody here yet.");
     return null;
   }
   const hits = matchPeople(want);
   if (!hits.length) {
     const all = roster();
     systemLine(all.length
-      ? `Nobody here called "${want}". Here now: ${all.slice(0, 8).map((p) => p.nick || p.from).join(", ")}`
-      : `Nobody here called "${want}" — the room is empty.`);
+      ? `No "${want}". Here: ${all.slice(0, 8).map((p) => p.nick || p.from).join(", ")}`
+      : `No "${want}" here.`);
     return null;
   }
   // Ambiguity is not a match. Picking one on somebody's behalf is how a private
   // message reaches the wrong person.
   if (hits.length > 1) {
-    systemLine(`"${want}" could be ${hits.slice(0, 6).map((p) => p.nick || p.from).join(", ")}. Be more specific.`);
+    systemLine(`Which? ${hits.slice(0, 6).map((p) => p.nick || p.from).join(", ")}`);
     return null;
   }
   return hits[0];
@@ -422,15 +416,13 @@ async function setFavorite(rest, on) {
   if (on) {
     const st = await guard("stats", () => window.auralfm.presenceStats(), null);
     if (!st?.durable && !confirm(
-      `Keep ${name(who)}?\n\nYour key is thrown away when AuralFM quits, so this will not survive `
-      + "a restart — and neither will theirs unless they have switched on a durable identity too. "
-      + "Settings → Privacy turns yours on.\n\nKeep them for this session anyway?")) return;
+      `Keep ${name(who)}? Lost when you quit.`)) return;
   }
   const ok = await guard("socialFavorite", () => window.auralfm.socialFavorite(who.pubkey, on), false);
-  if (!ok) return systemLine("That did not work — they may be muted.");
+  if (!ok) return systemLine("Didn’t work. Muted?");
   systemLine(on
-    ? `Keeping ${name(who)}. They have been told, privately. It becomes mutual if they keep you back.`
-    : `No longer keeping ${name(who)}.`);
+    ? `Keeping ${name(who)}. They’re told.`
+    : `Stopped keeping ${name(who)}.`);
 }
 
 /**
@@ -442,8 +434,7 @@ async function setFavorite(rest, on) {
  * the gesture.
  */
 async function panicWipe() {
-  if (!confirm(t("chat.wipeAsk",
-    "Erase favorites, listening history, the mute list and every key this session used? This cannot be undone."))) return;
+  if (!confirm(t("chat.wipeAsk", "Erase everything? No undo."))) return;
   const done = await guard("panicWipe", () => window.auralfm.panicWipe(), []);
   leaveDm();
   clearSystemLines();
@@ -526,7 +517,7 @@ function wireCommands() {
       input.disabled = false;
       input.focus();
       if (ok) input.value = "";
-      else sendFailed(input, t("chat.dmFailed", "Not sent — no relay took it, or they are muted."));
+      else sendFailed(input, t("chat.dmFailed", "Not sent: no relay, or muted."));
       describeMode();
       return;
     }
@@ -556,7 +547,7 @@ function wireCommands() {
     if (sent) input.value = "";
     // Never silently swallow it. If no relay took the message, the text stays
     // where the person typed it.
-    else sendFailed(input, t("chat.failed", "AuralFM cannot reach a relay. It did not send your message."));
+    else sendFailed(input, t("chat.failed", "No relay reached. Not sent."));
     describeMode();
   };
 

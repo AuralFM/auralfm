@@ -64,7 +64,7 @@ async function tripHop({ announce = true } = {}) {
   try {
     const pick = await guard("randomStation", () => window.auralfm.randomStation(), null);
     if (!pick) {
-      if (announce) systemLine(t("ctl.somewhereFailed", "Could not find anywhere just now"));
+      if (announce) systemLine(t("ctl.somewhereFailed", "Nowhere found. Try again."));
       return false;
     }
     showingFavorites = false;
@@ -95,7 +95,7 @@ async function startTrip() {
   const b = $("tripBtn");
   b.setAttribute("aria-pressed", "true");
   b.title = t("ctl.tripStop", "Stop travelling");
-  systemLine(t("ctl.tripStarted", "Travelling — a new station every 5 minutes"));
+  systemLine(t("ctl.tripStarted", "Travelling: new station every 5m"));
   await tripHop();
   if (tripTimer) clearInterval(tripTimer);
   tripTimer = setInterval(async () => {

@@ -138,7 +138,7 @@ function paintConvos() {
   if (!list.length) {
     const n = document.createElement("div");
     n.className = "none";
-    n.textContent = t("chat.noPrivate", "No private conversations yet. /msg somebody to start one.");
+    n.textContent = t("chat.noPrivate", "No private chats. Try /msg.");
     box.append(n);
     return;
   }

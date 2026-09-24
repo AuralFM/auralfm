@@ -216,18 +216,13 @@ function repaintLog() {
         // Cancel stops everything and the second declines the extra step —
         // neither one does something on the way out, which a single confirm
         // offering "OK reports, Cancel mutes" would.
-        if (!confirm(t("chat.muteAsk",
-          `Mute ${label}? You will stop seeing their messages. This is only on this Mac.`)
-          .replace("{who}", label))) return;
+        if (!confirm(t("chat.muteAsk", `Mute ${label}?`).replace("{who}", label))) return;
         await guard("muteAdd", () => window.auralfm.muteAdd(m.pubkey));
-        if (!confirm(t("chat.reportAsk",
-          "Also report this message? It opens an email draft with the message in it — nothing is sent until you send it."))) return;
+        if (!confirm(t("chat.reportAsk", "Report it too? Opens an email."))) return;
         await guard("chatReport", () => window.auralfm.chatReport({
           pubkey: m.pubkey, text: m.text, at: m.at, geohash: m.geohash,
         }));
-        systemLine(t("chat.reported",
-          "Muted, and an email draft is open. Nothing was sent automatically — AuralFM has no "
-          + "server, and it cannot delete this from the relays carrying it."));
+        systemLine(t("chat.reported", "Muted. Report draft opened."));
       };
       who.onclick = act;
       who.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } };
@@ -392,12 +387,10 @@ async function syncChatView() {
  */
 function chatNotice() {
   if (prefs?.chatNoticeSeen) return;
-  systemLine(t("chat.notice",
-    "About this channel: it is a public conversation carried by relays AuralFM does not own. "
-    + "Nobody moderates it, and nothing can be deleted from somebody else's relay — not by you, "
-    + "and not by us. What you do control is your own window: click a name to mute or report, "
-    + "the word filter is on, and Settings can limit this to people you have kept. "
-    + "Triple-click the log to erase everything."));
+  // Short on purpose: every line in chat stays around 30 characters. The rest
+  // of what this used to say lives where it acts — a name mutes or reports, and
+  // Settings holds the filter and the erase.
+  systemLine(t("chat.notice", "Public, unmoderated, permanent."));
   window.auralfm.setPrefs({ chatNoticeSeen: true });
 }
 
@@ -410,7 +403,7 @@ function paintComposer() {
   input.placeholder = dmWith
     ? t("chat.dmPlaceholder", "Private message")
     : browsing
-      ? t("chat.browsing", "Listening here would let you reply")
+      ? t("chat.browsing", "Listen here to reply")
       : t("chat.placeholder", "Say something to this place");
   describeMode();
 }

@@ -56,7 +56,7 @@
   chatPanel.hidden = true;
   const chatNone = document.createElement("p");
   chatNone.className = "chatnone";
-  chatNone.textContent = "Play a station to talk to the place it comes from.";
+  chatNone.textContent = "Play a station to chat here.";
 
   /** One tab: a glyph, a word under it, and whether it is the one you are on. */
   function tab(name, label, glyph, onPick) {

@@ -2569,6 +2569,31 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`the splash's ${wants.join(", ")} exists, is committed and is packaged`);
 }
 
+// ── chat speaks in short lines ──────────────────────────────────────────────
+// Melton, 2026-09-23: "we don't need this much copy ever — keep it around 30
+// characters." The chat's opening notice was 381 characters of italic in a
+// panel people glance at, and the command replies ran to two sentences each.
+// Everything the chat says: its strings in every language, and the literal
+// text the slash commands answer with (the fixed part — a name is extra).
+{
+  console.log("\nchat speaks in short lines");
+  const { strings, LANGUAGES } = await import(pathToFileURL(R("src/i18n.js")).href).then((m) => m.default || m);
+  const KEYS = /^(chat\.|notes\.ask$|ctl\.trip|ctl\.somewhere)/;
+  const long = [];
+  for (const { code } of LANGUAGES) {
+    const cap = code === "en" ? 32 : 36;
+    for (const [k, v] of Object.entries(strings(code, "en"))) {
+      if (KEYS.test(k) && String(v).replace("{who}", "").replace("{place}", "").length > cap) long.push(`${code} ${k} (${v.length})`);
+    }
+  }
+  const cmds = readSrc("src/renderer/explore-commands.js");
+  const said = [...cmds.matchAll(/systemLine\(\s*(["`])([\s\S]*?)\1\s*\)/g), ...cmds.matchAll(/hint:\s*(["'`])([\s\S]*?)\1/g)]
+    .map((m) => m[2].replace(/\$\{[^}]*\}/g, "").trim());
+  for (const line of said) if (line.length > 32) long.push(`command: "${line.slice(0, 40)}…" (${line.length})`);
+  long.length ? fail("chat speaks in short lines", long.slice(0, 8).join("; ") + (long.length > 8 ? `; +${long.length - 8} more` : ""))
+    : pass(`every chat string and command reply is 32 characters or fewer in English, 36 in translation`);
+}
+
 // ── world headlines do not hang on one gatekeeper ───────────────────────────
 // World headlines were Google News' World topic, and on the web that request
 // leaves from here.now's servers. Google answered it, on 2026-09-23, with its
