@@ -63,6 +63,7 @@ differently" below. The rest of this table applies to both.
 | Open-Meteo | Weather for a selected place | Your IP address, the **selected city's** coordinates |
 | Google News RSS | Headlines for a country or place | Your IP address |
 | BBC, Al Jazeera, France 24, DW (their own RSS feeds) | World headlines | Your IP address |
+| The publisher of a headline you open | Reading it in the app | Your IP address, and which article |
 | CoinGecko | Crypto prices | Your IP address |
 | wheretheiss.at / Celestrak | ISS and satellite positions | Your IP address |
 | rx.linkfanel.net | The list of shortwave receivers, refreshed at most twice a day | Your IP address |
@@ -99,18 +100,19 @@ counts of page loads, not a record of you — nothing in them says which station
 you played, what you favourited or what you wrote in chat, because none of that
 is ever sent. The desktop app has no equivalent: it has no analytics at all.
 
-One feature additionally passes **through** that host rather than going straight
-out, because a browser is not allowed to fetch it directly:
+Headlines, and reading them, additionally pass **through** that host rather than
+going straight out, because a browser is not allowed to fetch them directly:
 
 | Route | Goes to | What the request carries |
 |---|---|---|
 | Headlines for a country or place | Google News RSS | Your IP address |
 | World headlines | The BBC, Al Jazeera, France 24 and DW feeds | Your IP address |
+| Reading a world headline in the app | That story's page on the BBC, Al Jazeera, France 24 or DW site | Your IP address, and which article |
 
-It is not logged by us; we run no server and keep no logs. What here.now
+None of it is logged by us; we run no server and keep no logs. What here.now
 retains is governed by their policy, not ours.
 
-**The Mac application does not do this.** It fetches the headlines directly,
+**The Mac application does not do this.** It fetches the headlines and the articles directly,
 and nothing it does passes through a host of ours.
 
 ## Shortwave receivers

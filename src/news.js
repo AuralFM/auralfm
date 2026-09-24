@@ -76,7 +76,9 @@ const cool = cooldown({ min: 15_000, max: 2 * 60_000, label: "news" });
  * is worse than no reader view.
  */
 const decode = (s) => s
-  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
+  // Hex as well: the BBC writes an apostrophe as &#x27;, and a title showed it.
+  .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
   .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
   .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
   .replace(/&nbsp;/g, " ")
@@ -196,12 +198,15 @@ const setBase = (base) => { RSS = String(base).replace(/\/+$/, ""); };
  *
  * `route` is the web version's proxy path (/api/feeds/<route>); the desktop
  * fetches `url` itself. scripts/build-web.mjs writes the routes from this list.
+ * `site` is where the feed's own stories live, which the web reader reaches
+ * through /api/read/<route>/* — the host every link in that feed names, checked
+ * 2026-09-24, so no story arrives there by a redirect the route cannot follow.
  */
 const WORLD_FEEDS = [
-  { name: "BBC", route: "bbc", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
-  { name: "Al Jazeera", route: "aljazeera", url: "https://www.aljazeera.com/xml/rss/all.xml" },
-  { name: "France 24", route: "france24", url: "https://www.france24.com/en/rss" },
-  { name: "DW", route: "dw", url: "https://rss.dw.com/rdf/rss-en-world" },
+  { name: "BBC", route: "bbc", url: "https://feeds.bbci.co.uk/news/world/rss.xml", site: "https://www.bbc.co.uk" },
+  { name: "Al Jazeera", route: "aljazeera", url: "https://www.aljazeera.com/xml/rss/all.xml", site: "https://www.aljazeera.com" },
+  { name: "France 24", route: "france24", url: "https://www.france24.com/en/rss", site: "https://www.france24.com" },
+  { name: "DW", route: "dw", url: "https://rss.dw.com/rdf/rss-en-world", site: "https://www.dw.com" },
 ];
 let FEEDS = null;                  // null: fetch each feed's own url
 const setFeedBase = (base) => { FEEDS = String(base).replace(/\/+$/, ""); };
@@ -300,6 +305,28 @@ module.exports = { get, setBase, setFeedBase, WORLD_FEEDS };
 const READ_TTL_MS = 30 * 60_000;
 const readCache = new Map();
 
+/**
+ * The reader on the web.
+ *
+ * A page cannot fetch another site's article, so the web version reads through
+ * one proxy route per world-feed newsroom (setReadBase). That covers what World
+ * shows, and nothing else: a country headline is a Google News link, which leads
+ * to Google's own page and not to the publisher, so no fixed route could reach
+ * it. canRead() says which is which, so the web opens those where they were
+ * published instead of showing a reader that was never going to work.
+ */
+let READ = null;                   // null: fetch the article itself (desktop)
+const setReadBase = (base) => { READ = String(base).replace(/\/+$/, ""); };
+
+function viaRoute(url) {
+  let u;
+  try { u = new URL(url); } catch { return null; }
+  const f = WORLD_FEEDS.find((x) => x.site === u.origin);
+  return f ? `${READ}/${f.route}${u.pathname}${u.search}` : null;
+}
+
+const canRead = (url) => validUrl(url) && (!READ || !!viaRoute(url));
+
 const stripTags = (html) => html
   .replace(/<!--[\s\S]*?-->/g, "")
   .replace(/<(script|style|noscript|svg|iframe|form)\b[\s\S]*?<\/\1>/gi, "")
@@ -310,12 +337,20 @@ async function read(url) {
   // feed, and `^https?://` is perfectly happy with the loopback interface,
   // RFC1918 space and a cloud metadata endpoint. Same check the receiver list
   // gets, for the same reason: neither list is ours.
-  if (!validUrl(url)) return null;
+  if (!canRead(url)) return null;
   const hit = readCache.get(url);
   if (hit && Date.now() - hit.at < READ_TTL_MS) return hit.doc;
 
   let html;
-  try {
+  if (READ) {
+    // Our own route, to the one host it serves; the route sets the User-Agent.
+    // A redirect comes back unfollowed and reads as a failure, as it should.
+    try {
+      const res = await fetch(viaRoute(url), { redirect: "manual", signal: AbortSignal.timeout(12000) });
+      if (!res.ok) return null;
+      html = await res.text();
+    } catch { return null; }
+  } else try {
     // safeFetch follows redirects by hand and re-checks the host at every hop.
     // `redirect: "follow"` validates nothing after the first one, so a permitted
     // publisher could bounce the request anywhere and the check above would be
@@ -351,3 +386,5 @@ async function read(url) {
 }
 
 module.exports.read = read;
+module.exports.canRead = canRead;
+module.exports.setReadBase = setReadBase;

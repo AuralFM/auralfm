@@ -304,6 +304,9 @@ fs.writeFileSync(path.join(OUT, ".herenow", "proxy.json"), JSON.stringify({
     "/api/news/*": { upstream: "https://news.google.com/rss", method: "GET", headers: UA, rateLimit: LIMIT },
     ...Object.fromEntries(WORLD_FEEDS.map((f) =>
       [`/api/feeds/${f.route}`, { upstream: f.url, method: "GET", headers: UA, rateLimit: LIMIT }])),
+    // The reader: one route per newsroom, to the host its stories live on.
+    ...Object.fromEntries(WORLD_FEEDS.filter((f) => f.site).map((f) =>
+      [`/api/read/${f.route}/*`, { upstream: f.site, method: "GET", headers: UA, rateLimit: LIMIT }])),
   },
 }, null, 2));
 copy("assets/fonts", "assets/fonts");

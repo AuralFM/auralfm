@@ -1,16 +1,23 @@
 /**
  * Loaded after Explore's own parts and before explore.js starts them.
  *
- * On the desktop a headline opens in a reader: the main process fetches the
- * article and strips it to text. A web page cannot fetch another site's article,
- * so on the web a headline opens where it was published, in a new tab. The
- * headline rows call the global openReader() when they are chosen, so this
- * replaces it; nothing else in Explore changes.
+ * On the desktop every headline opens in the reader: the main process fetches
+ * the article and strips it to text. A web page cannot fetch another site's
+ * article, so here only the world feeds' stories can be read, each newsroom
+ * through its own proxy route (src/news.js). Anything else — a country
+ * headline is a Google News link — opens where it was published, in a new tab,
+ * rather than in a reader that would only say it could not. The headline rows
+ * call the global openReader() when chosen, so this wraps it.
  */
-// eslint-disable-next-line no-global-assign
-openReader = (item) => {
-  if (item?.link) window.auralfm.openLink(item.link);
-};
+{
+  const readInApp = openReader;
+  // eslint-disable-next-line no-global-assign
+  openReader = (item) => {
+    if (!item?.link) return;
+    if (window.auralfm.canReadArticle(item.link)) readInApp(item);
+    else window.auralfm.openLink(item.link);
+  };
+}
 
 /**
  * The service worker, and asking to keep what it caches.

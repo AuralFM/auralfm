@@ -2618,6 +2618,55 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`world headlines come from ${hosts.size} newsrooms' own feeds, each with a route`);
 }
 
+// ── world headlines read in the web app, and nothing pretends to ────────────
+// The web version opened every headline in a new tab, because a page cannot
+// fetch another site's article. The world feeds' stories now read in the app
+// through a route per newsroom. Two ways that breaks quietly: a newsroom with
+// no route (its stories fail as "does not open in AuralFM"), and a Google News
+// link sent to the reader (it leads to Google, never the publisher, so it could
+// only fail). This runs the real reader against a stubbed network.
+{
+  console.log("\nworld headlines read in the web app, and nothing pretends to");
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const file = req.resolve(R("src/news.js"));
+  delete req.cache[file];
+  const news = req(file);
+  delete req.cache[file];
+  const gaps = [];
+  const build = readSrc("scripts/build-web.mjs");
+  const after = readSrc("web/after.js").replace(/\/\*[\s\S]*?\*\//g, "");
+  const feeds = news.WORLD_FEEDS || [];
+  const noSite = feeds.filter((f) => !/^https:\/\/[^/]+$/.test(f.site || "")).map((f) => f.name);
+  if (noSite.length) gaps.push(`no site for ${noSite.join(", ")}, so its stories cannot be read on the web`);
+  if (!/\/api\/read\/\$\{f\.route\}\/\*/.test(build)) gaps.push("scripts/build-web.mjs writes no /api/read/<route>/* routes");
+  if (!/setReadBase\(/.test(readSrc("web/bridge.js"))) gaps.push("web/bridge.js never points the reader at its routes");
+  if (!/canReadArticle\(/.test(after)) gaps.push("web/after.js opens the reader without asking whether it can read the story");
+  if (typeof news.setReadBase !== "function" || typeof news.canRead !== "function") gaps.push("news.js has no setReadBase/canRead");
+  else {
+    const realFetch = globalThis.fetch;
+    const asked = [];
+    const para = "<p>" + "A paragraph long enough to count as prose rather than a caption. ".repeat(2) + "</p>";
+    globalThis.fetch = async (u) => { asked.push(String(u)); return new Response(`<title>T</title><article>${para.repeat(3)}</article>`, { status: 200 }); };
+    try {
+      news.setReadBase("/api/read");
+      for (const f of feeds.filter((x) => x.site)) {
+        const doc = await news.read(`${f.site}/news/story-1?x=1`);
+        const want = `/api/read/${f.route}/news/story-1?x=1`;
+        if (!doc?.paragraphs?.length) gaps.push(`a ${f.name} story did not read`);
+        if (asked.at(-1) !== want) gaps.push(`a ${f.name} story was fetched from ${asked.at(-1)}, not ${want}`);
+      }
+      const google = "https://news.google.com/rss/articles/CBMiabc?oc=5";
+      if (news.canRead(google)) gaps.push("the web reader says it can read a Google News link");
+      const n = asked.length;
+      if (await news.read(google)) gaps.push("the web reader read a Google News link");
+      if (asked.length !== n) gaps.push("the web reader fetched a link no route serves");
+    } finally { globalThis.fetch = realFetch; }
+  }
+  gaps.length ? fail("world headlines read in the web app, and nothing pretends to", gaps.join("; "))
+    : pass(`${feeds.length} newsrooms' stories read through their own routes; Google links open out`);
+}
+
 // ── the phone layout is one question, asked the same way four times ─────────
 // A landscape iPhone is 844pt wide or more, and "phone" was `max-width: 700px`,
 // so a phone on its side got the desktop layout — toolbar, side rail, volume

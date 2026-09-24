@@ -13,9 +13,10 @@
  *
  * What the web version does not do, it says by returning nothing rather than by
  * pretending: no shortwave (receivers speak plain ws://, which an https page may
- * not open), no article reader, no stations of your own. Headlines come
- * through the site's own proxy route, because Google News does not let a web
- * page read it directly.
+ * not open), no stations of your own, and a reader for the world feeds' stories
+ * only. Headlines, and those stories, come through the site's own proxy
+ * routes, because neither Google News nor a publisher lets a web page read it
+ * directly.
  *
  * Everything that persists — favourites, settings, the last station — lives in
  * this browser's localStorage and nowhere else. There is no account. Clearing
@@ -419,6 +420,8 @@
   M.news.setBase("/api/news");
   // World headlines come from the newsrooms' own feeds, each on its own route.
   M.news.setFeedBase("/api/feeds");
+  // And their stories are read in the app through a route per newsroom.
+  M.news.setReadBase("/api/read");
 
   // ── the bridge ──────────────────────────────────────────────────────────────
   chat = window.AuralChat ? window.AuralChat({ getPrefs, emit }) : null;
@@ -517,6 +520,10 @@
     // Headlines come through the site's proxy route (see the manifest in
     // scripts/build-web.mjs); Google News does not let a page read it.
     news: (country) => M.news.get(country),
+    // The world feeds' stories read here; anything else opens where it was
+    // published (web/after.js asks this before choosing).
+    readArticle: (url) => M.news.read(url),
+    canReadArticle: (url) => M.news.canRead(url),
 
     // shortwave: not in a browser (plain ws:// receivers)
     sdrPoints: empty, sdrOnAir: empty, sdrStats: async () => ({ count: 0 }),
@@ -544,10 +551,8 @@
       return done;
     },
 
-    // not in this version: the article reader (web/after.js opens the article
-    // instead), your own stations
+    // not in this version: your own stations
     onMineChanged: noop,
-    readArticle: none,
     mineList: empty,
     mineAdd: async () => ({ ok: false, error: "Adding your own stations is not in the web version yet." }),
     // Privacy, Terms and the open source licences, from the same allowlist and
