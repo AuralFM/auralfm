@@ -140,7 +140,37 @@
   const audio = new Audio();
   audio.preload = "none";
   audio.volume = getState().vol ?? 0.8;
-  let current = null, live = false, status = "", isError = false;
+  // Offered to AirPlay and to iOS's own output picker (AirPods, Bluetooth
+  // speakers), which is what `pickOutput` below opens.
+  audio.setAttribute("x-webkit-airplay", "allow");
+
+  /**
+   * Where the sound goes, on Safari.
+   *
+   * A page elsewhere lists outputs and picks one (setSinkId). Safari lists none,
+   * so the button used to hide and the only way to AirPods was Control Centre.
+   * But Safari will open the system's own route picker — the one every iPhone
+   * music app shows, with the AirPods, the Bluetooth speaker and the AirPlay
+   * devices in it — and says when there is anything to pick. Explore shows its
+   * output button whenever there is (web/after.js).
+   */
+  let routes = false;
+  audio.addEventListener("webkitplaybacktargetavailabilitychanged", (e) => {
+    routes = e.availability === "available";
+    emit("routes", routes);
+  });
+
+  /**
+   * Tell iOS this is a player, before it plays.
+   *
+   * Left on "auto", a page's audio session is decided by what it happens to be
+   * using, and the share card's waveform opens a Web Audio graph, which is the
+   * shape of an "ambient" page: muted by the silent switch, and not the session
+   * a Bluetooth headset or the lock screen treats as the thing playing.
+   * "playback" is what a radio is. Safari 16.4 and later; elsewhere a no-op.
+   */
+  const asPlayer = () => { try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { /* older Safari */ } };
+  let current = null, previous = null, live = false, status = "", isError = false;
   let gen = 0, tried = [], watchdog = null;
   /**
    * What is kept while the network is away: the URL that was playing and the
@@ -207,7 +237,11 @@
     if (!ch) return;
     if (!chained) tried = [];
     const my = ++gen;
+    // The station before, for "previous" on the lock screen and the headphones.
+    // An auto-skip is not a choice, so it does not become somewhere to go back to.
+    if (!chained && current && current.id !== ch.id) previous = current;
     current = ch;
+    asPlayer();
     live = false;
     // A new choice ends any hold, and drops the URL a resume would have used.
     held = null; playingUrl = null;
@@ -289,12 +323,12 @@
     audio.play().catch(() => tune(current));
   });
 
-  function stop() {
+  function stop(said = "Stopped") {
     gen++; clearTimeout(watchdog); live = false;
     held = null;
     playingUrl = null;
     audio.pause(); audio.removeAttribute("src"); audio.load();
-    setStatus("Stopped");
+    setStatus(said);
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
   }
 
@@ -330,10 +364,27 @@
     }
   });
   audio.addEventListener("waiting", () => { if (live) setStatus("Buffering…"); });
+
+  /**
+   * A pause nobody here asked for.
+   *
+   * iOS pauses the page itself when AirPods come out of an ear, when the
+   * Bluetooth device disconnects, for a call and for Siri. The player went on
+   * saying it was live — the button showed pause, the lock screen said playing —
+   * and pressing play did nothing, because as far as it knew it was playing.
+   * Every pause of our own (stop, hold) clears `live` first, so a pause that
+   * arrives while it is still set came from outside. It stops cleanly, and play,
+   * from anywhere, tunes in again: a live station resumes at now, not where it
+   * was left.
+   */
+  audio.addEventListener("pause", () => {
+    if (!live || audio.ended) return;
+    stop("Paused");
+  });
   if ("mediaSession" in navigator) {
     navigator.mediaSession.setActionHandler("play", () => current && tune(current));
-    navigator.mediaSession.setActionHandler("pause", stop);
-    navigator.mediaSession.setActionHandler("stop", stop);
+    navigator.mediaSession.setActionHandler("pause", () => stop());
+    navigator.mediaSession.setActionHandler("stop", () => stop());
     /**
      * Next, from the lock screen and the headphones.
      *
@@ -346,6 +397,9 @@
       const next = await catalogReady.then(() => M.catalog.nextInPlace(current, []));
       if (next) tune(next);
     });
+    // And back: a triple press on AirPods, or ⏮ on the lock screen, returns to
+    // the station before this one.
+    navigator.mediaSession.setActionHandler("previoustrack", () => { if (previous) tune(previous); });
   }
 
   function transport({ action, value } = {}) {
@@ -483,6 +537,10 @@
 
     // playback
     tune, transport, onPlayerState: on("player"),
+    // Safari's own output picker (AirPods, Bluetooth, AirPlay); see `routes`.
+    canPickOutput: () => routes,
+    pickOutput: () => { try { audio.webkitShowPlaybackTargetPicker?.(); } catch { /* not Safari */ } },
+    onRoutes: on("routes"),
     tuneSdr: noop, reportOk: noop, reportFailed: noop,
 
     // preferences, state, strings, palettes, layers

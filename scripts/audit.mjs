@@ -2667,6 +2667,34 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${feeds.length} newsrooms' stories read through their own routes; Google links open out`);
 }
 
+// ── headphones: a pause from outside is heard, and headphones off is sound off ─
+// Two faults found on 2026-09-24. On an iPhone, iOS pauses the page itself when
+// AirPods come out or disconnect, and for calls and Siri; the web player kept
+// saying it was live, so play did nothing. On the Mac, AirPods disconnecting
+// moved macOS to the built-in speakers and the radio followed — out loud.
+// Plus the way to AirPods on iPhone, Safari's own route picker, which the
+// output button had no way to reach.
+{
+  console.log("\nheadphones: a pause from outside is heard, and headphones off is sound off");
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const bridge = strip(readSrc("web/bridge.js"));
+  const after = strip(readSrc("web/after.js"));
+  const pop = strip(readSrc("src/renderer/popover.js"));
+  const gaps = [];
+  const pauseHandler = bridge.match(/audio\.addEventListener\("pause",[\s\S]*?\}\);/)?.[0] || "";
+  if (!/if \(!live[^)]*\) return;[\s\S]*stop\(/.test(pauseHandler)) gaps.push("web: a pause iOS makes (AirPods out, a call) leaves the player saying it is live");
+  // stop takes the status to show; handed to the media session bare, the
+  // browser's action details become that status.
+  if (/setActionHandler\("(pause|stop)", stop\)/.test(bridge)) gaps.push("web: the lock screen's pause passes its event object to stop()");
+  if (!/setActionHandler\("previoustrack"/.test(bridge)) gaps.push("web: previous (triple-press, lock screen) does nothing");
+  if (!/webkitShowPlaybackTargetPicker/.test(bridge) || !/pickOutput\(\)/.test(after)) gaps.push("web: the output button cannot open iOS's route picker");
+  if (!/audioSession\.type = "playback"/.test(bridge)) gaps.push("web: the page never tells iOS it is a player");
+  if (!/"devicechange",[^\n]*pauseIfOutputGone\(\)/.test(pop)) gaps.push("desktop: headphones disconnecting moves the radio to the speakers");
+  if (!/if \(outs\.some\(\(d\) => d\.groupId === was\)\) return;\s*stop\(\)/.test(pop)) gaps.push("desktop: the disconnect check no longer stops playback");
+  gaps.length ? fail("headphones: a pause from outside is heard, and headphones off is sound off", gaps.join("; "))
+    : pass("iOS pauses are followed, previous and the route picker work, and the Mac pauses when its headphones go");
+}
+
 // ── a phone is shown how to install, not a tour of a desktop ────────────────
 // Reported from an iPhone on 2026-09-24: the introduction's Headlines and
 // Favorites tips pointed at the top left corner, because they anchor to the

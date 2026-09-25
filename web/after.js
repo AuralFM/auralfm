@@ -20,6 +20,49 @@
 }
 
 /**
+ * The output button, on Safari: the system's own picker.
+ *
+ * Explore's button opens a menu of the outputs the page can list. Safari lists
+ * none, so the button hid — on an iPhone the way to AirPods was Control Centre.
+ * When the bridge says Safari has somewhere to send the sound (AirPods, a
+ * Bluetooth speaker, AirPlay), the button stays and opens the picker iOS itself
+ * shows, which also connects a device that is paired but not in use. Elsewhere
+ * Explore's own menu is untouched. renderOutputs is the global Explore calls on
+ * every device change, so this wraps it, as openReader is wrapped above.
+ */
+{
+  const listOutputs = renderOutputs;
+  let routes = window.auralfm.canPickOutput?.() || false;
+  // eslint-disable-next-line no-global-assign
+  renderOutputs = async () => {
+    const wrap = $("outwrap"), btn = $("outbtn");
+    if (!routes || !wrap || !btn) {
+      wrap?.classList.remove("route");
+      btn?.setAttribute("aria-haspopup", "listbox");
+      return listOutputs();
+    }
+    closeOutMenu();
+    wrap.hidden = false;
+    wrap.classList.add("route");
+    // A system sheet, not this page's menu.
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.removeAttribute("aria-expanded");
+    Icons.set(btn, "speakers");
+    btn.title = t("ctl.output", "Where the sound comes out");
+    btn.setAttribute("aria-label", btn.title);
+  };
+  window.auralfm.onRoutes?.((on) => { routes = on; renderOutputs(); });
+  // Ahead of Explore's own click handler, which would open the empty menu. The
+  // picker has to open inside the tap, so this calls it directly.
+  document.addEventListener("click", (e) => {
+    if (!routes || !e.target.closest?.("#outbtn")) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    window.auralfm.pickOutput();
+  }, true);
+}
+
+/**
  * The service worker, and asking to keep what it caches.
  *
  * Registered here rather than in the bridge because it is about this page

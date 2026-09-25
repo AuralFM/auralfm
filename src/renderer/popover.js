@@ -96,6 +96,40 @@ async function applyOutput(id) {
   // partial one.
   try { await audio.setSinkId?.(target ?? ""); } catch { /* device went away */ }
   try { if (audioCtx) await audioCtx.setSinkId?.(target ?? ""); } catch { /* same */ }
+  noteOutput();
+}
+
+/**
+ * Headphones off, sound off.
+ *
+ * With the Mac's own output in use, macOS moves to the built-in speakers the
+ * moment AirPods or a Bluetooth headset disconnect, and the radio followed it:
+ * take the headphones off on a train and the station played out loud. Apple's
+ * own players pause, and so does this. The output the radio is being heard on
+ * is remembered by its group — one physical device, whatever its entries — and
+ * a device change that takes that group away while something plays stops it.
+ * A new device arriving, or choosing another output, is not a disconnection.
+ */
+let heardOn = null;             // groupId of the output in use while playing
+
+async function outputInUse() {
+  try {
+    const outs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audiooutput");
+    const d = outs.find((x) => x.deviceId === (outputId || "default"));
+    return { group: d?.groupId || null, outs };
+  } catch { return { group: null, outs: [] }; }
+}
+
+async function noteOutput() { heardOn = (await outputInUse()).group; }
+
+async function pauseIfOutputGone() {
+  const was = heardOn;
+  const { group, outs } = await outputInUse();
+  heardOn = group;
+  if (!was || !document.body.classList.contains("playing")) return;
+  if (outs.some((d) => d.groupId === was)) return;
+  stop();
+  setStatus("Paused · headphones disconnected");
 }
 
 /**
@@ -494,6 +528,8 @@ function togglePlay() {
  */
 function setToggle(state) {
   Icons.set(toggle, state);
+  // Sound has started (a stream or a receiver): note where it is heard.
+  if (state === "pause") noteOutput();
   /**
    * The English word, not `t()`.
    *
@@ -931,8 +967,9 @@ window.auralfm.onShown(() => {
                                 : (at <= 0 ? items.length - 1 : at - 1)]?.focus();
   });
   window.addEventListener("resize", () => { if (!$("outmenu").hidden) placeOutMenu(); });
-  // A speaker connecting or disconnecting changes what is on offer.
-  navigator.mediaDevices.addEventListener?.("devicechange", () => renderOutputs());
+  // A speaker connecting or disconnecting changes what is on offer — and the one
+  // being listened on disconnecting pauses the radio rather than moving it.
+  navigator.mediaDevices.addEventListener?.("devicechange", () => { pauseIfOutputGone(); renderOutputs(); });
 
   const saved = await window.auralfm.getState();
   state = { favorites: [], vol: 0.8, ...(saved || {}) };

@@ -309,8 +309,17 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   body.phonebar .now #nowStatus { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Volume and the output picker belong to iOS here: the hardware keys set one
      and Control Centre sets the other, from outside any app. */
-  body.phonebar .now .volwrap, body.phonebar .now #nowStar, body.phonebar .now .outwrap,
+  body.phonebar .now .volwrap, body.phonebar .now #nowStar, body.phonebar .now .outwrap:not(.route),
   body.phonebar .now .brand { display: none; }
+  /* Except the way to AirPods: iOS's own route picker (web/after.js), shown
+     only when there is somewhere to send the sound. Drawn at 32 like share,
+     caught at 44. */
+  body.phonebar .now .outwrap.route #outbtn {
+    position: relative; width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+    font-size: 15px; color: var(--label2); border-radius: var(--r-md);
+  }
+  body.phonebar .now .outwrap.route #outbtn::before { content: ""; position: absolute; inset: -6px; border-radius: var(--r-md); }
+  body.phonebar .now .outwrap.route #outbtn:active { background: var(--fill); }
   /* Sharing works here after all: the card goes into the system's share sheet
      rather than needing a clipboard and a file dialog of our own. */
   body.phonebar .now #nowShare {
