@@ -2667,6 +2667,34 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${feeds.length} newsrooms' stories read through their own routes; Google links open out`);
 }
 
+// ── the website says what the app says: privacy and terms ──────────────────
+// The policy and the terms lived only in the app, under Settings. They are now
+// on auralfm.xyz too, generated from the same files by scripts/build-legal.mjs.
+// A document edited without rebuilding would leave the website promising
+// something the app no longer does — so the audit rebuilds in memory and fails
+// on any difference.
+{
+  console.log("\nthe website says what the app says: privacy and terms");
+  const r = spawnSync(process.execPath, [R("scripts/build-legal.mjs"), "--check"], { encoding: "utf8" });
+  r.status === 0
+    ? pass("home/privacy and home/terms match docs/PRIVACY.md and docs/TERMS.md")
+    : fail("the website says what the app says: privacy and terms",
+        (r.stdout + r.stderr).trim() || "build-legal --check failed");
+}
+
+// ── one design across the three sites ───────────────────────────────────────
+// auralfm.xyz, the Journal and the docs are separate here.now sites, so each
+// carries its own copy of the stylesheet, script and fonts, copied from home/
+// by scripts/sync-sites.mjs. A copy edited by hand, or left behind after a
+// change to home/, is two sites quietly drifting apart.
+{
+  console.log("\none design across the three sites");
+  const r = spawnSync(process.execPath, [R("scripts/sync-sites.mjs"), "--check"], { encoding: "utf8" });
+  r.status === 0
+    ? pass("site/ and docs-site/ carry home/'s stylesheet, script, fonts and icons unchanged")
+    : fail("one design across the three sites", (r.stdout + r.stderr).trim() || "sync-sites --check failed");
+}
+
 // ── headphones: a pause from outside is heard, and headphones off is sound off ─
 // Two faults found on 2026-09-24. On an iPhone, iOS pauses the page itself when
 // AirPods come out or disconnect, and for calls and Siri; the web player kept

@@ -277,6 +277,61 @@ p { text-wrap: pretty; }
 .free a { color: var(--aqua); }
 .links .cell[aria-current="page"] { background: var(--bone); color: var(--onyx); }
 
+/* ── the journal ──────────────────────────────────────────────────────────── */
+.featured { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.feature { display: flex; flex-direction: column; gap: 12px; padding: 0 0 var(--pad); }
+.feature img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.feature .label, .feature h2 { padding: 0 var(--pad); }
+.feature h2 { font: 900 24px/1.02 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 76; text-wrap: balance; }
+.stories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stories > h2 { grid-column: 1 / -1; }
+.story { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 18px; align-items: start; }
+.story img { width: 112px; height: 112px; object-fit: cover; }
+.story .meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aqua); margin-bottom: 8px; }
+.story h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; margin-bottom: 8px; }
+.story p:not(.meta) { color: var(--bone2); }
+.aboutrow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.aboutrow .cell { display: flex; flex-direction: column; gap: 12px; }
+.aboutrow .cell p:not(.label) { color: var(--bone2); }
+.figures { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0; }
+.figures dt { font: 400 11px/14px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--bone2); }
+.figures dd { font: 900 30px/1 var(--display); font-variation-settings: "wdth" 70; }
+.sidelinks { display: grid; gap: 10px; }
+.steps-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.foot-links a[aria-current="page"] { color: var(--aqua); }
+
+/* ── long reading: privacy, terms, docs, the journal ──────────────────────── */
+/* One column: the big word, then its introduction full width. Two columns left
+   an empty cell beside the intro, the grid showing through as a grey block. */
+.legal-hero { grid-template-columns: minmax(0, 1fr); }
+.legal-hero .intro .lede { max-width: 60ch; }
+.legal-hero h1 { font-size: clamp(56px, 12vw, 180px); }
+.prose { grid-template-columns: minmax(0, 1fr); }
+.prose > .cell { padding: 40px var(--pad) 64px; }
+.prose .body { max-width: 72ch; }
+.prose h1 { display: none; }            /* the page's own title says it */
+.prose h2 {
+  font: 900 clamp(26px, 3.4vw, 40px)/1 var(--display); text-transform: uppercase;
+  font-variation-settings: "wdth" 78; margin: 48px 0 16px; text-wrap: balance;
+}
+.prose h3 { font: 700 16px/24px var(--mono); text-transform: uppercase; letter-spacing: .04em; margin: 32px 0 8px; }
+.prose p, .prose li { color: var(--bone2); font-size: 17px; line-height: 28px; }
+.prose p + p, .prose p + ul, .prose ul + p, .prose p + ol, .prose ol + p, .prose table + p { margin-top: 14px; }
+.prose strong { color: var(--bone); font-weight: 600; }
+.prose ul, .prose ol { padding-left: 22px; margin-top: 10px; display: grid; gap: 6px; }
+.prose ul { list-style: square; }
+.prose ol { list-style: decimal; }
+.prose li::marker { color: var(--aqua); }
+.prose a { color: var(--aqua); }
+.prose code { font: 400 14px/1 var(--mono); color: var(--bone); background: rgba(247, 244, 238, .08); padding: 2px 5px; }
+.prose table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; line-height: 22px; display: block; overflow-x: auto; }
+.prose th, .prose td { text-align: left; vertical-align: top; padding: 10px 12px; border: 1px solid var(--line); }
+.prose th { font: 700 12px/16px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--bone); }
+.prose td { color: var(--bone2); }
+.prose blockquote { margin: 18px 0; padding: 14px 18px; border: 1px solid var(--line); }
+.prose blockquote p { color: var(--bone); }
+.prose hr { border: 0; height: 1px; background: var(--line); margin: 40px 0; }
+
 /* ── questions ────────────────────────────────────────────────────────────── */
 .faq { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
 /* Its own cell, so it cannot size to it (cqi): set to fit the 5fr column. */
@@ -320,18 +375,24 @@ p { text-wrap: pretty; }
   .vibe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aboutrow, .steps-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   :root { --pad: 16px; }
   .island .go { display: none; }
   .island .cell { padding: 0 14px; }
   .hero, .board, .why, .support-cta, .faq, .platforms, .features, .card-wide, .foot,
-  .support-hero, .tiers, .costs, .free { grid-template-columns: minmax(0, 1fr); }
+  .support-hero, .tiers, .costs, .free, .legal-hero,
+  .featured, .stories, .aboutrow { grid-template-columns: minmax(0, 1fr); }
   .globe { grid-row: auto; }
+  /* One word, as big as a phone allows: "JOURNAL" ran past a 390pt screen. */
+  .legal-hero h1 { font-size: 12.4vw; }
   .fit { white-space: normal; font-size: clamp(40px, 14vw, 88px); line-height: .86; }
   /* Condensed, so the longest word ("UNOWNED.") still fits a phone whole. */
   .fit, .js .fit.stretch.in { font-variation-settings: "wdth" 66; }
-  .steps { grid-template-columns: minmax(0, 1fr); }
+  .steps, .steps-4 { grid-template-columns: minmax(0, 1fr); }
+  .story { grid-template-columns: 80px minmax(0, 1fr); gap: 14px; }
+  .story img { width: 80px; height: 80px; }
   .lede { font-size: 19px; line-height: 28px; }
   .tagline { padding: 64px var(--pad); }
   /* Condensed on a phone: at full width "BROADCASTING." alone ran 7px past the

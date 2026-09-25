@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AuralFM: a window onto the world you can listen to</title>
-<meta name="description" content="Spin a globe and hear what Mexico City, Jakarta and Tallahassee are playing right now. 38,337 live radio stations in 12,579 places, with local headlines and chat. Free, no account.">
+<title>AuralFM · Listen in.</title>
+<meta name="description" content="A globe you listen to. 38,337 live radio stations in 12,579 places, heard where they broadcast, at the time it is there. Free, no account.">
 <!-- The link preview: the same cover, name and line as listen.auralfm.xyz.
      Absolute URLs, because several preview readers ignore a relative image. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AuralFM">
 <meta property="og:title" content="AuralFM">
-<meta property="og:description" content="A window onto the world you can listen to.">
+<meta property="og:description" content="Listen in. A window onto the world you can listen to.">
 <meta property="og:url" content="https://auralfm.xyz/">
 <meta property="og:image" content="https://auralfm.xyz/assets/share.jpg">
 <meta property="og:image:width" content="1200">
@@ -24,76 +24,105 @@
 <link rel="icon" href="assets/favicon.ico" sizes="48x48">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="preload" href="assets/fonts/SpaceGrotesk-wght.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/fonts/SpaceMono-700.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="home.css">
+<link rel="preload" href="assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/SpaceMono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="aural.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
-<!-- ── the island nav ──────────────────────────────────────────────────── -->
+<!-- ── the bar: the brand, the live read-out of the globe, and the way in ───── -->
 <header class="island" data-open="false">
-  <a class="brand" href="./" aria-label="AuralFM home">
+  <a class="cell brand" href="./" aria-label="AuralFM home">
     <svg class="brand-mark" viewBox="0 0 225 225" aria-hidden="true" focusable="false"><use href="#ring"/></svg>
     <span class="brand-word">AURAL.FM</span>
   </a>
+  <p class="cell livebar" aria-label="The time in places on the globe">
+    <span class="live" aria-hidden="true"></span>
+    <span class="flap" data-cycle aria-hidden="true">04:12 LAGOS</span>
+    <span class="sronly" data-cycle-text>Live somewhere on the globe</span>
+  </p>
   <nav class="links" aria-label="Sections">
-    <a href="#why">Why</a>
-    <a href="#features">What it does</a>
-    <a href="#faq">Questions</a>
-    <a href="https://blog.auralfm.xyz/">Blog</a>
+    <a class="cell" href="#vibes">Vibes</a>
+    <a class="cell" href="#how">How</a>
+    <a class="cell" href="https://blog.auralfm.xyz/">Journal</a>
+    <a class="cell" href="https://docs.auralfm.xyz/">Docs</a>
+    <a class="cell" href="support/">Support</a>
   </nav>
-  <a class="btn btn-sm" href="https://listen.auralfm.xyz/">Start listening</a>
-  <button class="burger" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open the menu">
+  <a class="cell go" href="https://listen.auralfm.xyz/">Listen <span aria-hidden="true">→</span></a>
+  <button class="cell burger" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open the menu">
     <span></span><span></span>
   </button>
 </header>
 <div class="menu" id="menu" hidden>
   <nav aria-label="Menu">
-    <a href="#why">Why</a>
-    <a href="#features">What it does</a>
-    <a href="#faq">Questions</a>
-    <a href="https://blog.auralfm.xyz/">Blog</a>
-    <a class="btn" href="https://listen.auralfm.xyz/">Start listening free</a>
+    <a href="#vibes">Vibes</a>
+    <a href="#how">How it works</a>
+    <a href="https://blog.auralfm.xyz/">Journal</a>
+    <a href="https://docs.auralfm.xyz/">Docs</a>
+    <a href="support/">Support</a>
+    <a class="menu-go" href="https://listen.auralfm.xyz/">Start listening</a>
   </nav>
 </div>
 
 <main id="main">
-
-  <!-- ── hero ──────────────────────────────────────────────────────────── -->
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="kicker"><span class="live" aria-hidden="true"></span>On air now in 12,579 places</p>
-      <h1>A window onto the world <br>you can listen to.</h1>
-      <p class="sub">Spin a globe and hear what Mexico City, Jakarta and Tallahassee are
-        playing right now. Live stations chosen by where they are,
-        not by an algorithm.</p>
-      <div class="actions">
-        <a class="btn" href="https://listen.auralfm.xyz/">Start listening free</a>
-      </div>
-      <p class="proof">No account. Nothing about what you play is reported. Works on iPhone and in any browser.</p>
-    </div>
-    <figure class="phone">
-      <img src="assets/app-phone.jpg" width="780" height="1688"
-           alt="AuralFM on an iPhone: the globe over North America, dotted with stations, and a Chicago station ready to play">
+  <!-- ── the headline, and the globe it is about ──────────────────────────── -->
+  <section class="hero grid">
+    <h1 class="cell display fit stretch">Listen in.</h1>
+    <figure class="cell globe">
+      <img src="assets/globe.jpg" width="1400" height="1400"
+           alt="The AuralFM globe: Africa and Europe with live cloud cover, the line between day and night crossing the continent, and city lights on the night side">
+      <figcaption class="readout" aria-hidden="true">
+        <span class="tl">N 12.0° · E 8.0°</span>
+        <span class="tr">Day · Night</span>
+        <span class="bl">Centre = selection</span>
+        <span class="br">Live</span>
+      </figcaption>
     </figure>
-  </section>
-
-  <!-- ── the numbers ───────────────────────────────────────────────────── -->
-  <section class="numbers" aria-label="AuralFM in numbers">
-    <dl>
-      <div><dt>Live stations</dt><dd>38,337</dd></div>
-      <div><dt>Places</dt><dd>12,579</dd></div>
-      <div><dt>Shortwave receivers</dt><dd>837</dd></div>
-      <div><dt>Accounts needed</dt><dd>0</dd></div>
+    <div class="cell intro">
+      <p class="label">[ A window onto the world you can listen to ]</p>
+      <p class="lede">Spin a globe and hear what Lagos, Mexico City and Tbilisi are playing
+        right now. Live stations found by where they are, never by an algorithm.</p>
+      <a class="btn" href="https://listen.auralfm.xyz/">Start listening free</a>
+      <p class="proof">No account. Nothing about what you play is reported. Any browser, iPhone and Mac.</p>
+    </div>
+    <dl class="numbers">
+      <div class="cell"><dt>Live stations</dt><dd>38,337</dd></div>
+      <div class="cell"><dt>Places</dt><dd>12,579</dd></div>
+      <div class="cell"><dt>Shortwave receivers</dt><dd>837</dd></div>
+      <div class="cell"><dt>Accounts needed</dt><dd>0</dd></div>
     </dl>
   </section>
 
-  <!-- ── why: the argument ─────────────────────────────────────────────── -->
-  <section class="why reveal" id="why">
-    <p class="label">[ Decolonize your ears ]</p>
-    <h2>Radio never went quiet. <br>We just stopped hearing it.</h2>
-    <div class="why-body">
+  <!-- ── right now: the globe, read aloud ─────────────────────────────────── -->
+  <section class="board grid" aria-labelledby="board-title">
+    <div class="cell board-head">
+      <p class="label">[ Right now on the globe ]</p>
+      <h2 id="board-title" class="display stretch">Where it is tonight</h2>
+    </div>
+    <table class="cell departures">
+      <caption class="sronly">Local time in cities on the globe, and what to listen for there</caption>
+      <thead><tr><th scope="col">City</th><th scope="col">Local time</th><th scope="col">Listen for</th></tr></thead>
+      <tbody>
+        <tr data-tz="Africa/Lagos"><th scope="row">Lagos</th><td class="clock">--:--</td><td>Afrobeats · talk</td></tr>
+        <tr data-tz="America/Chicago"><th scope="row">Chicago</th><td class="clock">--:--</td><td>House</td></tr>
+        <tr data-tz="Asia/Tokyo"><th scope="row">Tokyo</th><td class="clock">--:--</td><td>Jazz</td></tr>
+        <tr data-tz="Asia/Tbilisi"><th scope="row">Tbilisi</th><td class="clock">--:--</td><td>Techno</td></tr>
+        <tr data-tz="America/Mexico_City"><th scope="row">Mexico City</th><td class="clock">--:--</td><td>Cumbia · news</td></tr>
+        <tr data-tz="America/Detroit"><th scope="row">Detroit</th><td class="clock">--:--</td><td>Techno · gospel</td></tr>
+        <tr data-tz="Atlantic/Reykjavik"><th scope="row">Reykjavík</th><td class="clock">--:--</td><td>Ambient</td></tr>
+        <tr data-tz="Asia/Jakarta"><th scope="row">Jakarta</th><td class="clock">--:--</td><td>Dangdut · pop</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── why: the argument ──────────────────────────────────────────────── -->
+  <section class="why grid" id="why">
+    <div class="cell">
+      <p class="label">[ Decolonize your ears ]</p>
+      <h2 class="display stretch">Radio never went quiet. We just stopped hearing it.</h2>
+    </div>
+    <div class="cell why-body">
       <p>For most of us in America, radio means a handful of owners: iHeart, SiriusXM, a playlist
         somebody in an office picked. Meanwhile Mexico City is telling its own stories on its own
         stations, and nobody here is listening.</p>
@@ -104,87 +133,125 @@
     </div>
   </section>
 
-  <!-- ── the tagline reveal ────────────────────────────────────────────── -->
+  <!-- ── the tagline reveal ─────────────────────────────────────────────── -->
   <section class="tagline" aria-label="What AuralFM is for">
     <p class="words">The world never stopped broadcasting.
       The algorithm just stopped playing it for you.</p>
   </section>
 
-  <!-- ── what it does ──────────────────────────────────────────────────── -->
-  <section class="features" id="features">
-    <div class="section-head reveal">
-      <p class="label">[ What it does ]</p>
-      <h2>Hear a place, not a playlist</h2>
+  <!-- ── vibes: lanes across the whole globe ────────────────────────────── -->
+  <section class="vibes grid" id="vibes" aria-labelledby="vibes-title">
+    <div class="cell vibes-head">
+      <p class="label">[ Vibes · new in the web app ]</p>
+      <h2 id="vibes-title" class="display stretch">Pick a vibe. The globe lights up.</h2>
+      <p>Named by people, not by a ranking. Each one lights the places that play it, wherever
+        they are.</p>
     </div>
-    <ul class="cards">
-      <li class="card reveal">
-        <h3>Spin to anywhere</h3>
-        <p>Whatever sits in the middle of the globe becomes the selection. Tap a dot and you are
-          listening to that city, live, as it is being broadcast.</p>
-      </li>
-      <li class="card reveal">
-        <h3>Meet the places nobody promotes</h3>
-        <p>Sort by hidden gems, what is near, or who is awake right now. Tallahassee gets the same
-          chance as Paris.</p>
-      </li>
-      <li class="card reveal">
-        <h3>Read what is reported there</h3>
-        <p>Headlines from the country the station broadcasts from, in its own language. The stories
-          your feed was never going to show you.</p>
-      </li>
-      <li class="card reveal">
-        <h3>Talk to whoever else is listening</h3>
-        <p>Chat rooms tied to the place, carried on open relays that no company owns. No sign up and
-          no profile, like the chat rooms the internet used to have.</p>
-      </li>
-      <li class="card card-wide reveal">
-        <div>
-          <h3>Borrow a shortwave radio <span class="tag">Mac app</span></h3>
-          <p>837 receivers run by volunteers around the world. Tune somebody&rsquo;s actual antenna,
-            in somebody&rsquo;s actual garden, and hear what is crossing the ionosphere tonight.</p>
-        </div>
-        <img src="assets/mac-shortwave.jpg" width="1600" height="1000" loading="lazy"
-             alt="The Mac app with shortwave receivers marked across the globe">
-      </li>
+    <ul class="vibe-list">
+      <li class="cell vibe"><b>Deep &amp; house</b><span>310 stations · 164 places</span></li>
+      <li class="cell vibe"><b>Techno</b><span>90 stations · 64 places</span></li>
+      <li class="cell vibe"><b>Electronic &amp; ambient</b><span>369 stations · 225 places</span></li>
+      <li class="cell vibe"><b>Talk</b><span>745 stations · 524 places</span></li>
+      <li class="cell vibe"><b>Old-time radio</b><span>27 stations · 21 places</span></li>
+      <li class="cell vibe"><b>Faith</b><span>571 stations · 425 places</span></li>
+      <li class="cell vibe"><b>Jazz</b><span>554 stations · 339 places</span></li>
+      <li class="cell vibe"><b>Cumbia &amp; tropical</b><span>188 stations · 139 places</span></li>
+      <li class="cell vibe"><b>Reggae &amp; dub</b><span>112 stations · 84 places</span></li>
+      <li class="cell vibe"><b>Community</b><span>576 stations · 450 places</span></li>
     </ul>
   </section>
 
-  <!-- ── how it works ──────────────────────────────────────────────────── -->
-  <section class="how reveal" aria-labelledby="how-title">
-    <p class="label">[ How it works ]</p>
-    <h2 id="how-title">Three steps, no sign up</h2>
+  <!-- ── what it does ───────────────────────────────────────────────────── -->
+  <section class="features grid" id="features" aria-labelledby="features-title">
+    <div class="cell features-head">
+      <p class="label">[ What it does ]</p>
+      <h2 id="features-title" class="display stretch">Hear a place, not a playlist</h2>
+    </div>
+    <article class="cell card">
+      <p class="num">01</p>
+      <h3>Spin to anywhere</h3>
+      <p>Whatever sits in the middle of the globe becomes the selection. Tap a dot and you are
+        listening to that city, live, as it is being broadcast.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">02</p>
+      <h3>Meet the places nobody promotes</h3>
+      <p>Sort by hidden gems, what is near, or who is awake right now. Tallahassee gets the same
+        chance as Paris.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">03</p>
+      <h3>Read what is reported there</h3>
+      <p>World headlines from four newsrooms, and a country's own news in its own language.
+        The stories your feed was never going to show you.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">04</p>
+      <h3>Talk to whoever else is listening</h3>
+      <p>Chat rooms tied to the place, carried on open relays that no company owns. No sign up
+        and no profile, like the chat rooms the internet used to have.</p>
+    </article>
+    <article class="cell card card-wide">
+      <div>
+        <p class="num">05 <span class="tag">Mac app</span></p>
+        <h3>Borrow a shortwave radio</h3>
+        <p>837 receivers run by volunteers around the world. Tune somebody&rsquo;s actual antenna,
+          in somebody&rsquo;s actual garden, and hear what is crossing the ionosphere tonight.</p>
+      </div>
+      <img src="assets/mac-shortwave.jpg" width="1600" height="1000" loading="lazy"
+           alt="The Mac app with shortwave receivers marked across the globe">
+    </article>
+  </section>
+
+  <!-- ── how it works ───────────────────────────────────────────────────── -->
+  <section class="how grid" id="how" aria-labelledby="how-title">
+    <div class="cell how-head">
+      <p class="label">[ How it works ]</p>
+      <h2 id="how-title" class="display stretch">Three steps. No sign up.</h2>
+    </div>
     <ol class="steps">
-      <li><span class="n">01</span><h3>Open it</h3><p>Go to listen.auralfm.xyz, or add it to your iPhone home screen and it opens like an app.</p></li>
-      <li><span class="n">02</span><h3>Spin the globe</h3><p>Anywhere. The station list follows whatever sits under the middle.</p></li>
-      <li><span class="n">03</span><h3>Press play</h3><p>You are listening to that place, live. Keep the ones you love with a star.</p></li>
+      <li class="cell"><span class="n">01</span><h3>Open it</h3><p>Go to listen.auralfm.xyz, or add it to your iPhone home screen and it opens like an app. <a href="https://docs.auralfm.xyz/">How to add it</a></p></li>
+      <li class="cell"><span class="n">02</span><h3>Spin the globe</h3><p>Anywhere. The station list follows whatever sits under the middle.</p></li>
+      <li class="cell"><span class="n">03</span><h3>Press play</h3><p>You are listening to that place, live. Keep the ones you love with a star.</p></li>
     </ol>
   </section>
 
-  <!-- ── where it runs ─────────────────────────────────────────────────── -->
-  <section class="platforms" aria-labelledby="platforms-title">
-    <h2 id="platforms-title" class="reveal">Where it runs</h2>
-    <div class="platform-grid">
-      <article class="platform reveal">
-        <p class="label">[ Browser and iPhone ]</p>
-        <h3>Free, right now</h3>
-        <p>Open it in any browser. On iPhone, tap Share and then Add to Home Screen, and it opens
-          full screen like any other app.</p>
-        <a class="textlink" href="https://listen.auralfm.xyz/">Open listen.auralfm.xyz</a>
-      </article>
-      <article class="platform reveal">
-        <p class="label">[ Mac ]</p>
-        <h3>The fullest version</h3>
-        <p>Shortwave receivers, stations you add yourself and a player in the menu bar. The Mac app
-          gets new features first. It is in private beta while the public release is prepared.</p>
-        <p class="note">Private beta</p>
-      </article>
+  <!-- ── where it runs ──────────────────────────────────────────────────── -->
+  <section class="platforms grid" aria-labelledby="platforms-title">
+    <h2 id="platforms-title" class="cell display stretch">Where it runs</h2>
+    <article class="cell platform">
+      <p class="label">[ Browser and iPhone ]</p>
+      <h3>Free, right now</h3>
+      <p>Open it in any browser. On iPhone, tap Share and then Add to Home Screen, and it opens
+        full screen like any other app.</p>
+      <a class="textlink" href="https://listen.auralfm.xyz/">Open listen.auralfm.xyz</a>
+    </article>
+    <article class="cell platform">
+      <p class="label">[ Mac ]</p>
+      <h3>The fullest version</h3>
+      <p>Shortwave receivers, stations you add yourself and a player in the menu bar. The Mac app
+        gets new features first. It is in private beta while the public release is prepared.</p>
+      <p class="note">Private beta</p>
+    </article>
+  </section>
+
+  <!-- ── support ────────────────────────────────────────────────────────── -->
+  <section class="support-cta grid" aria-labelledby="support-title">
+    <div class="cell">
+      <p class="label">[ Keep it unowned ]</p>
+      <h2 id="support-title" class="display stretch">No ads. No investors. No server to sell.</h2>
+    </div>
+    <div class="cell support-body">
+      <p>AuralFM is free and stays free. If it gives you something, you can give back: become a
+        member, or leave a one-off donation. The app never knows who you are either way.</p>
+      <a class="btn" href="support/">Support AuralFM</a>
     </div>
   </section>
 
-  <!-- ── questions ─────────────────────────────────────────────────────── -->
-  <section class="faq" id="faq" aria-labelledby="faq-title">
-    <h2 id="faq-title" class="reveal">Questions</h2>
-    <div class="qa reveal">
+  <!-- ── questions ──────────────────────────────────────────────────────── -->
+  <section class="faq grid" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" class="cell display stretch">Questions</h2>
+    <div class="cell qa">
       <details>
         <summary>Is it free?</summary>
         <p>Yes. The browser and iPhone versions are free and need no account.</p>
@@ -220,33 +287,33 @@
       </details>
       <details>
         <summary>How can I support it?</summary>
-        <p>A way to support AuralFM directly is on its way. Until then the best help is the simplest:
-          send one person a station you found.</p>
+        <p>Memberships and donations are on the <a href="support/">support page</a>. The simplest
+          help costs nothing: send one person a station you found.</p>
       </details>
     </div>
   </section>
 
-  <!-- ── final call ────────────────────────────────────────────────────── -->
-  <section class="final reveal">
-    <h2>Go somewhere <br>you have never heard.</h2>
-    <a class="btn" href="https://listen.auralfm.xyz/">Start listening free</a>
+  <!-- ── final call ─────────────────────────────────────────────────────── -->
+  <section class="final grid">
+    <h2 class="cell display stretch">Go somewhere you have never heard.</h2>
+    <div class="cell final-go"><a class="btn" href="https://listen.auralfm.xyz/">Start listening free</a></div>
   </section>
-
 </main>
 
-<footer class="foot">
-  <div class="foot-inner">
-    <a class="brand" href="./" aria-label="AuralFM home">
-      <svg class="brand-mark" viewBox="0 0 225 225" aria-hidden="true" focusable="false"><use href="#ring"/></svg>
-      <span class="brand-word">AURAL.FM</span>
-    </a>
-    <nav class="foot-links" aria-label="Footer">
-      <a href="https://listen.auralfm.xyz/">Listen</a>
-      <a href="https://docs.auralfm.xyz/">Docs</a>
-      <a href="https://blog.auralfm.xyz/">Blog</a>
-    </nav>
-    <p class="foot-note">Privacy and terms are in the app, under Settings. <span>&copy; 2026 AuralFM</span></p>
-  </div>
+<footer class="foot grid">
+  <a class="cell brand" href="./" aria-label="AuralFM home">
+    <svg class="brand-mark" viewBox="0 0 225 225" aria-hidden="true" focusable="false"><use href="#ring"/></svg>
+    <span class="brand-word">AURAL.FM</span>
+  </a>
+  <nav class="cell foot-links" aria-label="Footer">
+    <a href="https://listen.auralfm.xyz/">Listen</a>
+    <a href="https://docs.auralfm.xyz/">Docs</a>
+    <a href="https://blog.auralfm.xyz/">Journal</a>
+    <a href="support/">Support</a>
+    <a href="privacy/">Privacy</a>
+    <a href="terms/">Terms</a>
+  </nav>
+  <p class="cell foot-note">No account. Nothing about what you play is reported. <span>&copy; 2026 AuralFM</span></p>
 </footer>
 
 <!-- The ring mark from the logo kit, drawn once and used twice. -->
@@ -257,6 +324,6 @@
   </symbol>
 </svg>
 
-<script src="home.js" defer></script>
+<script src="aural.js" defer></script>
 </body>
 </html>
