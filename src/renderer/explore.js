@@ -48,9 +48,10 @@ document.addEventListener("keydown", (e) => {
   Icons.set($("favBtn"), "star");
   Icons.set($("tripBtn"), "shuffle");
   Icons.set($("setBtn"), "gear");
-  // A globe: the button chooses whose headlines — the world's, this place's,
-  // or the station's — and it sits where the phone's close button used to.
-  Icons.set($("newsSrc"), "globe");
+  // The button chooses whose headlines — the world's, this place's, or the
+  // station's — and shows where a tap goes: a pin to local, the globe back to
+  // World (renderNewsPanel). The panel opens on World, so it starts as a pin.
+  Icons.set($("newsSrc"), "pin");
   setPlayName(false);
   Icons.set($("lock"), "unlock");
   Icons.set($("mute"), "volumeHigh");

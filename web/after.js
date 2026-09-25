@@ -47,7 +47,7 @@
     // A system sheet, not this page's menu.
     btn.setAttribute("aria-haspopup", "dialog");
     btn.removeAttribute("aria-expanded");
-    Icons.set(btn, "speakers");
+    Icons.set(btn, "route");
     btn.title = t("ctl.output", "Where the sound comes out");
     btn.setAttribute("aria-label", btn.title);
   };

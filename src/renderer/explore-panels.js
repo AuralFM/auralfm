@@ -347,8 +347,19 @@ async function renderNewsPanel() {
     : (selection.place?.country || null);
 
   const labels = { world: "World", place: "This place", playing: "Now playing" };
+  /**
+   * The button shows where a tap goes, not where you are.
+   *
+   * It was always a globe, so on World — where the panel opens — it read as
+   * "world", the thing already showing, and nobody guessed it was the way to
+   * local news. Now it is a pin while the next source is local, and the globe
+   * only when the tap goes back to World. The heading says where you are.
+   */
+  const next = NEWS_SOURCES[(NEWS_SOURCES.indexOf(newsSource) + 1) % NEWS_SOURCES.length];
+  Icons.set($("newsSrc"), next === "world" ? "globe" : "pin");
   $("newsSrc").setAttribute("aria-pressed", newsSource !== "world");
-  $("newsSrc").title = `Source: ${labels[newsSource]} — click to change`;
+  $("newsSrc").title = `Headlines from: ${labels[next]}`;
+  $("newsSrc").setAttribute("aria-label", $("newsSrc").title);
   $("newsplace").textContent =
     newsSource === "world" ? "World headlines"
     : country ? country
