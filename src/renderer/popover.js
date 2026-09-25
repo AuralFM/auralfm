@@ -152,14 +152,14 @@ async function readOutputs() {
 }
 
 /**
- * One glyph: a speaker. See the note in Explore — the bluetooth and warning
+ * One glyph: rings over a point, as in Explore. See the note there — the bluetooth and warning
  * marks fired on a cold start, before the device list existed, so the first
  * thing the app said was that something had failed when nothing had.
  */
 function paintOutputIcon() {
   const btn = $("outbtn");
   if (!btn) return;
-  Icons.set(btn, "speakers");
+  Icons.set(btn, "route");
   const dev = outputId ? outDevices.find((d) => d.deviceId === outputId) : null;
   btn.title = dev?.label || t("ctl.output", "Where the sound comes out");
 }

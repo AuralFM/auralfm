@@ -159,9 +159,10 @@
     chat: SVG(`<rect x="3.6" y="4.8" width="16.8" height="11.4" rx="3.4" stroke-width="2.1"/>
                <path d="M8.8 16.2 7.3 19.8l4.6-3.6" stroke-width="2.1"/>`),
 
-    /* Where the sound goes, on Safari: iOS's own picker for AirPods, Bluetooth
-       and AirPlay (web/after.js). Rings over a point, the shape people already
-       read as "send the sound to a device", where a speaker read as volume. */
+    /* Where the sound goes: the output button everywhere — the Mac's list of
+       speakers, and on Safari iOS's own picker for AirPods, Bluetooth and
+       AirPlay (web/after.js). Rings over a point, the shape people already read
+       as "send the sound to a device", where a speaker read as volume. */
     route: SVG(`<path d="M6.39 15.22A7.8 7.8 0 1 1 17.61 15.22M9.34 12.37A3.7 3.7 0 1 1 14.66 12.37" stroke-width="2.1"/>
                 <path d="M12 14.6 16.6 21H7.4Z" fill="currentColor" stroke-width="1.4"/>`),
     /* Local: headlines for a place rather than the world. The globe stays for

@@ -148,7 +148,7 @@ async function renderOutputs() {
 let outputWasGone = false;
 
 /**
- * One glyph: a speaker.
+ * One glyph: rings over a point (was a speaker, which read as volume).
  *
  * It briefly showed a bluetooth mark for wireless devices and a red warning mark
  * when the chosen one had gone. Both were wrong here. The warning fired on
@@ -163,7 +163,7 @@ let outputWasGone = false;
 function paintOutputIcon(devs, chosen, present) {
   const btn = $("outbtn");
   if (!btn) return;
-  Icons.set(btn, "speakers");
+  Icons.set(btn, "route");
   const dev = chosen ? devs.find((d) => d.deviceId === chosen) : null;
   btn.title = dev?.label || t("ctl.output", "Where the sound comes out");
 
