@@ -296,3 +296,39 @@ navigator.storage?.persist?.().catch(() => {});
     }, 120);
   }
 }
+
+/**
+ * A place, by name: ?place=Lagos&country=Nigeria.
+ *
+ * The homepage's live globe links here when somebody picks a dot ("Listen
+ * here"). A name rather than a catalogue index, because the site and the app
+ * are published separately and an index can shift when the catalogue is
+ * rebuilt; a name and a country do not. Waits for the app's own first
+ * selection to land (see below), then flies to the one asked for.
+ * No station starts: arriving somewhere is not the same as pressing play.
+ */
+{
+  const q = new URLSearchParams(location.search);
+  const want = q.get("place");
+  if (want) {
+    const country = q.get("country") || "";
+    const go = async () => {
+      const list = (await window.auralfm.places(want, 12))?.places || [];
+      const hit = list.find((p) => p.title === want && (!country || p.country === country))
+        || list.find((p) => p.title === want) || list[0];
+      if (hit) goToPlace(hit.i, { fly: true });
+    };
+    // The app makes its own first selection — the last station's place, or a
+    // city near you from the time zone — some while after the page appears, and
+    // a place chosen before that was simply replaced by it. So this waits for
+    // that first selection, then moves on to the place that was asked for.
+    const started = Date.now();
+    const wait = () => {
+      const settled = document.body.classList.contains("revealed")
+        && (selection.placeIndex !== null || Date.now() - started > 9000);
+      if (settled) setTimeout(go, 500);
+      else if (Date.now() - started < 30000) setTimeout(wait, 250);
+    };
+    wait();
+  }
+}

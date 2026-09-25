@@ -161,7 +161,20 @@
   };
 
   const setTab = (name) => {
-    if (held && name !== held) held = null;      // another tab takes the sheet's place
+    /**
+     * Another tab takes the sheet's place — and the sheet goes down.
+     *
+     * It only forgot who was holding it: Explore → Settings left the places
+     * list raised underneath Settings, where it showed as a second card
+     * behind it, and closing Chat or Headlines brought the list straight back
+     * up although Explore was no longer the tab. The sheet comes up for
+     * Explore, Favourites or a pull on the now-playing row, and for nothing
+     * else. Favourites is the sheet too, so it keeps it and moves it itself.
+     */
+    if (held && name !== held) {
+      held = null;
+      if (name !== "explore" && name !== "favorites") window.AuralRailSheet?.home();
+    }
     // Headlines and chat replace the sheet rather than covering it; Explore and
     // Favourites *are* the sheet, so it stays.
     document.body.classList.toggle("panel-open", name === "headlines" || name === "chat");

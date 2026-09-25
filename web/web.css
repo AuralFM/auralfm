@@ -90,7 +90,11 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
    chips, so a vibe reads as a filter, which is what it is. */
 /* The app's chip rows have a fixed height; this one sizes to its pills and
    does not give up height to the list below it, or the pills were cut in half. */
-.vibechips { height: auto; flex: none; padding: 2px 12px 8px; }
+/* Up into the space the heading row already leaves (no top margin), and room
+   below before the first place: the pills sat on the list's first row.
+   Two classes, because the touch rule for .chips comes later and set its own
+   padding over this one. */
+.chips.vibechips { height: auto; flex: none; margin-top: 0; padding: 0 12px 14px; }
 /* Hairlines between rows, the site's grid in the app's panels. */
 #placelist .place + .place,
 #stationlist .st + .st,
