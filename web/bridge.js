@@ -529,6 +529,9 @@
       return r;
     }),
     placeFacets: cat((i) => ({ tags: M.catalog.placeTags(i), bands: M.catalog.placeBands(i) })),
+    // Vibes (web first, web/after.js): the lanes, and the places that play one.
+    vibes: cat(() => M.catalog.VIBES.map(({ id, name }) => ({ id, name }))),
+    vibePlaces: cat((id) => M.catalog.vibePlaces(id)),
     stationById: cat((id) => M.catalog.byId(String(id || "")) || null),
     randomStation: cat(() => M.catalog.randomChannel()),
     nextStation: cat((ch, t) => M.catalog.nextInPlace(ch, t || [])),

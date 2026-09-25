@@ -77,6 +77,25 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 /* Reduced motion: a cross-fade, and nothing moves. */
 .setsheet.fade .setsheet-panel { transform: none !important; transition: opacity 200ms ease; }
 
+/* ── from the site's redesign, web first (web/after.js) ────────────────────
+   No font changes: the app's own face, with the site's rhythm. */
+/* Sun time on each place, like a departures board: tabular, quiet, dimmer at
+   night. It sits between the place and its station count. */
+.place .ptime {
+  flex: none; margin-left: auto; margin-right: 10px;
+  font-size: 12px; font-variant-numeric: tabular-nums; color: var(--label2);
+}
+.place .ptime.night { color: var(--label3); }
+/* Vibes: the chips row under the places heading. Same pills as the station
+   chips, so a vibe reads as a filter, which is what it is. */
+/* The app's chip rows have a fixed height; this one sizes to its pills and
+   does not give up height to the list below it, or the pills were cut in half. */
+.vibechips { height: auto; flex: none; padding: 2px 12px 8px; }
+/* Hairlines between rows, the site's grid in the app's panels. */
+#placelist .place + .place,
+#stationlist .st + .st,
+.newslist .story + .story { box-shadow: inset 0 .5px 0 var(--line); }
+
 /* ── Add to Home Screen (web/install.js) ──────────────────────────────────────
    A card at the bottom, where Safari's own controls are, over everything the
    app draws. One step lit at a time, its glyph above with a tap drawn on it. */

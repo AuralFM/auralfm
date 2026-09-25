@@ -227,6 +227,42 @@ function placeTags(placeIndex, limit = 6) {
   return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([t, n]) => ({ tag: t, n }));
 }
 
+/**
+ * Vibes: lanes across the whole globe, named by people rather than by a genre
+ * code (BRAND.md §10). Each is a handful of the catalogue's own tags; a station
+ * belongs to a vibe when it carries any of them. Counted 2026-09-25: from 27
+ * old-time radio stations in 21 places up to 745 talk stations in 524.
+ */
+const VIBES = [
+  { id: "house", name: "Deep & house", tags: ["deep house", "house"] },
+  { id: "techno", name: "Techno", tags: ["techno"] },
+  { id: "electronic", name: "Electronic & ambient", tags: ["electronic", "ambient", "experimental"] },
+  { id: "talk", name: "Talk", tags: ["talk"] },
+  { id: "otr", name: "Old-time radio", tags: ["old time radio", "old-time radio", "otr", "drama", "detective"] },
+  { id: "faith", name: "Faith", tags: ["christian", "gospel", "catholic", "religious", "islamic", "quran"] },
+  { id: "jazz", name: "Jazz", tags: ["jazz"] },
+  { id: "tropical", name: "Cumbia & tropical", tags: ["cumbia", "tropical"] },
+  { id: "reggae", name: "Reggae & dub", tags: ["reggae", "dub"] },
+  { id: "community", name: "Community", tags: ["community radio", "community", "college"] },
+];
+
+/**
+ * The places that play a vibe, most of it first: [{ ...place, n }], where n is
+ * how many of the place's stations carry the vibe. One pass over the channels,
+ * a few milliseconds, so it is computed when asked rather than kept.
+ */
+function vibePlaces(id) {
+  const vibe = VIBES.find((m) => m.id === id);
+  if (!vibe) return [];
+  const want = new Set(vibe.tags);
+  const n = new Map();
+  for (const c of channels) {
+    if (!c[4] || !c[4].split(",").some((t) => want.has(t.toLowerCase()))) continue;
+    n.set(c[2], (n.get(c[2]) || 0) + 1);
+  }
+  return [...n].sort((a, b) => b[1] - a[1]).map(([i, k]) => ({ ...hydratePlace(i), n: k }));
+}
+
 /** How many AM / FM stations a place has, so empty chips can be hidden. */
 function placeBands(placeIndex) {
   const out = { am: 0, fm: 0 };
@@ -391,4 +427,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats };
+module.exports = { load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };
