@@ -176,7 +176,7 @@ function body(p, up) {
       if (!/^[a-z0-9-]+\.(jpg|png|webp)$/.test(name) || !fs.existsSync(file))
         fail(`journal/${p.slug}.md: ${name} is not in site/assets/journal/ (run with --from to bring it in)`);
       const s = size(file);
-      figs.push(`<figure><img src="${up}assets/journal/${name}" alt="${esc(alt)}" loading="lazy"${s ? ` width="${s[0]}" height="${s[1]}"` : ""}>${alt ? `<figcaption>${esc(alt)}</figcaption>` : ""}</figure>`);
+      figs.push(`<figure><span class="duo"><img src="${up}assets/journal/${name}" alt="${esc(alt)}" loading="lazy"${s ? ` width="${s[0]}" height="${s[1]}"` : ""}></span>${alt ? `<figcaption>${esc(alt)}</figcaption>` : ""}</figure>`);
       return `\n\nJOURNALFIGURE${figs.length - 1}\n\n`;
     });
   return render(md).replace(/<p>JOURNALFIGURE(\d+)<\/p>/g, (_, i) => figs[+i]);
@@ -186,7 +186,7 @@ function body(p, up) {
 function stories(posts) {
   return posts.map((p) => {
     const title = p.body ? `<a href="${p.slug}/">${esc(p.title)}</a>` : esc(p.title);
-    const img = p.image ? `\n      <img src="assets/journal/${p.image}" alt="" loading="lazy" width="200" height="200">` : "";
+    const img = p.image ? `\n      <span class="duo"><img src="assets/journal/${p.image}" alt="" loading="lazy" width="200" height="200"></span>` : "";
     return `    <article class="cell story${p.image ? "" : " no-image"}">${img}
       <div>
         <p class="meta">${meta(p)}</p>
@@ -241,7 +241,7 @@ function page(p, i, posts, c) {
         <p class="meta"><time datetime="${p.iso}">${esc(p.when)}</time>${p.author ? ` · ${esc(p.author)}` : ""}</p>
       </div>
     </header>${p.image ? `
-    <figure class="post-image grid"><div class="cell"><img src="../assets/journal/${p.image}" alt="${esc(p.alt)}"${s ? ` width="${s[0]}" height="${s[1]}"` : ""}></div></figure>` : ""}
+    <figure class="post-image grid"><div class="cell"><span class="duo"><img src="../assets/journal/${p.image}" alt="${esc(p.alt)}"${s ? ` width="${s[0]}" height="${s[1]}"` : ""}></span></div></figure>` : ""}
     <div class="prose grid">
       <div class="cell"><div class="body">
 ${body(p, "../")}

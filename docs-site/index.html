@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Docs · AuralFM</title>
-<meta name="description" content="How to use AuralFM: putting it on your iPhone, vibes, and more to come.">
+<meta name="description" content="How AuralFM works: finding stations, vibes, headlines, chat, shortwave, privacy, and how it was built.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AuralFM">
 <meta property="og:title" content="AuralFM docs">
@@ -84,36 +84,186 @@
     </ol>
   </section>
 
-  <!-- ── vibes ──────────────────────────────────────────────────────────── -->
+  <!-- ── contents ───────────────────────────────────────────────────────── -->
+  <nav class="vibe-others grid" aria-label="On this page">
+    <p class="cell label">[ On this page ]</p>
+    <ul>
+      <li><a href="#find">Finding stations</a></li>
+      <li><a href="#vibes">Vibes</a></li>
+      <li><a href="#headlines">Headlines</a></li>
+      <li><a href="#chat">Chat</a></li>
+      <li><a href="#shortwave">Shortwave</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#desktop">Desktop and web</a></li>
+      <li><a href="#built">How it was built</a></li>
+      <li><a href="#help">When a station will not play</a></li>
+    </ul>
+  </nav>
+
+  <section class="features three grid" id="find" aria-labelledby="find-title">
+    <div class="cell features-head">
+      <p class="label">[ Finding stations ]</p>
+      <h2 id="find-title" class="display stretch"><span class="hollow">Six ways</span> to go somewhere</h2>
+    </div>
+    <article class="cell card">
+      <p class="num">01</p>
+      <h3>Spin</h3>
+      <p>Drag the globe anywhere. Whatever sits under the middle becomes the selection, and the list beside it follows.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">02</p>
+      <h3>Tap a dot</h3>
+      <p>Every lit dot is a place with stations. Tap it and the place opens: its stations, its weather, the time there.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">03</p>
+      <h3>Search</h3>
+      <p>A city, a country or a station name. Words combine, so <em>jazz new orleans</em> finds jazz stations in New Orleans. It searches on your device, with nothing sent anywhere.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">04</p>
+      <h3>Sort</h3>
+      <p>Order the places by most stations, <strong>hidden gems</strong> (a new handful each day, the same all day), what is <strong>near</strong> you, who is <strong>awake</strong> right now, or at random.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">05</p>
+      <h3>Somewhere else</h3>
+      <p>The shuffle button plays one station from anywhere on Earth. Every one of the 38,337 is as likely as the next: nothing is weighted, nothing is pushed.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">06</p>
+      <h3>Keep it</h3>
+      <p>Tap the star beside a station to keep it. Favorites stay on your device; on the desktop they are in the menu bar too.</p>
+    </article>
+  </section>
+
   <section class="why grid" id="vibes" aria-labelledby="vibes-title">
     <div class="cell">
-      <p class="label">[ New ]</p>
-      <h2 id="vibes-title" class="display stretch">Vibes</h2>
+      <p class="label">[ Vibes ]</p>
+      <h2 id="vibes-title" class="display stretch">Pick a vibe. <span class="hollow">The globe lights up.</span></h2>
     </div>
     <div class="cell why-body">
-      <p>Open Explore and pick a vibe under the places heading &mdash; deep &amp; house, techno,
-        talk, old-time radio, faith, jazz and more. The list becomes the places that play it, most
-        of it first, and every one of them lights up on the globe.</p>
-      <p>Tap the vibe again to go back to every place. Each place in the list shows the time there,
-        dimmer where it is night.</p>
+      <p>Open Explore and pick a vibe under the places heading: deep &amp; house, techno, electronic &amp; ambient, talk, old-time radio, faith, jazz, cumbia &amp; tropical, reggae &amp; dub, community. The list becomes the places that play it, most of it first, and every one of them lights up on the globe.</p>
+      <p>A vibe is the tags stations give themselves, grouped and named by people. Nobody ranks the stations inside it and nobody pays to be there. Tap the vibe again to see every place.</p>
+      <p>Every station in every vibe is also listed on the site, by place, with a filter: <a class="textlink" href="https://auralfm.xyz/vibes/">auralfm.xyz/vibes</a>.</p>
     </div>
   </section>
 
-  <!-- ── coming ─────────────────────────────────────────────────────────── -->
-  <section class="platforms grid" aria-labelledby="soon-title">
-    <h2 id="soon-title" class="cell display stretch">More to read here soon</h2>
-    <article class="cell platform">
-      <p class="label">[ Coming ]</p>
-      <h3>Finding stations</h3>
-      <p>Spinning, searching, sorting by hidden gems and who is awake, and keeping favorites.</p>
+  <section class="why grid" id="headlines" aria-labelledby="headlines-title">
+    <div class="cell">
+      <p class="label">[ Headlines ]</p>
+      <h2 id="headlines-title" class="display stretch">What is being <span class="hollow">reported there</span></h2>
+    </div>
+    <div class="cell why-body">
+      <p>Open the headlines and you see the news from the country your station broadcasts from, in that country&rsquo;s own language, from Google News for that country. Switch to world headlines for the BBC, Al Jazeera, France 24 and DW.</p>
+      <p>Choose a world headline and it opens in a reader inside the app: the article&rsquo;s text, without the page around it. A country headline opens where it was published.</p>
+      <p>In the desktop app every request goes straight from your computer to the newsroom. In the web version a browser is not allowed to fetch another site&rsquo;s feed, so headlines pass through the host that serves the web app. Nothing about them is kept.</p>
+    </div>
+  </section>
+
+  <section class="why grid" id="chat" aria-labelledby="chat-title">
+    <div class="cell">
+      <p class="label">[ Chat ]</p>
+      <h2 id="chat-title" class="display stretch">Talk to whoever <span class="hollow">else is listening</span></h2>
+    </div>
+    <div class="cell why-body">
+      <p>Each place has a room. Open the chat and you are talking with people listening to, or looking at, the same part of the world. There is nothing to sign up for and no profile.</p>
+      <p>The chat is carried on <strong>Nostr</strong>, an open network of relays that no single company owns. AuralFM makes a new key each time it opens and throws it away when it closes, so nothing links one session to the next. Messages ask relays to pass them on and not store them; most do, and none can promise all do, so say nothing you need kept private.</p>
+      <p>You can add a relay of your own in Settings, and it is tried first. See something abusive? Report it from the message and it comes to us.</p>
+      <p><strong>Listener presence</strong> is separate and off until you turn it on: while you play, it shares the station&rsquo;s name and roughly where the station is (a 20 km square), never where you are.</p>
+    </div>
+  </section>
+
+  <section class="why grid" id="shortwave" aria-labelledby="shortwave-title">
+    <div class="cell">
+      <p class="label">[ Shortwave · desktop ]</p>
+      <h2 id="shortwave-title" class="display stretch">Listening through <span class="hollow">someone&rsquo;s antenna</span></h2>
+    </div>
+    <div class="cell why-body">
+      <p>The desktop app shows public shortwave receivers on the globe: KiwiSDRs that radio hobbyists run at their own expense and list openly for anyone to use. Pick one, tune a frequency, and hear what is crossing the ionosphere.</p>
+      <p>Each one is somebody&rsquo;s own equipment, so AuralFM is a careful guest: it connects only when you click, to one receiver at a time, says who it is, never retries a receiver that said no, and gives the slot back ninety seconds after you pause.</p>
+      <p>Run a receiver and would rather not be listed? Email <a class="textlink" href="mailto:hello@auralfm.xyz">hello@auralfm.xyz</a> with your host name and it is out of the next build.</p>
+    </div>
+  </section>
+
+  <section class="why grid" id="privacy" aria-labelledby="privacy-title">
+    <div class="cell">
+      <p class="label">[ Privacy ]</p>
+      <h2 id="privacy-title" class="display stretch">In <span class="hollow">plain words</span></h2>
+    </div>
+    <div class="cell why-body">
+      <p>No account, no profile, no tracking, and no analytics in the app. Your favorites and settings stay on your device. Nothing learns what you like.</p>
+      <p>But radio is the open internet. The station you play, and the services that draw the globe (NASA&rsquo;s imagery, the weather, the headlines), see your IP address the way any website you visit does. The website&rsquo;s host counts page views. The <a class="textlink" href="privacy/">privacy policy</a> names every service and what it sees, and the <a class="textlink" href="terms/">terms</a> are short.</p>
+    </div>
+  </section>
+
+  <section class="features grid" id="desktop" aria-labelledby="desktop-title">
+    <div class="cell features-head">
+      <p class="label">[ Desktop and web ]</p>
+      <h2 id="desktop-title" class="display stretch">One globe, <span class="hollow">two ways in</span></h2>
+    </div>
+    <article class="cell card">
+      <p class="num">01</p>
+      <h3>Web and iPhone</h3>
+      <p>Free in any browser at listen.auralfm.xyz, and full screen from your iPhone&rsquo;s home screen. Stations, vibes, headlines and chat.</p>
     </article>
-    <article class="cell platform">
-      <p class="label">[ Coming ]</p>
-      <h3>Headlines, chat and privacy</h3>
-      <p>Where the news comes from, how the chat works with no account, and what AuralFM keeps.
-        The <a class="textlink" href="privacy/">privacy policy</a> is already here.</p>
+    <article class="cell card">
+      <p class="num">02</p>
+      <h3>Desktop</h3>
+      <p>Everything on the web, plus shortwave, stations you add yourself and a player in the menu bar. macOS now, Windows next, in private beta.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">03</p>
+      <h3>Why some stations are desktop only</h3>
+      <p>About half the most played streams are sent over plain http, which browsers block on a secure page. The web plays the secure ones and finds a secure copy where one exists; the desktop has no such limit.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">04</p>
+      <h3>Same code</h3>
+      <p>The web app is built from the desktop app&rsquo;s own code, so a fix in one is a fix in both.</p>
     </article>
   </section>
+
+  <section class="why grid" id="built" aria-labelledby="built-title">
+    <div class="cell">
+      <p class="label">[ How it was built ]</p>
+      <h2 id="built-title" class="display stretch"><span class="hollow">Nothing</span> in the middle</h2>
+    </div>
+    <div class="cell why-body">
+      <p><strong>The stations</strong> come from public directories kept by people who love radio: radio.garden for places, and the community-run radio-browser database for genres and working streams. They are gathered into one catalogue that ships inside the app, which is why search and the globe work offline.</p>
+      <p><strong>The globe</strong> is NASA&rsquo;s Blue Marble with live cloud cover from weather satellites, the line between day and night where it truly falls, the ISS where it is right now, drawn with globe.gl.</p>
+      <p><strong>The app</strong> is Electron on the desktop, and the same code built into a web page for browsers and iPhones. When you press play, your device goes straight to the station: nothing re-streams the audio or puts an ad in front of it.</p>
+      <p><strong>The chat</strong> rides open Nostr relays. <strong>The checks</strong>: every bug fixed gets a test written after it, and each one is seen to fail before it is trusted.</p>
+    </div>
+  </section>
+
+  <section class="features grid" id="help" aria-labelledby="help-title">
+    <div class="cell features-head">
+      <p class="label">[ When a station will not play ]</p>
+      <h2 id="help-title" class="display stretch"><span class="hollow">Try</span> this</h2>
+    </div>
+    <article class="cell card">
+      <p class="num">01</p>
+      <h3>It is quiet</h3>
+      <p>Stations go off air, move their streams or block other countries. AuralFM tries the next station in the same place on its own; tap another if it does not.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">02</p>
+      <h3>On the web it will not start</h3>
+      <p>It may be an http stream that browsers block. The desktop app can play it.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">03</p>
+      <h3>No sound on iPhone</h3>
+      <p>Check the volume and that AirPods or a speaker are not still connected somewhere else. The output button picks where the sound goes.</p>
+    </article>
+    <article class="cell card">
+      <p class="num">04</p>
+      <h3>Something else</h3>
+      <p>Tell us which station and where: <a href="mailto:hello@auralfm.xyz">hello@auralfm.xyz</a>.</p>
+    </article>
+  </section>
+
 </main>
 
 <footer class="foot grid">

@@ -377,6 +377,34 @@
     });
   }
 
+  // ── the stepped frame ─────────────────────────────────────────────────────
+  // A heavy outline stepping round a [data-frame] block, after архитекторы.рф,
+  // drawn in once when the block comes into view. It opens at the top left,
+  // where the block's label and headline start, and steps once at the bottom
+  // right: the first cut stepped through the middle and struck the headline.
+  // CSS hides it on phones, where it would only crowd the words.
+  const framed = document.querySelectorAll("[data-frame]");
+  if (framed.length) {
+    const NS = "http://www.w3.org/2000/svg";
+    const seen = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); seen.unobserve(e.target); }
+    }, { threshold: 0.35 });
+    for (const el of framed) {
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("class", "stepframe");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("aria-hidden", "true");
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("pathLength", "1");
+      // Steps only at the bottom right, clear of where headlines end.
+      path.setAttribute("d", "M60 0H100V82H93V100H0V56");
+      svg.append(path);
+      el.prepend(svg);
+      if (still) svg.classList.add("in"); else seen.observe(svg);
+    }
+  }
+
   // ── the live bar: one place at a time ─────────────────────────────────────
   // "04:12 in Lagos · Cool FM 96.9": the time people there would tell you, and a
   // station broadcasting from there, the whole bar a link that opens the place

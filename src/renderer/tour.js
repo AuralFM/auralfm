@@ -69,10 +69,13 @@
     },
     {
       welcome: true,
-      title: "Nothing is collected",
-      body: "No account, and no server of ours. The station list is already on "
-          + "this Mac, so the globe and search work with the network unplugged. "
-          + "Nothing reports what you played.",
+      // Was "Nothing is collected … no server of ours": true of AuralFM, but a
+      // station you play still sees your IP address, and the privacy policy
+      // says so. The card says what is true without the absolute.
+      title: "No account. No algorithm.",
+      body: "Nothing to sign up for, and nothing learning you. The station list "
+          + "is already on this device, so the globe and search work offline. "
+          + "Settings has the privacy policy, in plain words.",
     },
   ];
 

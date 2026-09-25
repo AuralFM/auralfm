@@ -23,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { vibeSvg } from "./vibe-art.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
@@ -88,8 +89,9 @@ function vibePage(v) {
   }).join("\n");
   return `${c.head}<main id="main">
   ${MARK}
-  <section class="hero legal-hero grid">
+  <section class="hero legal-hero vibe-hero grid">
     <h1 class="cell display stretch">${esc(v.name)}</h1>
+    <div class="cell vibe-hero-art">${vibeSvg(v.id, "vibe-art big")}</div>
     <div class="cell intro">
       <p class="label">[ Vibe · ${esc(v.tags.join(", "))} ]</p>
       <p class="lede">${plural(v.stations, "station")} in ${plural(v.places.length, "place")} across
@@ -127,7 +129,7 @@ ${c.foot}`;
 
 // ── /vibes/ and the homepage's cards ────────────────────────────────────────
 const cards = (base) => VIBES.map((v) =>
-  `      <li class="cell vibe"><a href="${base}${v.id}/"><b>${esc(v.name)}</b><span>${num(v.stations)} stations · ${num(v.places.length)} places</span></a></li>`).join("\n");
+  `      <li class="cell vibe"><a href="${base}${v.id}/">${vibeSvg(v.id)}<b>${esc(v.name)}</b><span>${num(v.stations)} stations · ${num(v.places.length)} places</span></a></li>`).join("\n");
 
 function indexPage() {
   const total = VIBES.reduce((s, v) => s + v.stations, 0);
