@@ -2695,6 +2695,17 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : fail("one design across the three sites", (r.stdout + r.stderr).trim() || "sync-sites --check failed");
 }
 
+// ── the sites' script parses ───────────────────────────────────────────────
+// home/aural.js runs every page on all three sites. A comment dropped into a
+// one-line function once swallowed its closing brackets: the file stopped
+// parsing, and with it went the live bar, the departures board, the menu and
+// the live globe — with nothing on the page to say so.
+{
+  console.log("\nthe sites' script parses");
+  try { new vm.Script(readSrc("home/aural.js"), { filename: "home/aural.js" }); pass("home/aural.js parses"); }
+  catch (e) { fail("the sites' script parses", `home/aural.js: ${e.message}`); }
+}
+
 // ── headphones: a pause from outside is heard, and headphones off is sound off ─
 // Two faults found on 2026-09-24. On an iPhone, iOS pauses the page itself when
 // AirPods come out or disconnect, and for calls and Siri; the web player kept

@@ -69,15 +69,18 @@
   <!-- ── the headline, and the globe it is about ──────────────────────────── -->
   <section class="hero grid">
     <h1 class="cell display fit stretch">Listen in.</h1>
-    <figure class="cell globe">
+    <figure class="cell globe" data-live-globe="assets/globe/">
+      <div class="globe-live" aria-label="The globe, live: drag to spin, pinch or scroll to zoom, tap a dot to find a place"></div>
       <img src="assets/globe.jpg" width="1400" height="1400"
            alt="The AuralFM globe: Africa and Europe with live cloud cover, the line between day and night crossing the continent, and city lights on the night side">
       <figcaption class="readout" aria-hidden="true">
         <span class="tl">N 12.0° · E 8.0°</span>
         <span class="tr">Day · Night</span>
-        <span class="bl">Centre = selection</span>
+        <span class="bl">Drag · zoom · tap a dot</span>
         <span class="br">Live</span>
       </figcaption>
+      <button class="globe-go" type="button">Spin the globe</button>
+      <p class="globe-pick" aria-live="polite" hidden></p>
     </figure>
     <div class="cell intro">
       <p class="label">[ A window onto the world you can listen to ]</p>
@@ -98,6 +101,11 @@
   <section class="board grid" aria-labelledby="board-title">
     <div class="cell board-head">
       <p class="label">[ Right now on the globe ]</p>
+      <div class="board-sum" data-board-sum>
+        <p class="sum-big" aria-hidden="true">–<span>/8</span></p>
+        <p class="sum-text">of these cities are in the dark right now &mdash; when radio is most
+          itself: the overnight shows, the stations nobody is watching.</p>
+      </div>
       <h2 id="board-title" class="display stretch">Where it is tonight</h2>
     </div>
     <table class="cell departures">

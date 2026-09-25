@@ -20,7 +20,7 @@ const R = (...p) => path.join(ROOT, ...p);
 const check = process.argv.includes("--check");
 
 const SHARED = [
-  "aural.css", "aural.js",
+  "aural.css", "aural.js", "404.html",
   "assets/favicon.ico", "assets/favicon.svg", "assets/apple-touch-icon.png", "assets/share.jpg",
   ...fs.readdirSync(R("home/assets/fonts")).map((f) => `assets/fonts/${f}`),
 ];
