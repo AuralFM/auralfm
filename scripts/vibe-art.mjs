@@ -2,9 +2,10 @@
  * Line art for the ten vibes: one line weight, square ends, no fill.
  *
  * Drawn to be replaced. Melton may draw his own; these hold the place and set
- * the rules his will follow — a 200 × 120 box, strokes only, every shape given
- * pathLength="1" so CSS can draw any of them in the same way (dasharray 1,
- * dashoffset 1 → 0) whatever its real length. Each is an object from the room
+ * the rules his will follow — a 200 × 120 box, strokes only. home/aural.js
+ * measures each shape's real length (getTotalLength) and CSS draws it in with
+ * that; pathLength="1" did the same job in Chrome but not reliably in Safari,
+ * where circles and rectangles came out dotted or blank. Each is an object from the room
  * the music is made in, not an icon of a genre: the record on the platter, the
  * sixteen steps of a drum machine, the microphone, the cathedral radio set,
  * the sound system and its echo.
@@ -12,9 +13,9 @@
  * Used by scripts/build-vibes.mjs on the homepage cards, the /vibes/ index and
  * the top of each vibe's page.
  */
-const P = (d) => `<path pathLength="1" d="${d}"/>`;
-const C = (cx, cy, r) => `<circle pathLength="1" cx="${cx}" cy="${cy}" r="${r}"/>`;
-const R = (x, y, w, h) => `<rect pathLength="1" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
+const P = (d) => `<path d="${d}"/>`;
+const C = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+const R = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`;
 
 export const VIBE_ART = {
   // A record on the platter, the tonearm down in the groove.

@@ -367,7 +367,7 @@ p { text-wrap: pretty; }
 .tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tiers-head { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 16px; }
 .tier { display: flex; flex-direction: column; gap: 14px; }
-.tier h3 { font: 900 30px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; }
+.tier h3 { font: 900 clamp(22px, 2.6vw, 30px)/1 var(--display); overflow-wrap: anywhere; text-transform: uppercase; font-variation-settings: "wdth" 80; }
 .price { font: 400 13px/20px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
 .price b { font: 900 48px/1 var(--display); font-variation-settings: "wdth" 70; color: var(--bone); margin-right: 6px; }
 .tier ul { display: flex; flex-direction: column; gap: 8px; flex: 1; color: var(--bone2); }
@@ -494,8 +494,9 @@ p { text-wrap: pretty; }
 .form-status { font: 400 16px/24px var(--body); padding: 14px 16px; border: 1px solid var(--line); }
 .form-status.ok { border-color: var(--aqua); color: var(--bone); }
 .form-status.bad { border-color: #FF8A7A; }
-/* Off-screen, not display:none: some bots skip fields they can tell are hidden. */
-.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+/* Clipped to nothing, not display:none: some bots skip fields they can tell are hidden.
+   Not pushed off-screen either, which a layout audit reads as overflow. */
+.hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .wait-form.sent .field, .wait-form.sent .btn { display: none; }
 
 /* ── a Journal post ───────────────────────────────────────────────────────── */
@@ -556,6 +557,9 @@ p { text-wrap: pretty; }
   .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aboutrow, .steps-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .vplaces { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* The departures table ran 40px off a 768 screen beside its heading. */
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .features.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   :root { --pad: 16px; }
@@ -563,7 +567,7 @@ p { text-wrap: pretty; }
   .island .cell { padding: 0 14px; }
   .hero, .board, .why, .support-cta, .faq, .platforms, .features, .card-wide, .foot,
   .support-hero, .tiers, .costs, .shop, .free, .legal-hero,
-  .featured, .stories, .aboutrow, .beta, .vplaces { grid-template-columns: minmax(0, 1fr); }
+  .featured, .stories, .aboutrow, .beta, .vplaces, .features.three { grid-template-columns: minmax(0, 1fr); }
   .globe { grid-row: auto; }
   /* One word, as big as a phone allows: "JOURNAL" ran past a 390pt screen. */
   .legal-hero h1 { font-size: 12.4vw; }
@@ -595,6 +599,8 @@ p { text-wrap: pretty; }
    bar has room for a whole time and city, and the vibe names step down. */
 @media (max-width: 380px) {
   .brand-word { display: none; }
+  /* One long word ("SOMEWHERE") outran a 320pt cell at the 32px floor. */
+  .display { font-size: clamp(26px, 11cqi, 110px); }
   .vibe b { font-size: 18px; font-variation-settings: "wdth" 56; }
 }
 @media (pointer: coarse) { .btn { min-height: 48px; } }
@@ -602,10 +608,12 @@ p { text-wrap: pretty; }
 /* ══ texture (the lab's studies, live since 25 Sept 2026) ═════════════════════ */
 
 /* 01 · Grain. A film grain over every page, drawn once as a 200px tile (Craft:
-   Noise) so scrolling costs nothing. Fixed, so it does not move with the page. */
+   Noise) so scrolling costs nothing. Fixed, so it does not move with the page.
+   Screen, not overlay: overlay on near-black multiplies to almost nothing, and
+   the grain was invisible on the onyx it was meant for. */
 body::after {
   content: ""; position: fixed; inset: 0; z-index: 40; pointer-events: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E") 0 0 / 200px 200px repeat; opacity: .12; mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E") 0 0 / 200px 200px repeat; opacity: .12; mix-blend-mode: screen;
 }
 
 /* 02 · The stepped frame. aural.js draws a heavy outline that steps round any
@@ -614,7 +622,10 @@ body::after {
 [data-frame] { position: relative; }
 @media (min-width: 761px) { [data-frame] { padding: 44px 48px 56px; } }
 .stepframe { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); pointer-events: none; overflow: visible; }
-.stepframe path { fill: none; stroke: var(--bone); stroke-width: 5; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; }
+/* --len is the path's measured length (aural.js). Until the block is seen the
+   whole line is offset out of view; then it slides in. No script: no --len,
+   so the dash is "none" and the frame simply shows. */
+.stepframe path { fill: none; stroke: var(--bone); stroke-width: 5; stroke-linecap: square; stroke-dasharray: var(--len, none); stroke-dashoffset: var(--len, 0); }
 .stepframe.in path { transition: stroke-dashoffset 2.2s var(--ease); stroke-dashoffset: 0; }
 @media (max-width: 760px) { .stepframe { display: none; } }
 
@@ -646,20 +657,19 @@ body::after {
 /* 05 · Line art for the vibes (scripts/vibe-art.mjs): one weight, square ends,
    drawn in when the card is pointed at. */
 .vibe-art { display: block; width: 100%; height: auto; max-height: 104px; overflow: visible; }
-/* No non-scaling-stroke here: it measures dashes on screen, which breaks the
-   pathLength="1" draw-in (the lines came out half drawn, or not at all). */
+/* Drawn in with each shape's measured length (--len, from aural.js). */
 .vibe-art * { fill: none; stroke: var(--bone2); stroke-width: 2.2; stroke-linecap: square; stroke-linejoin: miter; transition: stroke .5s var(--ease); }
 /* The card turns bone under the pointer, so the drawing goes onyx; by keyboard
    the card stays dark and the drawing goes aqua. Either way it draws itself in. */
-.vibe:hover .vibe-art *, .vibe a:focus-visible .vibe-art * { stroke-dasharray: 1; animation: artdraw 1.1s var(--ease); }
+.vibe:hover .vibe-art *, .vibe a:focus-visible .vibe-art * { stroke-dasharray: var(--len, none); animation: artdraw 1.1s var(--ease); }
 .vibe:hover .vibe-art * { stroke: var(--onyx); }
 .vibe a:focus-visible .vibe-art * { stroke: var(--aqua); }
-@keyframes artdraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes artdraw { from { stroke-dashoffset: var(--len, 0); } to { stroke-dashoffset: 0; } }
 .vibe-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
 .vibe-hero h1 { grid-column: 1 / -1; }
 .vibe-hero-art { display: flex; align-items: center; justify-content: center; padding: 40px var(--pad); }
 .vibe-art.big { max-height: 280px; }
-.vibe-art.big * { stroke: var(--aqua); stroke-width: 1.8; stroke-dasharray: 1; animation: artdraw 2s var(--ease) both; }
+.vibe-art.big * { stroke: var(--aqua); stroke-width: 1.8; stroke-dasharray: var(--len, none); animation: artdraw 2s var(--ease) both; }
 
 /* 06 · Halftone duotone: a photograph printed in two colours through a dot
    screen. The picture goes grey and multiplies over the ink; a dot screen

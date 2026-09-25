@@ -60,15 +60,34 @@
   // cell's edges rather than past them.
   const fits = [...document.querySelectorAll(".fit")];
   const probe = document.createElement("span");
-  probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;"
+  probe.style.cssText = "position:fixed;visibility:hidden;white-space:nowrap;left:0;top:0;pointer-events:none;"
     + "font-variation-settings:'wdth' 100";
   document.body.append(probe);
   // On a phone one line would shrink to a whisper ("KEEP IT UNOWNED." fitted at
   // 25px), so there the line is let go and wraps at the size the stylesheet sets.
   const phone = matchMedia("(max-width: 760px)");
+  // Phones keep the stylesheet's size and wrap, unless one word alone would
+  // not fit ("INDEPENDENT." ran 100px off a 375pt screen): then the size comes
+  // down just enough for the longest word, measured at the phone's condensed width.
+  function fitPhone(el) {
+    el.style.fontSize = "";
+    const cs = getComputedStyle(el);
+    probe.style.font = `${cs.fontWeight} 100px/1 ${cs.fontFamily}`;
+    probe.style.textTransform = cs.textTransform;
+    probe.style.fontVariationSettings = cs.fontVariationSettings;
+    const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    let widest = 0;
+    for (const word of el.textContent.trim().split(/\s+/)) {
+      probe.textContent = word;
+      widest = Math.max(widest, probe.getBoundingClientRect().width);
+    }
+    probe.style.fontVariationSettings = "'wdth' 100";
+    const size = Math.floor((100 * room) / widest) - 1;
+    if (size < parseFloat(cs.fontSize)) el.style.fontSize = `${size}px`;
+  }
   function fit() {
     for (const el of fits) {
-      if (phone.matches) { el.style.fontSize = ""; continue; }
+      if (phone.matches) { fitPhone(el); continue; }
       const cs = getComputedStyle(el);
       probe.style.font = `${cs.fontWeight} 100px/1 ${cs.fontFamily}`;
       probe.style.textTransform = cs.textTransform;
@@ -377,30 +396,49 @@
     });
   }
 
+  // ── line drawings that draw themselves in ──────────────────────────────────
+  // CSS draws a stroke in by animating its dash offset from its full length to
+  // zero. Each shape's real length is measured here and handed to CSS as --len.
+  // (pathLength="1" did this in Chrome, but Safari ignores it on circles and
+  // rectangles, which drew dotted or not at all.) Without script, --len is
+  // unset and every line simply shows whole.
+  const measure = (root) => {
+    for (const el of root.querySelectorAll("path, circle, rect, line, polyline")) {
+      try { el.style.setProperty("--len", el.getTotalLength().toFixed(1)); } catch { /* not rendered */ }
+    }
+  };
+  document.querySelectorAll(".vibe-art").forEach(measure);
+
   // ── the stepped frame ─────────────────────────────────────────────────────
   // A heavy outline stepping round a [data-frame] block, after архитекторы.рф,
   // drawn in once when the block comes into view. It opens at the top left,
   // where the block's label and headline start, and steps once at the bottom
-  // right: the first cut stepped through the middle and struck the headline.
-  // CSS hides it on phones, where it would only crowd the words.
+  // right. Drawn in real pixels for the block's current size (not a scaled
+  // 100 × 100 box), so its line weight and length are exact in every browser;
+  // redrawn when the block resizes. CSS hides it on phones.
   const framed = document.querySelectorAll("[data-frame]");
   if (framed.length) {
     const NS = "http://www.w3.org/2000/svg";
     const seen = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); seen.unobserve(e.target); }
     }, { threshold: 0.35 });
+    const draw = (svg, path) => {
+      const w = svg.clientWidth, h = svg.clientHeight;
+      if (!w || !h) return;
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      const X = (f) => (f * w).toFixed(1), Y = (f) => (f * h).toFixed(1);
+      path.setAttribute("d", `M${X(0.6)} 0H${w}V${Y(0.82)}H${X(0.93)}V${h}H0V${Y(0.56)}`);
+      measure(svg);
+    };
     for (const el of framed) {
       const svg = document.createElementNS(NS, "svg");
       svg.setAttribute("class", "stepframe");
-      svg.setAttribute("viewBox", "0 0 100 100");
-      svg.setAttribute("preserveAspectRatio", "none");
       svg.setAttribute("aria-hidden", "true");
       const path = document.createElementNS(NS, "path");
-      path.setAttribute("pathLength", "1");
-      // Steps only at the bottom right, clear of where headlines end.
-      path.setAttribute("d", "M60 0H100V82H93V100H0V56");
       svg.append(path);
       el.prepend(svg);
+      draw(svg, path);
+      new ResizeObserver(() => draw(svg, path)).observe(svg);
       if (still) svg.classList.add("in"); else seen.observe(svg);
     }
   }
@@ -444,7 +482,8 @@
       setTimeout(() => { paint(); slot.classList.remove("out"); }, 260);
     };
     paint();
-    const root = document.querySelector('link[rel="stylesheet"][href$="aural.css"]')?.href.replace(/aural\.css$/, "") || "/";
+    // The stylesheet carries a version stamp (?v=…, scripts/sync-sites.mjs), so match inside the href.
+    const root = document.querySelector('link[rel="stylesheet"][href*="aural.css"]')?.href.replace(/aural\.css(\?.*)?$/, "") || "/";
     fetch(root + "assets/live.json").then((r) => r.json()).then((list) => {
       if (Array.isArray(list) && list.length) { cities = list; at = Math.floor(Math.random() * list.length); paint(); }
     }).catch(() => {});
