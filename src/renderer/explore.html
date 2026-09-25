@@ -756,6 +756,28 @@
     transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   .chips button:hover{background:var(--fill-hi);color:var(--label)}
+  /* ── from the site's redesign (explore-brand.js) ───────────────────────────
+     No font changes: the app's own face, with the site's rhythm. */
+  /* Sun time on each place, like a departures board: tabular, quiet, dimmer at
+     night. It sits between the place and its station count. */
+  .place .ptime {
+    flex: none; margin-left: auto; margin-right: 10px;
+    font-size: 12px; font-variant-numeric: tabular-nums; color: var(--label2);
+  }
+  .place .ptime.night { color: var(--label3); }
+  /* Vibes: the chips row under the places heading. Same pills as the station
+     chips, so a vibe reads as a filter, which is what it is. */
+  /* The app's chip rows have a fixed height; this one sizes to its pills and
+     does not give up height to the list below it, or the pills were cut in half. */
+  /* Up into the space the heading row already leaves (no top margin), and room
+     below before the first place: the pills sat on the list's first row.
+     Two classes, because the touch rule for .chips comes later and set its own
+     padding over this one. */
+  .chips.vibechips { height: auto; flex: none; margin-top: 0; padding: 0 12px 14px; }
+  /* Hairlines between rows, the site's grid in the app's panels. */
+  #placelist .place + .place,
+  #stationlist .st + .st,
+  .newslist .story + .story { box-shadow: inset 0 .5px 0 var(--line); }
   .chips button:active{transform:scale(.94)}
   .chips button[aria-pressed="true"]{
     background:color-mix(in srgb,var(--accent) 22%,transparent);
@@ -885,6 +907,29 @@
   @media (prefers-reduced-motion: reduce){
     .tourring,.tourarrow,.tourcard{transition:none}
   }
+  /* ── the site's language on the first-run cards ─────────────────────────
+     auralfm.xyz draws in square cells on onyx with hairline rules, bracketed
+     labels in its accent and uppercase headings. The introduction and the help
+     tags are where somebody arriving from the site meets the app first, so
+     they wear that — square, solid, uppercase — in the app's own typeface,
+     which never changes. The glass stays on the app's working panels. */
+  .tourring{border-radius:0;border-width:2px;box-shadow:none}
+  .tourcard,.helptag{
+    border-radius:0;background:var(--bg);
+    border:1px solid color-mix(in srgb,var(--label) 34%,transparent);
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+  }
+  .tourarrow{background:var(--bg)}
+  .tourarrow.up,.tourarrow.down{border-color:color-mix(in srgb,var(--label) 34%,transparent)}
+  .tourlabel{
+    font-size:10.5px;letter-spacing:.1em;color:var(--accent);
+    font-variant-numeric:tabular-nums;margin-bottom:7px;
+  }
+  .tourcard .tourh{text-transform:uppercase;letter-spacing:.03em;font-weight:760}
+  .tourcard.welcome .tourh{font-size:17px}
+  .tourdots i{border-radius:0;width:6px;height:2px}
+  .tourskip,.tourgo{border-radius:0;text-transform:uppercase;letter-spacing:.07em;font-size:10.5px;font-weight:700;padding:6px 11px}
+  .tourback,.tipx{border-radius:0}
   /* A sender's name, when it belongs to somebody else. Underlined on hover only
      — a chat log full of permanently underlined names reads as a page of links. */
   .msg .mutable{cursor:default}
@@ -1725,6 +1770,7 @@
 <script src="explore-trackers.js"></script>
 <script src="explore-search.js"></script>
 <script src="explore-shortwave.js"></script>
+<script src="explore-brand.js"></script>
 <script src="explore.js"></script>
 </body>
 </html>

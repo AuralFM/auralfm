@@ -184,8 +184,34 @@ function toolbarLogo() {
   const view = svg.match(/viewBox="([^"]+)"/)?.[1];
   if (!view) throw new Error("web: the logo has no viewBox");
   // currentColor, so web.css picks bone or onyx by theme from one drawing.
-  const inked = paths.map((p) => p.replace(/fill="#[0-9A-Fa-f]{3,8}"/, 'fill="currentColor"')).join("");
-  return `<svg viewBox="${view}" aria-hidden="true" focusable="false">${inked}</svg>`;
+  const ink = (p) => p.replace(/fill="#[0-9A-Fa-f]{3,8}"/, 'fill="currentColor"');
+  // Spaced like the website's lockup. As drawn, the globe touched the A and the
+  // letters were set tight, so at 18px high AURAL.FM read as one smudge. The
+  // wordmark is split into its letters (each subpath grouped by where it sits
+  // across the line, so a counter stays with its letter) and set out again with
+  // tracking, and the mark gets a gap. Every path is absolute, so a translate
+  // per letter is all it takes.
+  const GAP = 44, TRACK = 26;
+  const d = paths[0].match(/ d="([^"]+)"/)[1];
+  const subs = d.split(/(?=M)/).map((sp) => {
+    const xs = [];
+    for (const [, c, nums] of sp.matchAll(/([MLHVCZ])([^MLHVCZ]*)/g)) {
+      const n = (nums.match(/-?\d*\.?\d+/g) || []).map(Number);
+      if (c === "H") xs.push(...n);
+      else if (c !== "V") for (let i = 0; i < n.length; i += 2) xs.push(n[i]);
+    }
+    return { sp, lo: Math.min(...xs), hi: Math.max(...xs) };
+  }).sort((a, b) => a.lo - b.lo);
+  const letters = [];
+  for (const s of subs) {
+    const last = letters.at(-1);
+    if (last && s.lo < last.hi) { last.d += s.sp; last.hi = Math.max(last.hi, s.hi); }
+    else letters.push({ d: s.sp, hi: s.hi });
+  }
+  const word = letters.map((l, k) => `<path fill="currentColor" transform="translate(${GAP + k * TRACK} 0)" d="${l.d}"/>`).join("");
+  const [x, y, w, h] = view.split(/\s+/).map(Number);
+  const wide = `${x} ${y} ${w + GAP + TRACK * (letters.length - 1)} ${h}`;
+  return `<svg viewBox="${wide}" aria-hidden="true" focusable="false">${ink(paths[1])}${word}</svg>`;
 }
 
 /**
@@ -280,7 +306,7 @@ page("explore.html", "index.html", {
   // levels.js before the bridge: the card's waveform is measured from a private
   // copy of the stream, exactly as the desktop's popover does it.
   before: ["web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
-  after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js"] },
+  after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js", "web/ticker.js"] },
   logo: true,
   share: true,
 });
@@ -295,7 +321,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
-for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
+for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
 // Google News does not let a web page read it, so here.now fetches it for the

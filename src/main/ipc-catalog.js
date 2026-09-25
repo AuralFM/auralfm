@@ -51,6 +51,10 @@ module.exports = function register(ctx) {
     return ok;
   });
   ipcMain.handle("catalog:places", (_e, q, limit, opts) => catalog.placeSearch(q, limit, opts || {}));
+  // Vibes: lanes across the whole catalogue (src/catalog.js VIBES). Names only
+  // for the chips; a vibe's places when one is chosen.
+  ipcMain.handle("catalog:vibes", () => catalog.VIBES.map(({ id, name }) => ({ id, name })));
+  ipcMain.handle("catalog:vibePlaces", (_e, id) => catalog.vibePlaces(String(id)));
   ipcMain.handle("catalog:placeChannels", (_e, i, filter) => {
     const r = catalog.placeChannels(i, filter);
     if (!r.place) return r;

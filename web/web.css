@@ -77,28 +77,32 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 /* Reduced motion: a cross-fade, and nothing moves. */
 .setsheet.fade .setsheet-panel { transform: none !important; transition: opacity 200ms ease; }
 
-/* ── from the site's redesign, web first (web/after.js) ────────────────────
-   No font changes: the app's own face, with the site's rhythm. */
-/* Sun time on each place, like a departures board: tabular, quiet, dimmer at
-   night. It sits between the place and its station count. */
-.place .ptime {
-  flex: none; margin-left: auto; margin-right: 10px;
-  font-size: 12px; font-variant-numeric: tabular-nums; color: var(--label2);
+/* ── the ticker (web/ticker.js) ───────────────────────────────────────────────
+   The website's aqua across the top: one line, uppercase, bracketed labels, in
+   the app's own typeface. 26px, above the toolbar in the page's column. */
+.ticker {
+  flex: none; position: relative; z-index: 20; height: 26px; display: flex; align-items: center;
+  background: #02E8CD; color: #0C0B0B; overflow: hidden;
+  font-size: 10.5px; line-height: 26px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
-.place .ptime.night { color: var(--label3); }
-/* Vibes: the chips row under the places heading. Same pills as the station
-   chips, so a vibe reads as a filter, which is what it is. */
-/* The app's chip rows have a fixed height; this one sizes to its pills and
-   does not give up height to the list below it, or the pills were cut in half. */
-/* Up into the space the heading row already leaves (no top margin), and room
-   below before the first place: the pills sat on the list's first row.
-   Two classes, because the touch rule for .chips comes later and set its own
-   padding over this one. */
-.chips.vibechips { height: auto; flex: none; margin-top: 0; padding: 0 12px 14px; }
-/* Hairlines between rows, the site's grid in the app's panels. */
-#placelist .place + .place,
-#stationlist .st + .st,
-.newslist .story + .story { box-shadow: inset 0 .5px 0 var(--line); }
+.ticker-run { display: flex; flex: none; animation: ticker var(--ticker-s, 60s) linear infinite; }
+.ticker:hover .ticker-run, .ticker:focus-within .ticker-run { animation-play-state: paused; }
+@keyframes ticker { to { transform: translateX(calc(-1 * var(--ticker-w, 50%))); } }
+.ticker ul { display: flex; flex: none; margin: 0; padding: 0; list-style: none; }
+.ticker li { flex: none; padding: 0 22px; white-space: nowrap; }
+/* A dot before every item, the first of each copy included, so the join of the loop reads like every other gap. */
+.ticker li::before { content: "●"; font-size: 5px; vertical-align: 2px; margin: 0 22px 0 -22px; opacity: .55; }
+.ticker a, .ticker span { color: inherit; text-decoration: none; }
+.ticker a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ticker a:focus-visible { outline: 2px solid #0C0B0B; outline-offset: -2px; }
+.ticker b { font-weight: 800; }
+.ticker-x {
+  position: absolute; right: 0; top: 0; height: 26px; width: 30px; border: 0; padding: 0;
+  background: #02E8CD; color: #0C0B0B; font: inherit; font-size: 15px; cursor: pointer;
+  box-shadow: -10px 0 10px #02E8CD;
+}
+.ticker-x:focus-visible { outline: 2px solid #0C0B0B; outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) { .ticker-run { animation: none; } }
 
 /* ── Add to Home Screen (web/install.js) ──────────────────────────────────────
    A card at the bottom, where Safari's own controls are, over everything the

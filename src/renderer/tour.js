@@ -192,8 +192,17 @@
                      : (step.welcome ? "Show me" : "Next");
     next.onclick = () => go(1);
 
+    // The step as the website labels things: "[ 02 / 05 ]" in the accent, above
+    // the title. Hidden from assistive technology, which already hears the step
+    // from the dots' label.
+    const lab = document.createElement("div");
+    lab.className = "tourlabel";
+    lab.setAttribute("aria-hidden", "true");
+    const two = (n) => String(n).padStart(2, "0");
+    lab.textContent = `[ ${two(i + 1)} / ${two(STEPS.length)} ]`;
+
     row.append(back, dots, skip, next);
-    card.append(h, p, row);
+    card.append(lab, h, p, row);
     position();
     next.focus();
   }

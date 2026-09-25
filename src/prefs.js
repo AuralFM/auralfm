@@ -121,14 +121,15 @@ const DEFAULTS = {
   dotSize: "normal",     // normal | large
   language: "system",    // system | en | es
   /**
-   * Tally, not Onyx, on a first run.
+   * AuralFM on a first run: the website's aqua, onyx and bone.
    *
-   * Onyx is the brand and it is the restrained one: bone on black, which is
-   * right once you live in the app and flat the first time you open it. Tally's
-   * lamp reds and greens say at a glance that the dots are alive. The brand
-   * palette is one tap away, and nobody who has already chosen sees this.
+   * It was Tally, whose lamp reds said at a glance that the dots were alive —
+   * but the app then looked like a different product from auralfm.xyz, which
+   * someone has usually just come from. The AuralFM palette has the same aqua
+   * dots as the site's globe. Nobody who has already chosen a palette sees
+   * this change.
    */
-  palette: "tally",      // see src/palettes.js
+  palette: "auralfm",    // see src/palettes.js
   /**
    * Which app icon to wear.
    *

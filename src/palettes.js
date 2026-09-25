@@ -23,6 +23,28 @@
 
 const PALETTES = [
   {
+    id: "auralfm",
+    name: "AuralFM",
+    /**
+     * The website's colours, so the app and auralfm.xyz read as one thing.
+     *
+     * Aqua (#02E8CD) is the site's accent and the colour of every dot on its
+     * hero globe; onyx and bone are the ground and the type, as they are here.
+     * The receivers take bone, the site's third colour, which keeps them
+     * unmistakably other than the aqua places across seven hundred dots. It is
+     * the palette a first run opens on (prefs.js).
+     *
+     * Ionosphere's accent (#2AE8B0) is a neighbour of this aqua. They are
+     * different palettes, never on screen together, so it stands for now.
+     */
+    accent: "#02E8CD",
+    accentLight: "#00796B",
+    dot: "#02E8CD",
+    rx: "#F7F4EE",
+    atmosphere: "#8AB4F8",
+    star: "#DFFFFA",
+  },
+  {
     id: "onyx",
     name: "Onyx",
     /**
