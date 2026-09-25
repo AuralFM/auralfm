@@ -1,0 +1,13 @@
+{
+  "collections": {
+    "beta": {
+      "fields": {
+        "email": { "type": "email", "required": true, "maxLength": 254, "trim": true },
+        "platform": { "type": "string", "required": true, "maxLength": 16, "trim": true },
+        "note": { "type": "string", "maxLength": 500, "trim": true }
+      },
+      "access": { "read": "owner", "insert": "public", "update": "owner", "delete": "owner" },
+      "rateLimit": "3/hour/ip"
+    }
+  }
+}

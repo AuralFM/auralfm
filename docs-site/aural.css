@@ -248,7 +248,8 @@ p { text-wrap: pretty; }
 /* ── vibes ────────────────────────────────────────────────────────────────── */
 .vibes { grid-template-columns: minmax(0, 1fr); }
 .vibes-head { display: flex; flex-direction: column; gap: 16px; }
-.vibes-head > p:last-child { color: var(--bone2); max-width: 52ch; }
+.vibes-head > p:not(.label) { color: var(--bone2); max-width: 52ch; }
+.vibes-head > .textlink { align-self: flex-start; }
 .vibe-list { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .vibe { display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-height: 176px; transition: background-color .5s var(--ease), color .5s var(--ease); }
 .vibe b {
@@ -259,6 +260,42 @@ p { text-wrap: pretty; }
 .vibe:hover { background: var(--bone); color: var(--onyx); }
 .vibe:hover span { color: var(--onyx); }
 .vibe:hover b { font-variation-settings: "wdth" 120; }
+/* A card that goes somewhere: the link is the whole card. */
+.vibe:has(> a) { padding: 0; }
+.vibe > a { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: var(--pad); color: inherit; text-decoration: none; }
+.vibe > a:focus-visible { outline-offset: -4px; }
+
+/* ── the vibe directory ───────────────────────────────────────────────────── */
+.directory { grid-template-columns: minmax(0, 1fr); }
+.dir-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.dir-head h2 { margin-right: auto; }
+.dir-filter { flex: 1 1 320px; max-width: 520px; }
+.dir-filter input {
+  width: 100%; background: transparent; color: var(--bone); border: 1px solid var(--line); border-radius: 0;
+  padding: 12px 14px; font: 400 16px/24px var(--body); transition: border-color .5s var(--ease);
+}
+.dir-filter input::placeholder { color: rgba(247, 244, 238, .5); }
+.dir-filter input:hover { border-color: var(--bone2); }
+.dir-filter input:focus-visible { outline: 2px solid var(--aqua); outline-offset: -1px; border-color: var(--aqua); }
+.dir-count { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
+.vplaces { display: grid; gap: 1px; background: var(--line); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Fills the rest of a short last row, so it is not a block of rule colour. */
+.vplaces::after { content: ""; background: var(--onyx); grid-column-end: -1; }
+.vplace { display: flex; flex-direction: column; gap: 10px; }
+.vplace[hidden], .dir-none[hidden] { display: none; }
+.vplace a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--bone); }
+.vplace b { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; overflow-wrap: anywhere; transition: color .5s var(--ease); }
+.vplace a:hover b { color: var(--aqua); }
+.vplace span { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aqua); }
+.vst { color: var(--bone2); font-size: 14px; line-height: 21px; overflow-wrap: anywhere; }
+.vst li { display: inline; }
+.vst li + li::before { content: " · "; color: var(--aqua); }
+.dir-none { color: var(--bone2); }
+.vibe-others ul { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); grid-column: 1 / -1; }
+.vibe-others { grid-template-columns: minmax(0, 1fr); }
+.vibe-others li { flex: 1 1 180px; }
+.vibe-others a { display: block; background: var(--onyx); padding: 16px var(--pad); text-decoration: none; font: 700 13px/18px var(--mono); letter-spacing: .06em; text-transform: uppercase; transition: background-color .5s var(--ease), color .5s var(--ease); }
+.vibe-others a:hover { background: var(--bone); color: var(--onyx); }
 
 /* ── features ─────────────────────────────────────────────────────────────── */
 .features { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -334,6 +371,16 @@ p { text-wrap: pretty; }
 .story .meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aqua); margin-bottom: 8px; }
 .story h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; margin-bottom: 8px; }
 .story p:not(.meta) { color: var(--bone2); }
+/* A story with its own page: the whole card is the link, the title says so. */
+.story { position: relative; }
+.story.no-image { grid-template-columns: minmax(0, 1fr); }
+.story h3 a { color: inherit; text-decoration: none; }
+.story h3 a::after { content: ""; position: absolute; inset: 0; }
+/* A link in the summary stays its own link, above the card's. */
+.story p a { position: relative; z-index: 1; }
+.story:has(h3 a):hover h3, .story h3 a:focus-visible { color: var(--aqua); }
+.story h3 a:focus-visible { outline: none; }
+.story:has(h3 a:focus-visible) { outline: 2px solid var(--aqua); outline-offset: -2px; }
 .aboutrow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .aboutrow .cell { display: flex; flex-direction: column; gap: 12px; }
 .aboutrow .cell p:not(.label) { color: var(--bone2); }
@@ -375,6 +422,55 @@ p { text-wrap: pretty; }
 .prose blockquote { margin: 18px 0; padding: 14px 18px; border: 1px solid var(--line); }
 .prose blockquote p { color: var(--bone); }
 .prose hr { border: 0; height: 1px; background: var(--line); margin: 40px 0; }
+.prose figure { margin: 28px 0; }
+.prose figure img { width: 100%; height: auto; }
+.prose figcaption { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); margin-top: 10px; }
+
+/* ── the Mac beta form ───────────────────────────────────────────────────── */
+.beta { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+.beta-what { display: flex; flex-direction: column; gap: 16px; }
+.beta-what ul { display: grid; gap: 10px; list-style: square; padding-left: 20px; color: var(--bone2); }
+.beta-what li::marker { color: var(--aqua); }
+.beta-form { display: flex; flex-direction: column; gap: 22px; max-width: 640px; }
+.beta-form .field { display: flex; flex-direction: column; gap: 8px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.beta-form label, .beta-form legend { font: 700 13px/18px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.beta-form legend { padding: 0; margin-bottom: 8px; }
+.beta-form .opt { color: var(--bone2); font-weight: 400; margin-left: 6px; }
+.beta-form input[type=email], .beta-form textarea {
+  width: 100%; background: transparent; color: var(--bone); border: 1px solid var(--line); border-radius: 0;
+  padding: 12px 14px; font: 400 16px/24px var(--body); transition: border-color .5s var(--ease);
+}
+.beta-form textarea { resize: vertical; min-height: 96px; }
+.beta-form input::placeholder, .beta-form textarea::placeholder { color: rgba(247, 244, 238, .5); }
+.beta-form input:hover, .beta-form textarea:hover { border-color: var(--bone2); }
+.beta-form input:focus-visible, .beta-form textarea:focus-visible { outline: 2px solid var(--aqua); outline-offset: -1px; border-color: var(--aqua); }
+.beta-form input[aria-invalid=true] { border-color: #FF8A7A; }
+.beta-form .choice { display: flex; align-items: center; gap: 12px; min-height: 44px; font: 400 16px/24px var(--body); text-transform: none; letter-spacing: 0; cursor: pointer; }
+.beta-form .choice input { width: 20px; height: 20px; margin: 0; accent-color: var(--aqua); }
+.beta-form .btn { align-self: flex-start; border: 0; cursor: pointer; }
+.beta-form .btn[disabled] { opacity: .6; cursor: progress; }
+.field-error { color: #FF8A7A; font: 400 14px/20px var(--body); }
+.field-error[hidden], .beta-status:empty { display: none; }
+.beta-status { font: 400 16px/24px var(--body); padding: 14px 16px; border: 1px solid var(--line); }
+.beta-status.ok { border-color: var(--aqua); color: var(--bone); }
+.beta-status.bad { border-color: #FF8A7A; }
+/* Off-screen, not display:none: some bots skip fields they can tell are hidden. */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.beta-form.sent .field, .beta-form.sent .btn { display: none; }
+
+/* ── a Journal post ───────────────────────────────────────────────────────── */
+.post-hero { grid-template-columns: minmax(0, 1fr); }
+.post-hero .cell { display: flex; flex-direction: column; gap: 18px; padding-top: 40px; padding-bottom: 32px; }
+.post-hero h1 { grid-column: auto; padding: 0; max-width: 18ch; font-size: clamp(36px, 8cqi, 104px); }
+.post-hero .meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
+.post-image .cell { padding: 0; background: #000; }
+.post-image img { width: 100%; height: auto; max-height: 72vh; object-fit: cover; }
+.post .prose p:first-child { font-size: 21px; line-height: 32px; color: var(--bone); }
+.post-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.post-nav a { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: var(--bone);
+  font: 900 20px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; }
+.post-nav a:hover span:last-child { color: var(--aqua); }
+.post-nav a:nth-child(3) { text-align: right; }
 
 /* ── questions ────────────────────────────────────────────────────────────── */
 .faq { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
@@ -420,6 +516,7 @@ p { text-wrap: pretty; }
   .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aboutrow, .steps-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vplaces { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   :root { --pad: 16px; }
@@ -427,7 +524,7 @@ p { text-wrap: pretty; }
   .island .cell { padding: 0 14px; }
   .hero, .board, .why, .support-cta, .faq, .platforms, .features, .card-wide, .foot,
   .support-hero, .tiers, .costs, .free, .legal-hero,
-  .featured, .stories, .aboutrow { grid-template-columns: minmax(0, 1fr); }
+  .featured, .stories, .aboutrow, .beta, .vplaces { grid-template-columns: minmax(0, 1fr); }
   .globe { grid-row: auto; }
   /* One word, as big as a phone allows: "JOURNAL" ran past a 390pt screen. */
   .legal-hero h1 { font-size: 12.4vw; }
@@ -437,6 +534,10 @@ p { text-wrap: pretty; }
   .steps, .steps-4 { grid-template-columns: minmax(0, 1fr); }
   .story { grid-template-columns: 80px minmax(0, 1fr); gap: 14px; }
   .story img { width: 80px; height: 80px; }
+  .post-nav { grid-template-columns: minmax(0, 1fr); }
+  .post-nav span.cell { display: none; }
+  .post-nav a:nth-child(3) { text-align: left; }
+  .post .prose p:first-child { font-size: 19px; line-height: 28px; }
   .lede { font-size: 19px; line-height: 28px; }
   .tagline { padding: 64px var(--pad); }
   /* Condensed on a phone: at full width "BROADCASTING." alone ran 7px past the

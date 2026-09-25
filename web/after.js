@@ -257,6 +257,17 @@
       b.onclick = () => setVibe(m.id);
       bar.append(b);
     }
+    // ?vibe=jazz, from the website's vibe pages: light that vibe once the
+    // globe is up. Nothing plays; the places are lit and listed.
+    const asked = new URLSearchParams(location.search).get("vibe");
+    if (asked && vibeNames[asked]) {
+      const started = Date.now();
+      const wait = () => {
+        if (document.body.classList.contains("revealed")) setTimeout(() => { if (vibe !== asked) setVibe(asked); }, 400);
+        else if (Date.now() - started < 30000) setTimeout(wait, 250);
+      };
+      wait();
+    }
   }).catch(() => { /* no vibes, no bar */ });
 }
 

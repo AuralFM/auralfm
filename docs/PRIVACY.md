@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 23 September 2026**
+**Last updated: 25 September 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -43,6 +43,7 @@ you.
 - No analytics, telemetry, crash reporting, or usage tracking
 - No advertising, and no advertising or tracking SDKs of any kind
 - No collection of your name, email, location, contacts, or device identifiers
+  (the one exception is on the website, not in the app: the Mac beta list, below)
 - No selling or sharing of data, because none is collected
 
 ## Third-party services AuralFM contacts
@@ -114,6 +115,24 @@ retains is governed by their policy, not ours.
 
 **The Mac application does not do this.** It fetches the headlines and the articles directly,
 and nothing it does passes through a host of ours.
+
+## The Mac beta list (the website only)
+
+This is the one place AuralFM asks you for anything, and it is a page on
+auralfm.xyz, not the app. If you ask for an invite to the Mac beta, we keep:
+
+- the **email address** you give,
+- **which computer** you said you use (Mac, or Windows for when there is one),
+- anything you chose to write in the **note**.
+
+It is stored with here.now, which hosts the website, as that site's own data.
+Only we can read it; it is not public. here.now also sees your IP address when
+you send the form, and uses it to limit how many sign-ups one connection can
+send, which keeps spam out.
+
+We use it for one thing: to email you about the Mac beta — an invite, a build,
+and when it opens to everyone. It is never sold, shared, or added to any other
+list. To come off it, email **meltonbell@icloud.com** and we delete it.
 
 ## Shortwave receivers
 

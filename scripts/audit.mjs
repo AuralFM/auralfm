@@ -2669,7 +2669,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 
 // ── the website says what the app says: privacy and terms ──────────────────
 // The policy and the terms lived only in the app, under Settings. They are now
-// on auralfm.xyz too, generated from the same files by scripts/build-legal.mjs.
+// on auralfm.xyz and docs.auralfm.xyz too (the docs site is public while the
+// homepage is not), generated from the same files by scripts/build-legal.mjs.
 // A document edited without rebuilding would leave the website promising
 // something the app no longer does — so the audit rebuilds in memory and fails
 // on any difference.
@@ -2677,9 +2678,40 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   console.log("\nthe website says what the app says: privacy and terms");
   const r = spawnSync(process.execPath, [R("scripts/build-legal.mjs"), "--check"], { encoding: "utf8" });
   r.status === 0
-    ? pass("home/privacy and home/terms match docs/PRIVACY.md and docs/TERMS.md")
+    ? pass("privacy/ and terms/ on auralfm.xyz and the docs match docs/PRIVACY.md and docs/TERMS.md")
     : fail("the website says what the app says: privacy and terms",
         (r.stdout + r.stderr).trim() || "build-legal --check failed");
+}
+
+// ── the Journal is what journal/ says ──────────────────────────────────────
+// Posts are Markdown in journal/ (brought in from the Obsidian vault) and
+// scripts/build-journal.mjs writes the Stories list and a page per post. A post
+// added, changed or taken out without a rebuild would leave the published
+// Journal saying something the record does not — including a post that was
+// withdrawn but whose page is still up.
+{
+  console.log("\nthe Journal is what journal/ says");
+  const r = spawnSync(process.execPath, [R("scripts/build-journal.mjs"), "--check"], { encoding: "utf8" });
+  r.status === 0
+    ? pass("blog.auralfm.xyz's stories and post pages match journal/")
+    : fail("the Journal is what journal/ says", (r.stdout + r.stderr).trim() || "build-journal --check failed");
+}
+
+// ── the vibe directory is the catalogue ───────────────────────────────────
+// auralfm.xyz/vibes/ lists every station in every vibe, written out of the
+// catalogue by scripts/build-vibes.mjs, and the homepage's vibe cards carry the
+// counts. A crawl or a change to VIBES without a rebuild would leave the site
+// listing stations the app no longer has, or numbers that are no longer true.
+{
+  console.log("\nthe vibe directory is the catalogue");
+  if (!fs.existsSync(R("data/stations.min.json"))) {
+    skip("the vibe directory is the catalogue", "data/stations.min.json is gitignored — runs locally");
+  } else {
+    const r = spawnSync(process.execPath, [R("scripts/build-vibes.mjs"), "--check"], { encoding: "utf8" });
+    r.status === 0
+      ? pass("home/vibes/ and the homepage's vibe counts match the catalogue")
+      : fail("the vibe directory is the catalogue", (r.stdout + r.stderr).replace(/^catalog:.*\n/m, "").trim() || "build-vibes --check failed");
+  }
 }
 
 // ── one design across the three sites ───────────────────────────────────────

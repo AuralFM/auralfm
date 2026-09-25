@@ -283,6 +283,90 @@
     }
   }
 
+  // ── the Mac beta list ─────────────────────────────────────────────────────
+  // here.now Site Data (home/.herenow/data.json): anyone can add a sign-up and
+  // only the owner can read them back. The manifest checks the email and caps
+  // sign-ups per connection; this only says so in words before it has to.
+  const form = document.querySelector("[data-beta]");
+  if (form) {
+    const email = form.querySelector("#beta-email");
+    const err = form.querySelector("#beta-email-error");
+    const status = form.querySelector(".beta-status");
+    const btn = form.querySelector("button[type=submit]");
+    const say = (text, kind) => { status.textContent = text; status.className = `beta-status ${kind || ""}`; };
+    const wrong = (text) => {
+      err.textContent = text; err.hidden = !text;
+      email.setAttribute("aria-invalid", text ? "true" : "false");
+    };
+    email.addEventListener("input", () => { if (email.getAttribute("aria-invalid") === "true" && email.validity.valid) wrong(""); });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      say("");
+      const value = email.value.trim();
+      if (!value) { wrong("Enter your email address."); email.focus(); return; }
+      if (!email.validity.valid || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        wrong("That email address does not look right. Check it and try again."); email.focus(); return;
+      }
+      wrong("");
+      const done = () => {
+        form.classList.add("sent");
+        say("You are on the list. We will write to you when there is a build for you.", "ok");
+      };
+      // A person never fills in the hidden field. Tell a bot it worked and send nothing.
+      if (form.elements.website.value) { done(); return; }
+      btn.disabled = true; btn.textContent = "Sending…";
+      try {
+        const res = await fetch(form.dataset.beta, {
+          method: "POST",
+          headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+          body: JSON.stringify({
+            email: value,
+            platform: form.elements.platform.value || "mac",
+            ...(form.elements.note.value.trim() ? { note: form.elements.note.value.trim() } : {}),
+          }),
+        });
+        if (res.ok) { done(); return; }
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 429) say("Too many sign-ups from this connection. Try again in an hour.", "bad");
+        else if (res.status === 400 || res.status === 422) {
+          wrong(/email/i.test(JSON.stringify(body)) ? "That email address does not look right. Check it and try again." : "");
+          if (!/email/i.test(JSON.stringify(body))) say("Something in the form was not accepted. Check it and try again.", "bad");
+        } else say("The list could not be reached. Try again in a minute.", "bad");
+      } catch {
+        say("The list could not be reached. Check your connection and try again.", "bad");
+      } finally {
+        btn.disabled = false; btn.textContent = "Ask for an invite";
+      }
+    });
+  }
+
+  // ── a directory's filter ──────────────────────────────────────────────────
+  // The vibe pages list every place with its stations; typing narrows them.
+  // Each row carries its own words (data-q) so this never reads the DOM text.
+  for (const input of document.querySelectorAll("[data-filter]")) {
+    const list = document.querySelector(input.dataset.filter);
+    const rows = [...list.children];
+    const count = document.getElementById("dir-count");
+    const none = list.parentElement.querySelector(".dir-none");
+    const total = Number(count?.dataset.total) || rows.length;
+    const word = (n) => `${n.toLocaleString("en-US")} ${n === 1 ? "place" : "places"}`;
+    let t = 0;
+    input.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const terms = input.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).filter(Boolean);
+        let shown = 0;
+        for (const row of rows) {
+          const hit = terms.every((w) => row.dataset.q.includes(w));
+          row.hidden = !hit;
+          if (hit) shown++;
+        }
+        if (count) count.textContent = terms.length ? `${word(shown)} of ${total.toLocaleString("en-US")}` : word(total);
+        if (none) none.hidden = shown > 0;
+      }, 80);
+    });
+  }
+
   // ── the live bar: one place at a time ─────────────────────────────────────
   // The departures board's cities where there is one; pages without it (the
   // support page) read the same places from here, so the bar never stands still

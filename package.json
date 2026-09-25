@@ -19,6 +19,7 @@
     "audit": "node scripts/audit.mjs",
     "web": "node scripts/build-web.mjs",
     "web:serve": "node scripts/serve-web.mjs",
+    "journal": "node scripts/build-journal.mjs --from \"$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/MB3Vault/04 Projects/AuralFM/Journal\"",
     "crawl:sdr": "node scripts/crawl-sdr.mjs",
     "schedule": "node scripts/fetch-schedule.mjs",
     "lights": "node scripts/lights.mjs",
