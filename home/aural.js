@@ -183,10 +183,8 @@
   /**
    * The hero's globe, live: spin it, zoom it, find a place. No audio — the site
    * shows the world and listen.auralfm.xyz plays it — and a place you pick opens
-   * there. The picture stays until the globe is ready, and the globe (about
-   * 3.3 MB: the library, the Earth, 12,579 places) is fetched only when somebody
-   * reaches for it — a tap on the picture, or on a wide screen once the page has
-   * settled — never on a phone's first paint, never with data saver on.
+   * there. The picture shows until the globe is ready; the globe starts loading
+   * as soon as this script runs, except with data saver on.
    *
    * The dots are one merged shape, as in the app (12,579 separate ones is 12,579
    * draw calls), so a dot cannot be hovered or clicked itself. A hover or tap
@@ -232,6 +230,12 @@
       const c = globe.controls();
       c.enableDamping = true; c.dampingFactor = 0.08; c.rotateSpeed = 0.7;
       c.minDistance = 130; c.maxDistance = 520;
+      // A plain scroll wheel scrolls the page, not the globe: it sits at the top,
+      // and zooming it instead trapped anyone just scrolling past. A pinch (which
+      // a trackpad sends as ctrl+wheel), ⌘ or ctrl with the wheel, or two fingers
+      // on a phone, zoom.
+      box.addEventListener("wheel", (e) => { c.enableZoom = e.ctrlKey || e.metaKey; }, { capture: true, passive: true });
+      box.addEventListener("touchstart", (e) => { c.enableZoom = e.touches.length > 1; }, { capture: true, passive: true });
       c.autoRotate = !still; c.autoRotateSpeed = 0.35;
       addEventListener("resize", () => globe.width(box.clientWidth).height(box.clientHeight));
 
@@ -276,67 +280,73 @@
     }
     goBtn.addEventListener("click", start);
     fig.querySelector("img")?.addEventListener("click", start);
-    const roomy = matchMedia("(min-width: 1024px) and (pointer: fine)").matches;
-    const saving = navigator.connection?.saveData;
-    if (roomy && !saving) {
-      addEventListener("load", () => (window.requestIdleCallback || setTimeout)(start, { timeout: 2500 }));
-    }
+    // Straight away, on every screen: waiting for the page to settle made the
+    // globe the last thing to arrive, and it is the first thing people look at.
+    // The Earth is 2048px now (440 KB, not 1.4 MB) and the rest travels
+    // compressed, so this is about 1.3 MB. Only data saver keeps the picture.
+    if (!navigator.connection?.saveData) start();
   }
 
-  // ── the Mac beta list ─────────────────────────────────────────────────────
-  // here.now Site Data (home/.herenow/data.json): anyone can add a sign-up and
-  // only the owner can read them back. The manifest checks the email and caps
-  // sign-ups per connection; this only says so in words before it has to.
-  const form = document.querySelector("[data-beta]");
-  if (form) {
-    const email = form.querySelector("#beta-email");
-    const err = form.querySelector("#beta-email-error");
-    const status = form.querySelector(".beta-status");
+  // ── the waitlists ─────────────────────────────────────────────────────────
+  // The desktop beta (beta/) and membership (support/#waitlist). Each form posts
+  // to its own collection, declared in home/.herenow/data.json: anyone can add a
+  // name, only we can read them back, and each connection is capped. This only
+  // says what is wrong in words before the server has to.
+  for (const form of document.querySelectorAll("[data-waitlist]")) {
+    const name = form.elements.name, email = form.elements.email;
+    const status = form.querySelector(".form-status");
     const btn = form.querySelector("button[type=submit]");
-    const say = (text, kind) => { status.textContent = text; status.className = `beta-status ${kind || ""}`; };
-    const wrong = (text) => {
+    const label = btn.textContent;
+    const say = (text, kind) => { status.textContent = text; status.className = `form-status ${kind || ""}`; };
+    const wrong = (input, text) => {
+      const err = document.getElementById(input.getAttribute("aria-describedby"));
       err.textContent = text; err.hidden = !text;
-      email.setAttribute("aria-invalid", text ? "true" : "false");
+      input.setAttribute("aria-invalid", text ? "true" : "false");
     };
-    email.addEventListener("input", () => { if (email.getAttribute("aria-invalid") === "true" && email.validity.valid) wrong(""); });
+    for (const input of [name, email])
+      input.addEventListener("input", () => { if (input.getAttribute("aria-invalid") === "true" && input.value.trim()) wrong(input, ""); });
+    const choice = form.dataset.choice;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       say("");
-      const value = email.value.trim();
-      if (!value) { wrong("Enter your email address."); email.focus(); return; }
-      if (!email.validity.valid || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        wrong("That email address does not look right. Check it and try again."); email.focus(); return;
-      }
-      wrong("");
-      const done = () => {
-        form.classList.add("sent");
-        say("You are on the list. We will write to you when there is a build for you.", "ok");
-      };
+      const who = name.value.trim(), value = email.value.trim();
+      let bad = null;
+      if (!who) { wrong(name, "Tell us your name."); bad ||= name; } else wrong(name, "");
+      if (!value) { wrong(email, "Enter your email address."); bad ||= email; }
+      else if (!email.validity.valid || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        wrong(email, "That email address does not look right. Check it and try again."); bad ||= email;
+      } else wrong(email, "");
+      if (bad) { bad.focus(); return; }
+      const done = () => { form.classList.add("sent"); say(form.dataset.done, "ok"); };
       // A person never fills in the hidden field. Tell a bot it worked and send nothing.
       if (form.elements.website.value) { done(); return; }
       btn.disabled = true; btn.textContent = "Sending…";
       try {
-        const res = await fetch(form.dataset.beta, {
+        const note = form.elements.note?.value.trim();
+        const res = await fetch(form.dataset.waitlist, {
           method: "POST",
           headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify({
-            email: value,
-            platform: form.elements.platform.value || "mac",
-            ...(form.elements.note.value.trim() ? { note: form.elements.note.value.trim() } : {}),
-          }),
+          body: JSON.stringify({ name: who, email: value, [choice]: form.elements[choice].value, ...(note ? { note } : {}) }),
         });
         if (res.ok) { done(); return; }
-        const body = await res.json().catch(() => ({}));
+        const body = JSON.stringify(await res.json().catch(() => ({})));
         if (res.status === 429) say("Too many sign-ups from this connection. Try again in an hour.", "bad");
-        else if (res.status === 400 || res.status === 422) {
-          wrong(/email/i.test(JSON.stringify(body)) ? "That email address does not look right. Check it and try again." : "");
-          if (!/email/i.test(JSON.stringify(body))) say("Something in the form was not accepted. Check it and try again.", "bad");
-        } else say("The list could not be reached. Try again in a minute.", "bad");
+        else if ((res.status === 400 || res.status === 422) && /email/i.test(body))
+          wrong(email, "That email address does not look right. Check it and try again.");
+        else if (res.status === 400 || res.status === 422) say("Something in the form was not accepted. Check it and try again.", "bad");
+        else say("The list could not be reached. Try again in a minute.", "bad");
       } catch {
         say("The list could not be reached. Check your connection and try again.", "bad");
       } finally {
-        btn.disabled = false; btn.textContent = "Ask for an invite";
+        btn.disabled = false; btn.textContent = label;
       }
+    });
+  }
+  // A tier's "Join the waitlist" chooses that tier in the form it jumps to.
+  for (const a of document.querySelectorAll("[data-pick]")) {
+    a.addEventListener("click", () => {
+      const r = document.querySelector(`input[name="tier"][value="${a.dataset.pick}"]`);
+      if (r) r.checked = true;
     });
   }
 
@@ -368,21 +378,48 @@
   }
 
   // ── the live bar: one place at a time ─────────────────────────────────────
-  // The departures board's cities where there is one; pages without it (the
-  // support page) read the same places from here, so the bar never stands still
-  // on a time that is not true.
-  const PLACES = rows.length
-    ? rows.map((tr) => [tr.dataset.tz, tr.querySelector("th").textContent])
-    : [["Africa/Lagos", "Lagos"], ["America/Chicago", "Chicago"], ["Asia/Tokyo", "Tokyo"],
-       ["Asia/Tbilisi", "Tbilisi"], ["America/Mexico_City", "Mexico City"], ["Atlantic/Reykjavik", "Reykjavík"]];
+  // "04:12 in Lagos · Cool FM 96.9": the time people there would tell you, and a
+  // station broadcasting from there, the whole bar a link that opens the place
+  // in the app. It used to flap through random letters on the way to a bare
+  // "04:12 LAGOS", which read as noise until it landed and never said what it
+  // was. The cities and stations are assets/live.json, written from the
+  // catalogue by scripts/build-home-globe.mjs; until it arrives (or if it
+  // cannot), the bar keeps to a few cities it knows, without stations.
   const bar = document.querySelector("[data-cycle]");
   if (bar) {
-    let at = 0;
-    const next = () => {
-      const [tz, city] = PLACES[at++ % PLACES.length];
-      flapTo(bar, `${clockOf(tz)} ${city.toUpperCase()}`);
+    const cell = bar.closest(".livebar");
+    const link = document.createElement("a");
+    link.className = cell.className + " livelink";
+    link.href = "https://listen.auralfm.xyz/";
+    link.innerHTML = '<span class="live" aria-hidden="true"></span><span class="lb" data-lb></span>';
+    cell.replaceWith(link);
+    const slot = link.querySelector("[data-lb]");
+    let cities = [["Africa/Lagos", "Lagos", "", "", []], ["America/Mexico_City", "Mexico City", "", "", []],
+      ["Asia/Tbilisi", "Tbilisi", "", "", []], ["Asia/Jakarta", "Jakarta", "", "", []]];
+    let at = Math.floor(Math.random() * 1000);
+    const paint = () => {
+      const [tz, city, title, country, names] = cities[at++ % cities.length];
+      const station = names.length ? names[Math.floor(Math.random() * names.length)] : "";
+      slot.innerHTML = '<span class="lb-now"><b></b> in <span class="lb-city"></span></span>'
+        + (station ? '<span class="lb-st"></span>' : "");
+      slot.querySelector("b").textContent = clockOf(tz);
+      slot.querySelector(".lb-city").textContent = city;
+      if (station) slot.querySelector(".lb-st").textContent = station;
+      link.href = title
+        ? `https://listen.auralfm.xyz/?place=${encodeURIComponent(title)}&country=${encodeURIComponent(country)}`
+        : "https://listen.auralfm.xyz/";
+      link.setAttribute("aria-label", `${clockOf(tz)} in ${city}${station ? `, ${station}` : ""}. Listen there`);
     };
-    next();
+    const next = () => {
+      if (still) return paint();
+      slot.classList.add("out");
+      setTimeout(() => { paint(); slot.classList.remove("out"); }, 260);
+    };
+    paint();
+    const root = document.querySelector('link[rel="stylesheet"][href$="aural.css"]')?.href.replace(/aural\.css$/, "") || "/";
+    fetch(root + "assets/live.json").then((r) => r.json()).then((list) => {
+      if (Array.isArray(list) && list.length) { cities = list; at = Math.floor(Math.random() * list.length); paint(); }
+    }).catch(() => {});
     // Every 6.5s: often enough to feel alive, not so often it pulls the eye.
     if (!still) setInterval(next, 6500);
   }

@@ -179,7 +179,7 @@ module.exports = function register(ctx) {
       "this message from the relays that carry it; the sender is now muted on this",
       "Mac.",
     ];
-    const url = "mailto:meltonbell@icloud.com"
+    const url = "mailto:hello@auralfm.xyz"
       + "?subject=" + encodeURIComponent("AuralFM — reported chat message")
       + "&body=" + encodeURIComponent(lines.join("\n"));
     // mailto has practical length limits in some clients; the quote is already

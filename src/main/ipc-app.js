@@ -97,7 +97,7 @@ module.exports = function register(ctx) {
   ipcMain.handle("prefs:get", () => getPrefs());
   ipcMain.handle("prefs:set", (_e, patch) => setPrefs(patch));
   ipcMain.on("settings:open", openSettings);
-  ipcMain.on("mail:open", () => shell.openExternal("mailto:meltonbell@icloud.com?subject=AuralFM"));
+  ipcMain.on("mail:open", () => shell.openExternal("mailto:hello@auralfm.xyz?subject=AuralFM"));
   ipcMain.handle("i18n:strings", () => getStrings());
   ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
   ipcMain.handle("palettes:list", () => palettes.list());

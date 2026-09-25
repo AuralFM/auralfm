@@ -79,7 +79,7 @@ window.AuralChat = function create({ getPrefs, emit }) {
       "delete this message from the relays that carry it; the sender is now muted",
       "in this browser.",
     ];
-    location.href = ("mailto:meltonbell@icloud.com?subject=" + encodeURIComponent("AuralFM — reported chat message")
+    location.href = ("mailto:hello@auralfm.xyz?subject=" + encodeURIComponent("AuralFM — reported chat message")
       + "&body=" + encodeURIComponent(lines.join("\n"))).slice(0, 8000);
     return true;
   }

@@ -6,8 +6,11 @@ AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
 both, and says clearly where the two differ — because on one point they do.
 
-Short version: **AuralFM has no servers, no accounts, and no analytics. Nothing
-about what you listen to is sent to us, because there is no "us" to send it to.**
+Short version: **AuralFM has no accounts, no profiles and no tracking, and the
+app has no analytics. We do not collect what you listen to.** But radio is the
+open internet. The station you play, and the services that draw the globe, see
+your IP address, the same way any website you visit does. Every one of them is
+named below, with what it sees.
 
 ## What AuralFM stores
 
@@ -43,7 +46,7 @@ you.
 - No analytics, telemetry, crash reporting, or usage tracking
 - No advertising, and no advertising or tracking SDKs of any kind
 - No collection of your name, email, location, contacts, or device identifiers
-  (the one exception is on the website, not in the app: the Mac beta list, below)
+  (the one exception is on the website, not in the app: the waitlists, below)
 - No selling or sharing of data, because none is collected
 
 ## Third-party services AuralFM contacts
@@ -116,23 +119,26 @@ retains is governed by their policy, not ours.
 **The Mac application does not do this.** It fetches the headlines and the articles directly,
 and nothing it does passes through a host of ours.
 
-## The Mac beta list (the website only)
+## The waitlists (the website only)
 
-This is the one place AuralFM asks you for anything, and it is a page on
-auralfm.xyz, not the app. If you ask for an invite to the Mac beta, we keep:
+This is the one place AuralFM asks you for anything, and it is on auralfm.xyz,
+not in the app. There are two lists: one for the desktop beta, and one for
+membership. If you join either, we keep:
 
-- the **email address** you give,
-- **which computer** you said you use (Mac, or Windows for when there is one),
+- your **name** and **email address**,
+- **which computer** you use (for the desktop beta) or **which membership** you
+  are interested in,
 - anything you chose to write in the **note**.
 
-It is stored with here.now, which hosts the website, as that site's own data.
-Only we can read it; it is not public. here.now also sees your IP address when
+It is stored with the company that hosts the website, as that site's own data.
+Only we can read it; it is not public. The host also sees your IP address when
 you send the form, and uses it to limit how many sign-ups one connection can
 send, which keeps spam out.
 
-We use it for one thing: to email you about the Mac beta — an invite, a build,
-and when it opens to everyone. It is never sold, shared, or added to any other
-list. To come off it, email **meltonbell@icloud.com** and we delete it.
+We use it for one thing: to email you about what you signed up for — an invite
+and a build for the beta, or membership opening. It is never sold, shared, or
+added to any other list. To come off either list, email **hello@auralfm.xyz**
+and we delete it.
 
 ## Shortwave receivers
 
@@ -194,7 +200,7 @@ them on trust.
 
 ## Contact
 
-**meltonbell@icloud.com**
+**hello@auralfm.xyz**
 
 ## Live captions (off by default)
 
