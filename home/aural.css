@@ -67,6 +67,12 @@ body {
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--aqua); outline-offset: 2px; }
+/* The links invert on a tap already; iOS's grey flash on top of that read as a
+   glitch. */
+html { -webkit-tap-highlight-color: transparent; }
+/* viewport-fit=cover lets the page run under an iPhone's notch when it is
+   turned sideways, and nothing held the words back from it. */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 h1, h2, h3, p, dl, dd, figure, ol, ul { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 p { text-wrap: pretty; }
@@ -125,6 +131,9 @@ p { text-wrap: pretty; }
 .brand { gap: 10px; text-decoration: none; }
 .brand-mark { width: 26px; height: 26px; border-radius: 50%; color: var(--bone); }
 .brand-word { font: 700 15px/1 var(--mono); letter-spacing: .04em; }
+/* The flap re-sets this text every 42ms while it turns; contained, a turn
+   re-lays out the bar and nothing else on the page. */
+.livebar { contain: content; }
 .livebar { gap: 10px; font: 700 14px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
 /* The bar is a link: "04:12 in Lagos · a station there". It slides, never scrambles. */
 .livelink { text-decoration: none; color: var(--bone); min-width: 0; }
@@ -156,6 +165,7 @@ p { text-wrap: pretty; }
 /* The menu, on phones: a full screen of big lines. */
 .menu {
   position: fixed; inset: 56px 0 0; z-index: 19; background: var(--onyx);
+  padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
   opacity: 0; transition: opacity .5s var(--ease);
 }
 .menu.open { opacity: 1; }
@@ -730,4 +740,40 @@ body::after {
   .live { animation: none; }
   .tagline .w { transition: none; }
   .vibe, .vibe b, .btn, .go, .menu { transition: none; }
+  .lb, .globe img { transition: none; }
 }
+
+/* ── 09 · The signal pass (studies, 26 Sept) ──────────────────────────────── */
+/* From a constructivist brief: what it asked for that the page did not have
+   yet, in the page's own type and colours. */
+
+/* Index numbers on the sections, as a poster numbers its panels. Drawn by CSS,
+   so the words stay the words; the empty alt keeps a screen reader from
+   reading "zero one slash" before each one. */
+.links, .menu nav { counter-reset: panel; }
+.links .cell::before, .menu a:not(.menu-go)::before {
+  counter-increment: panel; content: counter(panel, decimal-leading-zero) "/" / "";
+  font: 400 10px/1 var(--mono); letter-spacing: .04em; color: var(--aqua);
+}
+.links .cell::before { margin-right: 6px; translate: 0 -5px; }
+.links .cell:hover::before, .links .cell[aria-current="page"]::before { color: inherit; }
+.menu a:not(.menu-go)::before { display: block; margin-bottom: 8px; font-size: 12px; letter-spacing: .08em; }
+
+/* The masthead rule: one heavy line of mast red under the bar, the only rule on
+   the page thicker than a hairline. */
+.island { border-bottom: 3px solid var(--mast); }
+.menu { inset: 59px 0 0; }
+
+/* A tuning dial under each clock on the board: the 24 hours, the daylight
+   drawn heavier, and a red needle where the city is now. */
+.departures .clock { position: relative; padding-bottom: 26px; }
+.departures .clock::before, .departures .clock::after { content: ""; position: absolute; bottom: 14px; pointer-events: none; }
+.departures .clock::before {
+  left: var(--pad); right: var(--pad); height: 3px;
+  background: linear-gradient(90deg, var(--line) 0 25%, rgba(247, 244, 238, .55) 25% 83.34%, var(--line) 83.34%);
+}
+.departures .clock::after {
+  left: calc(var(--pad) + (100% - 2 * var(--pad)) * var(--day, 0)); width: 2px; height: 13px; bottom: 9px;
+  background: var(--mast); translate: -1px 0;
+}
+.departures tr:not([style]) .clock::after { display: none; }

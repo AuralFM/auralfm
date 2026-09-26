@@ -177,6 +177,8 @@
       const now = clockOf(tr.dataset.tz);
       const h = Number(now.slice(0, 2));
       tr.classList.toggle("night", h < 6 || h >= 20);
+      // Where the needle sits on the row's 24-hour dial.
+      if (!Number.isNaN(h)) tr.style.setProperty("--day", ((h * 60 + Number(now.slice(3, 5))) / 1440).toFixed(4));
       if (cell.textContent === now) return;
       if (!boardShown) { cell.textContent = now; return; }
       setTimeout(() => flapTo(cell, now), i * 70);
