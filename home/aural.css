@@ -689,6 +689,13 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke-linecap='square'%3E%3Cg stroke='%23F7F4EE' stroke-opacity='.3' stroke-width='1.5'%3E%3Cpath d='M60 58L50 100M60 58L70 100M53 86H67M56 72H64M47 100H73'/%3E%3C/g%3E%3Cg stroke='%2302E8CD' stroke-width='1.5'%3E%3Cpath d='M50 48A14 14 0 0 1 70 48' stroke-opacity='.9'/%3E%3Cpath d='M42 40A26 26 0 0 1 78 40' stroke-opacity='.6'/%3E%3Cpath d='M34 32A38 38 0 0 1 86 32' stroke-opacity='.35'/%3E%3Cpath d='M26 24A50 50 0 0 1 94 24' stroke-opacity='.18'/%3E%3C/g%3E%3Ccircle cx='60' cy='56' r='2.5' fill='%23E5382C'/%3E%3C/svg%3E"); background-size: 120px 120px;
 }
 
+/* 08 · The pattern: Melton's terrain-from-orbit, printed in aqua and onyx, as a
+   band between sections. Once a page, never behind text, never near the globe. */
+.pattern-band {
+  height: clamp(120px, 15vw, 240px); border-bottom: 1px solid var(--line);
+  background: var(--onyx) url("assets/patterns/terrain-aqua.webp") center / cover no-repeat;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stepframe.in path { transition: none; }
   .band-strip span, .vibe-art, .vibe:hover .vibe-art, .vibe-art.big { animation: none; }
