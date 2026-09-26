@@ -319,8 +319,12 @@ async function paintNearby() {
     return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
   };
 
+  // "Somewhere in France" and "Online only" hold stations whose town nobody
+  // gave (scripts/expand.mjs); their dot is a stand-in, so a distance to it
+  // would be made up, and their size would crowd out the real towns nearby.
+  const nowhere = (p) => /^(Somewhere in |Online only$)/.test(p.title);
   const near = placeCache
-    .filter((p) => p.i !== here.i && p.count > 0)
+    .filter((p) => p.i !== here.i && p.count > 0 && !nowhere(p))
     .map((p) => ({ ...p, km: km(here, p) }))
     // 1,200 km is a morning's drive at the top end and still the same weather,
     // the same news and usually the same language. Past that it is not "nearby",

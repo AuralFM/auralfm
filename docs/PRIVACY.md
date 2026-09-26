@@ -61,6 +61,7 @@ differently" below. The rest of this table applies to both.
 | Service | Purpose | What it necessarily sees |
 |---|---|---|
 | The radio station's own server | Playing audio | Your IP address, as with any stream |
+| The station's own website | Its logo, when you open a station's profile (web version) | Your IP address |
 | radio.garden | Resolving a stream URL when you press play | Your IP address |
 | radio-browser.info | Fallback stream lookup; play counts | Your IP address, the station played |
 | NASA GIBS | Satellite cloud imagery | Your IP address |

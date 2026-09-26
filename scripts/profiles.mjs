@@ -39,6 +39,9 @@ const F = {
 };
 const dry = process.argv.includes("--dry");
 const T = createRequire(import.meta.url)(path.join(ROOT, "src/taxonomy.js"));
+// Names, not ids, so the app can show them without carrying the taxonomy.
+const NAME = new Map([...T.GENRES, ...T.SCENES, ...T.FORMATS, ...T.MOODS].map((c) => [c.id, c.name]));
+const names = (ids) => ids.map((i) => NAME.get(i) || i);
 
 /** The shard a station's profile lives in. src/catalog.js computes the same. */
 export function shardOf(id) {
@@ -82,7 +85,8 @@ for (const c of full.channels) {
     image: https(claim.logo) || https(site.image) || https(c.logo) || https(r?.logo),
     lang: site.lang || c.lang || r?.lang,
     social: site.social && Object.keys(site.social).length ? site.social : undefined,
-    bitrate: stream.br, genres: k.genres, moods: k.moods, formats: k.formats, scenes: k.scenes,
+    bitrate: stream.br, genres: names(k.genres), moods: names(k.moods), formats: names(k.formats), scenes: names(k.scenes),
+    explicit: c.explicit || undefined,
     claim: claim.lightning || claim.nostr ? clean({ lightning: claim.lightning, nostr: claim.nostr, contact: claim.contact }) : undefined,
     checked: e?.at,
   });

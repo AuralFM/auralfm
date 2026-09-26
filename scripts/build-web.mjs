@@ -306,7 +306,7 @@ page("explore.html", "index.html", {
   // levels.js before the bridge: the card's waveform is measured from a private
   // copy of the stream, exactly as the desktop's popover does it.
   before: ["web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
-  after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js", "web/ticker.js"] },
+  after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js", "web/ticker.js", "web/profile.js"] },
   logo: true,
   share: true,
 });
@@ -321,7 +321,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
-for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
+for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "profile.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
 // Google News does not let a web page read it, so here.now fetches it for the
@@ -362,6 +362,9 @@ fs.writeFileSync(path.join(OUT, ".herenow", "proxy.json"), JSON.stringify({
 copy("assets/fonts", "assets/fonts");
 copy("assets/sky.json", "assets/sky.json");
 copy("data/stations.min.json", "data/stations.min.json");
+// Each station's profile (scripts/profiles.mjs), fetched one file at a time when
+// a station is opened: 256 files, none precached.
+if (fs.existsSync(R("data/profiles"))) copy("data/profiles", "data/profiles");
 fs.mkdirSync(path.join(OUT, "assets", "generated"), { recursive: true });
 // The Dock previews are loaded by Settings even while its App icon section is
 // hidden, so they ship too; they are small.
