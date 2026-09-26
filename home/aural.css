@@ -162,7 +162,7 @@ p { text-wrap: pretty; }
 .menu nav { display: grid; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
 .menu a {
   background: var(--onyx); padding: 18px var(--pad); text-decoration: none;
-  font: 900 34px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80;
+  font: 900 34px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70;
 }
 .menu .menu-go { background: var(--aqua); color: var(--onyx); }
 
@@ -213,7 +213,7 @@ p { text-wrap: pretty; }
 /* Its own display: flex outranks the hidden attribute, which left an empty
    bordered box on the globe before anything was picked. */
 .globe-pick[hidden] { display: none; }
-.pick-name { font: 900 22px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 76; }
+.pick-name { font: 900 22px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; }
 .pick-meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
 .pick-go { margin-left: auto; font: 700 13px/20px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aqua); min-height: 44px; display: inline-flex; align-items: center; }
 .readout span {
@@ -240,14 +240,14 @@ p { text-wrap: pretty; }
 .board-head { display: flex; flex-direction: column; gap: 20px; justify-content: space-between; }
 /* The board's own summary: how much of it is in the dark. */
 .board-sum { display: flex; flex-direction: column; gap: 10px; }
-.sum-big { font: 900 clamp(64px, 9cqi, 132px)/.85 var(--display); font-variation-settings: "wdth" 64; font-variant-numeric: tabular-nums; }
+.sum-big { font: 900 clamp(64px, 9cqi, 132px)/.85 var(--display); font-variation-settings: "wdth" 70; font-variant-numeric: tabular-nums; }
 .sum-big span { color: var(--bone2); }
 .sum-text { color: var(--bone2); max-width: 36ch; }
 .sum-text b { color: var(--bone); font-weight: 600; }
 .departures { border-collapse: collapse; width: 100%; padding: 0; font: 700 15px/20px var(--mono); text-transform: uppercase; letter-spacing: .06em; }
 .departures th, .departures td { text-align: left; padding: 14px var(--pad); border-bottom: 1px solid var(--line); font-weight: 700; }
 .departures thead th { font-weight: 400; font-size: 11px; color: var(--bone2); padding-top: 18px; padding-bottom: 10px; }
-.departures tbody th { font: 900 22px/24px var(--display); font-variation-settings: "wdth" 80; letter-spacing: 0; }
+.departures tbody th { font: 900 22px/24px var(--display); font-variation-settings: "wdth" 70; letter-spacing: 0; }
 .departures .clock { color: var(--aqua); font-variant-numeric: tabular-nums; font-size: 20px; }
 .departures tr.night .clock { color: var(--bone2); }
 .departures tbody tr:last-child > * { border-bottom: 0; }
@@ -262,7 +262,7 @@ p { text-wrap: pretty; }
 .tagline { padding: 96px var(--pad); border-bottom: 1px solid var(--line); }
 .tagline .words {
   font: 900 clamp(34px, 5.6vw, 84px)/1 var(--display); text-transform: uppercase;
-  font-variation-settings: "wdth" 88; max-width: 18ch;
+  font-variation-settings: "wdth" 100; max-width: 18ch;
 }
 .tagline .line { display: block; }
 .tagline .w { color: rgba(247, 244, 238, .2); transition: color 1s var(--ease); }
@@ -276,14 +276,14 @@ p { text-wrap: pretty; }
 .vibe-list { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .vibe { display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-height: 176px; transition: background-color .5s var(--ease), color .5s var(--ease); }
 .vibe b {
-  font: 900 30px/.95 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 62;
+  font: 900 30px/.95 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70;
   transition: font-variation-settings .8s var(--ease);
 }
 .vibe span { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
 .vibe:hover { background: var(--bone); color: var(--onyx); }
 .vibe:hover span { color: var(--onyx); }
 /* Widens a little, not to 120: "ELECTRONIC" ran out of its card and was cut. */
-.vibe:hover b { font-variation-settings: "wdth" 80; }
+.vibe:hover b { font-variation-settings: "wdth" 84; }
 /* A card that goes somewhere: the link is the whole card. */
 .vibe:has(> a) { padding: 0; }
 .vibe > a { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: var(--pad); color: inherit; text-decoration: none; }
@@ -308,7 +308,7 @@ p { text-wrap: pretty; }
 .vplace { display: flex; flex-direction: column; gap: 10px; }
 .vplace[hidden], .dir-none[hidden] { display: none; }
 .vplace a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--bone); }
-.vplace b { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; overflow-wrap: anywhere; transition: color .5s var(--ease); }
+.vplace b { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; overflow-wrap: anywhere; transition: color .5s var(--ease); }
 .vplace a:hover b { color: var(--aqua); }
 .vplace span { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aqua); }
 .vst { color: var(--bone2); font-size: 14px; line-height: 21px; overflow-wrap: anywhere; }
@@ -327,7 +327,7 @@ p { text-wrap: pretty; }
 .features.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .features-head { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 16px; }
 .card { display: flex; flex-direction: column; gap: 12px; }
-.card h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; }
+.card h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; }
 .card p:not(.num) { color: var(--bone2); }
 .num { font: 400 12px/16px var(--mono); letter-spacing: .08em; color: var(--aqua); }
 .tag { margin-left: 8px; padding: 2px 6px; border: 1px solid var(--line); color: var(--bone); }
@@ -339,8 +339,8 @@ p { text-wrap: pretty; }
 .how-head { display: flex; flex-direction: column; gap: 16px; }
 .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .steps li { display: flex; flex-direction: column; gap: 10px; }
-.steps .n { font: 900 64px/1 var(--display); font-variation-settings: "wdth" 60; color: var(--aqua); }
-.steps h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; }
+.steps .n { font: 900 64px/1 var(--display); font-variation-settings: "wdth" 70; color: var(--aqua); }
+.steps h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; }
 .steps p { color: var(--bone2); }
 .steps a { color: var(--aqua); }
 
@@ -348,7 +348,7 @@ p { text-wrap: pretty; }
 .platforms { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .platforms h2 { grid-column: 1 / -1; }
 .platform { display: flex; flex-direction: column; gap: 12px; }
-.platform h3 { font: 900 26px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; }
+.platform h3 { font: 900 26px/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; }
 .platform p:not(.label):not(.note) { color: var(--bone2); }
 .beta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
 .beta-row .note { align-self: center; }
@@ -367,7 +367,7 @@ p { text-wrap: pretty; }
 .tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tiers-head { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 16px; }
 .tier { display: flex; flex-direction: column; gap: 14px; }
-.tier h3 { font: 900 clamp(22px, 2.6vw, 30px)/1 var(--display); overflow-wrap: anywhere; text-transform: uppercase; font-variation-settings: "wdth" 80; }
+.tier h3 { font: 900 clamp(22px, 2.6vw, 30px)/1 var(--display); overflow-wrap: anywhere; text-transform: uppercase; font-variation-settings: "wdth" 70; }
 .price { font: 400 13px/20px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
 .price b { font: 900 48px/1 var(--display); font-variation-settings: "wdth" 70; color: var(--bone); margin-right: 6px; }
 .tier ul { display: flex; flex-direction: column; gap: 8px; flex: 1; color: var(--bone2); }
@@ -393,7 +393,7 @@ p { text-wrap: pretty; }
 .feature { display: flex; flex-direction: column; gap: 12px; padding: 0 0 var(--pad); }
 .feature img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
 .feature .label, .feature h2 { padding: 0 var(--pad); }
-.feature h2 { font: 900 24px/1.02 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 76; text-wrap: balance; }
+.feature h2 { font: 900 24px/1.02 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; text-wrap: balance; }
 .feature { position: relative; }
 .feature h2 a { color: inherit; text-decoration: none; }
 .feature h2 a::after { content: ""; position: absolute; inset: 0; }
@@ -405,7 +405,7 @@ p { text-wrap: pretty; }
 .story { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 18px; align-items: start; }
 .story img, .story .duo { width: 112px; height: 112px; object-fit: cover; flex: none; }
 .story .meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aqua); margin-bottom: 8px; }
-.story h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; margin-bottom: 8px; }
+.story h3 { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; margin-bottom: 8px; }
 .story p:not(.meta) { color: var(--bone2); }
 /* A story with its own page: the whole card is the link, the title says so. */
 .story { position: relative; }
@@ -439,7 +439,7 @@ p { text-wrap: pretty; }
 .prose h1 { display: none; }            /* the page's own title says it */
 .prose h2 {
   font: 900 clamp(26px, 3.4vw, 40px)/1 var(--display); text-transform: uppercase;
-  font-variation-settings: "wdth" 78; margin: 48px 0 16px; text-wrap: balance;
+  font-variation-settings: "wdth" 70; margin: 48px 0 16px; text-wrap: balance;
 }
 .prose h3 { font: 700 16px/24px var(--mono); text-transform: uppercase; letter-spacing: .04em; margin: 32px 0 8px; }
 .prose p, .prose li { color: var(--bone2); font-size: 17px; line-height: 28px; }
@@ -509,7 +509,7 @@ p { text-wrap: pretty; }
 .post .prose p:first-child { font-size: 21px; line-height: 32px; color: var(--bone); }
 .post-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .post-nav a { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: var(--bone);
-  font: 900 20px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 80; }
+  font: 900 20px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; }
 .post-nav a:hover span:last-child { color: var(--aqua); }
 .post-nav a:nth-child(3) { text-align: right; }
 
@@ -573,7 +573,7 @@ p { text-wrap: pretty; }
   .legal-hero h1 { font-size: 12.4vw; }
   .fit { white-space: normal; font-size: clamp(40px, 14vw, 88px); line-height: .86; }
   /* Condensed, so the longest word ("UNOWNED.") still fits a phone whole. */
-  .fit, .js .fit.stretch.in { font-variation-settings: "wdth" 66; }
+  .fit, .js .fit.stretch.in { font-variation-settings: "wdth" 70; }
   .steps, .steps-4 { grid-template-columns: minmax(0, 1fr); }
   .story { grid-template-columns: 80px minmax(0, 1fr); gap: 14px; }
   .story img, .story .duo { width: 80px; height: 80px; }
@@ -585,7 +585,7 @@ p { text-wrap: pretty; }
   .tagline { padding: 64px var(--pad); }
   /* Condensed on a phone: at full width "BROADCASTING." alone ran 7px past the
      screen and gave the page a sideways scroll. */
-  .tagline .words { font-variation-settings: "wdth" 62; font-size: clamp(28px, 9vw, 48px); }
+  .tagline .words { font-variation-settings: "wdth" 70; font-size: clamp(28px, 9vw, 48px); }
   /* "SOMEWHERE" alone outran a phone at the desktop minimum. */
   .final h2 { font-size: clamp(28px, 9vw, 48px); }
   .departures th, .departures td { padding: 12px var(--pad); }
@@ -601,7 +601,7 @@ p { text-wrap: pretty; }
   .brand-word { display: none; }
   /* One long word ("SOMEWHERE") outran a 320pt cell at the 32px floor. */
   .display { font-size: clamp(26px, 11cqi, 110px); }
-  .vibe b { font-size: 18px; font-variation-settings: "wdth" 56; }
+  .vibe b { font-size: clamp(14px, 5vw, 18px); }
 }
 @media (pointer: coarse) { .btn { min-height: 48px; } }
 
@@ -620,7 +620,10 @@ body::after {
    [data-frame] block, once, when it comes into view. Wide screens only: on a
    phone the block is the whole width and the frame would only crowd it. */
 [data-frame] { position: relative; }
-@media (min-width: 761px) { [data-frame] { padding: 44px 48px 56px; } }
+@media (min-width: 761px) { [data-frame] { padding: 44px 48px 56px; }
+  /* The frame steps in to 93% of the width below 82% of the height; text in
+     that corner stops short of it instead of running under the line. */
+  [data-frame] > p:last-child { max-width: min(62ch, 84%); } }
 .stepframe { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); pointer-events: none; overflow: visible; }
 /* --len is the path's measured length (aural.js). Until the block is seen the
    whole line is offset out of view; then it slides in. No script: no --len,
@@ -634,7 +637,7 @@ body::after {
 .bands { position: relative; overflow: hidden; padding: 72px 0; border-bottom: 1px solid var(--line); }
 .band-strip {
   margin: 0 -48px; padding: 22px 64px; white-space: nowrap; overflow: hidden;
-  font: 900 clamp(30px, 5vw, 84px)/.9 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 72;
+  font: 900 clamp(30px, 5vw, 84px)/.9 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70;
   color: var(--onyx); background: var(--mast); transform: rotate(-3.5deg);
 }
 .band-strip.places { background: var(--aqua); transform: rotate(2.5deg); margin-top: -14px; }
@@ -689,11 +692,12 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke-linecap='square'%3E%3Cg stroke='%23F7F4EE' stroke-opacity='.3' stroke-width='1.5'%3E%3Cpath d='M60 58L50 100M60 58L70 100M53 86H67M56 72H64M47 100H73'/%3E%3C/g%3E%3Cg stroke='%2302E8CD' stroke-width='1.5'%3E%3Cpath d='M50 48A14 14 0 0 1 70 48' stroke-opacity='.9'/%3E%3Cpath d='M42 40A26 26 0 0 1 78 40' stroke-opacity='.6'/%3E%3Cpath d='M34 32A38 38 0 0 1 86 32' stroke-opacity='.35'/%3E%3Cpath d='M26 24A50 50 0 0 1 94 24' stroke-opacity='.18'/%3E%3C/g%3E%3Ccircle cx='60' cy='56' r='2.5' fill='%23E5382C'/%3E%3C/svg%3E"); background-size: 120px 120px;
 }
 
-/* 08 · The pattern: Melton's terrain-from-orbit, printed in aqua and onyx, as a
-   band between sections. Once a page, never behind text, never near the globe. */
+/* 08 · The pattern: Melton's terrain-from-orbit, in its own colours, the middle
+   half of the drawing at two copies across a laptop screen (it is cut into
+   blocks, so the join reads as one more), as a band between sections. Once a page, never behind text, never near the globe. */
 .pattern-band {
   height: clamp(120px, 15vw, 240px); border-bottom: 1px solid var(--line);
-  background: var(--onyx) url("assets/patterns/terrain-aqua.webp") center / cover no-repeat;
+  background: var(--onyx) url("assets/patterns/band.webp") 0 0 / auto 100% repeat-x;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -90,7 +90,7 @@ function vibePage(v) {
   return `${c.head}<main id="main">
   ${MARK}
   <section class="hero legal-hero vibe-hero grid">
-    <h1 class="cell display stretch">${esc(v.name)}</h1>
+    <h1 class="cell display fit stretch">${esc(v.name)}</h1>
     <div class="cell vibe-hero-art">${vibeSvg(v.id, "vibe-art big")}</div>
     <div class="cell intro">
       <p class="label">[ Vibe · ${esc(v.tags.join(", "))} ]</p>
