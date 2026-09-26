@@ -26,9 +26,9 @@
  * originals/, measure it (see weights.json), add its entry, and rebuild.
  *
  * HAND are the exceptions, drawn by hand as strokes at the same TARGET weight
- * and rounded ends, in the same square frame, and not generated here: house
- * because no icon came for Deep & house, community after Melton's drawing
- * (kept in originals/ for reference) because its line was too heavy to match.
+ * and rounded ends, in the same square frame, and not generated here: community,
+ * after Melton's drawing (kept in originals/ for reference), because its line
+ * was too heavy to match. (House was one too until Melton's turntable came.)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -67,7 +67,7 @@ function normalize(id, svg) {
     + `<g${strokeAttrs}>${inner}</g></svg>\n`;
 }
 
-const HAND = new Set(["house", "community"]);
+const HAND = new Set(["community"]);
 
 let stale = 0;
 for (const file of fs.readdirSync(R("art/vibes/originals")).filter((f) => f.endsWith(".svg"))) {
