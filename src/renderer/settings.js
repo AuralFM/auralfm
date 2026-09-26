@@ -38,6 +38,7 @@ function paint() {
   $("#filterChat").setAttribute("aria-checked", String(P.filterChat !== false));
   $("#powFloor").value = String(P.powFloor ?? 0);
   $("#onlyKept").setAttribute("aria-checked", String(P.onlyKept === true));
+  $("#hideExplicit").setAttribute("aria-checked", String(P.hideExplicit === true));
   if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
   paintFingerprint();
@@ -280,6 +281,7 @@ $("#filterreset").addEventListener("click", async () => {
 $("#filterChat").addEventListener("click", () => set({ filterChat: P.filterChat === false }));
 $("#powFloor").addEventListener("change", (e) => set({ powFloor: Number(e.target.value) || 0 }));
 $("#onlyKept").addEventListener("click", () => set({ onlyKept: P.onlyKept !== true }));
+$("#hideExplicit").addEventListener("click", () => set({ hideExplicit: P.hideExplicit !== true }));
 
 /**
  * Turning the durable identity on and off.

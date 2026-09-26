@@ -1,5 +1,5 @@
 /**
- * A station's profile, on the web first.
+ * A station's profile.
  *
  * Each row in the station list gets a small "i". It opens what the station says
  * about itself, gathered by scripts/enrich.mjs and written by
@@ -9,26 +9,17 @@
  * hands its Lightning address to the listener's own wallet. AuralFM never
  * touches the money; the link is `lightning:` and the wallet does the rest.
  *
- * Web first, as new features are (the desktop takes it once approved): this
- * wraps renderStations, the global Explore draws the list with, as after.js
- * wraps openReader. Everything is set as text, never as HTML, and only http(s)
- * links are followed, because all of it comes from the stations' own pages.
+ * It started on the web and came to the desktop once Melton approved it
+ * (26 Sept). The profile itself comes from window.auralfm.profile(id): on the
+ * desktop, the files that ship with the app (src/profiles.js); on the web, the
+ * same files fetched from the site (web/bridge.js). This wraps renderStations,
+ * the global Explore draws the list with. Everything is set as text, never as
+ * HTML, and only http(s) links are followed: all of it comes from the stations'
+ * own pages.
  */
 {
   const draw = renderStations;
-  const shards = new Map();
-
-  // The same hash scripts/profiles.mjs files each station under.
-  const shardOf = (id) => {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-    return ((h >>> 0) & 0xff).toString(16).padStart(2, "0");
-  };
-  const profileOf = async (id) => {
-    const s = shardOf(id);
-    if (!shards.has(s)) shards.set(s, fetch(`data/profiles/${s}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
-    return (await shards.get(s))[id] || null;
-  };
+  const profileOf = (id) => Promise.resolve(window.auralfm.profile?.(id)).catch(() => null);
 
   const SOCIAL = [["instagram", "Instagram"], ["facebook", "Facebook"], ["x", "X"], ["youtube", "YouTube"],
     ["tiktok", "TikTok"], ["soundcloud", "SoundCloud"], ["mixcloud", "Mixcloud"], ["spotify", "Spotify"],
@@ -101,7 +92,11 @@
 
   async function toggle(row, ch, btn) {
     const open = row.nextElementSibling?.classList.contains("sprofile");
+    // Focus inside a panel about to go (a link in it) comes back to this button,
+    // not to the page.
+    const focusWasInside = [...stationListEl.querySelectorAll(".sprofile")].some((b) => b.contains(document.activeElement));
     stationListEl.querySelectorAll(".sprofile").forEach((b) => b.remove());
+    if (focusWasInside) btn.focus();
     stationListEl.querySelectorAll(".pinfo[aria-expanded='true']").forEach((b) => b.setAttribute("aria-expanded", "false"));
     if (open) return;
     const box = el("div", "sprofile");

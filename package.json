@@ -69,6 +69,7 @@
       "THIRD-PARTY-NOTICES.md",
       "package.json",
       "data/stations.min.json",
+      "data/profiles/*.json",
       "data/sdr.min.json",
       "docs/PRIVACY.md",
       "docs/TERMS.md",

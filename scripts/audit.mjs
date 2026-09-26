@@ -2772,6 +2772,53 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       `asked ${asked.join(", ") || "nothing"}; got ${got?.url || "no stream"}`);
 }
 
+// ── a station's profile is found where it was filed ───────────────────────
+// scripts/profiles.mjs files each profile under a hash of the station id; the
+// desktop (src/profiles.js) and the web (web/bridge.js) look it up by the same
+// hash. Three copies of one function: if one drifts, every profile opens empty
+// on that side and nothing says why. Compared by running all three.
+{
+  console.log("\na station's profile is found where it was filed");
+  const { createRequire } = await import("node:module");
+  const { pathToFileURL } = await import("node:url");
+  const desktop = createRequire(import.meta.url)(R("src/profiles.js")).shardOf;
+  const build = (await import(pathToFileURL(R("scripts/lib/shard.mjs")).href).catch(() => null))?.shardOf;
+  const bridgeSrc = fs.readFileSync(R("web/bridge.js"), "utf8");
+  const body = /const shardOf = \(id\) => \{([\s\S]*?)\n\s*\};/.exec(bridgeSrc)?.[1];
+  const web = body ? new Function("id", body) : null;
+  const ids = ["k3hL3UUv", "rb-c685c086-b716-4edd-b313-d4a7baf1084c", "_npeqOYP", "x", "Ae6kS7C7"];
+  const bad = !build ? "scripts/lib/shard.mjs exports no shardOf" : !web ? "web/bridge.js has no shardOf" :
+    ids.filter((id) => !(desktop(id) === build(id) && build(id) === web(id))).map((id) => `${id}: ${desktop(id)}/${build(id)}/${web(id)}`).join(", ");
+  bad ? fail("a station's profile is found where it was filed", bad)
+      : pass("the build, the desktop and the web file a profile under the same hash");
+}
+
+// ── "Hide explicit stations" hides them ───────────────────────────────────
+// Explicit stations are listed and labelled (Melton, 26 Sept); the setting
+// leaves them out of lists, search and shuffle. Checked on the real catalogue:
+// an explicit station is found by its name with the setting off, not with it on.
+{
+  console.log("\n\"Hide explicit stations\" hides them");
+  const { createRequire } = await import("node:module");
+  const cat = createRequire(import.meta.url)(R("src/catalog.js"));
+  if (!fs.existsSync(R("data/stations.min.json"))) skip("\"Hide explicit stations\" hides them", "no catalogue — runs locally");
+  else {
+    const log = console.log; console.log = () => {}; cat.load(); console.log = log;
+    const min = JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8"));
+    const x = min.c.find((c) => c[7] === 1);
+    if (!x) skip("\"Hide explicit stations\" hides them", "the catalogue has no explicit station to try");
+    else {
+      cat.setHideExplicit(false);
+      const shown = cat.search(x[1], 200).some((s) => s.id === x[0] && s.explicit);
+      cat.setHideExplicit(true);
+      const hidden = !cat.search(x[1], 200).some((s) => s.id === x[0]);
+      cat.setHideExplicit(false);
+      shown && hidden ? pass(`"${x[1]}" is listed and marked, and gone with the setting on`)
+        : fail("\"Hide explicit stations\" hides them", `${shown ? "" : "not listed and marked with the setting off; "}${hidden ? "" : "still found with it on"}`);
+    }
+  }
+}
+
 // ── the vibe icons share one line ──────────────────────────────────────────
 // The vibe icons came from different sets at different line weights, and
 // scripts/build-vibe-icons.mjs brings them to one weight and one frame. An icon

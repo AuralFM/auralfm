@@ -100,7 +100,7 @@ export function writeBundles(full, F) {
   const min = {
     g: full.generated,
     p: full.places.map((p) => [p.title, p.country, p.geo[0], p.geo[1]]),
-    // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk]
+    // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit]
     // Fixed arity now that later slots exist — optional trailing fields stop
     // working the moment anything follows them.
     c: full.channels.map((c) => [
@@ -108,6 +108,7 @@ export function writeBundles(full, F) {
       c.tags?.length ? c.tags.join(",") : "",
       c.rbuuid || "",
       c.ok === 0 ? 0 : c.ok === 1 ? 1 : "",
+      c.explicit ? 1 : "",
     ]),
   };
   fs.writeFileSync(F.min, JSON.stringify(min));

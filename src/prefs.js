@@ -99,6 +99,15 @@ const DEFAULTS = {
    */
   onlyKept: false,
   /**
+   * Leave explicit stations out: of the lists, of search, of shuffle.
+   *
+   * Explicit stations are listed (Melton, 26 Sept: keep them if real and on the
+   * air) and labelled Explicit. Off by default, so nothing is hidden that the
+   * listener did not choose to hide; one switch in Settings for anyone who would
+   * rather not see them.
+   */
+  hideExplicit: false,
+  /**
    * Whether the plain warning about what this channel is has been read.
    *
    * Shown once, the first time the chat appears. Not a legal disclaimer and not

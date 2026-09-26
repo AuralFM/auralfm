@@ -149,7 +149,11 @@ let settingsWin = null;
  * popover's window-open handler did not.
  */
 function openOutside(url) {
-  if (/^https?:\/\//i.test(String(url || ""))) shell.openExternal(url);
+  const u = String(url || "");
+  // A station's Tip button (explore-profile.js) is lightning:name@host, handed to
+  // the listener's own Lightning wallet. Only that exact shape: nothing else in a
+  // lightning: link reaches the wallet from here.
+  if (/^https?:\/\//i.test(u) || /^lightning:[\w.+-]{1,64}@[\w.-]{1,120}\.[a-z]{2,}$/i.test(u)) shell.openExternal(u);
 }
 
 /**
@@ -624,6 +628,7 @@ function setPrefs(incoming) {
   // is now wrong. Repaint from main's copy rather than waiting for the next
   // message — switching the filter on and watching nothing happen reads as a
   // dead setting.
+  if ("hideExplicit" in patch) catalog.setHideExplicit(st.prefs.hideExplicit);
   if ("filterChat" in patch || "onlyKept" in patch) refreshChat();
   if ("powFloor" in patch) { nostr.setPowFloor(getPrefs().powFloor || 0); refreshChat(); }
   /**
@@ -951,6 +956,7 @@ if (!app.requestSingleInstanceLock()) {
     // icon. The menu bar keeps every behaviour it had — it is now the thing that
     // keeps playback going once the window is closed.
     catalog.load();
+    catalog.setHideExplicit(getPrefs().hideExplicit);
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
     clouds.init(app.getPath("userData"));

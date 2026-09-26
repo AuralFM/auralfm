@@ -7,7 +7,7 @@
  *
  * Bundle shape (positional, to keep the file small):
  *   p: [ [placeTitle, country, lon, lat], ... ]
- *   c: [ [channelId, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk] ]
+ *   c: [ [channelId, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit] ]
  *
  * tags is a comma-joined string, present only on the ~34% of channels we could
  * match to radio-browser (see scripts/tags.mjs). radio.garden has no genre data
@@ -99,6 +99,7 @@ function hydrate(i) {
     band: bands[i] || null,
     rbuuid: c[5] || null,          // radio-browser id, for click reporting
     ok: c[6] === 0 ? false : c[6] === 1 ? true : null,
+    explicit: c[7] === 1,
     place: p[0],
     country: p[1],
     lon: p[2],
@@ -171,7 +172,17 @@ function placeMatches(idx, terms) {
 }
 
 /** Shared filter used by both search and place browsing. */
+/**
+ * Explicit stations are listed like any other (Melton, 26 Sept: keep them if
+ * real), marked explicit, and left out everywhere — lists, search, shuffle —
+ * when the listener turns on Settings → Hide explicit stations.
+ */
+let hideExplicit = false;
+function setHideExplicit(on) { hideExplicit = !!on; }
+const isExplicit = (i) => channels[i]?.[7] === 1;
+
 function passes(i, { band, tag } = {}) {
+  if (hideExplicit && isExplicit(i)) return false;
   if (band && bands[i] !== band) return false;
   if (tag) {
     const t = channels[i][4];
@@ -388,7 +399,9 @@ function globePoints() {
 function randomChannel() {
   if (!channels.length) return null;
   for (let tries = 0; tries < 12; tries++) {
-    const c = hydrate(Math.floor(Math.random() * channels.length));
+    const i = Math.floor(Math.random() * channels.length);
+    if (hideExplicit && isExplicit(i)) continue;
+    const c = hydrate(i);
     if (Number.isFinite(c.lat) && Number.isFinite(c.lon)) return c;
   }
   return null;
@@ -427,4 +440,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };
+module.exports = { setHideExplicit, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };

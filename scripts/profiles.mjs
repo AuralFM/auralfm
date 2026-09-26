@@ -28,6 +28,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { writeBundles } from "./lib/match.mjs";
+import { shardOf } from "./lib/shard.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const F = {
@@ -42,13 +43,6 @@ const T = createRequire(import.meta.url)(path.join(ROOT, "src/taxonomy.js"));
 // Names, not ids, so the app can show them without carrying the taxonomy.
 const NAME = new Map([...T.GENRES, ...T.SCENES, ...T.FORMATS, ...T.MOODS].map((c) => [c.id, c.name]));
 const names = (ids) => ids.map((i) => NAME.get(i) || i);
-
-/** The shard a station's profile lives in. src/catalog.js computes the same. */
-export function shardOf(id) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-  return ((h >>> 0) & 0xff).toString(16).padStart(2, "0");
-}
 
 // "Pop, Dance/Hits; 128kbps" → ["pop", "dance", "hits"]
 const genresFrom = (s) => [...new Set(String(s || "").split(/[,;/|]+/).map((g) => g.trim().toLowerCase())

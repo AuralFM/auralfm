@@ -69,7 +69,7 @@
   // fetched first and every catalogue call waits for it.
   const catalogReady = fetch("data/stations.min.json")
     .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
-    .then((text) => { M.files["stations.min.json"] = text; M.catalog.load(); })
+    .then((text) => { M.files["stations.min.json"] = text; M.catalog.load(); M.catalog.setHideExplicit(getPrefs().hideExplicit); })
     .catch((err) => console.error("catalog:", err));
   const cat = (fn) => async (...a) => { await catalogReady; return fn(...a); };
 
@@ -98,6 +98,7 @@
   // What a change means beyond the page repainting — the desktop's setPrefs.
   function afterPrefs(changed) {
     if ("audioOutput" in changed) applyOutput();
+    if ("hideExplicit" in changed) M.catalog.setHideExplicit(getPrefs().hideExplicit);
     if (["presence", "relays", "powFloor"].some((k) => k in changed)) chat?.sync(lastPlayer);
     if (["filterChat", "onlyKept", "powFloor"].some((k) => k in changed)) chat?.refresh();
   }
@@ -533,6 +534,22 @@
     vibes: cat(() => M.catalog.VIBES.map(({ id, name }) => ({ id, name }))),
     vibePlaces: cat((id) => M.catalog.vibePlaces(id)),
     stationById: cat((id) => M.catalog.byId(String(id || "")) || null),
+    profile: (() => {
+      // The same files the desktop reads from disk (src/profiles.js), fetched one
+      // at a time, by the same hash.
+      const shards = new Map();
+      const shardOf = (id) => {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+        return ((h >>> 0) & 0xff).toString(16).padStart(2, "0");
+      };
+      return async (id) => {
+        id = String(id || ""); if (!id) return null;
+        const s = shardOf(id);
+        if (!shards.has(s)) shards.set(s, fetch(`data/profiles/${s}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+        return (await shards.get(s))[id] || null;
+      };
+    })(),
     randomStation: cat(() => M.catalog.randomChannel()),
     nextStation: cat((ch, t) => M.catalog.nextInPlace(ch, t || [])),
     distance: async (aLat, aLon, bLat, bLon, units) =>

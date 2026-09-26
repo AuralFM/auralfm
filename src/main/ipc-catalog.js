@@ -11,6 +11,7 @@ const catalog = require("../catalog");
 const failures = require("../failures");
 const mine = require("../mystations");
 const resolver = require("../resolver");
+const profiles = require("../profiles");
 
 module.exports = function register(ctx) {
   const { broadcast, hydrateMine } = ctx;
@@ -67,6 +68,8 @@ module.exports = function register(ctx) {
   ipcMain.handle("catalog:placeFacets", (_e, i) => ({ tags: catalog.placeTags(i), bands: catalog.placeBands(i) }));
   /** One station by id — for anything holding a name that has lost its place. */
   ipcMain.handle("catalog:byId", (_e, id) => catalog.byId(String(id || "")) || null);
+  /** What a station says about itself (src/profiles.js), for its profile. */
+  ipcMain.handle("catalog:profile", (_e, id) => profiles.profile(id));
 
   /** Somewhere else. The renderer names no station; the catalogue picks. */
   ipcMain.handle("catalog:random", () => catalog.randomChannel());

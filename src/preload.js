@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   placeFacets: (i) => ipcRenderer.invoke("catalog:placeFacets", i),
   randomStation: () => ipcRenderer.invoke("catalog:random"),
   stationById: (id) => ipcRenderer.invoke("catalog:byId", id),
+  profile: (id) => ipcRenderer.invoke("catalog:profile", id),
   globePoints: () => ipcRenderer.invoke("catalog:globePoints"),
   vibes: () => ipcRenderer.invoke("catalog:vibes"),
   vibePlaces: (id) => ipcRenderer.invoke("catalog:vibePlaces", id),

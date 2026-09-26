@@ -222,7 +222,9 @@ function renderStations() {
                     <button class="star${isFav(ch.id) ? " on" : ""}">${Icons.svg(isFav(ch.id) ? "starFill" : "star")}</button>
                     <span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".sn").textContent = ch.title;
-    el.querySelector(".stags").textContent = ch.tags.length ? ch.tags.slice(0, 4).join(" · ") : "";
+    // Explicit stations say so first, in the tag line, before anyone presses play.
+    el.querySelector(".stags").textContent =
+      [...(ch.explicit ? [t("st.explicit", "Explicit")] : []), ...ch.tags.slice(0, 4)].join(" · ");
     // The name area takes focus rather than the row, because the row holds the
     // star (and for your own stations a remove button): see activatable().
     activatable(el, (e) => {
