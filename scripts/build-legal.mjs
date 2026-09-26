@@ -40,6 +40,11 @@ const PAGES = [
   { id: "conduct", dir: "conduct", title: "Conduct", kicker: "AuralFM — Code of Conduct", footer: false,
     src: "docs/CODE-OF-CONDUCT.md", proof: "The Terms point here, in the app and on this site. It applies wherever people speak on AuralFM.",
     description: "What is not welcome wherever people speak on AuralFM, how to mute, filter and report, and what we can and cannot do about it." },
+  // For the people who run stations, not for listeners, so it is not one of the
+  // app's documents: read straight from the file (app: false).
+  { id: "stations", dir: "stations", title: "Stations", kicker: "AuralFM — for stations", footer: false, app: false,
+    src: "docs/STATIONS.md", proof: "For the people who run the stations. Listed, corrected, removed or claimed: all of it here.",
+    description: "Your station on AuralFM: how it got there, how to correct or remove it, how to claim your page, and tips that go straight to you over Lightning." },
 ];
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -64,7 +69,9 @@ function chrome(site) {
 }
 
 function page(site, p) {
-  const doc = docs.read(p.id);
+  const doc = p.app === false
+    ? (() => { const md = fs.readFileSync(R(p.src), "utf8"); return { html: docs.render(md), text: md }; })()
+    : docs.read(p.id);
   if (!doc) throw new Error(`legal: src/docs.js has no document "${p.id}"`);
   const updated = /\*\*Last updated: ([^*]+)\*\*/.exec(doc.text)?.[1] || "";
   const url = `${site.origin}/${p.dir}/`;

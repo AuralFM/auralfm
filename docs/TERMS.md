@@ -81,7 +81,9 @@ are, and then tell us.
 If you run a station, you can ask us to correct its listing (name, place,
 website, genre) or to take it off AuralFM altogether. Email
 **hello@auralfm.xyz** from an address at the station's own website, or tell us
-how else to confirm it is yours. We act on every such request.
+how else to confirm it is yours. We act on every such request. The
+[page for stations](https://docs.auralfm.xyz/stations/) also says how to claim
+your station's page with a file on your own website.
 
 ## Copyright
 

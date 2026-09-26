@@ -19,6 +19,12 @@
  *                TikTok, SoundCloud, Mixcloud, Telegram, WhatsApp, Bluesky,
  *                Mastodon, Nostr — and any Lightning address it publishes.
  *
+ *   its claim   /.well-known/auralfm.json on the station's own website, if it
+ *               has put one there: a station claiming its page. Only whoever
+ *               runs the website can publish that file, so what it says (a
+ *               Lightning address for tips, a Nostr key, its own description) is
+ *               the station speaking. See docs.auralfm.xyz/stations/.
+ *
  * Nothing about listeners is involved: this is a directory reading the public
  * pages of the stations it lists, once, politely (AuralFM's name in the
  * User-Agent, robots.txt respected, one request at a time per host).
@@ -63,7 +69,8 @@ if (argv.includes("--report")) {
   console.log(`  with a description ${n((r) => r.site?.description)}   an image ${n((r) => r.site?.image)}   a language ${n((r) => r.site?.lang)}`);
   console.log(`  with socials       ${n((r) => r.site?.social && Object.keys(r.site.social).length)}: ` +
     Object.entries(nets).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(" · "));
-  console.log(`  a Lightning address ${n((r) => r.site?.lightning)}   a Nostr key ${n((r) => r.site?.social?.nostr)}`);
+  console.log(`  a Lightning address ${n((r) => r.site?.lightning)}   a Nostr key ${n((r) => r.site?.social?.nostr)}   ` +
+    `claimed their page ${n((r) => r.site?.claim)}`);
   process.exit(0);
 }
 
@@ -199,6 +206,26 @@ function readPage(html, base) {
 const decode = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<")
   .replace(/&gt;/g, ">").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/\s+/g, " ");
 
+/**
+ * A station's claim: /.well-known/auralfm.json on its own site. Kept only as the
+ * fields the spec names, each a short string, so a claim cannot smuggle in
+ * anything else. Lightning addresses must look like name@host.
+ */
+const CLAIM_FIELDS = { name: 120, description: 600, lightning: 120, nostr: 70, logo: 300, contact: 120, genres: 200 };
+async function readClaim(origin) {
+  try {
+    const r = await fetch(`${origin}/.well-known/auralfm.json`, { headers: { "User-Agent": UA, Accept: "application/json" },
+      redirect: "follow", signal: AbortSignal.timeout(8000) });
+    if (!r.ok || new URL(r.url).origin !== origin) return null;
+    const j = await r.json();
+    const c = {};
+    for (const [k, max] of Object.entries(CLAIM_FIELDS)) if (typeof j[k] === "string" && j[k].trim()) c[k] = j[k].trim().slice(0, max);
+    if (c.lightning && !/^[\w.+\-]+@[\w.\-]+\.[a-z]{2,}$/i.test(c.lightning)) delete c.lightning;
+    if (c.nostr && !/^npub1[02-9ac-hj-np-z]{58}$/.test(c.nostr)) delete c.nostr;
+    return Object.keys(c).length ? c : null;
+  } catch { return null; }
+}
+
 async function website(raw) {
   let u; try { u = new URL(/^https?:/i.test(raw) ? raw : `http://${raw}`); } catch { return { ok: false, why: "bad url" }; }
   if (NOT_A_SITE.test(u.hostname.replace(/^www\./, ""))) return { ok: false, why: "not its own site" };
@@ -211,7 +238,8 @@ async function website(raw) {
       const reader = r.body.getReader(); let html = "", got = 0; const dec = new TextDecoder();
       while (got < 600000) { const { value, done } = await reader.read(); if (done) break; got += value.length; html += dec.decode(value, { stream: true }); }
       reader.cancel().catch(() => {});
-      return { ...readPage(html, r.url), final: r.url !== u.href ? r.url : undefined };
+      const claim = await readClaim(new URL(r.url).origin);
+      return { ...readPage(html, r.url), final: r.url !== u.href ? r.url : undefined, ...(claim ? { claim } : {}) };
     } catch (e) { return { ok: false, why: e.name === "TimeoutError" ? "timeout" : "network" }; }
   });
 }
