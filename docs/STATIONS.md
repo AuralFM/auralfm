@@ -28,7 +28,12 @@ AuralFM altogether, whichever you ask.
 
 ## Claim your page
 
-Put one small file on your own website, at this address:
+The quickest way: fill in the short form at
+[docs.auralfm.xyz/claim](https://docs.auralfm.xyz/claim/). No account, no email
+back and forth. We check the station is yours, then your description, your links
+and your Lightning address go on its page.
+
+Or, if you run your own website, put one small file on it, at this address:
 
 `https://your-station.example/.well-known/auralfm.json`
 

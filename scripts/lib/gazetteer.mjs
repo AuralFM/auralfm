@@ -79,7 +79,20 @@ export function loadGazetteer(dir) {
     return found.sort((a, b) => b.pop - a.pop)[0] || null;
   }
 
+  // Country name → code, for corrections that name a country ("Russia", "Peru").
+  const ccByName = new Map();
+  for (const line of fs.readFileSync(f("countryInfo.txt"), "utf8").split("\n")) {
+    if (!line || line[0] === "#") continue;
+    const c = line.split("\t"); ccByName.set(key(c[4]), c[0]);
+  }
+
   return {
+    ccOf(name) {
+      const k = key(name);
+      if (ccByName.has(k)) return ccByName.get(k);
+      for (const [n, cc] of ccByName) if (n.length > 3 && (n.includes(k) || k.includes(n))) return cc;
+      return null;
+    },
     find(cc, region, title) {
       if (!cc) return null;
       if (region) {

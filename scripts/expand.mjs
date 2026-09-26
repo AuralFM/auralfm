@@ -229,16 +229,23 @@ for (const s of byStream.values()) {
     const [i, d] = nearest(s.lat, s.lon);
     if (i >= 0 && d <= NEAR_KM && (!s.country || sameCountryName(full.places[i].country, ourCountry(s.country)))) { p = i; via = "near"; }
     else if (i >= 0 && d <= SAME_NEW_PLACE_KM && full.places[i].src === "rb") { p = i; via = "own"; }
-    else if (s.state && countryKey(s.state) !== countryKey(s.country)) {
+    else if (s.state && !sameCountryName(s.state, ourCountry(s.country)) && countryKey(s.state) !== countryKey(s.country)) {
       const country = ourCountry(s.country) || (i >= 0 ? full.places[i].country : "");
       full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: s.state, country, geo: [s.lon, s.lat], src: "rb" });
       p = full.places.length - 1; index(p); newPlaces++; via = "own";
-    } else {
-      const near = i >= 0 && d <= 150 ? full.places[i] : null;
-      const country = ourCountry(s.country) || near?.country || "";
-      full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: near ? `${near.title.split(",")[0]} area` : country,
+    } else if (i >= 0 && d <= 150) {
+      const near = full.places[i];
+      const country = ourCountry(s.country) || near.country;
+      full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: `${near.title.split(",")[0]} area`,
         country, geo: [s.lon, s.lat], src: "rb" });
       p = full.places.length - 1; index(p); newPlaces++; via = "own";
+    } else {
+      // A position with no town of ours within 150 km and no region named: often
+      // a wrong position (radio-browser had one "France" in Iraq). Not a dot of
+      // its own, then: a town or region GeoNames knows, else its country.
+      [p, via] = fromGazetteer(s);
+      if (p < 0) { p = somewhereIn(s.country); via = "country"; }
+      if (p < 0) { hold("no country either"); continue; }
     }
   } else if (s.state) {
     const hits = (byTitle.get(countryKey(s.state)) || []).filter((i) => sameCountryName(full.places[i].country, ourCountry(s.country)));
@@ -285,7 +292,37 @@ for (const [k, v] of Object.entries(why).sort((a, b) => b[1] - a[1])) console.lo
 console.log(`\nmost added: ${Object.entries(countries).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
 console.log(`genres gained: ${Object.entries(genreGain).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([k, v]) => `${k} +${v}`).join(" · ")}`);
 
-if (dry) { console.log("\n--dry: nothing written"); process.exit(0); }
 full.channels.push(...added);
+
+// ── corrections by hand (data/corrections.json, from scripts/review.mjs) ────
+// Applied to every station, ours or radio-browser's, after everything else, so
+// a correction outlives the next crawl: remove it, or move it to a country, or
+// to a town in that country (one of our places, else one GeoNames knows, else
+// "Somewhere in" that country).
+const CORR = path.join(DATA, "corrections.json");
+const corr = fs.existsSync(CORR) ? JSON.parse(fs.readFileSync(CORR, "utf8")).stations || {} : {};
+let corrected = 0, removedByHand = 0;
+if (Object.keys(corr).length) {
+  const byId = new Map(full.channels.map((c) => [c.id, c]));
+  const drop = new Set();
+  for (const [id, fix] of Object.entries(corr)) {
+    const c = byId.get(id); if (!c) continue;
+    if (fix.remove) { drop.add(id); removedByHand++; continue; }
+    const country = fix.country ? ourCountry(fix.country) : c.country;
+    let p = -1;
+    if (fix.town) {
+      const want = countryKey(fix.town);
+      p = full.places.findIndex((pl) => countryKey(pl.title.split(",")[0]) === want && sameCountryName(pl.country, country));
+      if (p < 0 && G) { const hit = G.find(G.ccOf(country), fix.town, ""); if (hit?.town) p = atTown(hit.town, country); }
+    }
+    if (p < 0) p = somewhereIn(country);
+    if (p < 0) continue;
+    c.p = p; c.place = full.places[p].id; c.country = full.places[p].country; corrected++;
+  }
+  full.channels = full.channels.filter((c) => !drop.has(c.id));
+  console.log(`corrections by hand: ${corrected} moved, ${removedByHand} removed`);
+}
+
+if (dry) { console.log("\n--dry: nothing written"); process.exit(0); }
 writeBundles(full, F);
 console.log(`\nwrote ${full.channels.length} stations in ${full.places.length} places`);

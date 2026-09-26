@@ -493,7 +493,8 @@ p { text-wrap: pretty; }
 .wait-form label, .wait-form legend { font: 700 13px/18px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .wait-form legend { padding: 0; margin-bottom: 8px; }
 .wait-form .opt { color: var(--bone2); font-weight: 400; margin-left: 6px; }
-.wait-form input[type=email], .wait-form input[type=text], .wait-form textarea {
+.wait-form .field-hint { color: var(--bone2); font-size: 13px; line-height: 18px; margin-top: 6px; }
+.wait-form input[type=email], .wait-form input[type=text], .wait-form input[type=url], .wait-form textarea {
   width: 100%; background: transparent; color: var(--bone); border: 1px solid var(--line); border-radius: 0;
   padding: 12px 14px; font: 400 16px/24px var(--body); transition: border-color .5s var(--ease);
 }

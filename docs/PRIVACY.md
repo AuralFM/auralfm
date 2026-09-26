@@ -141,6 +141,20 @@ and a build for the beta, or membership opening. It is never sold, shared, or
 added to any other list. To come off either list, email **hello@auralfm.xyz**
 and we delete it.
 
+## Claiming a station (the website only)
+
+People who run a station can claim its page with a form on docs.auralfm.xyz. It
+asks for the station, your **name** and **email address**, and whatever you choose
+to add: the station's website, a description, your links, a Nostr key and a
+**Lightning address** for tips. It is stored the same way as the waitlists: with
+the company that hosts the website, readable only by us, capped per connection.
+
+We use your email to confirm the station is yours and for nothing else. The
+description, links and Lightning address are published on the station's page in
+the app, because that is what you sent them for; your name and email are never
+published. To change or remove any of it, send the form again or email
+**hello@auralfm.xyz**.
+
 ## Shortwave receivers
 
 The shortwave receivers on the globe are private machines — someone's radio and

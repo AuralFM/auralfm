@@ -259,7 +259,30 @@ function renderStations() {
     stationListEl.appendChild(el);
   }
   stationListEl.appendChild(addStationRow());
-  paintNearby();
+  paintElsewhere().then(paintNearby);
+}
+
+/**
+ * The rest of the country, after this town's own stations.
+ *
+ * Stations that gave only their country live at "Somewhere in <country>"
+ * (scripts/expand.mjs). They have no dot and come last in every list, so this
+ * row, at the end of any real town in that country, is how you reach them:
+ * the town first, then the country's stations with no town (Melton, 26 Sept).
+ */
+async function paintElsewhere() {
+  const here = selection.place;
+  if (!here || here.nowhere) return;
+  const mine = selection.placeIndex;
+  let found = null;
+  try {
+    const r = await window.auralfm.places(`somewhere ${here.country}`, 12);
+    found = (r.places || []).find((p) => p.nowhere && p.country === here.country && /^Somewhere in (the )?/.test(p.title)
+      && !/, /.test(p.title) && p.title.replace(/^Somewhere in (the )?/, "") === here.country.replace(/^The /, ""));
+  } catch { /* nothing to add */ }
+  if (!found || selection.placeIndex !== mine) return;
+  stationListEl.append(placeSuggestion(found, `${found.count} ` +
+    (found.count === 1 ? t("elsewhere.one", "station with no town given") : t("elsewhere.many", "stations with no town given"))));
 }
 
 /**

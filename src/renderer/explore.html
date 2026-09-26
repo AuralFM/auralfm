@@ -981,16 +981,17 @@
      The "i" sits beside the star, in the star's quiet colour. It shows on hover
      and focus like the star, and always on a touch screen, which has no hover. */
   .pinfo{
-    flex:none;width:20px;height:20px;border-radius:50%;border:1px solid var(--label3);background:none;
-    color:var(--label2);font-family:inherit;font-size:12px;line-height:18px;font-weight:650;text-align:center;padding:0;
+    flex:none;width:13px;height:13px;border-radius:50%;border:1px solid var(--label3);background:none;
+    color:var(--label2);font-family:inherit;font-size:9px;line-height:11px;font-weight:700;text-align:center;padding:0;
     position:relative;
     opacity:0;transition:opacity var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out);
   }
   .st:hover .pinfo,.st:focus-within .pinfo,.pinfo[aria-expanded="true"]{opacity:1}
   .pinfo[aria-expanded="true"]{color:var(--accent);border-color:var(--accent)}
   .pinfo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  /* Drawn at 20px, hit at 40: a touch target has to be big enough for a thumb. */
-  .pinfo::after{content:"";position:absolute;inset:-10px}
+  /* Drawn smaller than the star beside it (Melton: never bigger than the
+     favourite), hit at 37px: a touch target has to be big enough for a thumb. */
+  .pinfo::after{content:"";position:absolute;inset:-12px}
   @media (hover:none){.pinfo{opacity:.8}}
   .sprofile{margin:2px 6px 8px;padding:12px;border-radius:var(--r-md);background:var(--fill);display:flex;flex-direction:column;gap:8px}
   .phead{display:flex;align-items:center;gap:10px}

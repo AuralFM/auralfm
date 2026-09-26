@@ -55,6 +55,21 @@ const enrich = new Map();
 if (fs.existsSync(F.enrich)) for (const line of fs.readFileSync(F.enrich, "utf8").split("\n")) {
   try { const r = JSON.parse(line); enrich.set(r.id, r); } catch { /* half a line */ }
 }
+// Claims approved through scripts/claims.mjs (the form at docs.auralfm.xyz/claim):
+// the station's own words, which win over anything crawled. Names and emails
+// stay in data/claims.json; only what the station sent to be shown is used.
+const approved = fs.existsSync(path.join(ROOT, "data/claims.json"))
+  ? JSON.parse(fs.readFileSync(path.join(ROOT, "data/claims.json"), "utf8")).approved || {} : {};
+const SOCIAL_HOST = [["instagram", /instagram\.com/], ["facebook", /facebook\.com|fb\.com/], ["x", /(^|\.)(x|twitter)\.com/],
+  ["youtube", /youtube\.com|youtu\.be/], ["tiktok", /tiktok\.com/], ["soundcloud", /soundcloud\.com/], ["mixcloud", /mixcloud\.com/],
+  ["spotify", /spotify\.com/], ["bluesky", /bsky\.app/], ["telegram", /t\.me|telegram\.me/], ["whatsapp", /wa\.me|whatsapp\.com/]];
+const socialFrom = (links = []) => {
+  const out = {};
+  for (const l of links) { let h = ""; try { h = new URL(l).hostname; } catch { continue; }
+    const hit = SOCIAL_HOST.find(([, re]) => re.test(h)); if (hit && !out[hit[0]]) out[hit[0]] = l; }
+  return out;
+};
+
 const rb = new Map();
 if (fs.existsSync(F.dump)) for (const s of JSON.parse(fs.readFileSync(F.dump, "utf8"))) rb.set(s.uuid, s);
 console.log(`profiles: ${full.channels.length} stations, ${enrich.size} of them asked about themselves`);
@@ -63,7 +78,11 @@ const shards = new Map();
 const n = { tagged: 0, newlyTagged: 0, onAir: 0, described: 0, social: 0, image: 0, claimed: 0, tips: 0 };
 for (const c of full.channels) {
   const e = enrich.get(c.id), r = c.rbuuid ? rb.get(c.rbuuid) : null;
-  const stream = e?.stream || {}, site = e?.site || {}, claim = site.claim || {};
+  const stream = e?.stream || {}, site = e?.site || {};
+  // A form claim that was approved outranks a claim file, which outranks the crawl.
+  const form = approved[c.id];
+  const claim = { ...(site.claim || {}), ...(form || {}) };
+  const formSocial = form ? socialFrom(form.links) : {};
 
   const before = (c.tags || []).length;
   const tags = [...new Set([...(c.tags || []), ...genresFrom(stream.genre), ...genresFrom(claim.genres)])];
@@ -78,7 +97,7 @@ for (const c of full.channels) {
     description: claim.description || site.description || stream.description,
     image: https(claim.logo) || https(site.image) || https(c.logo) || https(r?.logo),
     lang: site.lang || c.lang || r?.lang,
-    social: site.social && Object.keys(site.social).length ? site.social : undefined,
+    social: Object.keys({ ...(site.social || {}), ...formSocial }).length ? { ...(site.social || {}), ...formSocial } : undefined,
     bitrate: stream.br, genres: names(k.genres), moods: names(k.moods), formats: names(k.formats), scenes: names(k.scenes),
     explicit: c.explicit || undefined,
     claim: claim.lightning || claim.nostr ? clean({ lightning: claim.lightning, nostr: claim.nostr, contact: claim.contact }) : undefined,
@@ -87,7 +106,7 @@ for (const c of full.channels) {
   if (profile.description) n.described++;
   if (profile.social) n.social++;
   if (profile.image) n.image++;
-  if (site.claim) n.claimed++;
+  if (site.claim || form) n.claimed++;
   if (profile.claim?.lightning) n.tips++;
   const s = shardOf(c.id);
   if (!shards.has(s)) shards.set(s, {});

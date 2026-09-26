@@ -36,7 +36,7 @@
     box.textContent = "";
     if (!p) {
       box.append(el("p", "pnone", t("profile.none", "Nothing more about this station yet.")));
-      box.append(claimLine());
+      box.append(claimLine(ch));
       return;
     }
     const head = el("div", "phead");
@@ -57,7 +57,11 @@
     const facts = [where, langName, p.bitrate ? `${p.bitrate} kbps` : null].filter(Boolean).join(" · ");
     head.append(el("p", "pwhere", facts));
     box.append(head);
-    if (p.description) box.append(el("p", "pdesc", p.description));
+    // Thirty words at most, then "…" (Melton): a taste of the station, not its page.
+    if (p.description) {
+      const words = p.description.trim().split(/\s+/);
+      box.append(el("p", "pdesc", words.length > 30 ? `${words.slice(0, 30).join(" ").replace(/[,;:.\-–—]+$/, "")}…` : p.description));
+    }
 
     const chips = [...(p.explicit ? [t("profile.explicit", "Explicit")] : []), ...(p.genres || []).slice(0, 4), ...(p.moods || []).slice(0, 3)];
     if (chips.length) {
@@ -80,13 +84,14 @@
       tip.title = ln;
       box.append(tip);
       box.append(el("p", "pnote", t("profile.tipNote", "Wallet to wallet, to the address the station published itself. AuralFM never holds the money.")));
-    } else box.append(claimLine());
+    } else box.append(claimLine(ch));
   }
 
-  const claimLine = () => {
+  const claimLine = (ch) => {
     const p = el("p", "pnote");
     p.append(t("profile.claimQ", "Run this station? "));
-    p.append(link("https://docs.auralfm.xyz/stations/", t("profile.claim", "Claim its page")));
+    p.append(link(`https://docs.auralfm.xyz/claim/?station=${encodeURIComponent(ch?.title || "")}&id=${encodeURIComponent(ch?.id || "")}`,
+      t("profile.claim", "Claim its page")));
     return p;
   };
 

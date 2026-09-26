@@ -26,6 +26,7 @@ let byPlace = [];       // placeIndex -> [channelIndex] — built once, so Explo
 let placeHay = null;    // "place ∙ country" per place, on first search
 let bands = [];         // "am" | "fm" | null, derived from the title
 let generated = null;
+let nowhere = new Uint8Array(0); // 1 for "Somewhere in …" and "Online only": no town, no real dot
 
 /**
  * Broadcast band, inferred from the station name — the only signal there is.
@@ -83,6 +84,11 @@ function load() {
   byPlace = places.map(() => []);
   channels.forEach((c, i) => byPlace[c[2]]?.push(i));
   bands = channels.map((c) => detectBand(c[1]));
+  // Stations whose town nobody gave live at "Somewhere in <country>" (or
+  // "Online only"), made by scripts/expand.mjs. Their position is a stand-in, so
+  // they come after every real town wherever places are listed, and draw no dot
+  // on the globe (Melton, 26 Sept: the real cities first; these at the end).
+  nowhere = Uint8Array.from(places, (p) => (/^(Somewhere in |Online only$)/.test(p[0]) ? 1 : 0));
 
   console.log(`catalog: ${channels.length} channels across ${places.length} places`);
   return true;
@@ -213,6 +219,7 @@ const hydratePlace = (i) => ({
   lon: places[i][2],
   lat: places[i][3],
   count: byPlace[i].length,
+  ...(nowhere[i] ? { nowhere: true } : {}),
 });
 
 /** Every channel broadcasting from one place — the Explore primitive. */
@@ -358,13 +365,16 @@ function placeSearch(query, limit = 400, opts = {}) {
   }
   if (terms.length) {
     const first = terms[0];
-    // Prefix matches first ("berlin" before "new berlin"), then by station count.
-    out.sort((a, b) =>
+    // Real towns before "Somewhere in …", then prefix matches first ("berlin"
+    // before "new berlin"), then by station count.
+    out.sort((a, b) => nowhere[a] - nowhere[b] ||
       (ph[a].startsWith(first) ? 0 : 1) - (ph[b].startsWith(first) ? 0 : 1) ||
       byPlace[b].length - byPlace[a].length);
   } else {
     const ordered = orderBrowse(out, opts);
-    return { total: ordered.length, places: ordered.slice(0, limit).map(hydratePlace) };
+    // Whatever the order, the places with no town come after all the real ones.
+    const last = [...ordered.filter((i) => !nowhere[i]), ...ordered.filter((i) => nowhere[i])];
+    return { total: last.length, places: last.slice(0, limit).map(hydratePlace) };
   }
   return { total: out.length, places: out.slice(0, limit).map(hydratePlace) };
 }
@@ -378,7 +388,7 @@ function globePoints() {
   const out = [];
   for (let i = 0; i < places.length; i++) {
     const n = byPlace[i].length;
-    if (n) out.push([i, places[i][2], places[i][3], n]);
+    if (n && !nowhere[i]) out.push([i, places[i][2], places[i][3], n]);
   }
   return out;
 }

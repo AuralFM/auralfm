@@ -325,6 +325,18 @@
     for (const input of [name, email])
       input.addEventListener("input", () => { if (input.getAttribute("aria-invalid") === "true" && input.value.trim()) wrong(input, ""); });
     const choice = form.dataset.choice;
+    // More fields than name and email (the station claim form): data-extra names
+    // them, and any that are filled in are sent too. data-prefill fills fields
+    // from the address, so a station's "Claim its page" arrives already named.
+    const extra = (form.dataset.extra || "").split(",").map((f) => f.trim()).filter(Boolean);
+    if (form.dataset.prefill) {
+      const q = new URLSearchParams(location.search);
+      for (const pair of form.dataset.prefill.split(",")) {
+        const [param, field] = pair.split(":").map((x) => x.trim());
+        if (q.get(param) && form.elements[field]) form.elements[field].value = q.get(param).slice(0, 200);
+      }
+    }
+    const lightning = form.elements.lightning;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       say("");
@@ -335,6 +347,10 @@
       else if (!email.validity.valid || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         wrong(email, "That email address does not look right. Check it and try again."); bad ||= email;
       } else wrong(email, "");
+      // A Lightning address looks like an email address: name@wallet.example.
+      if (lightning && lightning.value.trim() && !/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(lightning.value.trim())) {
+        wrong(lightning, "A Lightning address looks like name@wallet.example. Check it and try again."); bad ||= lightning;
+      } else if (lightning) wrong(lightning, "");
       if (bad) { bad.focus(); return; }
       const done = () => { form.classList.add("sent"); say(form.dataset.done, "ok"); };
       // A person never fills in the hidden field. Tell a bot it worked and send nothing.
@@ -345,7 +361,9 @@
         const res = await fetch(form.dataset.waitlist, {
           method: "POST",
           headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-          body: JSON.stringify({ name: who, email: value, [choice]: form.elements[choice].value, ...(note ? { note } : {}) }),
+          body: JSON.stringify({ name: who, email: value, ...(choice ? { [choice]: form.elements[choice].value } : {}),
+            ...(note ? { note } : {}),
+            ...Object.fromEntries(extra.map((f) => [f, form.elements[f]?.value.trim()]).filter(([, v]) => v)) }),
         });
         if (res.ok) { done(); return; }
         const body = JSON.stringify(await res.json().catch(() => ({})));
