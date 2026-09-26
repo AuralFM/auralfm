@@ -17,6 +17,7 @@ data/_radiobrowser.json
 data/_streams.jsonl
 data/streams.log
 data/_enrich.jsonl
+data/profiles/
 data/enrich.log
 src/renderer/vendor/
 dist/
