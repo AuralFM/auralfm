@@ -302,7 +302,11 @@ async function selectPlace(i, { keepFilter = false } = {}) {
  * `sdrSel` (explore-globe.js) and `tunerStop` (explore-dial.js) are both in
  * files the web does ship, so nothing here needs a guard.
  */
-async function goToPlace(i, { play = false, fly = true } = {}) {
+async function goToPlace(i, { play = false, fly = true, hold = false } = {}) {
+  // A place chosen: the centre may lead again (explore-view.js) — unless this is
+  // the player's "i", which holds it for the card it opens. Set before the
+  // awaits below, so the drift cannot slip in while the place loads.
+  holdCentre = hold;
   browsingPlaces = false;              // a place was chosen; the list has done its job
   sdrSel = null;                       // a place and a receiver are never both selected
   tunerStop();                         // and a place has nothing to tune

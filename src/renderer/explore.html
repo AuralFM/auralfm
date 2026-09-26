@@ -1008,23 +1008,50 @@
   .ptip{align-self:flex-start;font-size:13px;font-weight:600;padding:6px 12px;border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);text-decoration:none}
   .ptip:focus-visible,.plink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .pnote,.pnone{font-size:12px;color:var(--label2)}
-  /* The same "i" in the player bar, for the station you are hearing (Melton,
-     26 Sept). Always shown there — the bar has no hover to reveal it — and a
-     little larger than in a list row, as the bar's type is; still caught at 38. */
-  .pinfo.nowinfo{opacity:1;width:14px;height:14px;font-size:9.5px;line-height:12px}
-  /* Its card opens above the bar, as the output menu does, and is the list's
-     card with the station's name on top: out here nothing else says whose it is. */
-  .nowcard{
-    position:fixed;z-index:9400;width:320px;max-width:calc(100vw - 16px);max-height:min(420px,70vh);overflow:auto;
-    padding:12px;border-radius:var(--r-lg);background:var(--pane);border:1px solid var(--line);
-    box-shadow:0 12px 40px rgba(0,0,0,.45);backdrop-filter:blur(20px);
-    display:flex;flex-direction:column;gap:8px;
+  /* ── The playing station's card, pulled up out of the player ─────────────────
+     Melton, 26 Sept: an "i" that popped a card out over Explore or Headlines was
+     clutter. The player itself pulls up instead: the handle on its top edge, or
+     a drag anywhere on the bar that is not a control. The drawer's height is
+     set by explore-profile.js as the finger moves; its content rides the top
+     edge, as a sheet's does, and anything taller than the cap scrolls. */
+  .now{position:relative}
+  .nowgrab{
+    position:absolute;top:0;left:50%;width:44px;height:14px;margin-left:-22px;padding:0;border:0;
+    background:none;cursor:grab;z-index:2;
   }
-  .nowcard[hidden]{display:none}
+  .nowgrab::before{
+    content:"";position:absolute;left:50%;top:4px;width:30px;height:4px;margin-left:-15px;
+    border-radius:var(--r-pill);background:var(--label3);transition:background var(--dur-hover) var(--ease-out);
+  }
+  .nowgrab:hover::before{background:var(--label2)}
+  /* Up, the card carries its own handle; one pill is enough. */
+  .nowgrab[aria-expanded="true"]::before{opacity:0}
+  .nowgrab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--r-sm)}
+  .nowdrawer{
+    position:fixed;left:0;z-index:9300;width:min(420px,100vw);height:0;overflow:hidden;
+    background:var(--pane);box-shadow:inset 0 .5px 0 var(--line),0 -10px 40px rgba(0,0,0,.35);
+    border-radius:var(--r-lg) var(--r-lg) 0 0;
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  }
+  .nowdrawer[hidden]{display:none}
+  .nowdrawer.settling{transition:height var(--dur-panel) var(--ease-out)}
+  .nowcard{padding:18px 16px 14px;display:flex;flex-direction:column;gap:8px;max-height:min(360px,50vh);overflow-y:auto;overscroll-behavior:contain}
+  .nowcard::before{
+    content:"";position:absolute;left:50%;top:6px;width:30px;height:4px;margin-left:-15px;
+    border-radius:var(--r-pill);background:var(--label3);
+  }
   .nowcard:focus{outline:none}
-  .nowcard .ptitle{font-size:13px;font-weight:590;color:var(--label);margin:0}
   .nowcard .sprofile{margin:0;padding:0;background:none}
   .nowcard p{margin:0}
+  @media (prefers-reduced-motion:reduce){.nowdrawer.settling{transition:none}}
+  /* On a wide window it is a strip of the layout, above the player: the globe,
+     the headlines and the station list make room for it rather than having it
+     laid over their bottom edge. (On a phone it is chrome instead; web.css.) */
+  /* A wide window has the rail for this: the "i" beside the name opens the
+     station there (Melton, 26 Sept). The pull-up is the phone's, which has no rail. */
+  body:not(.phonebar) .nowgrab,body:not(.phonebar) .nowdrawer{display:none}
+  body.phonebar .now .nowinfo{display:none}
+  .pinfo.nowinfo{opacity:1;width:14px;height:14px;font-size:9.5px;line-height:12px}
   .pnote .plink{font-size:12px}
   .star:active{transform:scale(.85)}
   /**
@@ -1718,7 +1745,15 @@
   </div>
 </div>
 
+<!-- What the station you are hearing says about itself: pulled up out of the
+     player, flicked back down (explore-profile.js). The same card the list's "i"
+     opens. It rises from the bar rather than floating over whatever is open. -->
+<div id="nowdrawer" class="nowdrawer" hidden>
+  <div class="nowcard" id="nowcard" role="region" tabindex="-1"></div>
+</div>
 <div class="now" id="now" hidden>
+  <button id="nowGrab" class="nowgrab" type="button" aria-expanded="false" aria-controls="nowdrawer"
+          data-i18n-title="profile.about" title="About this station" hidden></button>
   <button id="play" data-i18n-title="ctl.play" title="Play"></button>
   <!-- Order is the layout. The two controls that act on this station sit
        together, then the on-air lamp sits against the name it describes. The
@@ -1734,9 +1769,9 @@
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
-  <!-- What the station says about itself, for the one you are hearing: the same
-       card the list opens (explore-profile.js). Hidden until there is a station. -->
-  <button id="nowInfo" class="pinfo nowinfo" type="button" aria-expanded="false" aria-controls="nowcard"
+  <!-- About the station you are hearing: opens its place in the rail with its
+       card unfolded (explore-profile.js). A phone pulls the bar up instead. -->
+  <button id="nowInfo" class="pinfo nowinfo" type="button"
           data-i18n-title="profile.about" title="About this station" hidden>i</button>
   <!-- Announced, not shown. The visible name and status are two separate
        elements that change together, so a live region on either one alone would
@@ -1786,7 +1821,6 @@
   rendered inside it is clipped at the bar's own edge no matter how it is
   positioned. It is placed from the button's rectangle at open time instead.
 -->
-<div id="nowcard" class="nowcard" role="region" tabindex="-1" hidden></div>
 <div id="outmenu" class="outmenu" role="listbox" hidden
      aria-label="Where the sound comes out"></div>
 

@@ -371,9 +371,13 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   /* The ring stays 30px; the target around it is 44. Play is the one control
      on this row everybody uses, and it was the smallest thing on the screen. */
   body.phonebar .now #play::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; }
-  /* The station's "i": drawn a touch larger than in the list, caught at 44. */
-  body.phonebar .now .nowinfo { width: 16px; height: 16px; font-size: 10px; line-height: 14px; flex: none; }
-  body.phonebar .now .nowinfo::after { inset: -14px; }
+  /* The handle that pulls the station's card up out of the player: on its top
+     edge, over the big button, and wide enough for a thumb. The drawer runs
+     the full width here and sits with the chrome, above the panels. */
+  body.phonebar .now > .nowgrab.nowgrab { position: absolute; z-index: 2; width: 64px; margin-left: -32px; height: 18px; }
+  body.phonebar .nowdrawer { width: 100vw; z-index: 5; border-radius: var(--r-xl) var(--r-xl) 0 0;
+    background: color-mix(in srgb, var(--bg) 94%, transparent); }
+  body.phonebar #stationlist, body.phonebar #placelist { padding-bottom: var(--drawer, 0px); }
   body.phonebar .now #lock {
     flex: none; width: 32px; height: 32px; min-width: 32px; min-height: 32px;
     display: grid; place-items: center; padding: 0; font-size: 13px;

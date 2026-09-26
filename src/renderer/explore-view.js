@@ -125,6 +125,8 @@ async function initGlobe() {
   globe.controls().dampingFactor = 0.08;
   globe.controls().rotateSpeed = 0.75;
   globe.controls().addEventListener("change", onCameraChange);
+  // A hand on the globe is browsing again, whatever was holding the rail.
+  globe.controls().addEventListener("start", () => { holdCentre = false; });
   applyLod(true);
 
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
@@ -432,8 +434,15 @@ function onCameraChange() {
  * *not* start playing — auto-playing on every drag would be chaos. Clicking a
  * dot is the gesture that makes sound.
  */
+/**
+ * Set when the player's "i" opens the playing station in the rail
+ * (explore-profile.js): the card was asked for, so the idle drift must not swap
+ * the place out from under it a few seconds later. Grabbing the globe, or going
+ * to any place yourself (goToPlace), lets the centre lead again.
+ */
+let holdCentre = false;
 function followCentre() {
-  if (!globe || !globePts || showingFavorites || browsingPlaces || flying) return;
+  if (!globe || !globePts || showingFavorites || browsingPlaces || flying || holdCentre) return;
   // Locked means locked: browsing the globe must not pull the list out from
   // under you. Clicking a dot or searching still works — this only stops the
   // globe's own motion from changing what you are looking at.

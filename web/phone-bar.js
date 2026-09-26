@@ -358,12 +358,17 @@
    * playing, and iOS grows the bar by the home indicator.
    */
   const chrome = () => {
-    const h = (tabs.hidden ? 0 : tabs.offsetHeight) + (now.hidden ? 0 : now.offsetHeight);
+    // The station's card, pulled up out of the player, is chrome too while it is
+    // up: the panels above move with it instead of being covered.
+    const drawer = $("nowdrawer");
+    const h = (tabs.hidden ? 0 : tabs.offsetHeight) + (now.hidden ? 0 : now.offsetHeight)
+      + (drawer && !drawer.hidden ? drawer.offsetHeight : 0);
     document.documentElement.style.setProperty("--chrome", `${h}px`);
   };
   if (typeof ResizeObserver !== "undefined") {
     const ro = new ResizeObserver(chrome);
     ro.observe(tabs); ro.observe(now);
+    if ($("nowdrawer")) ro.observe($("nowdrawer"));
   }
   new MutationObserver(chrome).observe(now, { attributes: true, attributeFilter: ["hidden"] });
   addEventListener("resize", chrome);

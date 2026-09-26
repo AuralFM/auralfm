@@ -134,6 +134,7 @@ function hydrate(i) {
     country: p[1],
     lon: p[2],
     lat: p[3],
+    pi: c[2],                      // its place, for anything that opens it (the player's "i")
   };
 }
 
