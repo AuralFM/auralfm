@@ -2746,6 +2746,26 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${cases.length} readings hold: hits, classic hits, names, places, tag soup`);
 }
 
+// ── every require of package.json finds one ────────────────────────────────
+// src/main/ipc-app.js read the build channel with require("../package.json"),
+// written when it lived in src/main.js. After the split into src/main/ that
+// named src/package.json, which does not exist; the try/catch around it made
+// the failure silent, so every build reported no channel — no "beta" in About,
+// and the studio (shown in beta builds) never appeared in an installed app.
+{
+  console.log("\nevery require of package.json finds one");
+  const bad = [];
+  const walk = (dir) => fs.readdirSync(R(dir), { withFileTypes: true }).flatMap((d) =>
+    d.isDirectory() ? (d.name === "vendor" ? [] : walk(`${dir}/${d.name}`)) : d.name.endsWith(".js") ? [`${dir}/${d.name}`] : []);
+  for (const f of walk("src")) {
+    for (const m of fs.readFileSync(R(f), "utf8").matchAll(/require\(\s*["'](\.{1,2}\/[^"']*package\.json)["']\s*\)/g)) {
+      if (!fs.existsSync(path.resolve(path.dirname(R(f)), m[1]))) bad.push(`${f} requires ${m[1]}, which is not there`);
+    }
+  }
+  bad.length ? fail("every require of package.json finds one", bad.join("; "))
+    : pass("each relative require of package.json names a file that exists");
+}
+
 // ── a station plays from its own server, and no other directory is asked ──
 // The catalogue began as radio.garden's, and the desktop resolved every one of
 // those stations through radio.garden's listen endpoint — which answers only

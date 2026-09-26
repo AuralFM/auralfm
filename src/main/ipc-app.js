@@ -113,7 +113,10 @@ module.exports = function register(ctx) {
    */
   ipcMain.handle("app:version", () => {
     let channel = null;
-    try { channel = require("../package.json").buildChannel || null; } catch { /* dev */ }
+    // From the app's own folder, not a path relative to this file: this moved
+    // from src/main.js into src/main/ with "../package.json" unchanged, which
+    // then named a file that does not exist, and every build said no channel.
+    try { channel = require(require("node:path").join(app.getAppPath(), "package.json")).buildChannel || null; } catch { /* dev */ }
     return { version: app.getVersion(), channel, dev: !app.isPackaged };
   });
   ipcMain.handle("geo:distance", (_e, aLat, aLon, bLat, bLon, units) =>
