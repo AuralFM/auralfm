@@ -137,10 +137,16 @@ Only we can read it; it is not public. The host also sees your IP address when
 you send the form, and uses it to limit how many sign-ups one connection can
 send, which keeps spam out.
 
-We use it for one thing: to email you about what you signed up for — an invite
-and a build for the beta, or sponsorship opening. It is never sold, shared, or
-added to any other list. To come off either list, email **hello@auralfm.xyz**
-and we delete it.
+We use it for one thing: to email you about what you signed up for — a note that
+you are on the list, then an invite and a build for the beta, or sponsorship
+opening. It is never sold, shared, or added to any other list. To come off
+either list, reply "remove" to any email from us, or write to
+**hello@auralfm.xyz**, and we delete it.
+
+**How the emails are sent.** Through [Resend](https://resend.com), an email
+delivery service, from hello@auralfm.xyz. To send one, Resend receives your name,
+your email address and the email itself; it does not get the rest of what you
+sent us. We do not put tracking pixels or tracked links in our emails.
 
 ## Claiming a station (the website only)
 
@@ -150,7 +156,9 @@ to add: the station's website, a description, your links, a Nostr key and a
 **Lightning address** for tips. It is stored the same way as the waitlists: with
 the company that hosts the website, readable only by us, capped per connection.
 
-We use your email to confirm the station is yours and for nothing else. The
+We use your email to confirm the station is yours, and to write to you about
+the claim — that we received it, and when it is approved — through Resend, as
+above; for nothing else. The
 description, links and Lightning address are published on the station's page in
 the app, because that is what you sent them for; your name and email are never
 published. To change or remove any of it, send the form again or email
