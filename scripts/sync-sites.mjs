@@ -28,7 +28,7 @@ const check = process.argv.includes("--check");
 
 const SHARED = [
   "aural.css", "aural.js", "404.html",
-  "assets/favicon.ico", "assets/favicon.svg", "assets/apple-touch-icon.png", "assets/share.jpg", "assets/live.json", "assets/desktop.webp",
+  "assets/favicon.ico", "assets/favicon.svg", "assets/apple-touch-icon.png", "assets/share.jpg", "assets/live.json", "assets/desktop.webp", "assets/phone-explore.webp",
   ...fs.readdirSync(R("home/assets/fonts")).map((f) => `assets/fonts/${f}`),
 ];
 const SITES = ["site", "docs-site"];

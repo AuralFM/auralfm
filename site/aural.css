@@ -464,6 +464,15 @@ p { text-wrap: pretty; }
 
 /* ── the waitlist forms ───────────────────────────────────────────────────── */
 .beta { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+/* The desktop window with the phone standing in front of it, bottom right. */
+.devices { grid-template-columns: minmax(0, 1fr); margin: 0; }
+.devices .cell:first-child { padding-top: 48px; padding-bottom: 48px; }
+.devices img { display: block; height: auto; }
+.devices .desk { width: 82%; }
+.devices .phone { width: 22%; margin: -34% 2% 0 auto; position: relative; border-radius: 28px;
+  border: 5px solid #1d1c1c; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+.devices figcaption { font: 400 13px/20px var(--mono); color: var(--bone2); }
+@media (max-width: 760px) { .devices .desk { width: 100%; } .devices .phone { width: 38%; margin-top: -22%; border-radius: 18px; border-width: 3px; } }
 /* A screenshot of the app in its own window, shadow and all: shown whole, on the onyx. */
 .shot { grid-template-columns: minmax(0, 1fr); margin: 0; }
 .shot img { display: block; width: 100%; max-width: 1313px; height: auto; margin: 0 auto; }
