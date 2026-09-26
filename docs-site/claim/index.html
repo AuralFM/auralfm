@@ -83,8 +83,8 @@
       <p class="proof">Rather not be listed at all? Say so in the note, and we take the station off.</p>
     </div>
     <form class="cell wait-form" data-waitlist="../.herenow/data/claims" data-choice="role"
-          data-extra="station,stationId,site,lightning,nostr,description,links"
-          data-prefill="station:station,id:stationId"
+          data-extra="station,station_id,site,lightning,description,links"
+          data-prefill="station:station,id:station_id"
           data-done="Thank you. We will check it is yours and put it on your page, usually within a few days." novalidate>
       <h2 id="claim-title" class="label">[ Claim your station ]</h2>
       <div class="field">
@@ -92,7 +92,7 @@
         <input id="c-station" name="station" type="text" maxlength="200" autocomplete="off" required aria-describedby="c-station-error">
         <p class="field-error" id="c-station-error" hidden></p>
       </div>
-      <input type="hidden" name="stationId">
+      <input type="hidden" name="station_id">
       <div class="field">
         <label for="c-name">Your name</label>
         <input id="c-name" name="name" type="text" maxlength="120" autocomplete="name" required aria-describedby="c-name-error">
@@ -127,11 +127,7 @@
       </div>
       <div class="field">
         <label for="c-links">Your links <span class="opt">optional</span></label>
-        <textarea id="c-links" name="links" rows="3" maxlength="800" placeholder="Instagram, Facebook, Mixcloud, anything else, one per line"></textarea>
-      </div>
-      <div class="field">
-        <label for="c-nostr">Nostr key <span class="opt">optional</span></label>
-        <input id="c-nostr" name="nostr" type="text" maxlength="70" spellcheck="false" autocapitalize="off" placeholder="npub1…">
+        <textarea id="c-links" name="links" rows="3" maxlength="800" placeholder="Instagram, Facebook, Mixcloud, a Nostr npub, anything else, one per line"></textarea>
       </div>
       <div class="field">
         <label for="c-note">Anything else <span class="opt">optional</span></label>
