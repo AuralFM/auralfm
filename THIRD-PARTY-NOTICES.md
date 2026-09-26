@@ -372,7 +372,7 @@ publish it are the reason this app has anything to show.
 - **NASA Black Marble / GIBS** — Public domain (US Government work). City lights at 8192×4096, and imagery layers.
 - **NOAA Space Weather Prediction Center** — Public domain (US Government work). Solar flux and K-index.
 - **WSPRnet / wspr.live** — Community published. Propagation reports.
-- **radio.garden** — Referenced. Station geography.
+- **GeoNames** — CC BY 4.0. Towns, regions and their positions (cities1000, admin1 codes, country info). https://www.geonames.org
 - **CelesTrak / SatNOGS** — Community published. Orbital elements.
 - **The KiwiSDR operators** — Volunteered. 837 receivers, on their hardware and their bandwidth, given away free. Not a licence — a debt.
 - **Inter** — SIL Open Font License 1.1. The interface typeface, vendored at `assets/fonts/InterVariable.woff2`. Copyright (c) 2016 The Inter Project Authors. Full licence at `assets/fonts/Inter-LICENSE.txt`.

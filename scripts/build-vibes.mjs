@@ -29,7 +29,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
 const catalog = createRequire(import.meta.url)(R("src/catalog.js"));
 const check = process.argv.includes("--check");
-if (!catalog.load()) { console.error("vibes: no catalogue — run npm run crawl"); process.exit(1); }
+if (!catalog.load()) { console.error("vibes: no catalogue — run npm run catalogue"); process.exit(1); }
 
 const APP = "https://listen.auralfm.xyz/";
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

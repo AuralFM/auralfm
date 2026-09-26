@@ -32,7 +32,7 @@ module.exports = function register(ctx) {
   ipcMain.handle("catalog:stats", () => catalog.stats());
   ipcMain.handle("stream:resolve", (_e, ch) => {
     // Nothing to resolve: you told us the URL. Going through the three-tier
-    // resolver would ask radio.garden about a station it has never heard of.
+    // resolver would ask radio-browser about a station it has never heard of.
     if (mine.isMine(ch?.id)) {
       const s = mine.get(ch.id);
       return s ? { url: s.url } : null;

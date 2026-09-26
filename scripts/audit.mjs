@@ -2746,30 +2746,54 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${cases.length} readings hold: hits, classic hits, names, places, tag soup`);
 }
 
-// ── a station found only in radio-browser plays from radio-browser ────────
-// scripts/expand.mjs adds stations radio.garden does not list; their id is
-// "rb-" + radio-browser's. Asking radio.garden for one gets nothing, and the
-// name search after it can land on another station with the same name. So the
-// desktop resolver must go straight to radio-browser by id. Checked with the
-// network faked: which URLs does resolving one ask for?
+// ── a station plays from its own server, and no other directory is asked ──
+// The catalogue began as radio.garden's, and the desktop resolved every one of
+// those stations through radio.garden's listen endpoint — which answers only
+// requests that look like its own website, so the app sent a borrowed Chrome
+// User-Agent and radio.garden's Referer. The web app used the same endpoint as
+// a fallback. Both are gone (Melton, 26 Sept: completely separate). This fails
+// if any code the apps run names radio.garden or sends a Referer, and, with the
+// network faked, if resolving a station asks anything but radio-browser: by id
+// when the station has one, else not at all (its own stream, from its profile).
 {
-  console.log("\na station found only in radio-browser plays from radio-browser");
+  const name = "a station plays from its own server, and no other directory is asked";
+  console.log("\na station plays from its own server, and no other directory is asked");
+  const bad = [];
+  const code = (f) => fs.readFileSync(R(f), "utf8").split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  const runtime = [...fs.readdirSync(R("src")).filter((f) => f.endsWith(".js")).map((f) => `src/${f}`),
+    ...fs.readdirSync(R("src/main")).filter((f) => f.endsWith(".js")).map((f) => `src/main/${f}`),
+    ...fs.readdirSync(R("src/renderer")).filter((f) => f.endsWith(".js")).map((f) => `src/renderer/${f}`),
+    ...fs.readdirSync(R("web")).filter((f) => f.endsWith(".js")).map((f) => `web/${f}`)];
+  for (const f of runtime) {
+    const c = code(f);
+    if (/radio\.garden/i.test(c)) bad.push(`${f} names radio.garden`);
+    if (/["']Referer["']\s*:/i.test(c)) bad.push(`${f} sends a Referer header`);
+  }
   const { createRequire } = await import("node:module");
   const resolver = createRequire(import.meta.url)(R("src/resolver.js"));
+  const profiles = createRequire(import.meta.url)(R("src/profiles.js"));
   const real = globalThis.fetch, asked = [];
   globalThis.fetch = async (u) => {
     asked.push(String(u));
     return new Response(JSON.stringify([{ url_resolved: "https://stream.example/live", lastcheckok: 1 }]),
       { status: 200, headers: { "content-type": "application/json" } });
   };
-  let got = null;
-  try { got = await resolver.resolve({ id: "rb-0000", title: "Test", country: "", rbuuid: "0000" }); }
-  finally { globalThis.fetch = real; }
-  const rg = asked.filter((u) => u.includes("radio.garden"));
-  !rg.length && got?.url === "https://stream.example/live" && asked.some((u) => u.includes("/json/stations/byuuid/0000"))
-    ? pass("resolved by radio-browser id, radio.garden never asked")
-    : fail("a station found only in radio-browser plays from radio-browser",
-      `asked ${asked.join(", ") || "nothing"}; got ${got?.url || "no stream"}`);
+  try {
+    const got = await resolver.resolve({ id: "af-test0000", title: "Test", country: "", rbuuid: "0000" });
+    if (got?.url !== "https://stream.example/live" || !asked.some((u) => u.includes("/json/stations/byuuid/0000")))
+      bad.push(`with a radio-browser id: asked ${asked.join(", ") || "nothing"}, got ${got?.url || "no stream"}`);
+    // A station with a stream of its own and no radio-browser id: nothing asked.
+    const shard = fs.existsSync(R("data/profiles")) ? fs.readdirSync(R("data/profiles")).find((f) => f.endsWith(".json")) : null;
+    const withStream = shard && Object.values(JSON.parse(fs.readFileSync(R(`data/profiles/${shard}`), "utf8"))).find((p) => p.stream);
+    if (withStream) {
+      asked.length = 0;
+      const own = await resolver.resolve({ id: withStream.id, title: withStream.title, country: withStream.country });
+      if (own?.url !== profiles.profile(withStream.id)?.stream || asked.length)
+        bad.push(`with its own stream: asked ${asked.join(", ") || "nothing"}, got ${own?.url || "no stream"}`);
+    }
+  } finally { globalThis.fetch = real; }
+  if (asked.some((u) => /radio\.garden/.test(u))) bad.push("radio.garden was asked");
+  bad.length ? fail(name, bad.join("; ")) : pass("radio-browser by id, else the station's own stream; radio.garden named nowhere the apps run");
 }
 
 // ── a station's profile is found where it was filed ───────────────────────
@@ -2786,7 +2810,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const bridgeSrc = fs.readFileSync(R("web/bridge.js"), "utf8");
   const body = /const shardOf = \(id\) => \{([\s\S]*?)\n\s*\};/.exec(bridgeSrc)?.[1];
   const web = body ? new Function("id", body) : null;
-  const ids = ["k3hL3UUv", "rb-c685c086-b716-4edd-b313-d4a7baf1084c", "_npeqOYP", "x", "Ae6kS7C7"];
+  const ids = ["af-3k9m2qx7", "af-0000zzzz", "k3hL3UUv", "x", "af-t4pd8w1n"];
   const bad = !build ? "scripts/lib/shard.mjs exports no shardOf" : !web ? "web/bridge.js has no shardOf" :
     ids.filter((id) => !(desktop(id) === build(id) && build(id) === web(id))).map((id) => `${id}: ${desktop(id)}/${build(id)}/${web(id)}`).join(", ");
   bad ? fail("a station's profile is found where it was filed", bad)

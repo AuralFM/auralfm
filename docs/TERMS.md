@@ -18,9 +18,9 @@ player, in the same sense that a web browser is not the websites it visits.
 
 ## The content is not ours
 
-Station listings come from public directories (radio.garden, radio-browser.info)
-and from what stations publish about themselves: their streams, websites and
-social accounts. Town and region names come from GeoNames (geonames.org, CC BY
+Station listings are AuralFM's own catalogue, confirmed from the public-domain
+radio-browser.info directory and from what stations publish about themselves:
+their streams, websites and social accounts. Town and region names come from GeoNames (geonames.org, CC BY
 4.0). Broadcasts belong to the stations, and so do their names and
 logos, which AuralFM shows only to say which station is which. Satellite imagery, weather, headlines, market
 prices and orbital data come from the third parties named in the app's About

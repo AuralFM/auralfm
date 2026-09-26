@@ -102,19 +102,23 @@ cd auralfm
 npm install
 ```
 
-The station catalog is **not** in the repo — it's generated, ~2.7 MB, and
-reproducible. Build it once (~50 minutes, one time):
+AuralFM's own stations are in the repo, in `data/catalogue.json`: every one
+confirmed by radio-browser.info or by its own stream and website, placed in its
+town from GeoNames. The bundle the app loads is generated from it, adding
+radio-browser's other stations, genres and what each station says about itself.
+GeoNames first (`data/geonames/`: cities1000, admin1CodesASCII, countryInfo, from
+download.geonames.org), then:
 
 ```bash
-npm run crawl     # radio.garden -> data/stations.json + stations.min.json
-npm run tags      # fold in radio-browser genre tags
+npm run catalogue # data/catalogue.json + radio-browser -> data/stations.json + stations.min.json
 npm run crawl:sdr # kiwisdr -> data/sdr.min.json, the receiver list
 npm run icons     # rasterize assets/*.svg, and build build/icon.icns
 npm start         # run it
 ```
 
 `crawl:sdr` takes seconds — it is one request to an aggregate list, never to the
-receivers themselves. `crawl` is the slow one.
+receivers themselves. `catalogue` is the slow one: the first run asks every
+station about itself, which takes hours; later runs ask only the new ones.
 
 The globe opens on launch. Close it and AuralFM keeps playing from the menu bar —
 right-click the tray icon for **Open the Globe**, **About**, **Open at Login** and
@@ -122,7 +126,8 @@ right-click the tray icon for **Open the Globe**, **About**, **Open at Login** a
 
 ### Just trying it out?
 
-`npm run crawl -- --limit 300` builds a usable catalog in about two minutes. The
+`node scripts/base.mjs && node scripts/profiles.mjs` builds a playable catalogue
+from the repo alone in under a minute, without genres from radio-browser. The
 receiver bundle is committed, so shortwave works immediately either way.
 
 ## What it does
@@ -264,15 +269,16 @@ which is a different and better problem.
 
 ## How it works
 
-Two directories, joined at build time, so the app depends on neither at runtime.
+Our own catalogue, joined at build time with radio-browser and what each
+station says about itself, so the app depends on none of them to browse.
 
 ```
 BUILD TIME
-  radio.garden ──── geography ────┐
-   12,296 places, all with coords │
-                                  ├──> data/stations.min.json  (2.7 MB)
-  radio-browser ──── genres ──────┘
-   61,520 stations, 11,777 tags
+  data/catalogue.json ── our stations ──┐  confirmed by radio-browser or by
+   placed from GeoNames                  │  their own stream and website
+                                         ├──> data/stations.min.json
+  radio-browser ── more stations, genres ┤
+  each station ── its stream, its site ──┘  (scripts/enrich.mjs)
 
   rx.kiwisdr.com ── receivers ────────> data/sdr.min.json      (98 KB)
    every listed shortwave site, all with GPS
@@ -280,22 +286,24 @@ BUILD TIME
 RUN TIME
   Search + Explore read the local bundles.       (no network)
 
-  Press play on a station -> resolve the stream URL:
-    1. radio.garden listen endpoint (302 -> real stream)
-    2. radio-browser, matched on name + country
+  Press play on a station -> its own server, found by:
+    1. radio-browser, by the station's own id there
+    2. the stream we recorded for it (its profile)
     3. last-known-good URL cached on disk
+    4. radio-browser, matched on name + country
     0. a station you added yourself skips all of it — you gave us the URL
 
   Press play on a shortwave band -> connect straight to that receiver:
     ws://host/kiwi/<ts>/SND, IMA-ADPCM, decoded in the browser
 ```
 
-Neither directory is queried while you browse, and playback survives both being
-unreachable once a station has played at least once.
+No directory is queried while you browse, and a station with a stream of its
+own recorded plays even when radio-browser is unreachable.
 
-**Why two sources?** radio.garden has coordinates for every place but no genre
-data at all. radio-browser has 11,777 genre tags but coordinates for only 22% of
-its stations. Neither is sufficient alone.
+**Why our own catalogue?** It began in 2026 as a crawl of radio.garden. On 26
+September it became AuralFM's own (scripts/own.mjs): a station stays only where
+radio-browser or the station itself confirms it, every one has an AuralFM id,
+and every town comes from GeoNames. Nothing in it is radio.garden's any more.
 
 **Being a good API citizen.** radio-browser's docs ask clients to report each
 play so their popularity ranking stays meaningful, so AuralFM calls
@@ -398,9 +406,13 @@ src/                     main process unless noted
     errors.js            renderer error capture
 scripts/
   audit.mjs              the test suite (npm run audit)
-  crawl.mjs              radio.garden -> station bundle (resumable)
+  base.mjs               data/catalogue.json <-> data/stations.json
+  own.mjs                the one-time move to a catalogue of our own (26 Sept 2026)
+  tags.mjs               radio-browser: genre tags, ids -> bundle
+  expand.mjs             radio-browser's other stations -> bundle
+  enrich.mjs             what each station says about itself (stream, website)
+  profiles.mjs           station profiles and the stream each plays from
   crawl-sdr.mjs          kiwisdr -> receiver bundle
-  tags.mjs               radio-browser genre tags -> bundle
   fetch-schedule.mjs     EiBi shortwave schedule
   relays.mjs             geo-located Nostr relay directory
   sky.mjs, lights.mjs    star bundle, city-lights texture
@@ -411,7 +423,8 @@ scripts/
   sync-kb.mjs            mirrors docs into the knowledge-base vault
   relay-test/            manual two-party tests against live relays
 assets/                  source icons, fonts, licences, attribution
-data/                    receivers, schedule, relays and word filter are
+data/                    receivers, schedule, relays, word filter, our own
+                         stations (catalogue.json) and their ids (ids.json) are
                          tracked; the station bundle is generated (gitignored)
 docs/                    privacy, terms, receivers, legal and security
 ```
@@ -421,8 +434,7 @@ docs/                    privacy, terms, receivers, legal and security
 | Command | What it does |
 |---|---|
 | `npm start` | Run the app |
-| `npm run crawl` | Build the station catalog (resumable, safe to Ctrl-C) |
-| `npm run crawl -- --build` | Rebuild bundles from existing progress, no network |
+| `npm run catalogue` | Build the station bundle from `data/catalogue.json` and radio-browser (resumable) |
 | `npm run tags` | Join radio-browser genre tags onto the catalog |
 | `npm run icons` | Regenerate PNGs from `assets/*.svg` |
 | `npm run crawl:sdr` | Refresh the shortwave receiver list |
@@ -434,7 +446,6 @@ docs/                    privacy, terms, receivers, legal and security
 | `npm run release` | Gate, build both arches, verify the artifacts, publish. `--dry-run` to rehearse |
 | `npm run test:relays` | Two independent clients meet over live relays and exercise presence, chat, notes, private messages and mutual favorites. **Manual only — never CI**, it publishes to other people's relays |
 | `npm run test:app-inbound` | Drives real inbound traffic from a second client into the running app and asserts against its DOM. **Manual only** — see the header for the setup |
-| `npm run check` | Report how stale the station catalogue is |
 
 ## Known limits
 
@@ -450,7 +461,7 @@ docs/                    privacy, terms, receivers, legal and security
   but returns 403 to anything sending a browser `Origin`. Expect roughly 5% of
   streams to be dead or blocked at any given time.
 - **The catalog is a snapshot, not a subscription.** Stations come and go; re-run
-  `npm run crawl` every few months.
+  `npm run catalogue` every few months.
 - **Unsigned.** Gatekeeper will complain until the app is signed and notarised.
 - **The interface is mid-rework.** This began as a menu-bar player and became a
   standalone app with a globe, a receiver, a spectrum display and a chat. Each
@@ -509,7 +520,9 @@ Station and place names are matched with the same ranking the in-app search uses
 so "kexp", "wwoz" and "new orleans" all work without being exact.
 ## Credits
 
-- Station geography: [radio.garden](https://radio.garden)
+- Stations: [radio-browser.info](https://www.radio-browser.info) (public domain),
+  and the stations themselves
+- Towns and regions: [GeoNames](https://www.geonames.org) (CC BY 4.0)
 - Shortwave receivers: the [KiwiSDR](http://kiwisdr.com) community, and the
   operators who pay for the bandwidth
 - Orbital elements: [CelesTrak](https://celestrak.org) and [SatNOGS](https://db.satnogs.org)

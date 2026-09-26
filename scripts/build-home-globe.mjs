@@ -31,7 +31,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
 const OUT = R("home", "assets", "globe");
 const catalog = createRequire(import.meta.url)(R("src/catalog.js"));
-if (!catalog.load()) { console.error("home-globe: no catalogue — run npm run crawl"); process.exit(1); }
+if (!catalog.load()) { console.error("home-globe: no catalogue — run npm run catalogue"); process.exit(1); }
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.copyFileSync(R("src/renderer/vendor/globe.gl.min.js"), path.join(OUT, "globe.gl.min.js"));

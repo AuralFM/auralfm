@@ -7,16 +7,15 @@
  *   node scripts/tags.mjs --offline  # never touch the network
  *   node scripts/tags.mjs --dry      # match and report, write nothing
  *
- * radio.garden ships no genre metadata, so "jazz new orleans" can only ever find
- * stations with "jazz" in the name. radio-browser has ~11.7k tags but no useful
- * coordinates — so we crawl geography from one and genre from the other and join
- * them here.
+ * The catalogue (scripts/own.mjs) carries each station's own stream and
+ * website but few genres; radio-browser has ~11.7k tags. This joins them, so
+ * "jazz new orleans" finds more than the stations with "jazz" in their name.
  *
  * The join is the whole problem: two directories, no shared identifier. Matching
  * is tiered from most to least trustworthy, first hit wins, and every tier that
  * could produce a false positive is gated on corroborating evidence.
  *
- * September 2026: the stream itself became the first tier. scripts/streams.mjs
+ * September 2026: the stream itself became the first tier. The catalogue
  * records where each station's audio comes from, and radio-browser records the
  * same for its stations, so the same stream is the same station whatever either
  * directory calls it. Coordinates became a tier too: radio-browser gives some
@@ -34,7 +33,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
 const F = {
   dump: path.join(DATA, "_radiobrowser.json"),
-  streams: path.join(DATA, "_streams.jsonl"),
   full: path.join(DATA, "stations.json"),
   min:  path.join(DATA, "stations.min.json"),
 };
@@ -220,11 +218,7 @@ function match(ch, country, ix, place, stream) {
 const rb = await getDump();
 const full = JSON.parse(fs.readFileSync(F.full, "utf8"));
 const ix = buildIndexes(rb);
-const streams = new Map();
-if (fs.existsSync(F.streams)) for (const line of fs.readFileSync(F.streams, "utf8").split("\n")) {
-  try { const r = JSON.parse(line); if (r.url) streams.set(r.id, r.url); } catch { /* partial line */ }
-}
-console.log(`streams known for ${streams.size} of ${full.channels.length} channels`);
+console.log(`streams known for ${full.channels.filter((c) => c.url).length} of ${full.channels.length} channels`);
 
 const before = { matched: full.channels.filter((c) => c.rbuuid).length, tagged: full.channels.filter((c) => c.tags?.length).length };
 const stats = {};
@@ -234,7 +228,6 @@ for (const ch of full.channels) {
   delete ch.tags; delete ch.rbuuid; delete ch.ok;
   const place = full.places[ch.p];
   const country = place?.country;
-  if (streams.has(ch.id)) ch.url = streams.get(ch.id);
   const m = match(ch, country, ix, place, ch.url);
   if (!m) continue;
   if (showTier && m.via === showTier && shown.length < 30) shown.push(`  ${ch.title} · ${country}  ⇄  ${m.name} · ${m.country}`);

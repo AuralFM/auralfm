@@ -11,7 +11,7 @@
  * strictly decorative and strictly best-effort: cached for 15 minutes, silent on
  * failure, and nothing depends on it.
  *
- * Country names are the ones radio.garden uses, which is why "Türkiye" and
+ * Country names are the ones the station catalogue uses, which is why "Türkiye" and
  * "Czechia" appear in modern spelling. The 45 or so below cover ~89% of stations
  * in the catalog; anything unmapped falls back to world news in English.
  */

@@ -439,7 +439,8 @@ function showAbout() {
       "Offline-first · no account · no telemetry · no backend of ours\n" +
       "The station catalogue lives on your machine. Nothing about what you\n" +
       "listen to leaves it.\n\n" +
-      "Stations: radio.garden · radio-browser.info\n" +
+      "Stations: radio-browser.info · the stations themselves\n" +
+      "Places: GeoNames (CC BY 4.0)\n" +
       "Imagery: NASA GIBS (VIIRS, GOES) · Blue Marble\n" +
       "Sky: Yale Bright Star Catalog via d3-celestial\n" +
       "Weather: Open-Meteo · ISS: wheretheiss.at\n" +
@@ -957,6 +958,12 @@ if (!app.requestSingleInstanceLock()) {
     // keeps playback going once the window is closed.
     catalog.load();
     catalog.setHideExplicit(getPrefs().hideExplicit);
+    // Favourites and the last station saved under the catalogue's old ids find
+    // themselves again by name (catalog.relinkSaved); nothing else is touched.
+    {
+      const { state, moved } = catalog.relinkSaved(load());
+      if (moved) { save(state); console.log(`catalog: ${moved} saved stations moved to their new ids`); }
+    }
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
     clouds.init(app.getPath("userData"));

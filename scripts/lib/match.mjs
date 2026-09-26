@@ -98,6 +98,11 @@ export function overlap(a, b) {
 }
 
 /** Rewrite stations.json and the positional stations.min.json the app loads. */
+/** "Somewhere in the United States", not "in United States" (and not "the Czechia"). */
+export const the = (name) => (/^(the |bailiwick|collectivity)/i.test(name) ? name
+  : /^(united|republic|democratic|central african|dominican|philippines|netherlands|maldives|seychelles|comoros|gambia|bahamas|vatican)|(islands|republic|emirates)$/i.test(name)
+    ? `the ${name}` : name);
+
 /**
  * A station that is talk, news, sport or faith and plays no music genre at all.
  * These stay open where foreign music stations are held back (src/region.js):

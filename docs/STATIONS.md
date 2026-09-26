@@ -10,9 +10,11 @@ gets the same dot as one in Paris.
 
 ## How your station got here
 
-From open directories (radio.garden and radio-browser.info), with towns and
-regions from [GeoNames](https://www.geonames.org) (CC BY 4.0), and from what you
-publish yourself: your stream's own headers (the name, genre and website your
+AuralFM keeps its own catalogue. A station is in it when the public-domain
+[radio-browser.info](https://www.radio-browser.info) directory lists it, or when
+its own stream and website answered us; towns and regions come from
+[GeoNames](https://www.geonames.org) (CC BY 4.0). What the page says about you
+comes from what you publish yourself: your stream's own headers (the name, genre and website your
 streaming server announces) and your homepage (its title, description, image and
 the links to your social accounts).
 

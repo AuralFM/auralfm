@@ -29,7 +29,7 @@ const BUILD = Date.now().toString(36);
 const NEEDED = ["data/stations.min.json", "assets/sky.json", "src/renderer/vendor/globe.gl.min.js"];
 const missing = NEEDED.filter((f) => !fs.existsSync(R(f)));
 if (missing.length) {
-  console.error(`web: missing ${missing.join(", ")} — run npm run crawl, npm run sky and npm run vendor first`);
+  console.error(`web: missing ${missing.join(", ")} — run npm run catalogue, npm run sky and npm run vendor first`);
   process.exit(1);
 }
 

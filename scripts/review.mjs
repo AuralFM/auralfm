@@ -45,6 +45,11 @@ function parseCsv(text) {
   return rows.filter((r) => r.some((c) => c.trim()));
 }
 
+// A sheet made before 26 Sept 2026 names stations by radio.garden's old ids;
+// data/legacy-ids.json (scripts/own.mjs) says what each is now.
+const LEGACY = R("data/legacy-ids.json");
+const legacy = fs.existsSync(LEGACY) ? JSON.parse(fs.readFileSync(LEGACY, "utf8")) : {};
+const idNow = (id) => legacy[id] || id;
 const loadCorrections = () => (fs.existsSync(CORR) ? JSON.parse(fs.readFileSync(CORR, "utf8")) : { stations: {} });
 
 if (argv[0] === "--import") {
@@ -58,7 +63,7 @@ if (argv[0] === "--import") {
   for (const r of rows) {
     const country = r[NC]?.trim(), town = r[NT]?.trim(), remove = /^(y|yes|x|true|1)$/i.test(r[RM]?.trim() || "");
     if (!r[ID] || !(country || town || remove)) continue;
-    corr.stations[r[ID]] = { station: r[NAME], ...(remove ? { remove: true } : {}), ...(country ? { country } : {}),
+    corr.stations[idNow(r[ID])] = { station: r[NAME], ...(remove ? { remove: true } : {}), ...(country ? { country } : {}),
       ...(town ? { town } : {}), ...(r[NOTE]?.trim() ? { note: r[NOTE].trim() } : {}), at: new Date().toISOString().slice(0, 10) };
     n++;
   }

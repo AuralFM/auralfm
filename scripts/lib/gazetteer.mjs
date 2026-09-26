@@ -37,15 +37,19 @@ export function loadGazetteer(dir) {
   const f = (n) => path.join(dir, n);
   if (!fs.existsSync(f("cities1000.txt"))) return null;
   const regionsByCC = new Map();                       // cc → Map(key → { code, name })
+  const regionName = new Map();                        // `${cc}.${a1}` → name
   for (const line of fs.readFileSync(f("admin1CodesASCII.txt"), "utf8").split("\n")) {
     const [code, name, ascii] = line.split("\t"); if (!code) continue;
     const [cc, a1] = code.split(".");
     if (!regionsByCC.has(cc)) regionsByCC.set(cc, new Map());
     for (const n of [name, ascii]) regionsByCC.get(cc).set(key(n), { code: a1, name });
+    regionName.set(code, name);
   }
   const byName = new Map();                            // `${cc}|${key}` → [town]
   const byNameMain = new Map();                        // same, main names only (for reading titles)
   const biggest = new Map();                           // `${cc}.${a1}` → town
+  const biggestCC = new Map();                         // cc → town
+  const grid = new Map();                              // "lat,lon" (whole degrees) → [town]
   const add = (m, k, t) => { if (!k) return; const a = m.get(k) || m.set(k, []).get(k); if (!a.includes(t)) a.push(t); };
   for (const line of fs.readFileSync(f("cities1000.txt"), "utf8").split("\n")) {
     const c = line.split("\t"); if (c.length < 15) continue;
@@ -54,6 +58,9 @@ export function loadGazetteer(dir) {
     for (const n of (c[3] || "").split(",")) if (n && n.length < 40) add(byName, `${town.cc}|${key(n)}`, town);
     const r = `${town.cc}.${town.a1}`;
     if (!biggest.has(r) || biggest.get(r).pop < town.pop) biggest.set(r, town);
+    if (!biggestCC.has(town.cc) || biggestCC.get(town.cc).pop < town.pop) biggestCC.set(town.cc, town);
+    const g = `${Math.floor(town.lat)},${Math.floor(town.lon)}`;
+    (grid.get(g) || grid.set(g, []).get(g)).push(town);
   }
 
   /** The one town a name means, or null when it could be several. */
@@ -87,6 +94,29 @@ export function loadGazetteer(dir) {
   }
 
   return {
+    /** Every town a name can mean in a country, biggest first (main and alternate names). */
+    towns(cc, name) { return [...(byName.get(`${cc}|${key(name)}`) || [])].sort((a, b) => b.pop - a.pop); },
+    /** A region's name from its code ("US", "IL" → "Illinois"). */
+    regionName(cc, a1) { return regionName.get(`${cc}.${a1}`) || null; },
+    /** A region's code from its name, or null. */
+    regionCode(cc, name) { return regionsByCC.get(cc)?.get(key(name))?.code || null; },
+    /** The biggest town in a region, for a place that names only its region. */
+    biggestIn(cc, a1) { return biggest.get(`${cc}.${a1}`) || null; },
+    /** The biggest town in a country. */
+    biggestInCountry(cc) { return biggestCC.get(cc) || null; },
+    /** The nearest town to a point, in that country when cc is given, within maxKm. */
+    nearest(lat, lon, cc, maxKm = 25) {
+      let best = null, d = Infinity;
+      const R = 6371, rad = Math.PI / 180;
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++)
+        for (const t of grid.get(`${Math.floor(lat) + a},${Math.floor(lon) + b}`) || []) {
+          if (cc && t.cc !== cc) continue;
+          const x = Math.sin((t.lat - lat) * rad / 2) ** 2 + Math.cos(lat * rad) * Math.cos(t.lat * rad) * Math.sin((t.lon - lon) * rad / 2) ** 2;
+          const dd = 2 * R * Math.asin(Math.sqrt(x));
+          if (dd < d) { d = dd; best = t; }
+        }
+      return best && d <= maxKm ? best : null;
+    },
     ccOf(name) {
       const k = key(name);
       if (ccByName.has(k)) return ccByName.get(k);

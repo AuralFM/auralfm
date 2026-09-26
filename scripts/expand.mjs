@@ -11,6 +11,7 @@
  *
  * Every live station goes in, placed as exactly as it can honestly be:
  *   near      radio-browser gives it a position within 25 km of one of our places
+ *             (GeoNames towns since scripts/own.mjs; ids from scripts/lib/ids.mjs)
  *   own       a position with none of our places near: a new place there, named
  *             for the region radio-browser gives, or "<nearest town> area"
  *   named     no position, but the town it names is exactly one of our places in
@@ -38,14 +39,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { loose, countryKey, sameCountryName, cleanTags, streamKey, km, writeBundles } from "./lib/match.mjs";
+import { loose, countryKey, sameCountryName, cleanTags, streamKey, km, writeBundles, the } from "./lib/match.mjs";
 import { loadGazetteer } from "./lib/gazetteer.mjs";
+import { openIds, rbRef, streamRef } from "./lib/ids.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
 const F = {
   dump: path.join(DATA, "_radiobrowser.json"),
-  streams: path.join(DATA, "_streams.jsonl"),
+  ids: path.join(DATA, "ids.json"),
   full: path.join(DATA, "stations.json"),
   min: path.join(DATA, "stations.min.json"),
 };
@@ -65,12 +67,8 @@ if (firstAdded >= 0) full.places.length = firstAdded;
 if (removed) console.log(`expand: took out ${removed} stations added last time`);
 
 // ── what we already carry ──────────────────────────────────────────────────
-const streams = new Map();
-if (fs.existsSync(F.streams)) for (const line of fs.readFileSync(F.streams, "utf8").split("\n")) {
-  try { const r = JSON.parse(line); if (r.url) streams.set(r.id, r.url); } catch { /* partial line */ }
-}
 const haveUuid = new Set(full.channels.map((c) => c.rbuuid).filter(Boolean));
-const haveStream = new Set(full.channels.map((c) => streamKey(c.url || streams.get(c.id))).filter(Boolean));
+const haveStream = new Set(full.channels.map((c) => streamKey(c.url)).filter(Boolean));
 const haveNameAt = new Set(full.channels.map((c) => `${loose(c.title)}|${c.p}`));
 // For a station placed only by its country, the same name anywhere in that
 // country is the same station: "Radio X" somewhere in Germany is the Radio X
@@ -141,11 +139,13 @@ const how = { near: 0, own: 0, named: 0, town: 0, region: 0, country: 0, online:
 const G = loadGazetteer(path.join(DATA, "geonames"));
 if (!G) console.log("expand: no data/geonames/ — stations naming only a region go to their country");
 const townPlace = new Map(), regionPlace = new Map();
+const placeById = new Map(full.places.map((p, i) => [p.id, i]));
 function atTown(town, country) {
   if (townPlace.has(town.id)) return townPlace.get(town.id);
   const [i, d] = nearest(town.lat, town.lon);
   let p;
-  if (i >= 0 && d <= 15 && sameCountryName(full.places[i].country, country)) p = i;
+  if (placeById.has(`gn-${town.id}`)) p = placeById.get(`gn-${town.id}`);
+  else if (i >= 0 && d <= 15 && sameCountryName(full.places[i].country, country)) p = i;
   else {
     full.places.push({ id: `gn-${town.id}`, title: town.name, country, geo: [town.lon, town.lat], src: "rb" });
     p = full.places.length - 1; index(p); newPlaces++;
@@ -197,19 +197,20 @@ const somewhere = new Map();
 const median = (xs) => { const a = [...xs].sort((x, y) => x - y); return a.length % 2 ? a[a.length >> 1] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2; };
 let online = -1;
 function onlineOnly() {
+  if (online < 0 && placeById.has("online")) online = placeById.get("online");
   if (online >= 0) return online;
   full.places.push({ id: "rb-online", title: "Online only", country: "Null Island", geo: [0, 0], src: "rb" });
   online = full.places.length - 1; newPlaces++;
   return online;
 }
-/** "Somewhere in the United States", not "in United States". */
-const the = (name) => (/^(the |bailiwick|collectivity)/i.test(name) ? name
-  : /^(united|republic|democratic|central african|dominican|philippines|netherlands|maldives|seychelles|comoros|gambia|bahamas|vatican)|(islands|republic|emirates)$/i.test(name)
-    ? `the ${name}` : name);
 function somewhereIn(rbCountry, lat, lon) {
   const name = ourCountry(rbCountry);
   if (!name) return -1;
   if (somewhere.has(name)) return somewhere.get(name);
+  // The catalogue's own "Somewhere in" for that country, when it has one.
+  const title = `Somewhere in ${the(name)}`;
+  const had = full.places.findIndex((p) => p.title === title);
+  if (had >= 0) { somewhere.set(name, had); return had; }
   const mine = full.places.filter((p) => p.src !== "rb" && sameCountryName(p.country, name));
   let geo = null;
   if (mine.length) geo = [median(mine.map((p) => p.geo[0])), median(mine.map((p) => p.geo[1]))];
@@ -222,6 +223,9 @@ function somewhereIn(rbCountry, lat, lon) {
 }
 const added = [];
 let newPlaces = 0;
+// AuralFM ids (scripts/lib/ids.mjs): the same radio-browser station keeps the
+// same id from one run to the next.
+const ids = openIds(F.ids);
 for (const s of byStream.values()) {
   let p = -1, via = "";
   const hasGeo = typeof s.lat === "number" && typeof s.lon === "number" && (s.lat || s.lon);
@@ -264,10 +268,11 @@ for (const s of byStream.values()) {
   let host = ""; try { host = new URL(url).hostname.split(".").slice(-2).join("."); } catch { /* keep "" */ }
   const place = full.places[p];
   added.push({
-    id: `rb-${s.uuid}`, title: s.name, place: place.id, p, country: place.country,
+    id: ids.idFor([rbRef(s.uuid), streamRef(url)]), title: s.name, place: place.id, p, country: place.country,
     website: s.home, secure: url.startsWith("https://"), stream: host, url,
     ...(s.allTags.length ? { tags: s.allTags } : {}), rbuuid: s.uuid, ok: 1,
-    lang: s.lang, logo: s.logo, ...(s.state ? { region: s.state } : {}), ...(EXPLICIT(s) ? { explicit: true } : {}), src: "rb",
+    lang: s.lang, logo: s.logo, ...(s.state ? { region: s.state } : {}), ...(EXPLICIT(s) ? { explicit: true } : {}),
+    from: "radio-browser", src: "rb",
   });
   how[via]++;
 }
@@ -324,5 +329,6 @@ if (Object.keys(corr).length) {
 }
 
 if (dry) { console.log("\n--dry: nothing written"); process.exit(0); }
+ids.save();
 writeBundles(full, F);
 console.log(`\nwrote ${full.channels.length} stations in ${full.places.length} places`);

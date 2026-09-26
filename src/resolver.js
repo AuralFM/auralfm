@@ -1,33 +1,29 @@
 /**
  * Turn a catalog channel into a playable stream URL.
  *
- * Runs in the main process because it needs to spoof browser headers for
- * radio.garden and follow redirects manually — neither is possible from a
- * sandboxed renderer.
+ * Every answer is the station's own server. Nothing here asks another radio
+ * directory for a redirect, and nothing pretends to be anyone's website: this
+ * used to begin with radio.garden's listen endpoint, which answers only
+ * requests that look like its own site, so the app sent a borrowed browser
+ * User-Agent and radio.garden's Referer to get through. That is gone
+ * (Melton, 26 Sept: completely separate from radio.garden).
  *
- * Three tiers, in order:
- *   1. radio.garden's listen endpoint, which 302s to the real stream.
- *   2. radio-browser.info, matched on name + country.
- *   3. Whatever worked last time, cached on disk.
- *
- * Tier 3 is what makes this survive radio.garden going down: once you've played
- * a station, it keeps playing even if both directories are unreachable.
+ * In order:
+ *   1. radio-browser.info by the station's own id, when the catalogue matched
+ *      one: its data is public domain and kept fresh by its checks.
+ *   2. The stream we recorded ourselves (the station's profile, scripts/
+ *      profiles.mjs), from contacting the station.
+ *   3. Whatever worked last time on this machine, cached on disk.
+ *   4. radio-browser.info, matched on name and country.
  */
 
 const fs = require("node:fs");
 const path = require("node:path");
 
-const RG = "https://radio.garden/api/ara/content/listen";
+const profiles = require("./profiles");
 // Discovered at runtime from the mirror pool; de1 is only the bootstrap.
 let RB_HOST = "https://de1.api.radio-browser.info";
 const UA = "AuralFM/0.1";
-
-const RG_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Accept": "*/*",
-  "Referer": "https://radio.garden/",
-};
 
 let cacheFile = null;
 let cache = {};
@@ -77,18 +73,6 @@ function remember(id, url) {
   try { fs.writeFileSync(cacheFile, JSON.stringify(cache)); } catch { /* non-fatal */ }
 }
 
-async function viaRadioGarden(id) {
-  const res = await fetch(`${RG}/${id}/channel.mp3`, {
-    headers: RG_HEADERS,
-    redirect: "manual",
-    signal: AbortSignal.timeout(8000),
-  });
-  // The whole point of this endpoint is the redirect; a 200 means we got a page.
-  const loc = res.headers.get("location");
-  if (res.status >= 300 && res.status < 400 && loc) return loc;
-  return null;
-}
-
 /** A station radio-browser knows by id: its own stream, the surest answer there is. */
 async function viaRadioBrowserId(uuid) {
   const res = await fetch(`${RB_HOST}/json/stations/byuuid/${encodeURIComponent(uuid)}`, {
@@ -131,10 +115,7 @@ async function resolve({ id, title, country, rbuuid }) {
   const attempts = [];
   reportClick(rbuuid);        // credit the station with the play, per their docs
 
-  // Stations found only in radio-browser (scripts/expand.mjs) have no
-  // radio.garden id: their id is "rb-" + the radio-browser one.
-  const rbOnly = String(id || "").startsWith("rb-");
-  if (rbOnly && rbuuid) {
+  if (rbuuid) {
     try {
       const url = await viaRadioBrowserId(rbuuid);
       if (url) { remember(id, url); return { url, via: "radio-browser" }; }
@@ -142,13 +123,11 @@ async function resolve({ id, title, country, rbuuid }) {
     } catch (err) { attempts.push(`radio-browser id: ${err.name}`); }
   }
 
-  if (id && !rbOnly) {
-    try {
-      const url = await viaRadioGarden(id);
-      if (url) { remember(id, url); return { url, via: "radio.garden" }; }
-      attempts.push("radio.garden: no redirect");
-    } catch (err) { attempts.push(`radio.garden: ${err.name}`); }
-  }
+  const own = id ? profiles.profile(id)?.stream : null;
+  if (own) return { url: own, via: "own" };
+  attempts.push("no stream recorded");
+
+  if (id && cache[id]) return { url: cache[id], via: "cache" };
 
   if (title) {
     try {
@@ -157,8 +136,6 @@ async function resolve({ id, title, country, rbuuid }) {
       attempts.push("radio-browser: no match");
     } catch (err) { attempts.push(`radio-browser: ${err.name}`); }
   }
-
-  if (id && cache[id]) return { url: cache[id], via: "cache" };
 
   console.warn(`resolve failed for ${title || id}: ${attempts.join(", ")}`);
   return null;

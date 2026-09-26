@@ -62,8 +62,7 @@ differently" below. The rest of this table applies to both.
 |---|---|---|
 | The radio station's own server | Playing audio | Your IP address, as with any stream |
 | The station's own website | Its logo, when you open a station's profile | Your IP address |
-| radio.garden | Resolving a stream URL when you press play | Your IP address |
-| radio-browser.info | Fallback stream lookup; play counts | Your IP address, the station played |
+| radio-browser.info | Looking up a station's current stream when you press play; play counts | Your IP address, the station played |
 | NASA GIBS | Satellite cloud imagery | Your IP address |
 | Open-Meteo | Weather for a selected place | Your IP address, the **selected city's** coordinates |
 | Google News RSS | Headlines for a country or place | Your IP address |

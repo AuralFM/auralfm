@@ -996,7 +996,7 @@ window.auralfm.onShown(() => {
     // not "check your connection" either, because this file is local and the
     // network has nothing to do with it.
     render([], { empty: t("empty.noCatalog", "No station data yet.") + "<br>"
-      + (dev ? "Run <b>npm run crawl</b> to build it."
+      + (dev ? "Run <b>npm run catalogue</b> to build it."
              : t("empty.noCatalogHelp", "Reinstalling the app should restore the catalog.")) });
   } else {
     qEl.placeholder = `Search ${s.channels.toLocaleString()} stations`;

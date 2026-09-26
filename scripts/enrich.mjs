@@ -9,8 +9,9 @@
  *   node scripts/enrich.mjs --retry       ask again only the ones whose stream timed out
  *                                         (run gently, --concurrency 16: a busy moment on
  *                                         this end is not a station off the air)
+ *   node scripts/enrich.mjs --ids FILE    ask again exactly these stations (ids, one per line)
  *   node scripts/enrich.mjs --streamed    only stations whose stream is already known
- *                                         (while scripts/streams.mjs is still running)
+ *                                         (the catalogue records one for nearly all)
  *
  * Two questions per station, both put to the station itself:
  *
@@ -78,7 +79,6 @@ dns.lookup = publicLookup;
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const F = {
   full: path.join(ROOT, "data/stations.json"),
-  streams: path.join(ROOT, "data/_streams.jsonl"),
   dump: path.join(ROOT, "data/_radiobrowser.json"),
   out: path.join(ROOT, "data/_enrich.jsonl"),
 };
@@ -113,17 +113,16 @@ if (argv.includes("--report")) {
 
 // ── who to ask ──────────────────────────────────────────────────────────────
 const { channels } = JSON.parse(fs.readFileSync(F.full, "utf8"));
-const streams = new Map();
-if (fs.existsSync(F.streams)) for (const line of fs.readFileSync(F.streams, "utf8").split("\n")) {
-  try { const r = JSON.parse(line); if (r.url) streams.set(r.id, r.url); } catch { /* partial */ }
-}
 const rbHome = new Map();
 if (fs.existsSync(F.dump)) for (const s of JSON.parse(fs.readFileSync(F.dump, "utf8"))) if (s.home) rbHome.set(s.uuid, s.home);
 
 const stale = (r) => CFG.again && (Date.now() - Date.parse(r.at)) / 864e5 > CFG.days;
 const timedOut = (r) => r.stream?.why === "timeout";
-const todo = channels.filter((c) => (CFG.retry ? known.has(c.id) && timedOut(known.get(c.id)) : !known.has(c.id) || stale(known.get(c.id))))
-  .map((c) => ({ id: c.id, stream: c.url || streams.get(c.id) || "", site: c.website || rbHome.get(c.rbuuid) || "" }))
+const idsAt = argv.indexOf("--ids");
+const only = idsAt >= 0 ? new Set(fs.readFileSync(argv[idsAt + 1], "utf8").split(/\s+/).filter(Boolean)) : null;
+const todo = channels.filter((c) => (only ? only.has(c.id)
+    : CFG.retry ? known.has(c.id) && timedOut(known.get(c.id)) : !known.has(c.id) || stale(known.get(c.id))))
+  .map((c) => ({ id: c.id, stream: c.url || "", site: c.website || rbHome.get(c.rbuuid) || "" }))
   .filter((t) => !CFG.streamed || t.stream)
   .slice(0, CFG.limit);
 // The catalogue is in place order, so neighbours share a town's hosting company

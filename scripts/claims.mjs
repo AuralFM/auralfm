@@ -31,6 +31,10 @@ const STORE = R("data/claims.json");
 const SLUG = "rapid-ember-55ng";   // docs.auralfm.xyz
 const argv = process.argv.slice(2);
 
+// A claim sent from a page opened before 26 Sept 2026 names the station by
+// radio.garden's old id; data/legacy-ids.json (scripts/own.mjs) says what it is now.
+const LEGACY = R("data/legacy-ids.json");
+const legacy = fs.existsSync(LEGACY) ? JSON.parse(fs.readFileSync(LEGACY, "utf8")) : {};
 const store = fs.existsSync(STORE) ? JSON.parse(fs.readFileSync(STORE, "utf8")) : { approved: {}, seen: {} };
 const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 function parseCsv(text) {
@@ -57,7 +61,7 @@ if (argv[0] === "--import") {
     if (!verdict) continue;
     store.seen[r[I.id]] = verdict;
     if (!/^(y|yes|x|true|1)$/.test(verdict)) { no++; continue; }
-    const sid = r[I["station id"]]?.trim();
+    const sid = legacy[r[I["station id"]]?.trim()] || r[I["station id"]]?.trim();
     if (!sid) { console.log(`claims: "${r[I.station]}" has no station id; find it in the app and add it to the sheet`); continue; }
     store.approved[sid] = {
       claim: r[I.id], at: new Date().toISOString().slice(0, 10),

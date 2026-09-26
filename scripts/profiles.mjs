@@ -92,7 +92,7 @@ for (const c of full.channels) {
   const k = T.classify({ tags: c.tags || [], title: c.title, country: c.country });
   const place = full.places[c.p] || {};
   const profile = clean({
-    id: c.id, title: c.title, place: place.title, country: c.country, region: c.region,
+    id: c.id, title: c.title, place: place.title, country: c.country, region: c.region || place.region,
     website: claim.website || site.final || c.website || stream.url || r?.home,
     description: claim.description || site.description || stream.description,
     image: https(claim.logo) || https(site.image) || https(c.logo) || https(r?.logo),
@@ -100,6 +100,9 @@ for (const c of full.channels) {
     social: Object.keys({ ...(site.social || {}), ...formSocial }).length ? { ...(site.social || {}), ...formSocial } : undefined,
     bitrate: stream.br, genres: names(k.genres), moods: names(k.moods), formats: names(k.formats), scenes: names(k.scenes),
     explicit: c.explicit || undefined,
+    // Where it plays from: the station's own server, which both apps try first
+    // (src/resolver.js, web/bridge.js). Never another directory's redirect.
+    stream: c.url && /^https?:\/\//i.test(c.url) && !/radio\.garden/i.test(c.url) ? c.url : undefined,
     claim: claim.lightning || claim.nostr ? clean({ lightning: claim.lightning, nostr: claim.nostr, contact: claim.contact }) : undefined,
     checked: e?.at,
   });

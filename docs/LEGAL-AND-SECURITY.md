@@ -570,6 +570,53 @@ Sources: [Tunein v Warner Music [2021] EWCA Civ 441](https://www.bailii.org/ew/c
 [PPL 2026 Linear Webcast Licence fees](https://www.ppluk.com/wp-content/uploads/2025/11/PPL-Linear-Webcast-Licence-Fees-and-Reporting-Summary-2026.pdf) ·
 [PRS Limited Online Music Licence](https://www.prsformusic.com/licences/using-music-online/limited-online-music-licence)
 
+## 10. A catalogue of our own (26 Sept 2026)
+
+**What it was.** The catalogue began as a crawl of radio.garden's directory:
+38,337 stations with their names, towns and coordinates, filed under
+radio.garden's own ids. The desktop resolved every one of them through
+radio.garden's listen endpoint, which answers only requests that look like its
+own website, so the app sent a borrowed Chrome User-Agent and radio.garden's
+Referer to get through; the web app used the same endpoint as a fallback.
+
+**Why it mattered.** Two things, apart from the plain courtesy of it:
+  - Getting past a block that a site put there on purpose is the part a
+    complaint would lead with, and in some places it is more than a terms-of-use
+    matter.
+  - radio.garden is Dutch, and the EU gives a *database right* (Directive
+    96/9/EC) to whoever invested in obtaining, checking or presenting a
+    database, against the extraction of a substantial part of it — even where
+    each fact in it (a station's name, its town, its stream) is free. The US has
+    no such right: facts are free there (*Feist*, 1991).
+
+**What was done** (scripts/own.mjs; Melton: "completely separate"):
+  - Neither app contacts radio.garden at all. A station plays from radio-browser
+    by its id there, else from the stream we recorded by contacting the station,
+    else from the last address that worked; nothing sends a borrowed header. An
+    audit check fails if any code the apps run names radio.garden.
+  - A station stays only where something other than radio.garden confirms it:
+    radio-browser.info lists it (public domain; the same stream or the same
+    name), or the station answered us itself: its own stream and its own website,
+    or a stream that names the station. Of 38,337, 36,266 stayed (16,857
+    confirmed by radio-browser, 19,409 by the station); 2,071 went, listed in
+    the vault's own-dropped.csv. With radio-browser's other stations the
+    catalogue is 60,096.
+  - Every station has an AuralFM id; radio.garden's are gone from everything
+    shipped. Old favourites find their station again by name.
+  - Every town comes from GeoNames (CC BY 4.0), found by name within the
+    station's country; radio.garden's coordinates are never read. 11,315
+    places; 959 of our stations went to "Somewhere in <country>" where GeoNames
+    had no town of that name (the review sheet can move them).
+  - Our own stations are now tracked in the repository (data/catalogue.json),
+    because that list exists nowhere else; builds start from it.
+
+**What is left for the lawyer.** The names and towns of the stations radio.garden
+listed first were a starting point, re-confirmed one by one from other sources.
+Whether a list rebuilt that way still counts as extraction from the original is
+the question to ask (a Dutch or EU IP lawyer, with §9's UK one): bring this
+section, scripts/own.mjs and the counts. Radio.garden remains credited as the
+inspiration it was.
+
 ---
 
 > **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them

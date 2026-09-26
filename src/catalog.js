@@ -1,7 +1,7 @@
 /**
  * Station catalog + search.
  *
- * Loads the static bundle produced by scripts/crawl.mjs and answers queries.
+ * Loads the static bundle the catalogue build produces (npm run catalogue) and answers queries.
  * Lives in the main process: the renderer never holds 38k rows, it just asks
  * for the ~50 it needs to draw.
  *
@@ -10,8 +10,8 @@
  *   c: [ [channelId, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit, speech] ]
  *
  * tags is a comma-joined string, present only on the ~34% of channels we could
- * match to radio-browser (see scripts/tags.mjs). radio.garden has no genre data
- * of its own, so this is the only thing making "jazz" a useful query.
+ * match to radio-browser (see scripts/tags.mjs), plus what stations' own streams
+ * say about themselves: the only thing making "jazz" a useful query.
  */
 
 const fs = require("node:fs");
@@ -70,7 +70,7 @@ function norm(s) {
 
 function load() {
   if (!fs.existsSync(BUNDLE)) {
-    console.warn("catalog: no bundle at data/stations.min.json — run `npm run crawl`");
+    console.warn("catalog: no bundle at data/stations.min.json — run `npm run catalogue`");
     return false;
   }
   const raw = JSON.parse(fs.readFileSync(BUNDLE, "utf8"));
@@ -471,6 +471,47 @@ function nextInPlace(channel, exclude = []) {
   return cands.find((c) => c.ok !== false) || cands[0] || null;
 }
 
+/**
+ * A station saved under an id the catalogue no longer has, found again.
+ *
+ * The catalogue's ids were radio.garden's until 26 Sept 2026, when it became
+ * AuralFM's own (scripts/own.mjs), so favourites and the last station saved
+ * before then name ids that are gone. The same station by name, in the same
+ * country, nearest to where it was saved; null when there is none.
+ */
+function relink(ch) {
+  if (!ch?.id) return null;
+  const i = indexOf(ch.id);
+  if (i >= 0) return hydrate(i);
+  const t = norm(String(ch.title || "")), co = norm(String(ch.country || ""));
+  if (!t) return null;
+  let best = -1, d = Infinity;
+  for (let k = 0; k < channels.length; k++) {
+    if (norm(channels[k][1]) !== t) continue;
+    const p = places[channels[k][2]];
+    if (co && p && norm(p[1]) !== co) continue;
+    const dd = Number.isFinite(ch.lat) && Number.isFinite(ch.lon) && p ? (p[3] - ch.lat) ** 2 + (p[2] - ch.lon) ** 2 : 0;
+    if (dd < d) { d = dd; best = k; }
+  }
+  return best >= 0 ? hydrate(best) : null;
+}
+
+/** Saved stations (favourites, the last one) moved to the ids the catalogue has now. */
+function relinkSaved(state) {
+  let moved = 0;
+  const fix = (ch) => {
+    if (!ch?.id || /^(my|sdr):/.test(String(ch.id)) || indexOf(ch.id) >= 0) return ch;
+    const n = relink(ch);
+    if (!n) return ch;
+    moved++;
+    return { ...ch, id: n.id, title: n.title, place: n.place, country: n.country, lat: n.lat, lon: n.lon, secure: n.secure };
+  };
+  const out = { ...state };
+  if (Array.isArray(state.favorites)) out.favorites = state.favorites.map(fix);
+  if (state.lastChannel) out.lastChannel = fix(state.lastChannel);
+  return { state: out, moved };
+}
+
 function byId(id) {
   const i = indexOf(id);
   return i < 0 ? null : hydrate(i);
@@ -478,4 +519,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { setHideExplicit, setRegion, held, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };
+module.exports = { setHideExplicit, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };

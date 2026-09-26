@@ -91,7 +91,7 @@ document.addEventListener("keydown", (e) => {
     const days = st.generated ? Math.floor((Date.now() - new Date(st.generated)) / 86400000) : 0;
     if (days >= 120) {
       placeHeadEl.textContent =
-        `${placeHeadEl.textContent} · catalog ${days} days old — run npm run crawl`;
+        `${placeHeadEl.textContent} · catalog ${days} days old — run npm run catalogue`;
     }
   }
 })();

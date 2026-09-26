@@ -69,7 +69,15 @@
   // fetched first and every catalogue call waits for it.
   const catalogReady = fetch("data/stations.min.json")
     .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
-    .then((text) => { M.files["stations.min.json"] = text; M.catalog.load(); M.catalog.setHideExplicit(getPrefs().hideExplicit); })
+    .then((text) => {
+      M.files["stations.min.json"] = text; M.catalog.load(); M.catalog.setHideExplicit(getPrefs().hideExplicit);
+      // Favourites and the last station saved under the catalogue's old ids find
+      // themselves again by name (catalog.relinkSaved), and so does a station
+      // already cued from them.
+      const { state, moved } = M.catalog.relinkSaved(getState());
+      if (moved) setState({ favorites: state.favorites, lastChannel: state.lastChannel });
+      if (current && !M.catalog.byId(String(current.id))) current = M.catalog.relink(current) || current;
+    })
     .catch((err) => console.error("catalog:", err));
   const cat = (fn) => async (...a) => { await catalogReady; return fn(...a); };
 
@@ -205,13 +213,34 @@
   const heldText = () => M.i18n.strings(getPrefs().language, locale)["st.held"] || "Not available where you are yet";
 
   /**
-   * Where a station can be heard from a web page, best first. https only: an
-   * http stream is refused by the browser on an https page however it is reached.
+   * A station's profile: the same files the desktop reads from disk
+   * (src/profiles.js), fetched one at a time, by the same hash. The card reads
+   * it, and so does play, for the stream we recorded.
+   */
+  const profileOf = (() => {
+    const shards = new Map();
+    const shardOf = (id) => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+      return ((h >>> 0) & 0xff).toString(16).padStart(2, "0");
+    };
+    return async (id) => {
+      id = String(id || ""); if (!id) return null;
+      const s = shardOf(id);
+      if (!shards.has(s)) shards.set(s, fetch(`data/profiles/${s}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+      return (await shards.get(s))[id] || null;
+    };
+  })();
+
+  /**
+   * Where a station can be heard from a web page, best first, and always the
+   * station's own server: nothing here asks another directory for a redirect
+   * (src/resolver.js says why). https only: an http stream is refused by the
+   * browser on an https page however it is reached.
    *
    *   1. radio-browser, by the station's own id, when the catalogue matched one.
    *      Its data is openly licensed and it asks to be the source it is.
-   *   2. radio.garden's listen URL, which redirects to the stream; the audio
-   *      element follows the redirect itself, as radio.garden's own site does.
+   *   2. The stream we recorded ourselves, in the station's profile.
    *   3. radio-browser by name, for a station the catalogue did not match.
    */
   async function candidates(ch) {
@@ -223,9 +252,7 @@
         if (s && s.lastcheckok !== 0) add(s.url_resolved || s.url);
       } catch { /* try the others */ }
     }
-    if (ch.id && ch.secure !== false && !String(ch.id).startsWith("rb-")) {
-      add(`https://radio.garden/api/ara/content/listen/${encodeURIComponent(ch.id)}/channel.mp3`);
-    }
+    try { add((await profileOf(ch.id))?.stream); } catch { /* the others, then */ }
     try {
       const q = new URLSearchParams({ name: ch.title, limit: "5", hidebroken: "true", order: "votes", reverse: "true" });
       const list = await (await fetch(`${RB}/json/stations/search?${q}`)).json();
@@ -540,22 +567,7 @@
     vibes: cat(() => M.catalog.VIBES.map(({ id, name }) => ({ id, name }))),
     vibePlaces: cat((id) => M.catalog.vibePlaces(id)),
     stationById: cat((id) => M.catalog.byId(String(id || "")) || null),
-    profile: (() => {
-      // The same files the desktop reads from disk (src/profiles.js), fetched one
-      // at a time, by the same hash.
-      const shards = new Map();
-      const shardOf = (id) => {
-        let h = 0x811c9dc5;
-        for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-        return ((h >>> 0) & 0xff).toString(16).padStart(2, "0");
-      };
-      return async (id) => {
-        id = String(id || ""); if (!id) return null;
-        const s = shardOf(id);
-        if (!shards.has(s)) shards.set(s, fetch(`data/profiles/${s}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
-        return (await shards.get(s))[id] || null;
-      };
-    })(),
+    profile: profileOf,
     randomStation: cat(() => M.catalog.randomChannel()),
     nextStation: cat((ch, t) => M.catalog.nextInPlace(ch, t || [])),
     distance: async (aLat, aLon, bLat, bLon, units) =>
