@@ -401,6 +401,59 @@ duties. None of this is legal advice; items marked **lawyer** want one.
 
 ---
 
+## 9. The big broadcasters' streams (26 Sept 2026)
+
+Melton asked whether AuralFM is in bounds playing the big groups' stations
+(iHeartMedia, SiriusXM, Sinclair and the like), which will never claim a page
+because they want listeners in their own apps. Not legal advice; **lawyer**.
+
+**What is in the catalogue**, counted by the server each stream comes from:
+NRJ 553, iHeartMedia 529, Bauer 268, Global 165, Radio France 61, BBC 7 — about
+1,600 of 62,036 stations. **No SiriusXM**: it is a paid subscription, and a
+subscription stream must never be added (anything that shows up is a restream
+someone had no right to make).
+
+**What AuralFM does with them.** It lists the station and, when you press play,
+your device connects to the broadcaster's own public stream. AuralFM does not
+host, record, re-stream or proxy the audio (the web version proxies headlines
+only), puts no ads around it, and credits the play to radio-browser.
+
+**iHeart's Terms of Use** forbid linking beyond the homepage of an iHeart *site*
+and framing it, and scraping for AI. No clause was found that forbids a
+third-party player from playing its public streams. But the streams are served
+for iHeart's own players, and iHeart can object at any time; if it does, the
+station comes off the same day (below).
+
+**The real exposure is the UK and the EU, not a terms page.** In *Warner Music v
+TuneIn* [2021] EWCA Civ 441 the Court of Appeal held that TuneIn, by linking UK
+listeners to foreign stations **not licensed for the UK**, communicated the
+recordings to a new public and infringed copyright. Stations licensed in the UK
+were not the problem. AuralFM links UK and EU listeners to music stations from
+everywhere, which is the same shape. The US has no equivalent ruling; linking is
+generally treated there as not itself a copy.
+
+**What is already in place**
+- Stations are removed on request, the same day: `data/corrections.json` with
+  `"remove": true` (scripts/review.mjs), applied on every build.
+- A copyright notice procedure in the Terms; a DMCA agent to register (§8).
+- No recording, no re-streaming, no subscription streams, no ads.
+
+**Options for the lawyer**
+1. Keep the big groups listed and playing, honour every request at once. (Today.)
+2. For the big groups only, open their own player instead of playing in-app.
+3. For UK and EU listeners, leave out foreign *music* stations not licensed there,
+   as TuneIn had to. This needs to know where the listener is, which an app with
+   no server does not; the desktop could guess from the time zone, the web could
+   not without asking. Against the whole idea of AuralFM, and the most legally
+   protective.
+4. A licence: PRS/PPL in the UK, and collecting societies elsewhere — the way
+   TuneIn went. Costs money; the premium tier could carry it.
+
+Sources: [Tunein v Warner Music [2021] EWCA Civ 441](https://www.bailii.org/ew/cases/EWCA/Civ/2021/441.html) ·
+[iHeart Terms of Use](https://www.iheart.com/content/terms-of-use/)
+
+---
+
 > **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
 > once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
 > on a project whose whole argument is that it runs on hardware people already
