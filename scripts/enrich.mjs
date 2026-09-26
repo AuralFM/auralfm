@@ -283,7 +283,10 @@ function readPage(html, base) {
     ...(ln ? { lightning: ln[1] } : {}),
   };
   for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k];
-  return out;
+  // A substring keeps its whole page alive in V8; kept for every homepage in the
+  // run, that ran the crawl out of memory at 2 GB. A JSON round trip copies each
+  // string out, and the pages can go.
+  return JSON.parse(JSON.stringify(out));
 }
 const decode = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<")
   .replace(/&gt;/g, ">").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/\s+/g, " ");
@@ -341,6 +344,11 @@ async function readWebsite(raw) {
 }
 
 // ── run ─────────────────────────────────────────────────────────────────────
+// Node's fetch can throw from inside a socket's end event when a body is
+// cancelled mid-read (an assertion in undici, seen 26 Sept), which no await can
+// catch. One station's odd server must not end a 26,000-station pass: say so and
+// go on; whatever was asked is already written, and a resume asks the rest.
+process.on("uncaughtException", (err) => console.error(`  (carried on past: ${err.code || err.name}: ${String(err.message).slice(0, 80)})`));
 const out = fs.createWriteStream(F.out, { flags: "a" });
 let next = 0, done = 0, onAir = 0;
 const started = Date.now();
