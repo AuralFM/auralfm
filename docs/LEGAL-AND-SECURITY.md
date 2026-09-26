@@ -447,9 +447,33 @@ licence for that. In the EU the test is the CJEU's (the Court of Appeal applied
 it): linking to freely available, authorised content is fine (*Svensson*, 2014);
 linking to unauthorised content infringes when you know or should know, and
 knowledge is presumed when you link **for financial gain** (*GS Media*, 2016).
-Memberships and a premium tier would count as financial gain.
 
-**The four options, in detail**
+**How AuralFM is funded matters here, and being open source does not settle it.**
+AuralFM is not selling memberships: it is an open source project funded like one
+(Open Collective, Liberapay, GitHub Sponsors), and supporters may get discounts or
+features. What that changes and what it does not:
+  - Infringement does not need profit. Making a work available to a "new public"
+    is the act, whoever does it and whatever the code's licence. TuneIn lost on
+    what its service did, not on its business model. An MIT licence covers our
+    code, not the music in other people's streams.
+  - It does change *GS Media*'s presumption. Plain gifts (Liberapay, sponsorships
+    with nothing in return) are the weakest case for "financial gain". Perks for
+    paying supporters (features, discounts) look more like a sale, and the closer
+    they get to "pay for more listening", the more they look like one.
+  - It changes who would be sued and what it would cost: the damages a court
+    would award against a free, volunteer-funded project are smaller, and
+    collecting societies rarely start with one. That lowers the odds; it does
+    not make the use lawful.
+  - It changes the licence price (below): PPL and PRS price by revenue and
+    listening, and PPL's standard licence excludes services funded by
+    subscription or by a single sponsor or donor.
+  - A fiscal host (such as Open Source Collective) holds the money, and it can
+    ask about legal risk before or after it takes a project on.
+  - Wording: say "supporters" or "sponsors", never "subscribers" or "members"
+    who "unlock" listening. Keep every station free to hear; put the perks on
+    things that are ours (profiles, themes, badges, early features).
+
+**The options, in detail**
 
 *1. Carry on, and honour every removal request at once (today).*
 Everything stays listed and playable everywhere. The protection is speed: a
@@ -460,8 +484,8 @@ stations, when removed), which is what a court would ask to see; the DMCA agent
 (§8); and a line in the Terms that rights holders can reach us at hello@. Cost:
 none. Risk left: a UK or EU claim like TuneIn's is about the index as a whole,
 not one station, so takedowns answer individual complaints but not that claim.
-Reasonable while AuralFM is small, private-beta and not charging; less so once
-memberships or premium are live (GS Media's "financial gain").
+Reasonable while AuralFM is small and funded by gifts; less so once supporter
+perks are live (GS Media's "financial gain").
 
 *2. Open the big groups' own players instead of playing them in-app.*
 For the ~1,600 streams of NRJ, iHeartMedia, Bauer, Global, Radio France and the
@@ -488,21 +512,46 @@ is hearing a place as it sounds to itself, from anywhere.
 
 *4. Licences.*
 In the UK two bodies license music: PPL (the recordings, for labels and
-performers) and PRS for Music (the songs, for writers and publishers). PPL's
-Linear Webcast Licence and PRS's online licences are written for services that
-**transmit** the audio (a webcaster, a simulcast); AuralFM transmits nothing, it
-points at other people's streams, so the fit is not off the shelf: expect a
-negotiated licence with PPL and PRS (or the labels directly), priced on
-listening. In the EU the same, per country or through societies that license
-several territories. Cost: money every year, and reporting what is played. It
-is the one path that lets UK and EU listeners hear everything and sits well with
-charging members — the premium tier could carry it.
+performers) and PRS for Music (the songs, for writers and publishers). Both are
+needed; one does not cover the other.
+
+PPL's 2026 Linear Webcast Licence does publish prices, in its fee summary rather
+than on the web page: **per channel, per year**, £207 up to 150,000 streams
+(Band 1, UK only), £345 up to 270,000 (Band 2), and £691 recouped against
+£0.00138 a stream above that or for any service reaching more than the UK
+(Band 3, plus an admin fee for international royalties). A "stream" is one
+track to one listener. PRS for Music's small online licence (the LOML, for
+services under £12,500 a year in revenue) starts at a few hundred pounds a year.
+
+None of it fits AuralFM as written:
+  - it licenses **your own channel**: a station that transmits. AuralFM has no
+    channel; it points at 62,036 of other people's. Per channel, that would be
+    62,036 × £207 = about £12.8 million a year, which is not what anyone means;
+  - it excludes services funded by subscription, or by a single sponsor or
+    donor, and anything with pause or rewind;
+  - it covers PPL's recordings for the territories you pay for, not the world.
+
+So this is a conversation, not a form: PPL's own document says to email
+linearwebcast@ppluk.com (or its Broadcast Licensing team) when a service does not
+fit. A draft of that question is in the vault (`PPL-PRS-ENQUIRY.md`). In the EU
+the same, per country or through societies that license several territories.
+Cost: money every year and listening reports. It is the one path that lets UK
+and EU listeners hear everything.
+
+*5. Close AuralFM to the UK and the EU until one of the above is settled.*
+Stricter than TuneIn, which kept UK stations and speech. Everything else about
+option 3 applies (how to tell where the listener is, VPNs). It is the one option
+that removes the UK/EU exposure outright, at the cost of every listener there,
+including those listening to their own country's stations, which carry no
+TuneIn-style risk at all. Option 3 gets nearly all of the protection for much
+less.
 
 **What to take to a lawyer** (a UK media and IP solicitor for 3 and 4; a US
 one for the DMCA side):
 - Does *Warner v TuneIn* reach an index that is free, non-commercial today, and
   plays streams directly from the stations' own servers? Does that change the day
-  memberships start?
+  supporter perks start, or with gifts only (Open Collective, Liberapay, GitHub
+  Sponsors)?
 - Is honouring removals (1) enough while AuralFM is in private beta, and until
   when?
 - For (2): does opening the station's own site instead of playing its stream
@@ -515,7 +564,9 @@ one for the DMCA side):
   and how play works (the station's own stream, straight to the listener).
 
 Sources: [Tunein v Warner Music [2021] EWCA Civ 441](https://www.bailii.org/ew/cases/EWCA/Civ/2021/441.html) ·
-[iHeart Terms of Use](https://www.iheart.com/content/terms-of-use/)
+[iHeart Terms of Use](https://www.iheart.com/content/terms-of-use/) ·
+[PPL 2026 Linear Webcast Licence fees](https://www.ppluk.com/wp-content/uploads/2025/11/PPL-Linear-Webcast-Licence-Fees-and-Reporting-Summary-2026.pdf) ·
+[PRS Limited Online Music Licence](https://www.prsformusic.com/licences/using-music-online/limited-online-music-licence)
 
 ---
 
