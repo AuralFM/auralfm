@@ -16,6 +16,8 @@ data/crawl.log
 data/_radiobrowser.json
 data/_streams.jsonl
 data/streams.log
+data/_enrich.jsonl
+data/enrich.log
 src/renderer/vendor/
 dist/
 build/icon.iconset/
