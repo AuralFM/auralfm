@@ -464,6 +464,10 @@ p { text-wrap: pretty; }
 
 /* ── the waitlist forms ───────────────────────────────────────────────────── */
 .beta { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+/* A screenshot of the app in its own window, shadow and all: shown whole, on the onyx. */
+.shot { grid-template-columns: minmax(0, 1fr); margin: 0; }
+.shot img { display: block; width: 100%; max-width: 1313px; height: auto; margin: 0 auto; }
+.shot figcaption { font: 400 13px/20px var(--mono); color: var(--bone2); }
 .beta-what { display: flex; flex-direction: column; gap: 16px; }
 .beta-what ul { display: grid; gap: 10px; list-style: square; padding-left: 20px; color: var(--bone2); }
 .beta-what li::marker { color: var(--aqua); }
