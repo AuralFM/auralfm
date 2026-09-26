@@ -497,11 +497,13 @@ change to the play button for a list of stream hosts, kept in one file; those
 problem, which is about labels' recordings on any foreign music station, big or
 small.
 
-*3. Leave foreign music stations out for UK and EU listeners.*
-What TuneIn did. For a UK listener: UK stations (2,346) plus speech stations
-elsewhere (talk, news, sports, faith with no music genre: about 5,400) — some
-7,700 of 62,036, about 12%. For an EU listener it is per country and far
-messier. The hard part is knowing where the listener is without a server:
+*3. Leave foreign music stations out for UK and EU listeners.* **Chosen, 26 Sept
+2026, and live** (src/region.js; the UK, the EU and the EEA; held stations stay
+listed and say "Not available where you are yet"). A UK listener keeps 5,846:
+2,346 UK stations and 3,500 talk, news, sport and faith stations with no music.
+What TuneIn did, and what Radio Garden does: UK listeners there hear UK stations
+only. For an EU listener it is their own country (with its overseas parts)
+plus the same speech stations. The hard part is knowing where the listener is without a server:
   - desktop: the time zone (Europe/London) is a guess, not a location; it is
     wrong for travellers and anyone who sets their clock otherwise;
   - web: the same guess, or an IP lookup through a third party (a privacy cost

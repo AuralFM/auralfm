@@ -479,6 +479,9 @@ async function tune(ch, { chained = false } = {}) {
 
   const res = await window.auralfm.resolve(ch);
   if (my !== gen) return;
+  // Not a failure: nothing is wrong with the station, so no skipping to the next
+  // one and no mark against it. It just does not play here (src/region.js).
+  if (res?.held) { setToggle("play"); setStatus(t("st.held", "Not available where you are yet"), "err"); return; }
   if (!res) { fail("No stream available"); return; }
   start(res.url, my);
 }

@@ -41,7 +41,7 @@ const copy = (from, to = from) => fs.cpSync(R(from), path.join(OUT, to), { recur
 // Order does not matter (require is lazy), but every module a wrapped one
 // requires must be in this list or be one of the shims below.
 const MODULES = ["backoff", "useragent", "geo", "prefs", "palettes", "i18n", "safehost",
-                 "catalog", "weather", "markets", "iss", "space", "clouds", "wspr", "news",
+                 "region", "catalog", "weather", "markets", "iss", "space", "clouds", "wspr", "news",
                  "docs"];
 const EXPOSE = ["geo", "prefs", "palettes", "i18n", "catalog", "weather", "markets", "iss", "space",
                 "clouds", "wspr", "news", "docs"];

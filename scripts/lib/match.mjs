@@ -3,6 +3,9 @@
  * apart: names, countries, streams, distances, and writing the two bundles.
  */
 import fs from "node:fs";
+import { createRequire } from "node:module";
+
+const { classify } = createRequire(import.meta.url)("../../src/taxonomy.js");
 
 // ── normalisation ────────────────────────────────────────────────────────────
 export const norm = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -95,12 +98,28 @@ export function overlap(a, b) {
 }
 
 /** Rewrite stations.json and the positional stations.min.json the app loads. */
+/**
+ * A station that is talk, news, sport or faith and plays no music genre at all.
+ * These stay open where foreign music stations are held back (src/region.js):
+ * the recordings a label licenses country by country are what the TuneIn ruling
+ * was about, and a phone-in is not one. No tags, no reading: not speech; and a
+ * name that says music wins over tags that say talk.
+ */
+const SPEECH = new Set(["news", "talk", "sports", "faith"]);
+export function speech(c, country = "") {
+  const k = classify({ tags: c.tags || [], title: c.title, country });
+  // A music word in its name counts even when its tags say talk: "Jazz WMUK" is
+  // tagged public radio and news, and plays jazz.
+  return !k.genres.length && k.formats.some((f) => SPEECH.has(f))
+    && !classify({ tags: [], title: c.title }).genres.length;
+}
+
 export function writeBundles(full, F) {
   fs.writeFileSync(F.full, JSON.stringify(full));
   const min = {
     g: full.generated,
     p: full.places.map((p) => [p.title, p.country, p.geo[0], p.geo[1]]),
-    // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit]
+    // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit, speech]
     // Fixed arity now that later slots exist — optional trailing fields stop
     // working the moment anything follows them.
     c: full.channels.map((c) => [
@@ -109,6 +128,7 @@ export function writeBundles(full, F) {
       c.rbuuid || "",
       c.ok === 0 ? 0 : c.ok === 1 ? 1 : "",
       c.explicit ? 1 : "",
+      speech(c, full.places[c.p]?.country) ? 1 : "",
     ]),
   };
   fs.writeFileSync(F.min, JSON.stringify(min));

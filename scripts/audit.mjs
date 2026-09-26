@@ -2819,6 +2819,46 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── foreign music stations are held back in the UK and the EU ──────────────
+// Option 3 of docs/LEGAL-AND-SECURITY.md §9 (Melton, 26 Sept): on London time a
+// US music station is listed but held, a UK one and a speech station elsewhere
+// are not, the shuffle lands only on what can play, and the two places that
+// start a stream (the desktop's resolve, the web bridge's tune) ask first. On
+// Los Angeles time nothing at all is held.
+{
+  const name = "foreign music stations are held back in the UK and the EU, and nowhere else";
+  console.log("\nforeign music stations are held back in the UK and the EU");
+  const { createRequire } = await import("node:module");
+  const cat = createRequire(import.meta.url)(R("src/catalog.js"));
+  if (!fs.existsSync(R("data/stations.min.json"))) skip(name, "no catalogue — runs locally");
+  else {
+    const log = console.log; console.log = () => {}; cat.load(); console.log = log;
+    const min = JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8"));
+    const country = (c) => min.p[c[2]][1];
+    const us = min.c.find((c) => country(c) === "United States" && c[8] !== 1 && c[4]);
+    const uk = min.c.find((c) => country(c) === "United Kingdom");
+    const talk = min.c.find((c) => country(c) === "United States" && c[8] === 1);
+    const bad = [];
+    if (!us || !uk || !talk) bad.push("the catalogue has no speech slot (run scripts/profiles.mjs)");
+    else {
+      cat.setRegion("Europe/London");
+      if (!cat.held({ id: us[0] }) || !cat.byId(us[0])?.held) bad.push(`"${us[1]}" (US music) plays in London`);
+      if (cat.held({ id: uk[0] })) bad.push(`"${uk[1]}" (UK) is held in London`);
+      if (cat.held({ id: talk[0] })) bad.push(`"${talk[1]}" (US talk) is held in London`);
+      if (cat.held({ id: "my:abc" })) bad.push("a station of your own is held");
+      for (let k = 0; k < 40; k++) { const r = cat.randomChannel(); if (!r || r.held) { bad.push("the shuffle landed on a held station, or nothing"); break; } }
+      cat.setRegion("America/Los_Angeles");
+      if (cat.held({ id: us[0] }) || cat.held({ id: uk[0] })) bad.push("something is held in Los Angeles");
+      cat.setRegion();
+    }
+    const ipc = fs.readFileSync(R("src/main/ipc-catalog.js"), "utf8");
+    const bridge = fs.readFileSync(R("web/bridge.js"), "utf8");
+    if (!/catalog\.held\(ch\)\)\s*return \{ held: true \}/.test(ipc)) bad.push("the desktop resolves a stream without asking catalog.held");
+    if (!/M\.catalog\.held\(ch\)\) return setStatus/.test(bridge)) bad.push("the web bridge tunes without asking catalog.held");
+    bad.length ? fail(name, bad.join("; ")) : pass(`"${us[1]}" is held in London and plays in Los Angeles; "${uk[1]}" and "${talk[1]}" play in both`);
+  }
+}
+
 // ── the vibe icons share one line ──────────────────────────────────────────
 // The vibe icons came from different sets at different line weights, and
 // scripts/build-vibe-icons.mjs brings them to one weight and one frame. An icon

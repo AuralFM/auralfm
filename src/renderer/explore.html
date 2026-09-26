@@ -956,6 +956,8 @@
           overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   .st[aria-current="true"]{background:color-mix(in srgb,var(--accent) 15%,transparent)}
   .st[aria-current="true"] .sn{color:var(--accent);font-weight:590}
+  /* Held back where the listener is (src/region.js): quieter, still readable. */
+  .st.held .sn{color:var(--label2)}
   .smeta{flex:1;min-width:0}
   .sn{letter-spacing:-.002em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stags{font-size:11px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1006,6 +1008,23 @@
   .ptip{align-self:flex-start;font-size:13px;font-weight:600;padding:6px 12px;border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);text-decoration:none}
   .ptip:focus-visible,.plink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .pnote,.pnone{font-size:12px;color:var(--label2)}
+  /* The same "i" in the player bar, for the station you are hearing (Melton,
+     26 Sept). Always shown there — the bar has no hover to reveal it — and a
+     little larger than in a list row, as the bar's type is; still caught at 38. */
+  .pinfo.nowinfo{opacity:1;width:14px;height:14px;font-size:9.5px;line-height:12px}
+  /* Its card opens above the bar, as the output menu does, and is the list's
+     card with the station's name on top: out here nothing else says whose it is. */
+  .nowcard{
+    position:fixed;z-index:9400;width:320px;max-width:calc(100vw - 16px);max-height:min(420px,70vh);overflow:auto;
+    padding:12px;border-radius:var(--r-lg);background:var(--pane);border:1px solid var(--line);
+    box-shadow:0 12px 40px rgba(0,0,0,.45);backdrop-filter:blur(20px);
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .nowcard[hidden]{display:none}
+  .nowcard:focus{outline:none}
+  .nowcard .ptitle{font-size:13px;font-weight:590;color:var(--label);margin:0}
+  .nowcard .sprofile{margin:0;padding:0;background:none}
+  .nowcard p{margin:0}
   .pnote .plink{font-size:12px}
   .star:active{transform:scale(.85)}
   /**
@@ -1715,6 +1734,10 @@
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
   <span id="nowStatus"></span>
+  <!-- What the station says about itself, for the one you are hearing: the same
+       card the list opens (explore-profile.js). Hidden until there is a station. -->
+  <button id="nowInfo" class="pinfo nowinfo" type="button" aria-expanded="false" aria-controls="nowcard"
+          data-i18n-title="profile.about" title="About this station" hidden>i</button>
   <!-- Announced, not shown. The visible name and status are two separate
        elements that change together, so a live region on either one alone would
        say "Connecting…" without ever saying to what. This carries both. -->
@@ -1763,6 +1786,7 @@
   rendered inside it is clipped at the bar's own edge no matter how it is
   positioned. It is placed from the button's rectangle at open time instead.
 -->
+<div id="nowcard" class="nowcard" role="region" tabindex="-1" hidden></div>
 <div id="outmenu" class="outmenu" role="listbox" hidden
      aria-label="Where the sound comes out"></div>
 

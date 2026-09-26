@@ -37,6 +37,8 @@ module.exports = function register(ctx) {
       const s = mine.get(ch.id);
       return s ? { url: s.url } : null;
     }
+    // Held back where the listener is (src/region.js): asked for, never looked up.
+    if (catalog.held(ch)) return { held: true };
     return resolver.resolve(ch);
   });
   ipcMain.handle("mine:list", () => mine.all().map(hydrateMine));

@@ -29,6 +29,12 @@ panel and in the Privacy Policy.
 We make no claim to any of it, and we cannot grant you rights to it. Your use of
 any stream is subject to that station's own terms and to the laws where you are.
 
+**Some stations do not play everywhere.** In the United Kingdom and the European
+Economic Area, music stations from other countries are listed but do not play
+until the licensing there is settled; your own country's stations, and talk,
+news and sport from anywhere, do. Where you are is worked out from your device's
+time zone, on the device (see the Privacy Policy).
+
 ## No warranty
 
 AuralFM is provided **"as is", without warranty of any kind**. In particular:

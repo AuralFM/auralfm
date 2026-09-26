@@ -215,7 +215,7 @@ function renderStations() {
   }
   for (const ch of channels) {
     const el = document.createElement("div");
-    el.className = "st";
+    el.className = ch.held ? "st held" : "st";
     el.dataset.id = ch.id;
     el.setAttribute("aria-current", playing?.id === ch.id);
     el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>
@@ -223,8 +223,11 @@ function renderStations() {
                     <span class="bars"><i></i><i></i><i></i></span>`;
     el.querySelector(".sn").textContent = ch.title;
     // Explicit stations say so first, in the tag line, before anyone presses play.
+    // So does one held back where the listener is (src/region.js): still listed,
+    // so the map stays whole, but it says why it will not play before anyone tries.
     el.querySelector(".stags").textContent =
-      [...(ch.explicit ? [t("st.explicit", "Explicit")] : []), ...ch.tags.slice(0, 4)].join(" · ");
+      [...(ch.held ? [t("st.held", "Not available where you are yet")] : []),
+       ...(ch.explicit ? [t("st.explicit", "Explicit")] : []), ...ch.tags.slice(0, 4)].join(" · ");
     // The name area takes focus rather than the row, because the row holds the
     // star (and for your own stations a remove button): see activatable().
     activatable(el, (e) => {

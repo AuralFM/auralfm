@@ -7,7 +7,7 @@
  *
  * Bundle shape (positional, to keep the file small):
  *   p: [ [placeTitle, country, lon, lat], ... ]
- *   c: [ [channelId, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit] ]
+ *   c: [ [channelId, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit, speech] ]
  *
  * tags is a comma-joined string, present only on the ~34% of channels we could
  * match to radio-browser (see scripts/tags.mjs). radio.garden has no genre data
@@ -16,6 +16,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const region = require("./region");
 
 const BUNDLE = path.join(__dirname, "..", "data", "stations.min.json");
 
@@ -78,6 +79,7 @@ function load() {
   channels = raw.c;
   // The search haystacks are NOT built here — see searchHay() and placeHaystack().
   haystack = placeHay = null;
+  byIdIndex = null;
 
   // Explore browses by place constantly, so invert the relation once at load
   // instead of scanning 38k channels on every click.
@@ -89,10 +91,31 @@ function load() {
   // they come after every real town wherever places are listed, and draw no dot
   // on the globe (Melton, 26 Sept: the real cities first; these at the end).
   nowhere = Uint8Array.from(places, (p) => (/^(Somewhere in |Online only$)/.test(p[0]) ? 1 : 0));
+  setRegion();
 
   console.log(`catalog: ${channels.length} channels across ${places.length} places`);
   return true;
 }
+
+/**
+ * Held back where the listener is (src/region.js): in the UK and the EU, a
+ * music station from another country. Still listed, so the map stays whole and
+ * nobody wonders where a station went; it just does not play.
+ */
+let home = null;
+function setRegion(zone) { home = region.homeFor(zone); open = null; }
+// What may play here, for the shuffle: most of the catalogue is held back in the
+// UK, so drawing at random from all of it and skipping would mostly skip.
+let open = null;
+const openHere = () => (open ||= channels.map((_, i) => i).filter((i) => !heldBack(i)));
+const heldBack = (i) => !!home && channels[i]?.[8] !== 1 && !home.countries.has(places[channels[i][2]]?.[1]);
+/** For the player: may this station play here? Stations not in the catalogue (your own) always may. */
+function held(ch) {
+  const i = ch ? indexOf(ch.id) : -1;
+  return i >= 0 && heldBack(i);
+}
+let byIdIndex = null;
+const indexOf = (id) => (byIdIndex ||= new Map(channels.map((c, i) => [c[0], i]))).get(String(id)) ?? -1;
 
 function hydrate(i) {
   const c = channels[i];
@@ -106,6 +129,7 @@ function hydrate(i) {
     rbuuid: c[5] || null,          // radio-browser id, for click reporting
     ok: c[6] === 0 ? false : c[6] === 1 ? true : null,
     explicit: c[7] === 1,
+    ...(heldBack(i) ? { held: true } : {}),
     place: p[0],
     country: p[1],
     lon: p[2],
@@ -205,11 +229,12 @@ function search(query, limit = 60, filter = {}) {
   for (let i = 0; i < channels.length; i++) {
     if (!passes(i, filter)) continue;
     const s = score(i, terms);
-    if (s >= 0) hits.push([placeMatches(i, terms) ? 0 : 1, s, channels[i][1].length, i]);
+    if (s >= 0) hits.push([heldBack(i) ? 1 : 0, placeMatches(i, terms) ? 0 : 1, s, channels[i][1].length, i]);
   }
-  // Geography first, then how well the rest of the query matched, then brevity.
-  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
-  return hits.slice(0, limit).map(([, , , i]) => hydrate(i));
+  // What can play here first; then geography, how well the rest of the query
+  // matched, and brevity.
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2] || a[3] - b[3]);
+  return hits.slice(0, limit).map(([, , , , i]) => hydrate(i));
 }
 
 const hydratePlace = (i) => ({
@@ -408,8 +433,10 @@ function globePoints() {
  */
 function randomChannel() {
   if (!channels.length) return null;
+  const pool = home ? openHere() : null;
+  if (pool && !pool.length) return null;
   for (let tries = 0; tries < 12; tries++) {
-    const i = Math.floor(Math.random() * channels.length);
+    const i = pool ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * channels.length);
     if (hideExplicit && isExplicit(i)) continue;
     const c = hydrate(i);
     if (Number.isFinite(c.lat) && Number.isFinite(c.lon)) return c;
@@ -439,15 +466,15 @@ function nextInPlace(channel, exclude = []) {
   if (i < 0) return null;
   const skip = new Set([channel.id, ...exclude]);
   // Prefer stations radio-browser last saw alive.
-  const cands = byPlace[i].map(hydrate).filter((c) => !skip.has(c.id));
+  const cands = byPlace[i].map(hydrate).filter((c) => !skip.has(c.id) && !c.held);
   return cands.find((c) => c.ok !== false) || cands[0] || null;
 }
 
 function byId(id) {
-  const i = channels.findIndex((c) => c[0] === id);
+  const i = indexOf(id);
   return i < 0 ? null : hydrate(i);
 }
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { setHideExplicit, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };
+module.exports = { setHideExplicit, setRegion, held, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };

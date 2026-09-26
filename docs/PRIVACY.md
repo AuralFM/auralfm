@@ -84,7 +84,9 @@ Two points worth stating plainly:
    against its own list of places so the first thing you see is somewhere
    plausible rather than the middle of the Pacific. This happens entirely on the
    device. The time zone is not sent anywhere, and it is a region, not a
-   location — it cannot say which town you are in.
+   location — it cannot say which town you are in. The same time zone decides
+   whether music stations from other countries play where you are (see the
+   Terms): again on the device, with nothing sent.
 3. **Play counts are reported to radio-browser.** Their documentation asks
    clients to do this so station popularity rankings stay meaningful. The report
    contains the station's identifier and nothing about you.

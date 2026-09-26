@@ -202,6 +202,7 @@
   // its rankings stay honest. Fire and forget.
   const RB = "https://de1.api.radio-browser.info";
   const reportClick = (uuid) => { if (uuid) fetch(`${RB}/json/url/${uuid}`).catch(() => {}); };
+  const heldText = () => M.i18n.strings(getPrefs().language, locale)["st.held"] || "Not available where you are yet";
 
   /**
    * Where a station can be heard from a web page, best first. https only: an
@@ -247,6 +248,11 @@
     // A new choice ends any hold, and drops the URL a resume would have used.
     held = null; playingUrl = null;
     setState({ lastChannel: ch });
+    // Held back where the listener is (src/region.js): not a failure, so no
+    // skipping on to the next station, and no stream is looked up at all.
+    await catalogReady;
+    if (my !== gen) return;
+    if (M.catalog.held(ch)) return setStatus(heldText(), true);
     setStatus("Finding stream…");
     reportClick(ch.rbuuid);
     const urls = await candidates(ch);

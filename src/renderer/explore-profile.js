@@ -115,6 +115,62 @@
     paint(box, await profileOf(ch.id), ch);
   }
 
+  // ── the player bar ───────────────────────────────────────────────────────
+  // The same card for the station you are hearing, from an "i" beside its name
+  // in the bar (Melton, 26 Sept: the bar has room, and a playing station is the
+  // one you most want to know about). It opens above the bar like the output
+  // menu, takes focus so its links are reachable, and closes on Escape, on a
+  // click anywhere else, or when the station changes.
+  const nowBtn = document.getElementById("nowInfo");
+  const card = document.getElementById("nowcard");
+  let nowCh = null;
+  const closeCard = ({ refocus = false } = {}) => {
+    if (!card || card.hidden) return;
+    card.hidden = true;
+    nowBtn.setAttribute("aria-expanded", "false");
+    if (refocus) nowBtn.focus();
+  };
+  const placeCard = () => {
+    const r = nowBtn.getBoundingClientRect(), m = card.getBoundingClientRect();
+    card.style.top = `${Math.round(Math.max(8, r.top - m.height - 10))}px`;
+    card.style.left = `${Math.round(Math.min(Math.max(8, r.left - 16), innerWidth - m.width - 8))}px`;
+  };
+  async function openCard() {
+    const ch = nowCh;
+    if (!ch) return;
+    card.textContent = "";
+    card.setAttribute("aria-label", `${ch.title}: ${t("profile.about", "about this station")}`);
+    const box = el("div", "sprofile");
+    box.append(el("p", "pnone", t("profile.loading", "Looking…")));
+    card.append(el("p", "ptitle", ch.title), box);
+    card.hidden = false;
+    nowBtn.setAttribute("aria-expanded", "true");
+    placeCard();
+    card.focus();
+    const p = await profileOf(ch.id);
+    if (nowCh !== ch || card.hidden) return;
+    paint(box, p, ch);
+    placeCard();
+  }
+  if (nowBtn && card) {
+    nowBtn.onclick = (e) => { e.stopPropagation(); if (card.hidden) openCard(); else closeCard(); };
+    window.auralfm.onPlayerState?.((st) => {
+      const ch = st?.channel || null;
+      const same = !!ch && !!nowCh && ch.id === nowCh.id;
+      nowCh = ch;
+      // Nothing to say about a shortwave receiver or a station you added yourself.
+      nowBtn.hidden = !ch || !!ch.sdr || String(ch.id).startsWith("my:");
+      if (!same) closeCard();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !card.hidden) { e.preventDefault(); closeCard({ refocus: true }); }
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!card.hidden && !card.contains(e.target) && !nowBtn.contains(e.target)) closeCard();
+    });
+    addEventListener("resize", () => { if (!card.hidden) placeCard(); });
+  }
+
   // eslint-disable-next-line no-global-assign
   renderStations = (...args) => {
     draw(...args);
