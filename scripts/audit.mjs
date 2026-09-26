@@ -2714,6 +2714,38 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── the taxonomy reads a station the way a listener would ──────────────────
+// src/taxonomy.js sorts stations into genres, scenes, formats and moods from
+// their tags, names and countries. Each case below is a way it went wrong while
+// it was being written, or would: "classic hits" read as chart pop, "metallica"
+// as metal, a Bangkok news station as Thai music, a hundred tags as everything.
+{
+  console.log("\nthe taxonomy reads a station the way a listener would");
+  const { createRequire } = await import("node:module");
+  const T = createRequire(import.meta.url)(R("src/taxonomy.js"));
+  const soup = Array.from({ length: T.TAG_SOUP + 1 }, (_, i) => ["techno", "yoga", "christmas", "jazz"][i % 4] + (i > 3 ? i : ""));
+  const cases = [
+    [{ tags: ["hits"] }, "genres", "pop", true, "\"hits\" is chart pop"],
+    [{ tags: ["classic hits"] }, "genres", "pop", false, "\"classic hits\" is oldies, not chart pop"],
+    [{ tags: ["classic hits"] }, "moods", "feel-good", true, "\"classic hits\" feels good"],
+    [{ tags: ["Hip-Hop"] }, "genres", "hip-hop", true, "\"Hip-Hop\" and \"hip hop\" are one"],
+    [{ tags: ["metallica"] }, "genres", "metal", false, "\"metallica\" is a band, not the genre"],
+    [{ tags: ["christian contemporary"] }, "genres", "christian", true, "a term inside a longer tag counts"],
+    [{ tags: [], title: "Jazz FM 102" }, "genres", "jazz", true, "a station with no tags is found by an unmistakable name"],
+    [{ tags: [], title: "Love FM" }, "moods", "love", false, "\"Love FM\" is a name, not a love-songs station"],
+    [{ tags: ["pop"], country: "Japan" }, "genres", "j-pop", true, "pop from Japan is J-pop"],
+    [{ tags: ["news"], country: "Thailand" }, "scenes", "thai", false, "a news station is not a music scene"],
+    [{ tags: ["pop"], country: "Thailand" }, "scenes", "thai", true, "music from Thailand is the Thai scene"],
+    [{ tags: soup }, "formats", "variety", true, "a station tagged with everything is Variety"],
+    [{ tags: soup }, "genres", "techno", false, "…and is not every genre in its list"],
+  ];
+  const wrong = cases.filter(([st, axis, id, want]) =>
+    T.classify({ title: "", country: "", ...st })[axis].includes(id) !== want);
+  wrong.length
+    ? fail("the taxonomy reads a station the way a listener would", wrong.map((c) => c[4]).join("; "))
+    : pass(`${cases.length} readings hold: hits, classic hits, names, places, tag soup`);
+}
+
 // ── the vibe icons share one line ──────────────────────────────────────────
 // The vibe icons came from different sets at different line weights, and
 // scripts/build-vibe-icons.mjs brings them to one weight and one frame. An icon
