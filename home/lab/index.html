@@ -21,7 +21,7 @@
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../aural.css?v=33150c7032">
+<link rel="stylesheet" href="../aural.css?v=62d4019321">
 <style>
 /* Texture lab: studies only, kept out of aural.css until one is chosen. */
 :root { --signal: #E5382C; }
@@ -75,8 +75,19 @@
 .tile { height: 260px; background-color: var(--onyx);
   background-image: radial-gradient(circle at 0 0, transparent 0 18px, var(--line) 18px 19.5px, transparent 19.5px 30px, var(--line) 30px 31.5px, transparent 31.5px 42px, rgba(2,232,205,.45) 42px 43.5px, transparent 43.5px);
   background-size: 48px 48px; }
+/* 08 the brand pattern, Melton's: terrain seen from orbit, printed in blocks. */
+.pat-band { height: clamp(140px, 16vw, 240px); background: url("../assets/patterns/bands.webp") center / cover; position: relative; }
+.pat-band span { position: absolute; left: var(--pad); bottom: 16px; font: 700 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; background: var(--onyx); color: var(--bone); padding: 6px 8px; }
+.pat-type { font: 900 clamp(36px, 10.4vw, 200px)/.86 var(--display); -webkit-text-stroke: 1px var(--bone); text-transform: uppercase; font-variation-settings: "wdth" 80; letter-spacing: -.01em;
+  background: url("../assets/patterns/field.webp") center / cover; -webkit-background-clip: text; background-clip: text; color: transparent; padding: 32px var(--pad) 8px; }
+.pats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.pat { position: relative; isolation: isolate; aspect-ratio: 3 / 2; overflow: hidden; background: var(--onyx); }
+.pat img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pat.tint { background: var(--aqua); }
+.pat.tint img { filter: grayscale(1) contrast(1.25); mix-blend-mode: multiply; }
+.pat span { position: absolute; left: 14px; bottom: 12px; z-index: 2; font: 700 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; background: var(--onyx); color: var(--bone); padding: 6px 8px; }
 @media (max-width: 760px) {
-  .frame, .duos { grid-template-columns: minmax(0, 1fr); }
+  .frame, .duos, .pats { grid-template-columns: minmax(0, 1fr); }
   .lines { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .frame-words { left: 32px; top: 32px; }
 }
@@ -123,7 +134,7 @@
     <h1 class="cell display stretch">Texture lab</h1>
     <div class="cell intro">
       <p class="label">[ Design studies · not a page of the site ]</p>
-      <p class="lede">Seven treatments for the next pass, each on its own, so they can be chosen or
+      <p class="lede">Eight treatments for the next pass, each on its own, so they can be chosen or
         thrown away one at a time before any of them reaches the live pages.</p>
       <p class="proof">After the references: 032c, архитекторы.рф, Хлебозавод №9 and Studio Job. The
         red is a proposal, not yet part of the brand.</p>
@@ -152,7 +163,7 @@
   </div></section>
 
   <section class="grid"><ul class="lines"><li><svg viewBox="0 0 200 120"><rect x="70" y="30" width="60" height="60"/><rect x="55" y="15" width="90" height="90"/><rect x="40" y="0" width="120" height="120"/></svg><b>Deep &amp; house</b></li><li><svg viewBox="0 0 200 120"><path d="M10 110V60M40 110V20M70 110V60M100 110V20M130 110V60M160 110V20M190 110V60"/></svg><b>Techno</b></li><li><svg viewBox="0 0 200 120"><path d="M10 90C40 10 60 10 80 60S120 120 140 50 180 20 190 40"/></svg><b>Jazz</b></li><li><svg viewBox="0 0 200 120"><path d="M20 30H180M20 60H150M20 90H110"/><path d="M110 90L90 115V90"/></svg><b>Talk</b></li><li><svg viewBox="0 0 200 120"><path d="M0 40Q50 10 100 40T200 40M0 70Q50 40 100 70T200 70M0 100Q50 70 100 100T200 100"/></svg><b>Reggae &amp; dub</b></li></ul>
-    <div class="cell"><p class="study-tag">[ Study 05 · Line art for vibes ]</p><p class="study-note">Placeholders for your own drawings: one line, one weight, square ends, drawn in on hover. Swap mine for yours and the rest stays.</p></div></section>
+    <div class="cell"><p class="study-tag">[ Study 05 · Line art for vibes ]</p><p class="study-note">The first placeholders. Your drawings have replaced them on the live pages, brought to one line weight: see the vibe cards on the homepage and at /vibes/.</p></div></section>
 
   <section class="grid"><div class="duos">
     <figure class="duo"><img src="../assets/globe.jpg" alt="The globe, in aqua halftone"><span>Aqua · halftone</span></figure>
@@ -163,6 +174,19 @@
 
   <section class="grid"><div class="echo-wall" aria-hidden="true"></div>
   <div class="cell"><p class="study-tag">[ Study 07 · The echo wall ]</p><p class="study-note">Redrawn 25 Sept: a radio mast throwing its signal off in rings, the echo you see drawn from every transmitter, repeated as a wall for section breaks. Mast red at the tip.</p></div></section>
+
+  <section aria-label="Study 08"><div class="pat-band" role="img" aria-label="The brand pattern as a band between sections"><span>As a band</span></div>
+  <p class="pat-type" aria-hidden="true">Everywhere</p>
+  <div class="pats">
+    <div class="pat"><img src="../assets/patterns/terrain.webp" alt="The brand pattern in its own colours" loading="lazy" width="1600" height="1067"><span>As drawn</span></div>
+    <div class="pat tint"><img src="../assets/patterns/terrain.webp" alt="The brand pattern printed in aqua and onyx" loading="lazy" width="1600" height="1067"><span>In the palette</span></div>
+  </div>
+  <div class="grid"><div class="cell"><p class="study-tag">[ Study 08 · The pattern ]</p><p class="study-note">Yours: terrain seen from orbit, cut into blocks and scan lines, which is the globe
+    taken apart. Three uses: a band between sections, the fill of one big word, and a field behind
+    a quiet block. Its blues and green are new to the brand, so it is either kept to itself or
+    printed in the palette, as on the right. Loud by design, so once or twice a page, never behind
+    text you have to read and never near the globe.</p></div></div></section>
+
 </main>
 
 <footer class="foot grid">
@@ -188,6 +212,6 @@
   </symbol>
 </svg>
 
-<script src="../aural.js?v=33150c7032" defer></script>
+<script src="../aural.js?v=62d4019321" defer></script>
 </body>
 </html>

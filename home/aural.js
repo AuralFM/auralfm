@@ -399,6 +399,7 @@
   // ── line drawings that draw themselves in ──────────────────────────────────
   // CSS draws a stroke in by animating its dash offset from its full length to
   // zero. Each shape's real length is measured here and handed to CSS as --len.
+  // (Used by the stepped frame; the vibe icons are filled drawings and wipe in.)
   // (pathLength="1" did this in Chrome, but Safari ignores it on circles and
   // rectangles, which drew dotted or not at all.) Without script, --len is
   // unset and every line simply shows whole.
@@ -407,7 +408,6 @@
       try { el.style.setProperty("--len", el.getTotalLength().toFixed(1)); } catch { /* not rendered */ }
     }
   };
-  document.querySelectorAll(".vibe-art").forEach(measure);
 
   // ── the stepped frame ─────────────────────────────────────────────────────
   // A heavy outline stepping round a [data-frame] block, after архитекторы.рф,

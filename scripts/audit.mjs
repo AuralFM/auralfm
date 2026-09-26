@@ -2714,6 +2714,19 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── the vibe icons share one line ──────────────────────────────────────────
+// The vibe icons came from different sets at different line weights, and
+// scripts/build-vibe-icons.mjs brings them to one weight and one frame. An icon
+// swapped in art/vibes/ by hand, or a new original without a rebuild, puts a
+// heavier or lighter drawing back among the others.
+{
+  console.log("\nthe vibe icons share one line");
+  const r = spawnSync(process.execPath, [R("scripts/build-vibe-icons.mjs"), "--check"], { encoding: "utf8" });
+  r.status === 0
+    ? pass("art/vibes/ is the originals at one line weight and one frame")
+    : fail("the vibe icons share one line", (r.stdout + r.stderr).trim() || "build-vibe-icons --check failed");
+}
+
 // ── one design across the three sites ───────────────────────────────────────
 // auralfm.xyz, the Journal and the docs are separate here.now sites, so each
 // carries its own copy of the stylesheet, script and fonts, copied from home/
