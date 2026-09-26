@@ -181,6 +181,11 @@
     // whatever the OS uses for .md. They open a panel now, so they get the
     // disclosure chevron that says so.
     disclose:  SVG(`<path d="M9 5l7 7-7 7"/>`),
+
+    /* Your show: the studio's button and its on-air state. Drawn at the chat
+       glyph's weight so the two sit together in a toolbar. */
+    mic: SVG(`<rect x="8.6" y="3" width="6.8" height="11.6" rx="3.4" stroke-width="2.1"/>
+              <path d="M5.2 11.2a6.8 6.8 0 0 0 13.6 0M12 18v3" stroke-width="2.1"/>`),
   };
 
   /**

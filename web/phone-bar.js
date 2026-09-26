@@ -302,7 +302,7 @@
       // The globe's own controls: what it shows, what is held, and where to go
       // next. Lock sits here rather than in the player because it is a switch
       // you set once and then forget, not part of reading what is on.
-      for (const el of [$("layersBtn"), $("lock"), $("tripBtn")]) { remember(el); side.append(el); }
+      for (const el of [$("layersBtn"), $("lock"), $("tripBtn"), $("studioBtn")]) { if (!el) continue; remember(el); side.append(el); }
       document.querySelector(".globewrap")?.append(side);
       // Search is a tab now, so the field lives in a bar that tab opens.
       const q = $("q");

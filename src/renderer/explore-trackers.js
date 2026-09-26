@@ -99,17 +99,23 @@ function paintRings() {
   if (layers.listeners) {
     for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
   }
+  // Your show, live (explore-studio.js): your town, in the accent, and always —
+  // it is you, not a layer.
+  const live = window.AuralStudio?.live;
+  if (live) data.push({ lat: live.lat, lng: live.lon, kind: "live" });
 
   globe
     .ringsData(data)
     .ringLat("lat").ringLng("lng")
     // Listeners pulse wider and slower than the ISS — it is overhead and moving,
     // they are a place on the ground where somebody is sitting.
-    .ringMaxRadius((d) => (d.kind === "peer" ? 3.6 : 2.4))
-    .ringPropagationSpeed((d) => (d.kind === "peer" ? 0.8 : 1.6))
-    .ringRepeatPeriod((d) => (d.kind === "peer" ? 2600 : 1400))
+    .ringMaxRadius((d) => (d.kind === "live" ? 5 : d.kind === "peer" ? 3.6 : 2.4))
+    .ringPropagationSpeed((d) => (d.kind === "live" ? 1.2 : d.kind === "peer" ? 0.8 : 1.6))
+    .ringRepeatPeriod((d) => (d.kind === "live" ? 900 : d.kind === "peer" ? 2600 : 1400))
     .ringAltitude(0.055)
-    .ringColor((d) => d.kind === "peer"
+    .ringColor((d) => d.kind === "live"
+      ? (t) => hexA(getComputedStyle(document.documentElement).getPropertyValue("--err").trim() || "#E5484D", 0.85 * (1 - t))
+      : d.kind === "peer"
       ? (t) => hexA(palette?.star || "#F5F0E4", 0.5 * (1 - t))
       : (t) => `rgba(255,255,255,${0.55 * (1 - t)})`);
 }
