@@ -125,10 +125,10 @@ and nothing it does passes through a host of ours.
 
 This is the one place AuralFM asks you for anything, and it is on auralfm.xyz,
 not in the app. There are two lists: one for the desktop beta, and one for
-membership. If you join either, we keep:
+sponsorship. If you join either, we keep:
 
 - your **name** and **email address**,
-- **which computer** you use (for the desktop beta) or **which membership** you
+- **which computer** you use (for the desktop beta) or **which sponsorship** you
   are interested in,
 - anything you chose to write in the **note**.
 
@@ -138,7 +138,7 @@ you send the form, and uses it to limit how many sign-ups one connection can
 send, which keeps spam out.
 
 We use it for one thing: to email you about what you signed up for — an invite
-and a build for the beta, or membership opening. It is never sold, shared, or
+and a build for the beta, or sponsorship opening. It is never sold, shared, or
 added to any other list. To come off either list, email **hello@auralfm.xyz**
 and we delete it.
 

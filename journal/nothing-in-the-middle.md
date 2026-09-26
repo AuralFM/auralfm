@@ -15,7 +15,7 @@ AuralFM tries to have as little middle as possible.
 
 ## Where things come from
 
-- **The stations** come from public directories kept by people who love radio: the radio.garden map for places, and the community-run radio-browser database for genres and working streams.
+- **The stations** are our own catalogue: each one confirmed by the community-run radio-browser database or by the station itself — its own stream and website answering — and placed in its town from GeoNames, an open atlas of the world's places.
 - **The Earth** is NASA's, given away to everyone, with live cloud cover and the line between day and night where it truly falls.
 - **The chat** rides open, decentralized relays that no single company owns. There is no account to make, and no profile that follows you from room to room.
 

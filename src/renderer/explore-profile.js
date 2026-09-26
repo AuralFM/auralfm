@@ -49,7 +49,8 @@
     }
     const where = [p.place, p.region && p.region !== p.place ? p.region : null, p.country].filter(Boolean).join(" · ");
     // Languages arrive as "portuguese", "pt-BR" or "PORTUGUESE": say them once, plainly.
-    const lang = p.lang ? (/^[a-z]{2}(-[a-z]{2})?$/i.test(p.lang) ? p.lang.toLowerCase().split("-")[0]
+    // "en_GB" is "en-GB" written by a different tool.
+    const lang = p.lang ? (/^[a-z]{2}([-_][a-z]{2})?$/i.test(p.lang) ? p.lang.toLowerCase().split(/[-_]/)[0]
       : p.lang.split(",")[0].trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())) : null;
     const langName = lang && lang.length === 2
       ? (() => { try { return new Intl.DisplayNames([navigator.language || "en"], { type: "language" }).of(lang); } catch { return lang; } })()
@@ -84,7 +85,11 @@
       tip.title = ln;
       box.append(tip);
       box.append(el("p", "pnote", t("profile.tipNote", "Wallet to wallet, to the address the station published itself. AuralFM never holds the money.")));
-    } else box.append(claimLine(ch));
+    } else {
+      // No tips to a country under comprehensive US sanctions (scripts/profiles.mjs).
+      if (p.noTips) box.append(el("p", "pnote", t("profile.noTips", "Tips can't be sent to stations in this country.")));
+      box.append(claimLine(ch));
+    }
   }
 
   const claimLine = (ch) => {

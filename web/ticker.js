@@ -24,7 +24,7 @@
     { label: "New", text: "Vibes: pick one and every place that plays it lights up", href: "https://auralfm.xyz/vibes/", site: true },
     { label: "Journal", text: "Listening through someone else's antenna", href: "https://blog.auralfm.xyz/listening-through-someone-elses-antenna/", site: true },
     { label: "Desktop", text: "The fullest version is in private beta — join the waitlist", href: "https://auralfm.xyz/beta/", site: true },
-    { label: "Members", text: "Keep it independent — join the membership waitlist", href: "https://auralfm.xyz/support/#waitlist", site: true },
+    { label: "Sponsors", text: "Keep it independent — join the sponsorship waitlist", href: "https://auralfm.xyz/support/#waitlist", site: true },
     { label: "How it works", text: "The docs: vibes, headlines, chat and privacy", href: "https://docs.auralfm.xyz/" },
     { label: "iPhone", text: "Add AuralFM to your home screen", href: "https://docs.auralfm.xyz/#iphone" },
     { text: "No chart. No feed. Nobody paying to be heard." },

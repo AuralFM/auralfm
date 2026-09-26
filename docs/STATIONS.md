@@ -67,6 +67,11 @@ wallet pays yours. No fee to us, no account with us.
 The same goes for the people who run the public shortwave receivers AuralFM
 tunes: publish an address and listeners can thank you for the antenna.
 
+One exception: stations in Cuba, Iran, North Korea and Syria get no Tip button.
+Those countries are under comprehensive US sanctions, which forbid US listeners
+to send money there, so AuralFM does not show an address from them. Listening
+is not affected; the station's page is shown as usual.
+
 ## How we visit
 
 As `AuralFM-directory` in the User-Agent, once in a while, one page (your

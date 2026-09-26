@@ -74,11 +74,45 @@ const rb = new Map();
 if (fs.existsSync(F.dump)) for (const s of JSON.parse(fs.readFileSync(F.dump, "utf8"))) rb.set(s.uuid, s);
 console.log(`profiles: ${full.channels.length} stations, ${enrich.size} of them asked about themselves`);
 
+/**
+ * No tips to stations in countries under comprehensive US sanctions. Listening
+ * is fine — news and media are exempt (the Berman amendment) — but sending
+ * money there is a payment a US listener may not lawfully make, so a Lightning
+ * address from a station in one of these never reaches the apps; its card says
+ * why instead (docs/LEGAL-AND-SECURITY.md §9; Melton, 26 Sept). Until a lawyer
+ * says otherwise.
+ */
+const NO_TIPS = new Set(["Cuba", "Iran", "North Korea", "Syria"]);
+/**
+ * Not a station's website: the software a stream runs on announces its maker's
+ * address when the station leaves the field empty (Orban's processors, SAM
+ * Broadcaster, Shoutcast, Icecast, VLC, Mixxx), or a placeholder nobody changed.
+ * A profile once described a Havana station as "Official download of VLC media
+ * player". Neither the address nor anything read from that page is used.
+ */
+const SOFTWARE = /(^|\.)(orban\.com|videolan\.org|icecast\.org|shoutcast\.com|winamp\.com|nullsoft\.com|danielnoethen\.de|mixxx\.org|liquidsoap\.info|spacial\.com|spacialaudio\.com|rocketbroadcaster\.com|radiodj\.ro|altacast\.com|localhost|example\.(com|org|net)|127\.0\.0\.1)$/i;
+const software = (u) => { try { return SOFTWARE.test(new URL(/^https?:/i.test(u) ? u : `http://${u}`).hostname.replace(/^www\./, "")); } catch { return false; } };
+const ownSite = (...urls) => urls.find((u) => u && !software(u));
+/**
+ * A stream's description, when it is one: streaming software fills the field
+ * with its own words when the station leaves it empty ("Unspecified
+ * description", "This is my server description", its maker's name). And a
+ * server that sends UTF-8 labelled as Latin-1 turns "für" into "fÃ¼r": read
+ * back as the bytes it was.
+ */
+const PLACEHOLDER = /^(\(?null\)?|description|default description|unspecified description|this is my server description|my (station|stream) description|streaming by securenet systems cirrus\(r\)|hi-fi internet audio|airtime radio! stream #\d+|deva ?icesender.*|breakaway one example stream|instreamer|mb recaster|mb studio|voscast auto dj|live stream from vlc media player|shoutcast server|icecast.*|no description)$/i;
+const mended = (s) => {
+  if (!s || !/Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]/.test(s)) return s;
+  const back = Buffer.from(s, "latin1").toString("utf8");
+  return back.includes("\ufffd") ? s : back;
+};
+const described = (s) => { const d = mended(String(s || "").trim()); return d && !PLACEHOLDER.test(d) ? d : undefined; };
 const shards = new Map();
 const n = { tagged: 0, newlyTagged: 0, onAir: 0, described: 0, social: 0, image: 0, claimed: 0, tips: 0 };
 for (const c of full.channels) {
   const e = enrich.get(c.id), r = c.rbuuid ? rb.get(c.rbuuid) : null;
-  const stream = e?.stream || {}, site = e?.site || {};
+  const stream = e?.stream || {};
+  const site = e?.site && !software(e.site.final || c.website || "") ? e.site : {};
   // A form claim that was approved outranks a claim file, which outranks the crawl.
   const form = approved[c.id];
   const claim = { ...(site.claim || {}), ...(form || {}) };
@@ -93,8 +127,8 @@ for (const c of full.channels) {
   const place = full.places[c.p] || {};
   const profile = clean({
     id: c.id, title: c.title, place: place.title, country: c.country, region: c.region || place.region,
-    website: claim.website || site.final || c.website || stream.url || r?.home,
-    description: claim.description || site.description || stream.description,
+    website: ownSite(claim.website, site.final, c.website, stream.url, r?.home),
+    description: claim.description || described(site.description) || described(stream.description),
     image: https(claim.logo) || https(site.image) || https(c.logo) || https(r?.logo),
     lang: site.lang || c.lang || r?.lang,
     social: Object.keys({ ...(site.social || {}), ...formSocial }).length ? { ...(site.social || {}), ...formSocial } : undefined,
@@ -103,7 +137,9 @@ for (const c of full.channels) {
     // Where it plays from: the station's own server, which both apps try first
     // (src/resolver.js, web/bridge.js). Never another directory's redirect.
     stream: c.url && /^https?:\/\//i.test(c.url) && !/radio\.garden/i.test(c.url) ? c.url : undefined,
-    claim: claim.lightning || claim.nostr ? clean({ lightning: claim.lightning, nostr: claim.nostr, contact: claim.contact }) : undefined,
+    claim: claim.lightning || claim.nostr
+      ? clean({ lightning: NO_TIPS.has(c.country) ? undefined : claim.lightning, nostr: claim.nostr, contact: claim.contact }) : undefined,
+    noTips: NO_TIPS.has(c.country) || undefined,
     checked: e?.at,
   });
   if (profile.description) n.described++;

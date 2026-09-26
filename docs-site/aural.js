@@ -307,7 +307,7 @@
   }
 
   // ── the waitlists ─────────────────────────────────────────────────────────
-  // The desktop beta (beta/) and membership (support/#waitlist). Each form posts
+  // The desktop beta (beta/) and sponsorship (support/#waitlist). Each form posts
   // to its own collection, declared in home/.herenow/data.json: anyone can add a
   // name, only we can read them back, and each connection is capped. This only
   // says what is wrong in words before the server has to.
