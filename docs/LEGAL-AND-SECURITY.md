@@ -438,16 +438,81 @@ generally treated there as not itself a copy.
 - A copyright notice procedure in the Terms; a DMCA agent to register (§8).
 - No recording, no re-streaming, no subscription streams, no ads.
 
-**Options for the lawyer**
-1. Keep the big groups listed and playing, honour every request at once. (Today.)
-2. For the big groups only, open their own player instead of playing in-app.
-3. For UK and EU listeners, leave out foreign *music* stations not licensed there,
-   as TuneIn had to. This needs to know where the listener is, which an app with
-   no server does not; the desktop could guess from the time zone, the web could
-   not without asking. Against the whole idea of AuralFM, and the most legally
-   protective.
-4. A licence: PRS/PPL in the UK, and collecting societies elsewhere — the way
-   TuneIn went. Costs money; the premium tier could carry it.
+**What happened to TuneIn afterwards.** The High Court ruled in 2019, the Court of
+Appeal upheld it in March 2021. From autumn 2020 TuneIn blocked most non-UK
+stations for UK listeners, marked "not supported"; a VPN brought them back. The
+court's point: a station licensed in its own country is not thereby licensed for
+the UK, so an index that makes it easy for UK listeners to reach it needs a UK
+licence for that. In the EU the test is the CJEU's (the Court of Appeal applied
+it): linking to freely available, authorised content is fine (*Svensson*, 2014);
+linking to unauthorised content infringes when you know or should know, and
+knowledge is presumed when you link **for financial gain** (*GS Media*, 2016).
+Memberships and a premium tier would count as financial gain.
+
+**The four options, in detail**
+
+*1. Carry on, and honour every removal request at once (today).*
+Everything stays listed and playable everywhere. The protection is speed: a
+station, a label or a collecting society asks, and the station comes off the
+same day (`data/corrections.json`, `"remove": true`, applied on every build and
+then published). Add: a register of requests and actions (date, who, which
+stations, when removed), which is what a court would ask to see; the DMCA agent
+(§8); and a line in the Terms that rights holders can reach us at hello@. Cost:
+none. Risk left: a UK or EU claim like TuneIn's is about the index as a whole,
+not one station, so takedowns answer individual complaints but not that claim.
+Reasonable while AuralFM is small, private-beta and not charging; less so once
+memberships or premium are live (GS Media's "financial gain").
+
+*2. Open the big groups' own players instead of playing them in-app.*
+For the ~1,600 streams of NRJ, iHeartMedia, Bauer, Global, Radio France and the
+BBC, "play" opens the station's own website or app (we have their websites)
+instead of the stream. AuralFM stays the map; the listening happens on their
+turf, which is what they want, and it removes their reason to object. Cost: a
+change to the play button for a list of stream hosts, kept in one file; those
+~2.6% of stations stop playing inside AuralFM. Does not answer the UK/EU
+problem, which is about labels' recordings on any foreign music station, big or
+small.
+
+*3. Leave foreign music stations out for UK and EU listeners.*
+What TuneIn did. For a UK listener: UK stations (2,346) plus speech stations
+elsewhere (talk, news, sports, faith with no music genre: about 5,400) — some
+7,700 of 62,036, about 12%. For an EU listener it is per country and far
+messier. The hard part is knowing where the listener is without a server:
+  - desktop: the time zone (Europe/London) is a guess, not a location; it is
+    wrong for travellers and anyone who sets their clock otherwise;
+  - web: the same guess, or an IP lookup through a third party (a privacy cost
+    the Privacy Policy would have to name), or asking the listener;
+  - a VPN defeats all of it, as it did for TuneIn, and courts accepted that.
+This is the most protective and the most against what AuralFM is for: the pitch
+is hearing a place as it sounds to itself, from anywhere.
+
+*4. Licences.*
+In the UK two bodies license music: PPL (the recordings, for labels and
+performers) and PRS for Music (the songs, for writers and publishers). PPL's
+Linear Webcast Licence and PRS's online licences are written for services that
+**transmit** the audio (a webcaster, a simulcast); AuralFM transmits nothing, it
+points at other people's streams, so the fit is not off the shelf: expect a
+negotiated licence with PPL and PRS (or the labels directly), priced on
+listening. In the EU the same, per country or through societies that license
+several territories. Cost: money every year, and reporting what is played. It
+is the one path that lets UK and EU listeners hear everything and sits well with
+charging members — the premium tier could carry it.
+
+**What to take to a lawyer** (a UK media and IP solicitor for 3 and 4; a US
+one for the DMCA side):
+- Does *Warner v TuneIn* reach an index that is free, non-commercial today, and
+  plays streams directly from the stations' own servers? Does that change the day
+  memberships start?
+- Is honouring removals (1) enough while AuralFM is in private beta, and until
+  when?
+- For (2): does opening the station's own site instead of playing its stream
+  remove the "communication" on our side?
+- For (3): is a time-zone guess a reasonable measure, or would a court expect IP
+  location?
+- For (4): what would PPL and PRS ask of a service that transmits nothing, and
+  what does that cost at our size?
+- Bring: this section, §8, the Terms, the Privacy Policy, the catalogue counts,
+  and how play works (the station's own stream, straight to the listener).
 
 Sources: [Tunein v Warner Music [2021] EWCA Civ 441](https://www.bailii.org/ew/cases/EWCA/Civ/2021/441.html) ·
 [iHeart Terms of Use](https://www.iheart.com/content/terms-of-use/)
