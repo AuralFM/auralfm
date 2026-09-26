@@ -89,6 +89,17 @@ async function viaRadioGarden(id) {
   return null;
 }
 
+/** A station radio-browser knows by id: its own stream, the surest answer there is. */
+async function viaRadioBrowserId(uuid) {
+  const res = await fetch(`${RB_HOST}/json/stations/byuuid/${encodeURIComponent(uuid)}`, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) return null;
+  const [s] = await res.json();
+  return s && s.lastcheckok !== 0 ? s.url_resolved || s.url || null : null;
+}
+
 async function viaRadioBrowser(title, country) {
   const q = new URLSearchParams({
     name: title,
@@ -120,7 +131,18 @@ async function resolve({ id, title, country, rbuuid }) {
   const attempts = [];
   reportClick(rbuuid);        // credit the station with the play, per their docs
 
-  if (id) {
+  // Stations found only in radio-browser (scripts/expand.mjs) have no
+  // radio.garden id: their id is "rb-" + the radio-browser one.
+  const rbOnly = String(id || "").startsWith("rb-");
+  if (rbOnly && rbuuid) {
+    try {
+      const url = await viaRadioBrowserId(rbuuid);
+      if (url) { remember(id, url); return { url, via: "radio-browser" }; }
+      attempts.push("radio-browser id: no stream");
+    } catch (err) { attempts.push(`radio-browser id: ${err.name}`); }
+  }
+
+  if (id && !rbOnly) {
     try {
       const url = await viaRadioGarden(id);
       if (url) { remember(id, url); return { url, via: "radio.garden" }; }

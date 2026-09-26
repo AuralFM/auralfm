@@ -221,7 +221,7 @@
         if (s && s.lastcheckok !== 0) add(s.url_resolved || s.url);
       } catch { /* try the others */ }
     }
-    if (ch.id && ch.secure !== false) {
+    if (ch.id && ch.secure !== false && !String(ch.id).startsWith("rb-")) {
       add(`https://radio.garden/api/ara/content/listen/${encodeURIComponent(ch.id)}/channel.mp3`);
     }
     try {

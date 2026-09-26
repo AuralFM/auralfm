@@ -2746,6 +2746,32 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${cases.length} readings hold: hits, classic hits, names, places, tag soup`);
 }
 
+// ── a station found only in radio-browser plays from radio-browser ────────
+// scripts/expand.mjs adds stations radio.garden does not list; their id is
+// "rb-" + radio-browser's. Asking radio.garden for one gets nothing, and the
+// name search after it can land on another station with the same name. So the
+// desktop resolver must go straight to radio-browser by id. Checked with the
+// network faked: which URLs does resolving one ask for?
+{
+  console.log("\na station found only in radio-browser plays from radio-browser");
+  const { createRequire } = await import("node:module");
+  const resolver = createRequire(import.meta.url)(R("src/resolver.js"));
+  const real = globalThis.fetch, asked = [];
+  globalThis.fetch = async (u) => {
+    asked.push(String(u));
+    return new Response(JSON.stringify([{ url_resolved: "https://stream.example/live", lastcheckok: 1 }]),
+      { status: 200, headers: { "content-type": "application/json" } });
+  };
+  let got = null;
+  try { got = await resolver.resolve({ id: "rb-0000", title: "Test", country: "", rbuuid: "0000" }); }
+  finally { globalThis.fetch = real; }
+  const rg = asked.filter((u) => u.includes("radio.garden"));
+  !rg.length && got?.url === "https://stream.example/live" && asked.some((u) => u.includes("/json/stations/byuuid/0000"))
+    ? pass("resolved by radio-browser id, radio.garden never asked")
+    : fail("a station found only in radio-browser plays from radio-browser",
+      `asked ${asked.join(", ") || "nothing"}; got ${got?.url || "no stream"}`);
+}
+
 // ── the vibe icons share one line ──────────────────────────────────────────
 // The vibe icons came from different sets at different line weights, and
 // scripts/build-vibe-icons.mjs brings them to one weight and one frame. An icon
