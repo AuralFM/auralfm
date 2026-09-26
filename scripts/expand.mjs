@@ -82,6 +82,17 @@ for (const s of rb) if (!s.country && s.cc && ccName.has(s.cc)) s.country = ccNa
 
 // ── radio-browser's candidates, one per stream ─────────────────────────────
 const TV = /\b(tv|television|televisi[oó]n|video)\b/i;
+// Explicit sexual content is listed like anything else real and on the air
+// (Melton, 26 Sept: "keep xxx type content if real and valid"), and marked
+// explicit: true, so the app can label it or keep it behind a setting. A station
+// is explicit when it is tagged explicit (or xxx, porn) and erotic (or adult,
+// asmr), or plainly named so. Not "erotica lounge" (sensual music), not a tag
+// list that mentions the Sex Pistols, not "adult contemporary", a pop format.
+const EXPLICIT = (s) => {
+  const t = ` ${s.tags.toLowerCase()} `;
+  return (/[ ,](explicit|xxx|porn|porno)[ ,]/.test(t) && /[ ,](erotic|adult|asmr|sex)[ ,]/.test(t))
+    || /\b(sex ?fm|sexfm|porn|porno|xxx)\b/i.test(s.name) || /^sex sound/i.test(s.name);
+};
 const why = {};
 const hold = (reason) => { why[reason] = (why[reason] || 0) + 1; };
 const byStream = new Map();
@@ -126,6 +137,24 @@ const how = { near: 0, own: 0, named: 0, country: 0, online: 0 };
 // Hawaii do not drag the United States into the Pacific).
 const countryName = new Map();
 for (const p of full.places) if (!countryName.has(countryKey(p.country))) countryName.set(countryKey(p.country), p.country);
+/**
+ * Our name for radio-browser's country. Containment (sameCountryName) settles
+ * most — "The United States Of America" is "United States" — and these are the
+ * ones it cannot: different words for the same country.
+ */
+const ALIAS = {
+  "republic of korea": "South Korea", "democratic peoples republic of korea": "North Korea",
+  "coted ivoire": "Côte d'Ivoire", "cabo verde": "Cape Verde", "islamic republic of iran": "Iran",
+  "us virgin islands": "U.S. Virgin Islands", "french polynesia": "Tahiti", "sudan": "Sudan", "niger": "Niger",
+  "dutch part sint maarten": "Sint Maarten", "united states minor outlying islands": "United States",
+  "bosnia and herzegovina": "Bosnia and Herzegovina", "turkey": "Türkiye", "czech republic": "Czechia",
+  "myanmar": "Myanmar (Burma)", "the gambia": "The Gambia", "bahamas": "The Bahamas",
+};
+function ourCountry(rbName) {
+  if (!rbName) return "";
+  const aliased = ALIAS[countryKey(rbName)] || rbName;
+  return [...countryName.values()].find((c) => sameCountryName(c, aliased)) || aliased.replace(/^The /, "");
+}
 const somewhere = new Map();
 const median = (xs) => { const a = [...xs].sort((x, y) => x - y); return a.length % 2 ? a[a.length >> 1] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2; };
 let online = -1;
@@ -135,9 +164,12 @@ function onlineOnly() {
   online = full.places.length - 1; newPlaces++;
   return online;
 }
+/** "Somewhere in the United States", not "in United States". */
+const the = (name) => (/^(the |bailiwick|collectivity)/i.test(name) ? name
+  : /^(united|republic|democratic|central african|dominican|philippines|netherlands|maldives|seychelles|comoros|gambia|bahamas|vatican)|(islands|republic|emirates)$/i.test(name)
+    ? `the ${name}` : name);
 function somewhereIn(rbCountry, lat, lon) {
-  const ours = [...countryName.values()].find((c) => sameCountryName(c, rbCountry));
-  const name = ours || rbCountry.replace(/^The /, "");
+  const name = ourCountry(rbCountry);
   if (!name) return -1;
   if (somewhere.has(name)) return somewhere.get(name);
   const mine = full.places.filter((p) => p.src !== "rb" && sameCountryName(p.country, name));
@@ -145,7 +177,7 @@ function somewhereIn(rbCountry, lat, lon) {
   if (mine.length) geo = [median(mine.map((p) => p.geo[0])), median(mine.map((p) => p.geo[1]))];
   else if (typeof lat === "number" && typeof lon === "number") geo = [lon, lat];
   if (!geo) return -1;
-  full.places.push({ id: `rb-in-${countryKey(name).replace(/ /g, "-")}`, title: `Somewhere in ${name}`, country: name, geo, src: "rb" });
+  full.places.push({ id: `rb-in-${countryKey(name).replace(/ /g, "-")}`, title: `Somewhere in ${the(name)}`, country: name, geo, src: "rb" });
   const i = full.places.length - 1;
   somewhere.set(name, i); newPlaces++;
   return i;
@@ -157,22 +189,21 @@ for (const s of byStream.values()) {
   const hasGeo = typeof s.lat === "number" && typeof s.lon === "number" && (s.lat || s.lon);
   if (hasGeo) {
     const [i, d] = nearest(s.lat, s.lon);
-    if (i >= 0 && d <= NEAR_KM && (!s.country || sameCountryName(full.places[i].country, s.country))) { p = i; via = "near"; }
+    if (i >= 0 && d <= NEAR_KM && (!s.country || sameCountryName(full.places[i].country, ourCountry(s.country)))) { p = i; via = "near"; }
     else if (i >= 0 && d <= SAME_NEW_PLACE_KM && full.places[i].src === "rb") { p = i; via = "own"; }
     else if (s.state && countryKey(s.state) !== countryKey(s.country)) {
-      const country = i >= 0 && sameCountryName(full.places[i].country, s.country) ? full.places[i].country : s.country;
+      const country = ourCountry(s.country) || (i >= 0 ? full.places[i].country : "");
       full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: s.state, country, geo: [s.lon, s.lat], src: "rb" });
       p = full.places.length - 1; index(p); newPlaces++; via = "own";
     } else {
       const near = i >= 0 && d <= 150 ? full.places[i] : null;
-      const country = near && sameCountryName(near.country, s.country) ? near.country
-        : [...countryName.values()].find((c) => sameCountryName(c, s.country)) || s.country.replace(/^The /, "");
+      const country = ourCountry(s.country) || near?.country || "";
       full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: near ? `${near.title.split(",")[0]} area` : country,
         country, geo: [s.lon, s.lat], src: "rb" });
       p = full.places.length - 1; index(p); newPlaces++; via = "own";
     }
   } else if (s.state) {
-    const hits = (byTitle.get(countryKey(s.state)) || []).filter((i) => sameCountryName(full.places[i].country, s.country));
+    const hits = (byTitle.get(countryKey(s.state)) || []).filter((i) => sameCountryName(full.places[i].country, ourCountry(s.country)));
     if (hits.length === 1) { p = hits[0]; via = "named"; }
     else { p = somewhereIn(s.country); via = "country"; }
   } else if (s.country) { p = somewhereIn(s.country); via = "country"; }
@@ -191,7 +222,7 @@ for (const s of byStream.values()) {
     id: `rb-${s.uuid}`, title: s.name, place: place.id, p, country: place.country,
     website: s.home, secure: url.startsWith("https://"), stream: host, url,
     ...(s.allTags.length ? { tags: s.allTags } : {}), rbuuid: s.uuid, ok: 1,
-    lang: s.lang, logo: s.logo, ...(s.state ? { region: s.state } : {}), src: "rb",
+    lang: s.lang, logo: s.logo, ...(s.state ? { region: s.state } : {}), ...(EXPLICIT(s) ? { explicit: true } : {}), src: "rb",
   });
   how[via]++;
 }
