@@ -15,8 +15,8 @@
  * is the thing a transport takes: WebRTC to listeners over Nostr signalling, or
  * an Icecast mount from the desktop (the plan: vault YOUR-OWN-SHOW.md).
  *
- * Hidden unless this is a development build of the desktop app, a web preview
- * on this machine, or a web page opened with ?studio — so publishing the web
+ * Hidden unless this is a development or beta build of the desktop app, a web
+ * preview on this machine, or a web page opened with ?studio — so publishing the web
  * app does not show anyone a studio that cannot yet reach them.
  */
 {
@@ -32,7 +32,10 @@
       if (q.has("studio")) { try { localStorage.setItem(`${KEY}.labs`, "1"); } catch {} return true; }
       try { if (localStorage.getItem(`${KEY}.labs`) === "1") return true; } catch {}
       if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return true;
-      if (location.protocol === "file:") return !!(await window.auralfm.version?.())?.dev;
+      // The desktop: a development build, or a beta build (npm run dist:beta)
+      // — the private beta is where the studio is tried first. A release has no
+      // channel and does not show it.
+      if (location.protocol === "file:") { const v = await window.auralfm.version?.(); return !!(v?.dev || v?.channel); }
     } catch {}
     return false;
   }

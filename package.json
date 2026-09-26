@@ -99,6 +99,7 @@
         }
       ],
       "extendInfo": {
+        "NSMicrophoneUsageDescription": "AuralFM uses the microphone only when you turn it on in Your show, to go live.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "com.meltonbell.auralfm",
