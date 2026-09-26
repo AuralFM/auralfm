@@ -61,6 +61,8 @@ export function streamKey(u) {
     const mount = p.split("/").pop().replace(/\.(mp3|aac)$/, "").replace(/aac$/, "");
     return mount ? `stw:${mount}` : null;
   }
+  // Qingting (China) serves one station from three hosts; the path is the station.
+  if (/(^|\.)(qingting\.fm|qtfm\.cn)$/.test(host)) return `qingting:${p}`;
   const port = x.port && !["80", "443"].includes(x.port) ? `:${x.port}` : "";
   return `${host}${port}${p}`;
 }

@@ -9,13 +9,19 @@
  * their radio-browser entries). radio-browser's data is public domain, so a
  * station found only there is ours to list.
  *
- * A station goes on the globe only where it honestly is:
- *   near    radio-browser gives it a position within 25 km of one of our places
- *   own     it has a position with none of our places near: a new place there,
- *           named for the region radio-browser gives, when it gives one
- *   named   no position, but the town it names is exactly one of our places in
- *           its country
- * Everything else is held back and counted, never dropped on a capital.
+ * Every live station goes in, placed as exactly as it can honestly be:
+ *   near      radio-browser gives it a position within 25 km of one of our places
+ *   own       a position with none of our places near: a new place there, named
+ *             for the region radio-browser gives, or "<nearest town> area"
+ *   named     no position, but the town it names is exactly one of our places in
+ *             its country
+ *   country   only a country, or only a region: "Somewhere in <country>", one
+ *             place per country at the middle of that country's places, so the
+ *             station is in the list and plays without pretending to a town.
+ *             Its region, when it gives one, stays on the station (region).
+ *   online    no country at all (laut.fm channels, web-only radio): "Online only",
+ *             on Null Island (0°, 0°), where maps put what has no place
+ * Melton, 26 Sept: "as long as the station just shows in the list".
  *
  * And never twice: not a station we already carry (the same radio-browser
  * entry, the same stream, or the same name in the same place), not two
@@ -62,7 +68,17 @@ if (fs.existsSync(F.streams)) for (const line of fs.readFileSync(F.streams, "utf
 const haveUuid = new Set(full.channels.map((c) => c.rbuuid).filter(Boolean));
 const haveStream = new Set(full.channels.map((c) => streamKey(c.url || streams.get(c.id))).filter(Boolean));
 const haveNameAt = new Set(full.channels.map((c) => `${loose(c.title)}|${c.p}`));
+// For a station placed only by its country, the same name anywhere in that
+// country is the same station: "Radio X" somewhere in Germany is the Radio X
+// we carry in Berlin.
+const haveNameIn = new Set(full.channels.map((c) => `${loose(c.title)}|${countryKey(c.country)}`));
 console.log(`expand: ${full.channels.length} stations carried, ${haveStream.size} of them with a known stream`);
+
+// Some entries name no country but carry its code; the others that carry both
+// say which name goes with which code.
+const ccName = new Map();
+for (const s of rb) if (s.cc && s.country && !ccName.has(s.cc)) ccName.set(s.cc, s.country);
+for (const s of rb) if (!s.country && s.cc && ccName.has(s.cc)) s.country = ccName.get(s.cc);
 
 // ── radio-browser's candidates, one per stream ─────────────────────────────
 const TV = /\b(tv|television|televisi[oó]n|video)\b/i;
@@ -103,7 +119,37 @@ function nearest(lat, lon) {
 const byTitle = new Map();
 full.places.forEach((p, i) => { const k = countryKey(p.title.split(",")[0]); (byTitle.get(k) || byTitle.set(k, []).get(k)).push(i); });
 
-const how = { near: 0, own: 0, named: 0 };
+const how = { near: 0, own: 0, named: 0, country: 0, online: 0 };
+
+// "Somewhere in <country>": one place per country, made when first needed, at
+// the median of that country's places (a median, not a mean, so Alaska and
+// Hawaii do not drag the United States into the Pacific).
+const countryName = new Map();
+for (const p of full.places) if (!countryName.has(countryKey(p.country))) countryName.set(countryKey(p.country), p.country);
+const somewhere = new Map();
+const median = (xs) => { const a = [...xs].sort((x, y) => x - y); return a.length % 2 ? a[a.length >> 1] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2; };
+let online = -1;
+function onlineOnly() {
+  if (online >= 0) return online;
+  full.places.push({ id: "rb-online", title: "Online only", country: "Null Island", geo: [0, 0], src: "rb" });
+  online = full.places.length - 1; newPlaces++;
+  return online;
+}
+function somewhereIn(rbCountry, lat, lon) {
+  const ours = [...countryName.values()].find((c) => sameCountryName(c, rbCountry));
+  const name = ours || rbCountry.replace(/^The /, "");
+  if (!name) return -1;
+  if (somewhere.has(name)) return somewhere.get(name);
+  const mine = full.places.filter((p) => p.src !== "rb" && sameCountryName(p.country, name));
+  let geo = null;
+  if (mine.length) geo = [median(mine.map((p) => p.geo[0])), median(mine.map((p) => p.geo[1]))];
+  else if (typeof lat === "number" && typeof lon === "number") geo = [lon, lat];
+  if (!geo) return -1;
+  full.places.push({ id: `rb-in-${countryKey(name).replace(/ /g, "-")}`, title: `Somewhere in ${name}`, country: name, geo, src: "rb" });
+  const i = full.places.length - 1;
+  somewhere.set(name, i); newPlaces++;
+  return i;
+}
 const added = [];
 let newPlaces = 0;
 for (const s of byStream.values()) {
@@ -117,15 +163,27 @@ for (const s of byStream.values()) {
       const country = i >= 0 && sameCountryName(full.places[i].country, s.country) ? full.places[i].country : s.country;
       full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: s.state, country, geo: [s.lon, s.lat], src: "rb" });
       p = full.places.length - 1; index(p); newPlaces++; via = "own";
-    } else { hold("a position, but no place near and no name for one"); continue; }
+    } else {
+      const near = i >= 0 && d <= 150 ? full.places[i] : null;
+      const country = near && sameCountryName(near.country, s.country) ? near.country
+        : [...countryName.values()].find((c) => sameCountryName(c, s.country)) || s.country.replace(/^The /, "");
+      full.places.push({ id: `rb-${s.uuid.slice(0, 8)}`, title: near ? `${near.title.split(",")[0]} area` : country,
+        country, geo: [s.lon, s.lat], src: "rb" });
+      p = full.places.length - 1; index(p); newPlaces++; via = "own";
+    }
   } else if (s.state) {
     const hits = (byTitle.get(countryKey(s.state)) || []).filter((i) => sameCountryName(full.places[i].country, s.country));
     if (hits.length === 1) { p = hits[0]; via = "named"; }
-    else { hold(hits.length ? "a town that is several of our places" : "only a region, no town we know"); continue; }
-  } else { hold("only a country"); continue; }
+    else { p = somewhereIn(s.country); via = "country"; }
+  } else if (s.country) { p = somewhereIn(s.country); via = "country"; }
+  else { p = onlineOnly(); via = "online"; }
+  if (p < 0) { hold("no country either"); continue; }
 
   if (haveNameAt.has(`${loose(s.name)}|${p}`)) { hold("already carried (same name, same place)"); continue; }
+  const inCountry = `${loose(s.name)}|${countryKey(full.places[p].country)}`;
+  if ((via === "country" || via === "online") && haveNameIn.has(inCountry)) { hold("already carried (same name, same country)"); continue; }
   haveNameAt.add(`${loose(s.name)}|${p}`);
+  haveNameIn.add(inCountry);
   const url = s.urlr || s.url;
   let host = ""; try { host = new URL(url).hostname.split(".").slice(-2).join("."); } catch { /* keep "" */ }
   const place = full.places[p];
@@ -133,7 +191,7 @@ for (const s of byStream.values()) {
     id: `rb-${s.uuid}`, title: s.name, place: place.id, p, country: place.country,
     website: s.home, secure: url.startsWith("https://"), stream: host, url,
     ...(s.allTags.length ? { tags: s.allTags } : {}), rbuuid: s.uuid, ok: 1,
-    lang: s.lang, logo: s.logo, src: "rb",
+    lang: s.lang, logo: s.logo, ...(s.state ? { region: s.state } : {}), src: "rb",
   });
   how[via]++;
 }
@@ -148,7 +206,9 @@ const countries = {};
 for (const c of added) countries[c.country] = (countries[c.country] || 0) + 1;
 
 console.log(`\nadds ${added.length} stations: ${how.near} near a place we have, ${how.named} by the town they name, ` +
-  `${how.own} at ${newPlaces} new places of their own`);
+  `${how.own} at places of their own, ${how.country} somewhere in their country (${somewhere.size} countries), ` +
+  `${how.online} online only; ` +
+  `${newPlaces} new places in all`);
 console.log(`  ${added.filter((c) => c.secure).length} of them https (playable on the web as well as the desktop)`);
 console.log(`\nheld back or skipped:`);
 for (const [k, v] of Object.entries(why).sort((a, b) => b[1] - a[1])) console.log(`  ${String(v).padStart(6)}  ${k}`);
