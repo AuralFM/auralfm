@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 20 September 2026**
+**Last updated: 26 September 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -18,8 +18,10 @@ player, in the same sense that a web browser is not the websites it visits.
 
 ## The content is not ours
 
-Station listings come from public directories (radio.garden, radio-browser.info).
-Broadcasts belong to the stations. Satellite imagery, weather, headlines, market
+Station listings come from public directories (radio.garden, radio-browser.info)
+and from what stations publish about themselves: their streams, websites and
+social accounts. Broadcasts belong to the stations, and so do their names and
+logos, which AuralFM shows only to say which station is which. Satellite imagery, weather, headlines, market
 prices and orbital data come from the third parties named in the app's About
 panel and in the Privacy Policy.
 
@@ -52,21 +54,61 @@ we run no server. Messages travel over public relays operated by other people,
 and **once sent, a message is out of our hands and cannot be recalled or
 deleted by us.**
 
-Because we operate no server, we cannot moderate what other people send. Treat
-anything you read there as coming from a stranger. Do not send anything you would
-mind a stranger keeping.
+Because we operate no server, we cannot delete what other people send. You can
+mute anyone and hide messages by word, and you can report what you see (see the
+Code of Conduct below). Treat anything you read there as coming from a stranger.
+Do not send anything you would mind a stranger keeping.
 
 ## Acceptable use
 
 Do not use AuralFM to infringe copyright, to redistribute or rebroadcast streams
 you have no right to, to harass anyone through the chat, or to break the law
-where you are.
+where you are. The [Code of Conduct](https://docs.auralfm.xyz/conduct/) says in
+plain words what is not welcome wherever people speak on AuralFM, and what
+happens when it turns up.
+
+## Child safety
+
+Nothing that sexualises a child is tolerated anywhere on AuralFM. When we learn
+of it, we report it to the National Center for Missing & Exploited Children
+(NCMEC) and cooperate with law enforcement, and a station carrying it is removed
+from the catalogue. If you find it, do not copy or forward it: report it at
+[report.cybertip.org](https://report.cybertip.org), or to the police where you
+are, and then tell us.
+
+## Stations: corrections and removal
+
+If you run a station, you can ask us to correct its listing (name, place,
+website, genre) or to take it off AuralFM altogether. Email
+**hello@auralfm.xyz** from an address at the station's own website, or tell us
+how else to confirm it is yours. We act on every such request.
+
+## Copyright
+
+AuralFM does not host or store any audio: it points to streams the stations
+publish themselves, as a directory and a player. If you believe a listing, a link
+or anything AuralFM shows infringes your copyright, send a notice to
+**hello@auralfm.xyz** with "Copyright" in the subject, including:
+
+1. the work you believe is infringed;
+2. what on AuralFM infringes it, precisely enough for us to find it (the station's
+   name and place, or a link);
+3. your name, postal address, telephone number and email address;
+4. a statement that you believe in good faith the use is not authorised by the
+   owner, its agent, or the law;
+5. a statement that the information in your notice is accurate and, under
+   penalty of perjury, that you are the owner or authorised to act for them;
+6. your physical or electronic signature.
+
+We remove or disable what the notice identifies, tell the station where we can,
+and restore it if a valid counter-notice follows and no court action is filed.
 
 ## Who may use it
 
-AuralFM is for people aged 13 and over. It is not directed at children, it asks
-for no personal information from anyone, and it has no accounts, profiles, or
-advertising.
+AuralFM is for people aged 13 and over. It is not directed at children. The app
+asks for no personal information and has no accounts, profiles, or advertising;
+the waitlists on the website are the one place anyone gives a name or an email,
+and they too are for people aged 13 and over.
 
 ## Stopping
 
@@ -97,9 +139,8 @@ conditions on your right to the code.
 marks are not granted — fork it freely, but a fork presented as AuralFM is a
 different thing. And the third-party components AuralFM bundles carry their own
 licences, which govern those components; they are reproduced in full in the app
-under **Settings → About → Open source licences**. The globe icons are by
-emilegraphics via the Noun Project under purchased royalty-free licences — see
-`assets/ATTRIBUTION.md`.
+under **Settings → About → Open source licences**. Where the app's own icons came
+from, and on what terms, is in `assets/ATTRIBUTION.md`.
 
 ## Changes
 

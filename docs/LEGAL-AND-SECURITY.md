@@ -346,6 +346,61 @@ In order:
 
 ---
 
+## 8. Before people speak, tip or broadcast (26 Sept 2026)
+
+The catalogue is becoming ours (tens of thousands of stations, with their websites,
+socials and logos), people talk in the chat, and tips and broadcasting are on the
+roadmap. That moves AuralFM from "a player" towards "a service", and a service has
+duties. None of this is legal advice; items marked **lawyer** want one.
+
+**Done in this pass**
+
+- **Code of Conduct** (`docs/CODE-OF-CONDUCT.md`), published at /conduct/ on both
+  sites and linked from the Terms: what is not welcome, mute, word list, how to
+  report, and what we honestly cannot do (delete from Nostr relays).
+- **Terms**: child safety (zero tolerance, NCMEC), stations' corrections and
+  removal, a copyright notice procedure with the six elements § 512(c)(3) asks
+  for, 13+ for the waitlists too, station names and logos shown only to identify.
+- **Privacy**: the Children section no longer says "collects no information from
+  anyone" while the waitlists collect names and emails; under-13 sign-ups are
+  deleted.
+
+**Only Melton can do (needs his name, address or payment)**
+
+- [ ] **Register a DMCA designated agent** at the Copyright Office's
+      [DMCA Designated Agent Directory](https://www.copyright.gov/dmca-directory/).
+      $6, renewed every three years. It matters now, not later: the safe harbour
+      covers "directories and other information location tools", which is what
+      AuralFM is (§ 512(d)). The agent may use a P.O. box; the service provider
+      must give a street address unless a safety waiver is granted. Use
+      hello@auralfm.xyz as the email so it matches the Terms. When registered, add
+      the agent's name and address to the Copyright section of the Terms.
+- [ ] **Register with NCMEC as an electronic service provider** (CyberTipline
+      ESP registration), so a report can be filed the day one is needed. The duty
+      in 18 U.S.C. § 2258A applies to providers with actual knowledge; AuralFM
+      hosts no chat messages today, but profiles and broadcasts will change that.
+
+**Before station profiles and tips ship** — **lawyer**
+- Tips go wallet to wallet (Lightning), to an address the station published
+  itself, verified by the station's own domain. AuralFM never holds, pools or
+  forwards money: holding it for others is money transmission.
+- Terms section for tips: irreversible, between you and the station, not a
+  donation to AuralFM, not tax-deductible.
+
+**Before anyone broadcasts** (the AzuraCast plan, BROADCAST.md) — **lawyer**
+- Music rights: a show that plays recorded music needs performance licences
+  (in the US: ASCAP, BMI, SESAC, GMR for the compositions; SoundExchange for the
+  recordings). Decide whether AuralFM carries them or each broadcaster must.
+- AGPL-3.0 obligations for the AzuraCast fork (publish changes, keep notices).
+- Takedown for live content, repeat-infringer policy (§ 512(i)), and a real
+  moderation team before strangers can go live.
+
+**Before an AuralFM social network** (SOCIAL.md, on the roadmap, not started)
+- Moderation (a labeler), 13+ age gate at sign-up, NCMEC registration done,
+  Terms and Privacy rewritten for accounts, emails and public posts.
+
+---
+
 > **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
 > once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
 > on a project whose whole argument is that it runs on hardware people already

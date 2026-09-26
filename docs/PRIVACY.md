@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 25 September 2026**
+**Last updated: 26 September 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -190,7 +190,10 @@ you are.
 
 ## Children
 
-AuralFM is not directed at children and collects no information from anyone.
+AuralFM is not directed at children, and it is for people aged 13 and over. The
+app collects no information from anyone. The waitlists are the one place anyone
+gives us a name or an email; if we learn that someone under 13 has joined one, we
+delete what they gave us.
 
 ## Changes
 
