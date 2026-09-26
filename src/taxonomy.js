@@ -7,7 +7,9 @@
  *   formats  what kind of station     Talk, News, Community …
  *   moods    what it is good for      Focus, Party, After hours … (derived)
  *
- * Melton's list (September 2026) plus the ten vibes already on the site. The
+ * Melton's list (September 2026), the ten vibes already on the site, and seven
+ * the stations' own tags asked for (Arabic, Balkan, Bollywood & Indian, Creole,
+ * Crooners, Greek, Schlager). The
  * vibes stay as they are: a vibe is a hand-picked lane across the globe, and
  * later each one can be written as a set of these ids instead of raw tags.
  *
@@ -60,8 +62,15 @@ const GENRES = [
   { id: "alternative", name: "Alternative", any: [{ tags: ["alternative", "indie", "post punk", "new wave", "shoegaze", "grunge"] }] },
   { id: "americana", name: "Americana", any: [{ tags: ["americana", "bluegrass", "roots", "alt country", "folk rock"] }] },
   { id: "anime", name: "Anime", any: [{ tags: ["anime", "anison", "vocaloid"] }], names: ["anime"] },
+  { id: "arabic", name: "Arabic", any: [{ tags: ["arabic", "arabic music", "arabic songs", "arabic hits", "=arab",
+    "music arabe", "musique arabe", "tarab", "khaleeji", "mahraganat", "dabke"] }] },
   { id: "baile-funk", name: "Baile funk", any: [{ tags: ["baile funk", "funk carioca", "funk brasileiro", "funk ostentacao",
     "brazilian funk"] }, { tags: ["funk"], countries: ["Brazil"] }] },
+  { id: "balkan", name: "Balkan", any: [{ tags: ["balkan", "manele", "narodna", "zabavna", "turbo folk", "chalga",
+    "sevdah", "sevdalinka", "gypsy", "romani", "cigan", "narodna muzika"] }] },
+  { id: "bollywood-indian", name: "Bollywood & Indian", any: [{ tags: ["bollywood", "hindi", "filmi", "tamil", "telugu",
+    "malayalam", "kannada", "punjabi", "bhangra", "desi", "indian", "indian music", "carnatic", "hindustani", "ghazal"] },
+    { genres: ["pop"], countries: ["India"] }] },
   { id: "blues", name: "Blues", any: [{ tags: ["blues"] }], names: ["blues"] },
   { id: "brazilian-hip-hop", name: "Brazilian hip hop", any: [{ tags: ["rap nacional", "hip hop brasileiro", "rap brasileiro",
     "brazilian hip hop"] }, { genres: ["hip-hop"], countries: ["Brazil"] }] },
@@ -78,6 +87,10 @@ const GENRES = [
   { id: "country", name: "Country", any: [{ tags: ["country", "country music", "new country", "classic country"] }] },
   { id: "c-pop", name: "C-pop", any: [{ tags: ["c pop", "cpop", "mandopop", "cantopop", "chinese pop"] },
     { genres: ["pop"], countries: CHINESE_SPEAKING }] },
+  { id: "creole", name: "Creole", any: [{ tags: ["creole", "kreyol", "kompa", "konpa", "zouk", "sega", "seggae",
+    "maloya", "musique creole"] }] },
+  { id: "crooners", name: "Crooners", any: [{ tags: ["crooner", "crooners", "adult standards", "=standards",
+    "old standards", "great american songbook"] }] },
   { id: "dance", name: "Dance", any: [{ tags: ["dance", "edm", "eurodance", "club", "dance pop", "disco"] }] },
   { id: "electronic", name: "Electronic", any: [{ tags: ["electronic", "electronica", "electro", "ambient", "idm",
     "downtempo", "trance", "drum and bass", "dnb", "dubstep", "breakbeat", "synthwave"] },
@@ -90,6 +103,8 @@ const GENRES = [
   { id: "french-pop", name: "French pop", any: [{ tags: ["chanson", "chansons", "chanson francaise", "chansons francaises",
     "variete", "variete francaise", "french pop", "french music", "musique francaise", "francophone"] }] },
   { id: "funk-soul", name: "Funk & soul", any: [{ tags: ["soul", "funk", "motown", "northern soul", "neo soul"] }] },
+  { id: "greek", name: "Greek", any: [{ tags: ["greek", "greek music", "greek pop", "greek folk", "laiko", "rebetiko",
+    "entehno", "hellenic"] }, { genres: ["pop"], countries: ["Greece", "Cyprus"] }] },
   { id: "hard-rock", name: "Hard rock", any: [{ tags: ["hard rock", "glam rock", "arena rock"] }] },
   { id: "hip-hop", name: "Hip hop", any: [{ tags: ["hip hop", "hiphop", "rap", "trap", "drill", "grime", "boom bap"] }] },
   { id: "holiday", name: "Holiday", any: [{ tags: ["christmas", "xmas", "holiday", "navidad", "natal", "noel", "weihnachten"] }],
@@ -122,6 +137,8 @@ const GENRES = [
   { id: "rock", name: "Rock", any: [{ tags: ["rock", "rock music", "pop rock", "indie rock", "alternative rock", "rock n roll"] },
     { genres: ["classic-rock", "hard-rock", "metal", "punk"] }] },
   { id: "samba", name: "Samba", any: [{ tags: ["samba", "pagode", "samba enredo", "bossa nova", "samba pagode"] }] },
+  { id: "schlager", name: "Schlager", any: [{ tags: ["schlager", "volksmusik", "discofox", "popschlager",
+    "partyschlager", "volkstumlicher schlager", "deutsche schlager", "schlagerhits"] }] },
   { id: "spanish-rock", name: "Rock en español", any: [{ tags: ["rock en espanol", "rock nacional", "rock latino",
     "spanish rock", "rock argentino", "rock mexicano"] }, { genres: ["rock"], countries: SPANISH_SPEAKING }] },
   { id: "t-pop", name: "T-pop", any: [{ tags: ["t pop", "tpop", "thai pop"] }, { genres: ["pop"], countries: ["Thailand"] }] },
@@ -189,7 +206,7 @@ const MOODS = [
   { id: "commuting", name: "Commuting", because: "news, talk and traffic for the drive",
     any: [{ formats: ["news", "talk"] }, { tags: ["traffic", "drive time"] }] },
   { id: "evening", name: "Evening", because: "jazz, soul and the quieter end of the dial",
-    any: [{ genres: ["jazz", "funk-soul", "r-and-b", "classical"] }], when: [18, 23] },
+    any: [{ genres: ["jazz", "funk-soul", "r-and-b", "classical", "crooners"] }], when: [18, 23] },
   { id: "feel-good", name: "Feel good", because: "sing-along hits and the golden oldies",
     any: [{ genres: ["funk-soul"] }, { tags: ["oldies", "classic hits", "disco", "70s", "80s", "80's", "90s", "90's",
       "flashback", "decades", "nostalgie", "feel good", "happy", "good vibes", "retro"] }] },
@@ -212,12 +229,12 @@ const MOODS = [
   { id: "outdoors", name: "Outdoors", because: "roots music and open air",
     any: [{ genres: ["americana", "folk"] }, { tags: ["nature", "nature sounds", "outdoors"] }] },
   { id: "party", name: "Party", because: "dance floors from Lagos to Rio",
-    any: [{ genres: ["dance", "urbano-latino", "baile-funk", "afrobeats", "house"] }, { tags: ["party", "club",
+    any: [{ genres: ["dance", "urbano-latino", "baile-funk", "afrobeats", "house", "balkan", "schlager"] }, { tags: ["party", "club",
       "dancehall", "soca"] }] },
   { id: "sports", name: "Sports", because: "commentary and phone-ins",
     any: [{ formats: ["sports"] }] },
   { id: "summertime", name: "Summertime", because: "beach, tropical and island sounds",
-    any: [{ genres: ["reggae", "samba"] }, { tags: ["summer", "beach", "tropical", "cumbia", "soca", "calypso", "zouk",
+    any: [{ genres: ["reggae", "samba", "creole"] }, { tags: ["summer", "beach", "tropical", "cumbia", "soca", "calypso", "zouk",
       "kizomba"] }] },
   { id: "weekend", name: "Weekend", because: "party and feel-good together",
     any: [{ moods: ["party", "feel-good"] }] },
