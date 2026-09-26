@@ -6,6 +6,11 @@
  *   node scripts/enrich.mjs --limit 50    a sample
  *   node scripts/enrich.mjs --report      what is known so far, no network
  *   node scripts/enrich.mjs --again       ask again the ones older than --days (default 30)
+ *   node scripts/enrich.mjs --retry       ask again only the ones whose stream timed out
+ *                                         (run gently, --concurrency 16: a busy moment on
+ *                                         this end is not a station off the air)
+ *   node scripts/enrich.mjs --streamed    only stations whose stream is already known
+ *                                         (while scripts/streams.mjs is still running)
  *
  * Two questions per station, both put to the station itself:
  *
@@ -34,10 +39,41 @@
  * reply read by hand. Answers are appended to data/_enrich.jsonl as they come.
  */
 import fs from "node:fs";
+import dns from "node:dns";
 import net from "node:net";
 import tls from "node:tls";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// ── names, through public resolvers ─────────────────────────────────────────
+// Looked up through the system, names go to the home router, which answered 250
+// of 300 lookups too slowly when asked all at once (26 Sept): every station
+// then "timed out". Public resolvers answered 293 of the same 300. So the crawl
+// asks them, keeps each answer for the run, and falls back to the system only
+// when they have nothing.
+const resolver = new dns.promises.Resolver({ timeout: 4000, tries: 2 });
+resolver.setServers(["1.1.1.1", "8.8.8.8", "9.9.9.9", "1.0.0.1"]);
+const systemLookup = dns.lookup.bind(dns);
+const names = new Map();
+function publicLookup(host, opts, cb) {
+  if (typeof opts === "function") { cb = opts; opts = {}; }
+  if (typeof opts === "number") opts = { family: opts };
+  opts = opts || {};
+  if (net.isIP(host)) {
+    const family = net.isIP(host);
+    return process.nextTick(() => (opts.all ? cb(null, [{ address: host, family }]) : cb(null, host, family)));
+  }
+  if (!names.has(host)) names.set(host, (async () => {
+    try { const a = await resolver.resolve4(host); if (a.length) return a.map((address) => ({ address, family: 4 })); } catch { /* next */ }
+    try { const a = await resolver.resolve6(host); if (a.length) return a.map((address) => ({ address, family: 6 })); } catch { /* next */ }
+    return new Promise((res) => systemLookup(host, { all: true }, (err, list) => res(err ? [] : list)));
+  })());
+  names.get(host).then((list) => {
+    if (!list.length) { const e = new Error(`no address for ${host}`); e.code = "ENOTFOUND"; return cb(e); }
+    if (opts.all) cb(null, list); else cb(null, list[0].address, list[0].family);
+  });
+}
+dns.lookup = publicLookup;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const F = {
@@ -48,7 +84,8 @@ const F = {
 };
 const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 && argv[i + 1] ? Number(argv[i + 1]) : d; };
-const CFG = { limit: opt("limit", Infinity), concurrency: opt("concurrency", 24), days: opt("days", 30), again: argv.includes("--again") };
+const CFG = { limit: opt("limit", Infinity), concurrency: opt("concurrency", 24), days: opt("days", 30), again: argv.includes("--again"),
+  streamed: argv.includes("--streamed"), retry: argv.includes("--retry") };
 const UA = "AuralFM-directory/0.2 (+https://docs.auralfm.xyz; hello@auralfm.xyz)";
 
 // ── what is known ───────────────────────────────────────────────────────────
@@ -84,14 +121,38 @@ const rbHome = new Map();
 if (fs.existsSync(F.dump)) for (const s of JSON.parse(fs.readFileSync(F.dump, "utf8"))) if (s.home) rbHome.set(s.uuid, s.home);
 
 const stale = (r) => CFG.again && (Date.now() - Date.parse(r.at)) / 864e5 > CFG.days;
-const todo = channels.filter((c) => !known.has(c.id) || stale(known.get(c.id)))
+const timedOut = (r) => r.stream?.why === "timeout";
+const todo = channels.filter((c) => (CFG.retry ? known.has(c.id) && timedOut(known.get(c.id)) : !known.has(c.id) || stale(known.get(c.id))))
   .map((c) => ({ id: c.id, stream: c.url || streams.get(c.id) || "", site: c.website || rbHome.get(c.rbuuid) || "" }))
+  .filter((t) => !CFG.streamed || t.stream)
   .slice(0, CFG.limit);
+// The catalogue is in place order, so neighbours share a town's hosting company
+// and every worker would queue on one server. Shuffled (the same way every run),
+// the workers are spread across hosts.
+{ let seed = 42; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = todo.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [todo[i], todo[j]] = [todo[j], todo[i]]; } }
 console.log(`enrich: ${known.size} known, ${todo.length} to ask, ${CFG.concurrency} at a time`);
 
 // ── one request per host at a time ──────────────────────────────────────────
+// A station's own server gets one request at a time. The big streaming
+// providers, which carry thousands of stations each and are built for that
+// traffic, get a few lanes, or a 38,000-station pass would take most of a day.
+const PROVIDERS = /(^|\.)(zeno\.fm|streamtheworld\.com|radio\.co|streamguys1\.com|securenetsystems\.net|infomaniak\.ch|radioca\.st|laut\.fm|qtfm\.cn|qingting\.fm|ice\.infomaniak\.ch|streamabc\.net|radiojar\.com|audio\.com\.br|radiohost\.pl|shoutcast\.com|listen2myradio\.com|streema\.com|mixlr\.com|live365\.com|radioking\.com|stream\.laut\.fm|icecast\.omroep\.nl|rtvelivestream\.akamaized\.net|akamaized\.net|cloudfront\.net)$/i;
+const LANES = 6;
+let lane = 0;
+// Any host carrying more than 20 of the stations to ask is a provider too, named
+// or not: Brazil alone has hosting companies with hundreds of stations each.
+const hostCount = new Map();
+for (const t of todo) for (const u of [t.stream, t.site]) {
+  try { const h = new URL(/^https?:/i.test(u) ? u : `http://${u}`).hostname; hostCount.set(h, (hostCount.get(h) || 0) + 1); } catch { /* none */ }
+}
+const laneFor = (host) => {
+  const bare = host.replace(/^stream:/, "");
+  return PROVIDERS.test(bare) || (hostCount.get(bare) || 0) > 20 ? `${host}#${lane++ % LANES}` : host;
+};
 const busy = new Map();
 async function politely(host, fn) {
+  host = laneFor(host);
   while (busy.get(host)) await busy.get(host).catch(() => {});
   const p = (async () => { try { return await fn(); } finally { await new Promise((r) => setTimeout(r, 250)); } })();
   busy.set(host, p);
@@ -105,9 +166,9 @@ function streamHeaders(url, hops = 0) {
     const secure = u.protocol === "https:";
     const port = Number(u.port) || (secure ? 443 : 80);
     const done = (r) => { clearTimeout(timer); sock.destroy(); resolve(r); };
-    const opts = { host: u.hostname, port, servername: u.hostname, rejectUnauthorized: false };
+    const opts = { host: u.hostname, port, servername: u.hostname, rejectUnauthorized: false, lookup: publicLookup };
     const sock = secure ? tls.connect(opts) : net.connect(opts);
-    const timer = setTimeout(() => done({ ok: false, why: "timeout" }), 10000);
+    const timer = setTimeout(() => done({ ok: false, why: "timeout" }), 8000);
     let buf = Buffer.alloc(0);
     sock.on("connect", () => !secure && send());
     sock.on("secureConnect", send);
@@ -146,7 +207,7 @@ async function allowed(u) {
   const origin = u.origin;
   if (!robots.has(origin)) robots.set(origin, (async () => {
     try {
-      const r = await fetch(`${origin}/robots.txt`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`${origin}/robots.txt`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(5000) });
       if (!r.ok) return [];
       const rules = [], lines = (await r.text()).split(/\r?\n/);
       let applies = false;
@@ -178,25 +239,46 @@ const SOCIAL = [
   ["nostr", /\bnpub1[02-9ac-hj-np-z]{58}\b/],
 ];
 
+/**
+ * What a homepage says, in one straight pass. The first version ran a dozen
+ * backtracking patterns over up to 600 KB each; at a hundred pages at once that
+ * starved the event loop long enough for every socket timer to fire first, and
+ * nearly every station "timed out". Now the page is cut into its meta tags and
+ * its links once, and the patterns only ever look at those short strings.
+ */
 function readPage(html, base) {
-  const head = html.slice(0, 200000);
-  const meta = (re) => { const m = re.exec(head); return m ? decode(m[1]).trim().slice(0, 400) : undefined; };
-  const prop = (p) => meta(new RegExp(`<meta[^>]+(?:property|name)=["']${p}["'][^>]+content=["']([^"']*)["']`, "i"))
-    || meta(new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${p}["']`, "i"));
+  const head = html.slice(0, 150000);
+  const metas = {};
+  for (const m of head.matchAll(/<meta\b([^>]{0,1500})>/gi)) {
+    const attrs = {};
+    for (const a of m[1].matchAll(/([\w:-]+)\s*=\s*("([^"]*)"|'([^']*)')/g)) attrs[a[1].toLowerCase()] = a[3] ?? a[4];
+    const key = (attrs.property || attrs.name || "").toLowerCase();
+    if (key && attrs.content && !(key in metas)) metas[key] = decode(attrs.content).trim().slice(0, 400);
+  }
+  const prop = (k) => metas[k] || undefined;
+  const hrefs = [...html.matchAll(/href\s*=\s*["']([^"'\s>]{8,400})["']/gi)].map((m) => m[1]);
   const social = {};
-  for (const [k, re] of SOCIAL) { const m = re.exec(html); if (m) social[k] = m[0].replace(/[)"'.,;]+$/, ""); }
-  const mastodon = /<a[^>]+rel=["'][^"']*\bme\b[^"']*["'][^>]+href=["'](https:\/\/[^"']+\/@[\w]+)["']/i.exec(html);
-  if (mastodon && !/twitter|x\.com|instagram|facebook/.test(mastodon[1])) social.mastodon = mastodon[1];
+  for (const [k, re] of SOCIAL) {
+    if (k === "nostr") { const m = /npub1[02-9ac-hj-np-z]{58}/.exec(html); if (m) social.nostr = m[0]; continue; }
+    const hit = hrefs.find((h) => re.test(h));
+    if (hit) social[k] = hit.replace(/[)"'.,;]+$/, "");
+  }
+  for (const m of html.matchAll(/<a\b([^>]{0,600})>/gi)) {
+    if (!/\brel\s*=\s*["'][^"']{0,40}\bme\b/i.test(m[1])) continue;
+    const h = /href\s*=\s*["'](https:\/\/[^"'\s]+\/@\w+)["']/i.exec(m[1]);
+    if (h && !/twitter|x\.com|instagram|facebook|threads/.test(h[1])) { social.mastodon = h[1]; break; }
+  }
   // A Lightning address the station publishes itself: lightning:name@host, or lud16.
-  const ln = /lightning:([\w.+\-]+@[\w.\-]+\.[a-z]{2,})/i.exec(html) || /"lud16"\s*:\s*"([\w.+\-]+@[\w.\-]+\.[a-z]{2,})"/i.exec(html);
+  const ln = /lightning:([\w.+-]{1,64}@[\w.-]{1,120}\.[a-z]{2,})/i.exec(html) || /"lud16"\s*:\s*"([\w.+-]{1,64}@[\w.-]{1,120}\.[a-z]{2,})"/i.exec(html);
   let image = prop("og:image") || prop("twitter:image");
   try { if (image) image = new URL(image, base).href; } catch { image = undefined; }
+  const title = /<title[^>]{0,200}>([^<]{1,300})<\/title>/i.exec(head);
   const out = {
     ok: true,
-    title: meta(/<title[^>]*>([^<]{1,300})<\/title>/i),
+    title: title ? decode(title[1]).trim() : undefined,
     description: prop("og:description") || prop("description"),
     image, name: prop("og:site_name"),
-    lang: (/<html[^>]+lang=["']([\w\-]{2,10})["']/i.exec(head) || [])[1],
+    lang: (/<html\b[^>]{0,500}\blang\s*=\s*["']([\w-]{2,10})["']/i.exec(head) || [])[1],
     ...(Object.keys(social).length ? { social } : {}),
     ...(ln ? { lightning: ln[1] } : {}),
   };
@@ -215,9 +297,14 @@ const CLAIM_FIELDS = { name: 120, description: 600, lightning: 120, nostr: 70, l
 async function readClaim(origin) {
   try {
     const r = await fetch(`${origin}/.well-known/auralfm.json`, { headers: { "User-Agent": UA, Accept: "application/json" },
-      redirect: "follow", signal: AbortSignal.timeout(8000) });
-    if (!r.ok || new URL(r.url).origin !== origin) return null;
+      redirect: "follow", signal: AbortSignal.timeout(5000) });
+    // A claim is JSON from the station's own origin, and says something only a
+    // station would: a tip address, a Nostr key or a description. Sites that
+    // answer every missing page with a JSON "404-error" and a 200 (Moody Radio)
+    // must not read as claims.
+    if (r.status !== 200 || new URL(r.url).origin !== origin || !/json/i.test(r.headers.get("content-type") || "")) return null;
     const j = await r.json();
+    if (!j || typeof j !== "object" || !(j.lightning || j.nostr || j.description)) return null;
     const c = {};
     for (const [k, max] of Object.entries(CLAIM_FIELDS)) if (typeof j[k] === "string" && j[k].trim()) c[k] = j[k].trim().slice(0, max);
     if (c.lightning && !/^[\w.+\-]+@[\w.\-]+\.[a-z]{2,}$/i.test(c.lightning)) delete c.lightning;
@@ -226,17 +313,26 @@ async function readClaim(origin) {
   } catch { return null; }
 }
 
-async function website(raw) {
+// A network's channels often share one homepage (181 NRJ channels, one nrj.fr):
+// read it once and give every one of them the same answer.
+const pages = new Map();
+function website(raw) {
+  const key = String(raw || "").trim().replace(/\/+$/, "").toLowerCase();
+  if (!pages.has(key)) pages.set(key, readWebsite(raw));
+  return pages.get(key);
+}
+
+async function readWebsite(raw) {
   let u; try { u = new URL(/^https?:/i.test(raw) ? raw : `http://${raw}`); } catch { return { ok: false, why: "bad url" }; }
   if (NOT_A_SITE.test(u.hostname.replace(/^www\./, ""))) return { ok: false, why: "not its own site" };
   return politely(u.hostname, async () => {
     if (!(await allowed(u))) return { ok: false, why: "robots" };
     try {
-      const r = await fetch(u.href, { headers: { "User-Agent": UA, Accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(12000) });
+      const r = await fetch(u.href, { headers: { "User-Agent": UA, Accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(10000) });
       if (!r.ok) return { ok: false, why: `http ${r.status}` };
       if (!/html/i.test(r.headers.get("content-type") || "")) return { ok: false, why: "not html" };
       const reader = r.body.getReader(); let html = "", got = 0; const dec = new TextDecoder();
-      while (got < 600000) { const { value, done } = await reader.read(); if (done) break; got += value.length; html += dec.decode(value, { stream: true }); }
+      while (got < 300000) { const { value, done } = await reader.read(); if (done) break; got += value.length; html += dec.decode(value, { stream: true }); }
       reader.cancel().catch(() => {});
       const claim = await readClaim(new URL(r.url).origin);
       return { ...readPage(html, r.url), final: r.url !== u.href ? r.url : undefined, ...(claim ? { claim } : {}) };
