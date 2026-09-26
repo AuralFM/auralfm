@@ -15,6 +15,9 @@
  *             for the region radio-browser gives, or "<nearest town> area"
  *   named     no position, but the town it names is exactly one of our places in
  *             its country
+ *   town      only a region or a country, but GeoNames knows the town it names,
+ *             or a city in its own name ("Love Radio Manila"): at that town
+ *   region    a region GeoNames knows but no town in it: "Somewhere in Texas"
  *   country   only a country, or only a region: "Somewhere in <country>", one
  *             place per country at the middle of that country's places, so the
  *             station is in the list and plays without pretending to a town.
@@ -36,6 +39,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { loose, countryKey, sameCountryName, cleanTags, streamKey, km, writeBundles } from "./lib/match.mjs";
+import { loadGazetteer } from "./lib/gazetteer.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
@@ -130,7 +134,41 @@ function nearest(lat, lon) {
 const byTitle = new Map();
 full.places.forEach((p, i) => { const k = countryKey(p.title.split(",")[0]); (byTitle.get(k) || byTitle.set(k, []).get(k)).push(i); });
 
-const how = { near: 0, own: 0, named: 0, country: 0, online: 0 };
+const how = { near: 0, own: 0, named: 0, town: 0, region: 0, country: 0, online: 0 };
+
+// GeoNames' towns and regions (data/geonames/, CC-BY 4.0): a station that names
+// only its region, or only its country, can often still be put at its town.
+const G = loadGazetteer(path.join(DATA, "geonames"));
+if (!G) console.log("expand: no data/geonames/ — stations naming only a region go to their country");
+const townPlace = new Map(), regionPlace = new Map();
+function atTown(town, country) {
+  if (townPlace.has(town.id)) return townPlace.get(town.id);
+  const [i, d] = nearest(town.lat, town.lon);
+  let p;
+  if (i >= 0 && d <= 15 && sameCountryName(full.places[i].country, country)) p = i;
+  else {
+    full.places.push({ id: `gn-${town.id}`, title: town.name, country, geo: [town.lon, town.lat], src: "rb" });
+    p = full.places.length - 1; index(p); newPlaces++;
+  }
+  townPlace.set(town.id, p);
+  return p;
+}
+function inRegion(region, country) {
+  const k = `${region.cc}|${region.name}`;
+  if (regionPlace.has(k)) return regionPlace.get(k);
+  full.places.push({ id: `gn-in-${region.cc}-${countryKey(region.name).replace(/ /g, "-")}`, title: `Somewhere in ${region.name}`,
+    country, geo: [region.lon, region.lat], src: "rb" });
+  const p = full.places.length - 1; newPlaces++;
+  regionPlace.set(k, p);
+  return p;
+}
+/** A town or region for a station that gave no position, or -1. */
+function fromGazetteer(s) {
+  const country = ourCountry(s.country);
+  const hit = G && s.cc ? G.find(s.cc, s.state, s.name) : null;
+  if (!hit || !country) return [-1];
+  return hit.town ? [atTown(hit.town, country), "town"] : [inRegion(hit.region, country), "region"];
+}
 
 // "Somewhere in <country>": one place per country, made when first needed, at
 // the median of that country's places (a median, not a mean, so Alaska and
@@ -205,14 +243,14 @@ for (const s of byStream.values()) {
   } else if (s.state) {
     const hits = (byTitle.get(countryKey(s.state)) || []).filter((i) => sameCountryName(full.places[i].country, ourCountry(s.country)));
     if (hits.length === 1) { p = hits[0]; via = "named"; }
-    else { p = somewhereIn(s.country); via = "country"; }
-  } else if (s.country) { p = somewhereIn(s.country); via = "country"; }
+    else { [p, via] = fromGazetteer(s); if (p < 0) { p = somewhereIn(s.country); via = "country"; } }
+  } else if (s.country) { [p, via] = fromGazetteer(s); if (p < 0) { p = somewhereIn(s.country); via = "country"; } }
   else { p = onlineOnly(); via = "online"; }
   if (p < 0) { hold("no country either"); continue; }
 
   if (haveNameAt.has(`${loose(s.name)}|${p}`)) { hold("already carried (same name, same place)"); continue; }
   const inCountry = `${loose(s.name)}|${countryKey(full.places[p].country)}`;
-  if ((via === "country" || via === "online") && haveNameIn.has(inCountry)) { hold("already carried (same name, same country)"); continue; }
+  if (["country", "online", "town", "region"].includes(via) && haveNameIn.has(inCountry)) { hold("already carried (same name, same country)"); continue; }
   haveNameAt.add(`${loose(s.name)}|${p}`);
   haveNameIn.add(inCountry);
   const url = s.urlr || s.url;
@@ -237,7 +275,8 @@ const countries = {};
 for (const c of added) countries[c.country] = (countries[c.country] || 0) + 1;
 
 console.log(`\nadds ${added.length} stations: ${how.near} near a place we have, ${how.named} by the town they name, ` +
-  `${how.own} at places of their own, ${how.country} somewhere in their country (${somewhere.size} countries), ` +
+  `${how.own} at places of their own, ${how.town} at the town GeoNames knows, ${how.region} somewhere in their region, ` +
+  `${how.country} somewhere in their country (${somewhere.size} countries), ` +
   `${how.online} online only; ` +
   `${newPlaces} new places in all`);
 console.log(`  ${added.filter((c) => c.secure).length} of them https (playable on the web as well as the desktop)`);

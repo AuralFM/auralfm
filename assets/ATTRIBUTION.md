@@ -86,3 +86,14 @@ Envato Elements on 6 August 2026, item licence `WBJ67S4UYL`.
 >
 > The licence is also revocable and tied to an active subscription at the time
 > the end product is completed. Keep the certificate.
+
+---
+
+## Towns and regions: GeoNames
+
+Where a station gave only its town or region, AuralFM places it using
+[GeoNames](https://www.geonames.org) (`cities1000`, `admin1CodesASCII`,
+`countryInfo`), licensed under
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+The data is read at build time by `scripts/lib/gazetteer.mjs` and is not shipped
+as a file; the places it produced are in the station catalogue.

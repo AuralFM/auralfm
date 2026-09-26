@@ -34,3 +34,4 @@ dist-web/
 
 # here.now publish state, written by its publish script; local to this machine.
 /.herenow/
+data/geonames/
