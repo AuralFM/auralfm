@@ -221,7 +221,8 @@ async function applyDayNight() {
   const [nightTex, bumpTex, lightsTex] = await Promise.all([
     loadTexture("vendor/earth-night.jpg", TexClass, dayTex),
     loadTexture("vendor/earth-topology.png", TexClass, dayTex),
-    // 8192x4096 city lights. Fails soft: if it is missing the shader keeps the
+    // 4096x2048 city lights (scripts/lights.mjs says why not 8192). Fails soft:
+    // if it is missing the shader keeps the
     // vendored night texture, which is the same imagery at a quarter the size.
     loadTexture("vendor/earth-lights.jpg", TexClass, dayTex).catch(() => null),
   ]);
@@ -275,14 +276,13 @@ async function applyDayNight() {
         vec3 dayC   = texture2D(map, vGlobeUv).rgb;
         vec3 nightC = texture2D(nightMap, vGlobeUv).rgb;
 
-        // City lights, at four times the resolution of the vendored night
-        // texture and as a mask rather than a picture: the colour is decided
+        // City lights, as a mask rather than a picture: the colour is decided
         // here, so it can be tuned without refetching 6.8 MB from NASA.
         //
         // The base is the day texture at a few percent — continents stay
         // faintly readable at night the way they do under a full moon, and it
         // keeps coastlines legible where nobody lives. The old night texture is
-        // still the fallback when the 8K one is missing.
+        // still the fallback when the lights mask is missing.
         if (hasLights > 0.5) {
           float lit = texture2D(lightsMap, vGlobeUv).r;
           // Sodium and LED street lighting, warm and slightly orange. The power

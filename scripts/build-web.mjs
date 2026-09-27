@@ -19,7 +19,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { execFileSync } from "node:child_process";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
@@ -265,14 +264,16 @@ function launchScreen() {
   #launch.gone{opacity:0;pointer-events:none}
   .launch-mark{width:96px;height:96px}
   .launch-mark svg{width:100%;height:100%;display:block}
-  .launch-name,.launch-say{letter-spacing:.14em;text-transform:uppercase;color:rgba(233,226,212,.62)}
+  /* #B3AEA3: bone at about 72% over the onyx, as a solid colour; 6.8:1 on the
+     lightest corner of the gradient, 8.9:1 on the darkest. */
+  .launch-name,.launch-say{letter-spacing:.14em;text-transform:uppercase;color:#B3AEA3}
   .launch-say{margin:10px 0 0;letter-spacing:.06em;text-transform:none;font-weight:500}
   /* In the layout from the start and faded in, so the stack above it does not
      jump when it arrives. */
-  .launch-slow{margin:0;max-width:32ch;min-height:3em;text-align:center;font-weight:400;line-height:1.5;color:rgba(233,226,212,.62);
+  .launch-slow{margin:0;max-width:32ch;min-height:3em;text-align:center;font-weight:400;line-height:1.5;color:#B3AEA3;
     opacity:0;transition:opacity .6s cubic-bezier(.32,.72,0,1)}
   .launch-slow.on{opacity:1}
-  #launch .wave{--wave:20px;color:rgba(233,226,212,.62);margin-top:6px}
+  #launch .wave{--wave:20px;color:#B3AEA3;margin-top:6px}
   @media (prefers-reduced-motion: reduce){ #launch{transition:opacity .2s linear} }
 </style>`;
   const markup = `<div id="launch" role="status" aria-live="polite">
@@ -396,23 +397,6 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
-/**
- * City lights at 4096 wide on the web, not the desktop's 8192.
- *
- * Measured on a cold launch: handing the 8192x4096 mask to the graphics chip
- * (with its mipmaps) was a single 6.5-second freeze in the first frame, behind
- * the launch screen, on this app's own Intel test machine. At 4096 it was
- * about 1.4 to 2 seconds. It is also a quarter of the graphics memory, about
- * 128 MB less, which is what gets a Safari tab reloaded on an iPhone, and a
- * megabyte less to download. 4096 is the resolution of the night texture it
- * replaced, so zoomed right in the lights are softer than on the desktop.
- */
-{
-  const lights = path.join(OUT, "vendor", "earth-lights.jpg");
-  if (fs.existsSync(lights)) {
-    execFileSync("sips", ["-Z", "4096", "-s", "formatOptions", "80", lights, "--out", lights], { stdio: "ignore" });
-  }
-}
 for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────

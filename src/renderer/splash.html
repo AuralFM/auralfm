@@ -53,22 +53,26 @@
      the bars are the same sign the app shows for a station connecting, so the
      first wait and every later one look alike. Copied rather than linked:
      this page loads nothing it does not have to. */
-  .wave{--wave:18px;display:flex;align-items:center;gap:calc(var(--wave) * .14);height:var(--wave);color:rgba(233,226,212,.62);margin-top:4px}
+  .wave{--wave:18px;display:flex;align-items:center;gap:calc(var(--wave) * .14);height:var(--wave);color:#B3AEA3;margin-top:4px}
   .wave i{display:block;width:calc(var(--wave) * .14);height:100%;background:currentColor;transform:scaleY(.3);animation:wave 1.1s cubic-bezier(.77,0,.175,1) infinite}
   .wave i:nth-child(2){animation-delay:.11s}
   .wave i:nth-child(3){animation-delay:.22s}
   .wave i:nth-child(4){animation-delay:.33s}
   .wave i:nth-child(5){animation-delay:.44s}
   @keyframes wave{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+  /* Still, a standing wave: each bar named, so none is left at the .3 it
+     starts from. */
   @media (prefers-reduced-motion: reduce){
     .wave i{animation:none}
-    .wave i:nth-child(1),.wave i:nth-child(5){transform:scaleY(.45)}
-    .wave i:nth-child(2),.wave i:nth-child(4){transform:scaleY(.75)}
+    .wave i:nth-child(1){transform:scaleY(.45)}
+    .wave i:nth-child(2){transform:scaleY(.75)}
     .wave i:nth-child(3){transform:none}
+    .wave i:nth-child(4){transform:scaleY(.75)}
+    .wave i:nth-child(5){transform:scaleY(.45)}
   }
   #name{
     font:590 12px/1 -apple-system, system-ui, sans-serif;
-    letter-spacing:.14em;text-transform:uppercase;color:rgba(233,226,212,.62);   /* 5.4:1 at the card's lightest corner; .42 was 3.3:1 */
+    letter-spacing:.14em;text-transform:uppercase;color:#B3AEA3;   /* bone at about 72%, solid: 6.8:1 at the card's lightest corner; .42 was 3.3:1 */
   }
 </style>
 

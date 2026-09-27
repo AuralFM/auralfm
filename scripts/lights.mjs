@@ -11,9 +11,14 @@
  * Po valley.
  *
  * The source here is the same mission at its published resolution — 13500x6750,
- * roughly 3 km a pixel — downsampled to 8192x4096, which is the largest the
- * integrated GPUs this app targets can take without the texture becoming the
- * heaviest thing in the scene.
+ * roughly 3 km a pixel. It was downsampled to 8192x4096, on the belief that the
+ * integrated GPUs this app targets could take it. Measured on a cold launch
+ * (26 Sept) they could not: handing 8192x4096 and its mipmaps to the graphics
+ * chip was one 6.5-second freeze in the first frame, the single heaviest thing
+ * in the launch, and 128 MB of graphics memory an iPhone does not have spare.
+ * At 4096x2048 it is about 1.5 to 2 seconds. So 4096: the same resolution as
+ * the night texture, but a clean greyscale mask from the newer imagery, tinted
+ * in the shader.
  *
  * Grayscale on purpose. It is a *mask* of where light is, tinted in the shader,
  * rather than a picture with a colour decision baked into it. That also makes it
@@ -37,7 +42,7 @@ const SRC = "https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144897/" 
             "BlackMarble_2016_3km_gray_geo.tif";
 const UA = "AuralFM/0.1 (+https://github.com/meltonbell/globefm; meltonbell@icloud.com)";
 
-const WIDTH = 8192;
+const WIDTH = 4096;
 
 if (fs.existsSync(OUT)) {
   console.log(`lights: earth-lights.jpg already built (${(fs.statSync(OUT).size / 1024).toFixed(0)} KB)`);

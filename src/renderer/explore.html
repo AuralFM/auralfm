@@ -823,7 +823,9 @@
   .wave.base{align-items:flex-end}
   .wave.base i{transform-origin:bottom}
   @keyframes wave{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
-  /* Still, it keeps its shape: a standing wave reads as "busy" without moving. */
+  /* Still, it keeps its shape: a standing wave reads as "busy" without moving.
+     animation:none rather than a near-zero duration: this one loops, and a
+     loop at a millisecond a turn flickers. Nothing listens for its end. */
   @media (prefers-reduced-motion:reduce){
     .wave i{animation:none}
     .wave i:nth-child(1),.wave i:nth-child(5){transform:scaleY(.45)}
@@ -1851,17 +1853,20 @@
 <div class="now" id="now" hidden>
   <button id="nowGrab" class="nowgrab" type="button" aria-expanded="false" aria-controls="nowdrawer"
           data-i18n-title="profile.about" title="About this station" hidden></button>
-  <button id="play" data-i18n-title="ctl.play" title="Play"></button>
-  <!-- Order is the layout. The two controls that act on this station sit
+  <button id="play" data-i18n-title="ctl.play" title="Play" aria-label="Play"></button>
+  <!-- Each control has its name in the markup as well as from the strings
+       (applyStrings sets aria-label from data-i18n-title), so it is named even
+       before they load or if they fail to.
+       Order is the layout. The two controls that act on this station sit
        together, then the on-air lamp sits against the name it describes. The
        lamp used to fall between the lock and the star, which read as three
        unrelated things rather than a pair and a label. -->
-  <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation"></button>
-  <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden></button>
+  <button id="lock" title="Lock this station while you browse" aria-label="Lock this station" data-i18n-title="ctl.lockStation"></button>
+  <button id="nowStar" title="Favorite" aria-label="Save to Favorites" data-i18n-title="ctl.favorite" hidden></button>
   <!-- Next to the two controls that act on this station, because it is a third
        one. Hidden until something is playing — there is nothing to share about
        silence. -->
-  <button id="nowShare" title="Copy a card of what you are listening to"
+  <button id="nowShare" title="Copy a card of what you are listening to" aria-label="Copy a card of what you are listening to"
           data-i18n-title="ctl.share" hidden></button>
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
