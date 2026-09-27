@@ -766,7 +766,7 @@ body::after {
 .links, .menu nav { counter-reset: panel; }
 .links .cell::before, .menu a:not(.menu-go)::before {
   counter-increment: panel; content: counter(panel, decimal-leading-zero) "/" / "";
-  font: 400 10px/1 var(--mono); letter-spacing: .04em; color: var(--aqua);
+  font: 400 11px/1 var(--mono); letter-spacing: .04em; color: var(--aqua);
 }
 .links .cell::before { margin-right: 6px; translate: 0 -5px; }
 .links .cell:hover::before, .links .cell[aria-current="page"]::before { color: inherit; }
