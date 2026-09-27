@@ -470,6 +470,7 @@ function renderReader(list) {
     const p = document.createElement("div");
     p.className = "readnote";
     p.textContent = t("news.loading", "Fetching the article…");
+    p.prepend(waveSpan());
     list.append(p);
     return;
   }

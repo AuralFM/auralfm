@@ -89,6 +89,15 @@ const isFav = (id) => favorites.some((f) => f.id === id);
 // activatable(), which makes rows keyboard-operable, lives in activatable.js:
 // the menu-bar popover needs it too.
 
+/** The wave (explore.html): five bars that say "working on it" without a number. */
+function waveSpan() {
+  const w = document.createElement("span");
+  w.className = "wave";
+  w.setAttribute("aria-hidden", "true");
+  w.innerHTML = "<i></i><i></i><i></i><i></i><i></i>";
+  return w;
+}
+
 /**
  * The third state, for any list that can be waited on.
  *

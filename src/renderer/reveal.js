@@ -14,6 +14,9 @@
  * `visibilitychange`, which is the real signal.
  */
 (() => {
+  // On the web and the iPhone app the page has its own launch screen
+  // (web/launch.js), which reveals the page when the globe has painted.
+  if (document.getElementById("launch")) return;
   let done = false;
   const reveal = () => {
     if (done) return;

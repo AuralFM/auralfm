@@ -226,7 +226,8 @@
       if (started) return;
       started = true;
       fig.classList.add("loading");
-      goBtn.textContent = "Loading the globe…";
+      // The wave from the app's own loading screens, before the words.
+      goBtn.innerHTML = '<span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Loading the globe…';
       let places;
       try {
         [, places] = await Promise.all([script(base + "globe.gl.min.js"), fetch(base + "places.json").then((r) => r.json())]);

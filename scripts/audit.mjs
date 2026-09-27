@@ -2766,6 +2766,50 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("each relative require of package.json names a file that exists");
 }
 
+// ── the web launch screen lifts when the globe has painted ─────────────────
+// The web and iPhone app carry their own launch screen (web/launch.js), because
+// a page has no splash window: without it a slow phone showed seconds of blank
+// page, then the interface with an empty hole where the globe would be. It is
+// lifted by the same explore:ready moment that shows the desktop window, which
+// the web bridge used to answer with a no-op. If that goes back to a no-op the
+// screen only lifts on its 45-second floor; if reveal.js stops standing aside,
+// the body fades in under the veil and the tour opens behind it.
+{
+  const name = "the web launch screen lifts when the globe has painted";
+  console.log(`\n${name}`);
+  const bad = [];
+  const bridge = fs.readFileSync(R("web/bridge.js"), "utf8");
+  if (!/exploreReady:\s*\(\)\s*=>\s*window\.AuralLaunch\?\.done\(\)/.test(bridge)) bad.push("web/bridge.js: exploreReady does not lift the launch screen");
+  // Run launch.js against a small stand-in page and lift it.
+  const cls = () => { const set = new Set(); return { add: (c) => set.add(c), remove: (c) => set.delete(c), contains: (c) => set.has(c) }; };
+  const attrs = {};
+  const veil = { classList: cls(), removeAttribute: (a) => delete attrs[a], setAttribute: (a, v) => (attrs[a] = v), remove() { veil.removed = true; },
+    querySelector: (q) => (q === ".launch-say" ? say : q === ".launch-slow" ? slow : null) };
+  const say = { dataset: {}, textContent: "" };
+  const slow = { classList: cls(), removeAttribute() {} };
+  const body = { classList: cls() };
+  const timers = [];
+  const ctx = { document: { body, getElementById: (id) => (id === "launch" ? veil : null) }, requestAnimationFrame: (f) => f(),
+    setTimeout: (f, ms) => { timers.push([f, ms]); return timers.length; }, clearTimeout() {} };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(R("web/launch.js"), "utf8"), ctx);
+  if (!ctx.AuralLaunch) bad.push("web/launch.js does not define AuralLaunch");
+  else {
+    ctx.AuralLaunch.step("launch.globe", "Drawing the globe");
+    if (say.textContent !== "Drawing the globe" || say.dataset.i18n !== "launch.globe") bad.push("step() does not say the step");
+    ctx.AuralLaunch.done();
+    for (const [f, ms] of timers) if (ms <= 1000) f();
+    if (!body.classList.contains("revealed")) bad.push("done() does not reveal the page");
+    if (!veil.classList.contains("gone") || !veil.removed) bad.push("done() does not take the launch screen away");
+  }
+  // reveal.js must stand aside while the launch screen is up.
+  const rctx = { document: { getElementById: (id) => (id === "launch" ? {} : null), visibilityState: "visible", body: { classList: cls() }, addEventListener() {} },
+    requestAnimationFrame: (f) => f(), setTimeout: (f) => f() };
+  vm.runInNewContext(fs.readFileSync(R("src/renderer/reveal.js"), "utf8"), rctx);
+  if (rctx.document.body.classList.contains("revealed")) bad.push("reveal.js reveals the page under the launch screen");
+  bad.length ? fail(name, bad.join("; ")) : pass("the bridge lifts it on explore:ready, launch.js reveals and removes it, and reveal.js waits");
+}
+
 // ── a station plays from its own server, and no other directory is asked ──
 // The catalogue began as radio.garden's, and the desktop resolved every one of
 // those stations through radio.garden's listen endpoint — which answers only

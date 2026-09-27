@@ -71,6 +71,7 @@
     .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
     .then((text) => {
       M.files["stations.min.json"] = text; M.catalog.load(); M.catalog.setHideExplicit(getPrefs().hideExplicit);
+      window.AuralLaunch?.step("launch.globe", "Drawing the globe");
       // Favourites and the last station saved under the catalogue's old ids find
       // themselves again by name (catalog.relinkSaved), and so does a station
       // already cued from them.
@@ -663,7 +664,8 @@
     openExplore: () => window.open("index.html", "auralfm"),
     openLink: (url) => { if (/^https:\/\//.test(url)) window.open(url, "_blank", "noopener"); },
     openExternal: (url) => { if (/^https:\/\//.test(url)) window.open(url, "_blank", "noopener"); },
-    exploreReady: noop,
+    // The globe has painted: lift the launch screen (web/launch.js).
+    exploreReady: () => window.AuralLaunch?.done(),
     tipNext: none, tipDonate: noop, tipRetire: noop,
     reportError: noop,
   };

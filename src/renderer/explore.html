@@ -806,6 +806,38 @@
   @media (prefers-reduced-motion:reduce){
     .st.pending .bars i{animation:none;transform:scaleY(.55)}
   }
+  /* The wave: five bars rising and falling, the app's one sign for "working on
+     it" — the launch screen, the splash, a station connecting, a card being
+     looked up. The same bars as a pending row above, grown to five, so waiting
+     looks like one idea everywhere. Drawn in currentColor, so it takes the ink
+     of whatever it sits in. Indeterminate on purpose: it says busy, never how
+     far along, because nothing here knows that.
+     --wave sets the height; the bars and gaps scale from it. */
+  .wave{--wave:14px;display:inline-flex;align-items:center;gap:calc(var(--wave) * .14);height:var(--wave);flex:none;vertical-align:middle}
+  .wave i{display:block;width:calc(var(--wave) * .14);min-width:2px;height:100%;background:currentColor;
+    transform:scaleY(.3);animation:wave 1.1s var(--ease-in-out,ease-in-out) infinite}
+  .wave i:nth-child(2){animation-delay:.11s}
+  .wave i:nth-child(3){animation-delay:.22s}
+  .wave i:nth-child(4){animation-delay:.33s}
+  .wave i:nth-child(5){animation-delay:.44s}
+  .wave.base{align-items:flex-end}
+  .wave.base i{transform-origin:bottom}
+  @keyframes wave{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+  /* Still, it keeps its shape: a standing wave reads as "busy" without moving.
+     animation:none rather than a near-zero duration: this one loops, and a
+     loop at a millisecond a turn flickers. Nothing listens for its end. */
+  @media (prefers-reduced-motion:reduce){
+    .wave i{animation:none}
+    .wave i:nth-child(1),.wave i:nth-child(5){transform:scaleY(.45)}
+    .wave i:nth-child(2),.wave i:nth-child(4){transform:scaleY(.75)}
+    .wave i:nth-child(3){transform:none}
+  }
+  /* In the bar, beside "Connecting…", for as long as the station is pending. */
+  #nowWave{--wave:11px;color:var(--label2);margin-right:-4px;display:none}
+  #now.pending #nowWave{display:inline-flex}
+  /* In a card or article that is still being looked up, before its words. */
+  .pnone .wave,.readnote .wave{--wave:11px;margin-right:8px}
+
   /* A failed stream says so in the colour the rest of the app uses for failure,
      rather than in the same grey as "Connecting…". */
   #nowStatus.err{color:var(--err)}
@@ -1821,20 +1853,24 @@
 <div class="now" id="now" hidden>
   <button id="nowGrab" class="nowgrab" type="button" aria-expanded="false" aria-controls="nowdrawer"
           data-i18n-title="profile.about" title="About this station" hidden></button>
-  <button id="play" data-i18n-title="ctl.play" title="Play"></button>
-  <!-- Order is the layout. The two controls that act on this station sit
+  <button id="play" data-i18n-title="ctl.play" title="Play" aria-label="Play"></button>
+  <!-- Each control has its name in the markup as well as from the strings
+       (applyStrings sets aria-label from data-i18n-title), so it is named even
+       before they load or if they fail to.
+       Order is the layout. The two controls that act on this station sit
        together, then the on-air lamp sits against the name it describes. The
        lamp used to fall between the lock and the star, which read as three
        unrelated things rather than a pair and a label. -->
-  <button id="lock" title="Lock this station while you browse" data-i18n-title="ctl.lockStation"></button>
-  <button id="nowStar" title="Favorite" data-i18n-title="ctl.favorite" hidden></button>
+  <button id="lock" title="Lock this station while you browse" aria-label="Lock this station" data-i18n-title="ctl.lockStation"></button>
+  <button id="nowStar" title="Favorite" aria-label="Save to Favorites" data-i18n-title="ctl.favorite" hidden></button>
   <!-- Next to the two controls that act on this station, because it is a third
        one. Hidden until something is playing — there is nothing to share about
        silence. -->
-  <button id="nowShare" title="Copy a card of what you are listening to"
+  <button id="nowShare" title="Copy a card of what you are listening to" aria-label="Copy a card of what you are listening to"
           data-i18n-title="ctl.share" hidden></button>
   <span class="dot" id="dot"></span>
   <b id="nowName"></b>
+  <span class="wave" id="nowWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
   <span id="nowStatus"></span>
   <!-- About the station you are hearing: opens its place in the rail with its
        card unfolded (explore-profile.js). A phone pulls the bar up instead. -->

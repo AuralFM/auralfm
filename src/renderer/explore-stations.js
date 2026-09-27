@@ -160,10 +160,12 @@ function markPending(id) {
   for (const el of stationListEl.children) {
     if (el.dataset?.id) el.classList.toggle("pending", el.dataset.id === id);
   }
+  $("now")?.classList.add("pending");
 }
 
 function clearPending() {
   for (const el of stationListEl.children) el.classList?.remove("pending");
+  $("now")?.classList.remove("pending");
 }
 
 function renderStations() {
