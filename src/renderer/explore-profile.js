@@ -128,7 +128,7 @@
     stationListEl.querySelectorAll(".sprofile").forEach((b) => b.remove());
     if (focusWasInside) btn.focus();
     stationListEl.querySelectorAll(".pinfo[aria-expanded='true']").forEach((b) => b.setAttribute("aria-expanded", "false"));
-    if (open) return;
+    if (open) { syncInfo(); return; }
     const box = el("div", "sprofile");
     box.id = `profile-${ch.id.replace(/[^\w-]/g, "")}`;
     box.setAttribute("role", "region");
@@ -137,7 +137,22 @@
     btn.setAttribute("aria-controls", box.id);
     btn.setAttribute("aria-expanded", "true");
     row.after(box);
+    syncInfo();
     paint(box, await profileOf(ch.id), ch);
+  }
+
+  /**
+   * The two "i"s are one switch (Melton, 26 Sept). The player's "i" is lit while
+   * the playing station's card is open in the list, and pressing it again
+   * closes that card, as the row's own "i" does; open or closed from either,
+   * both show it. syncInfo() is called wherever a card opens or closes, and
+   * whenever the list is redrawn or the station changes.
+   */
+  const playingRowInfo = () => (nowCh ? stationListEl.querySelector(`.st[data-id="${CSS.escape(String(nowCh.id))}"] .pinfo`) : null);
+  function syncInfo() {
+    if (!info) return;
+    const btn = playingRowInfo();
+    info.setAttribute("aria-expanded", String(!stationListEl.hidden && btn?.getAttribute("aria-expanded") === "true"));
   }
 
   // ── the player bar ───────────────────────────────────────────────────────
@@ -274,11 +289,21 @@
     // A drag that ended on the big button must not also open the station list.
     now.addEventListener("click", (e) => { if (swallowClick) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
     grab.addEventListener("click", (e) => { e.stopPropagation(); toggleDrawer(e.detail === 0); });
-    info?.addEventListener("click", (e) => { e.stopPropagation(); if (nowCh) openInRail(nowCh); });
+    info?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!nowCh) return;
+      const btn = playingRowInfo();
+      if (info.getAttribute("aria-expanded") === "true" && btn) {
+        await toggle(btn.closest(".st"), nowCh, btn);   // open: close it, as the row's "i" would
+        info.focus();
+      } else await openInRail(nowCh);
+      syncInfo();
+    });
     window.auralfm.onPlayerState?.((st) => {
       const ch = st?.channel || null;
       const changed = (ch?.id ?? null) !== (nowCh?.id ?? null);
       nowCh = ch;
+      syncInfo();
       // Nothing to say about a shortwave receiver or a station you added yourself.
       grab.hidden = !ch || !!ch.sdr || String(ch.id).startsWith("my:");
       if (info) info.hidden = grab.hidden;
@@ -307,5 +332,6 @@
       btn.onclick = (e) => { e.stopPropagation(); toggle(row, ch, btn); };
       row.querySelector(".star")?.before(btn);
     }
+    syncInfo();   // a redrawn list has no card open
   };
 }
