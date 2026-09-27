@@ -30,7 +30,11 @@
   const slow = veil.querySelector(".launch-slow");
   let over = false;
   const tr = (key, fallback) => { try { return typeof t === "function" ? t(key, fallback) : fallback; } catch { return fallback; } };
-  const slowTimer = setTimeout(() => { if (slow) slow.hidden = false; }, 6000);
+  const slowTimer = setTimeout(() => {
+    if (!slow) return;
+    slow.classList.add("on");
+    slow.removeAttribute("aria-hidden");   // announced by the status region now it is shown
+  }, 6000);
   const floor = setTimeout(() => done(), 45000);
 
   function step(key, fallback) {

@@ -249,10 +249,12 @@ function launchScreen() {
     .replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true" focusable="false"');
   if (!mark.includes('fill="currentColor"')) throw new Error("web: assets/mark.svg lost its currentColor globe");
   const style = `<style>
-  /* The launch screen. Onyx under everything while it is up, so a phone never
-     flashes white before the first paint; the page under it is shown, since
-     the veil covers it (explore.html starts the body at opacity 0). */
-  html:has(#launch){background:#0C0B0B}
+  /* The launch screen. Onyx under everything, so a phone never flashes white
+     before the first paint (the body paints its own theme colour over it once
+     the app is up); the page under the veil is shown, since the veil covers it
+     (explore.html starts the body at opacity 0). First in the head, before the
+     page's own 110 KB of style, so it is read first. */
+  html{background:#0C0B0B}
   body:has(#launch){opacity:1 !important;transform:none !important}
   #launch{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
     padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
@@ -264,8 +266,12 @@ function launchScreen() {
   .launch-mark svg{width:100%;height:100%;display:block}
   .launch-name,.launch-say{letter-spacing:.14em;text-transform:uppercase;color:rgba(233,226,212,.62)}
   .launch-say{margin:10px 0 0;letter-spacing:.06em;text-transform:none;font-weight:500}
-  .launch-slow{margin:0;max-width:32ch;text-align:center;font-weight:400;line-height:1.5;color:rgba(233,226,212,.62)}
-  #launch .wave{--wave:14px;color:rgba(233,226,212,.62);margin-top:4px}
+  /* In the layout from the start and faded in, so the stack above it does not
+     jump when it arrives. */
+  .launch-slow{margin:0;max-width:32ch;min-height:3em;text-align:center;font-weight:400;line-height:1.5;color:rgba(233,226,212,.62);
+    opacity:0;transition:opacity .6s cubic-bezier(.32,.72,0,1)}
+  .launch-slow.on{opacity:1}
+  #launch .wave{--wave:20px;color:rgba(233,226,212,.62);margin-top:6px}
   @media (prefers-reduced-motion: reduce){ #launch{transition:opacity .2s linear} }
 </style>`;
   const markup = `<div id="launch" role="status" aria-live="polite">
@@ -273,7 +279,7 @@ function launchScreen() {
   <div class="launch-name">AuralFM</div>
   <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
   <p class="launch-say" data-i18n="launch.stations">Fetching the stations</p>
-  <p class="launch-slow" data-i18n="launch.slow" hidden>The first visit brings the whole globe to this device. After that it opens at once.</p>
+  <p class="launch-slow" data-i18n="launch.slow" aria-hidden="true">The first visit brings the whole globe to this device. After that it opens at once.</p>
 </div>`;
   return { style, markup };
 }
@@ -327,7 +333,7 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
 <link rel="preload" href="vendor/earth-lights.jpg" as="image">
 <link rel="manifest"`);
     const { style, markup } = launchScreen();
-    html = html.replace("</head>", `${style}\n</head>`);
+    html = html.replace('<link rel="preload" href="web/web.css"', `${style}\n<link rel="preload" href="web/web.css"`);
     if (!/<body>\n/.test(html)) throw new Error(`web: ${srcName} has no <body> for the launch screen`);
     html = html.replace("<body>\n", `<body>\n${markup}\n`);
   }
