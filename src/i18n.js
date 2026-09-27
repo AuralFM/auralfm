@@ -28,6 +28,9 @@ const en = {
   "app.noCatalog": "No catalog",
   "app.loading": "Loading…",
   "app.loadingGlobe": "Loading globe…",
+  "launch.stations": "Fetching the stations",
+  "launch.globe": "Drawing the globe",
+  "launch.slow": "The first visit brings the whole globe to this device. After that it opens at once.",
   "app.globeFailed": "The globe could not be loaded.",
   "app.headlines": "Headlines",
 

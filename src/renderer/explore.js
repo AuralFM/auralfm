@@ -76,6 +76,9 @@ document.addEventListener("keydown", (e) => {
     // has to be visible whether or not the user asked for it.
     const el = $("globestatus") || $("globehint");
     if (el) { el.textContent = err.message; $("globehint").hidden = false; }
+    // And show the app now rather than on a fallback timer: a globe that failed
+    // is said so above, which nobody can read behind a splash.
+    window.auralfm.exploreReady?.();
   }
 
   // Quietly flag a stale catalog rather than letting it rot invisibly — but

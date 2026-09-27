@@ -25,6 +25,8 @@
     ["tiktok", "TikTok"], ["soundcloud", "SoundCloud"], ["mixcloud", "Mixcloud"], ["spotify", "Spotify"],
     ["bluesky", "Bluesky"], ["mastodon", "Mastodon"], ["telegram", "Telegram"], ["whatsapp", "WhatsApp"]];
   const safe = (u) => (typeof u === "string" && /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : null);
+  /** "Looking…", with the wave before it. */
+  const looking = () => { const p = el("p", "pnone", t("profile.loading", "Looking…")); p.prepend(waveSpan()); return p; };
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
   const link = (href, text, cls = "plink") => {
     const a = el("a", cls, text);
@@ -113,7 +115,7 @@
     box.id = `profile-${ch.id.replace(/[^\w-]/g, "")}`;
     box.setAttribute("role", "region");
     box.setAttribute("aria-label", `${ch.title}: ${t("profile.about", "about this station")}`);
-    box.append(el("p", "pnone", t("profile.loading", "Looking…")));
+    box.append(looking());
     btn.setAttribute("aria-controls", box.id);
     btn.setAttribute("aria-expanded", "true");
     row.after(box);
@@ -180,7 +182,7 @@
     card.textContent = "";
     card.setAttribute("aria-label", `${ch.title}: ${t("profile.about", "about this station")}`);
     const box = el("div", "sprofile");
-    box.append(el("p", "pnone", t("profile.loading", "Looking…")));
+    box.append(looking());
     // No name on top: the player it rises out of says it, right underneath.
     card.append(box);
     const p = await profileOf(ch.id);

@@ -237,7 +237,48 @@ const SHARE_TAGS = `
 <meta property="og:image:alt" content="The AuralFM globe on a field of stars">
 <meta name="twitter:card" content="summary_large_image">`;
 
-function page(srcName, outName, { title, before, beforeScript, after = {}, logo = false, share = false }) {
+/**
+ * The launch screen (web/launch.js explains why). Written into the page itself,
+ * markup and style both, so it is on screen from the first bytes, before any
+ * script or the stylesheet has arrived. Onyx with the same gradient, mark,
+ * name and wave as the desktop splash (src/renderer/splash.html), so the
+ * three platforms open on one screen.
+ */
+function launchScreen() {
+  const mark = fs.readFileSync(R("assets", "mark.svg"), "utf8")
+    .replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true" focusable="false"');
+  if (!mark.includes('fill="currentColor"')) throw new Error("web: assets/mark.svg lost its currentColor globe");
+  const style = `<style>
+  /* The launch screen. Onyx under everything while it is up, so a phone never
+     flashes white before the first paint; the page under it is shown, since
+     the veil covers it (explore.html starts the body at opacity 0). */
+  html:has(#launch){background:#0C0B0B}
+  body:has(#launch){opacity:1 !important;transform:none !important}
+  #launch{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+    background:radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);color:#F7F4EE;
+    font:590 12px/1 -apple-system, system-ui, sans-serif;-webkit-user-select:none;user-select:none;
+    transition:opacity .5s cubic-bezier(.32,.72,0,1)}
+  #launch.gone{opacity:0;pointer-events:none}
+  .launch-mark{width:96px;height:96px}
+  .launch-mark svg{width:100%;height:100%;display:block}
+  .launch-name,.launch-say{letter-spacing:.14em;text-transform:uppercase;color:rgba(233,226,212,.62)}
+  .launch-say{margin:10px 0 0;letter-spacing:.06em;text-transform:none;font-weight:500}
+  .launch-slow{margin:0;max-width:32ch;text-align:center;font-weight:400;line-height:1.5;color:rgba(233,226,212,.62)}
+  #launch .wave{--wave:14px;color:rgba(233,226,212,.62);margin-top:4px}
+  @media (prefers-reduced-motion: reduce){ #launch{transition:opacity .2s linear} }
+</style>`;
+  const markup = `<div id="launch" role="status" aria-live="polite">
+  <div class="launch-mark">${mark.trim()}</div>
+  <div class="launch-name">AuralFM</div>
+  <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+  <p class="launch-say" data-i18n="launch.stations">Fetching the stations</p>
+  <p class="launch-slow" data-i18n="launch.slow" hidden>The first visit brings the whole globe to this device. After that it opens at once.</p>
+</div>`;
+  return { style, markup };
+}
+
+function page(srcName, outName, { title, before, beforeScript, after = {}, logo = false, share = false, launch = false }) {
   let html = fs.readFileSync(R("src", "renderer", srcName), "utf8");
   const csp = /<meta http-equiv="Content-Security-Policy"[\s\S]*?>/;
   if (!csp.test(html)) throw new Error(`web: no CSP meta in ${srcName}`);
@@ -264,6 +305,32 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
   // equally specific rather than losing to source order.
   if (!html.includes("</head>")) throw new Error(`web: ${srcName} has no </head>`);
   html = html.replace("</head>", `<link rel="stylesheet" href="web/web.css">\n</head>`);
+  if (launch) {
+    // Asked for from the top of the page. Both used to be found only after the
+    // browser had read the page's own 110 KB of inline style (the stylesheet)
+    // or run nine scripts (the stations, fetched by bridge.js), so the launch
+    // screen and the catalogue both started seconds late on a slow phone.
+    // The globe's library and pictures likewise: they were asked for only once
+    // every script had run and the library had loaded, one after the other,
+    // and they are most of the wait (1.8 MB of library, about 6 MB of images
+    // that do not compress). Started here, they download alongside the scripts.
+    // Each `crossorigin` matches how the request is really made, so a preload
+    // is used rather than downloaded twice: fetch() and three.js's image loader
+    // ask in CORS mode, explore-globe.js's loadTexture() and a <script> do not.
+    html = html.replace('<link rel="manifest"', `<link rel="preload" href="web/web.css" as="style">
+<link rel="preload" href="data/stations.min.json" as="fetch" crossorigin>
+<link rel="preload" href="vendor/globe.gl.min.js" as="script">
+<link rel="preload" href="vendor/earth-blue-marble.jpg" as="image" crossorigin>
+<link rel="preload" href="vendor/night-sky.png" as="image" crossorigin>
+<link rel="preload" href="vendor/earth-night.jpg" as="image">
+<link rel="preload" href="vendor/earth-topology.png" as="image">
+<link rel="preload" href="vendor/earth-lights.jpg" as="image">
+<link rel="manifest"`);
+    const { style, markup } = launchScreen();
+    html = html.replace("</head>", `${style}\n</head>`);
+    if (!/<body>\n/.test(html)) throw new Error(`web: ${srcName} has no <body> for the launch screen`);
+    html = html.replace("<body>\n", `<body>\n${markup}\n`);
+  }
   const anchor = `<script src="${beforeScript}"></script>`;
   if (!html.includes(anchor)) throw new Error(`web: ${srcName} has no ${anchor}`);
   html = html.replace(anchor, before.map((s) => `<script src="${s}"></script>`).join("\n") + "\n" + anchor);
@@ -282,7 +349,7 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
   // Every script and stylesheet carries this build's stamp, so a browser that
   // cached the last version fetches the new one instead of mixing the two.
   html = html.replace(/(<script src="[^"?]+)"/g, `$1?v=${BUILD}"`)
-             .replace(/(<link rel="stylesheet" href="[^"?]+)"/g, `$1?v=${BUILD}"`);
+             .replace(/(<link rel="(?:stylesheet|preload)" href="[^"?]+\.css)"/g, `$1?v=${BUILD}"`);
   fs.writeFileSync(path.join(OUT, outName), html);
 }
 
@@ -305,10 +372,11 @@ page("explore.html", "index.html", {
   beforeScript: "errors.js",
   // levels.js before the bridge: the card's waveform is measured from a private
   // copy of the stream, exactly as the desktop's popover does it.
-  before: ["web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
+  before: ["web/launch.js", "web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
   after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js", "web/ticker.js"] },
   logo: true,
   share: true,
+  launch: true,
 });
 page("settings.html", "settings.html", {
   title: "AuralFM Settings",
@@ -321,7 +389,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
-for (const f of ["bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
+for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
 // Google News does not let a web page read it, so here.now fetches it for the
