@@ -6,8 +6,10 @@
  * scripts/profiles.mjs into data/profiles/<xx>.json: its description, its
  * website and socials, what it plays, and — when the station has claimed its
  * page with /.well-known/auralfm.json on its own website — a Tip button that
- * hands its Lightning address to the listener's own wallet. AuralFM never
- * touches the money; the link is `lightning:` and the wallet does the rest.
+ * hands its Lightning address to the listener's own wallet, and a Donate link
+ * to the station's own donation page when it has one. AuralFM never touches
+ * the money: the link is `lightning:` or the station's page, and the wallet or
+ * the station does the rest.
  *
  * It started on the web and came to the desktop once Melton approved it
  * (26 Sept). The profile itself comes from window.auralfm.profile(id): on the
@@ -81,15 +83,31 @@
     if (links.childElementCount) box.append(links);
 
     const ln = p.claim?.lightning;
-    if (ln && /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(ln)) {
+    const hasTip = !!ln && /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(ln);
+    // The station's own donation page, for the stations a Lightning address
+    // does not fit: a college or community station that is a nonprofit takes
+    // gifts through its own page (Melton, 26 Sept, on 8-Ball Radio). Opened in
+    // the browser; AuralFM is never in the middle of it. Not in a sanctioned
+    // country, for the same reason as tips.
+    const donate = !p.noTips && /^https:\/\//.test(p.donate || "") ? safe(p.donate) : null;
+    if (hasTip) {
       const tip = link(`lightning:${ln}`, t("profile.tip", "Tip this station"), "ptip");
       tip.removeAttribute("target");
       tip.title = ln;
       box.append(tip);
       box.append(el("p", "pnote", t("profile.tipNote", "Wallet to wallet, to the address the station published itself. AuralFM never holds the money.")));
-    } else {
+    }
+    if (donate) {
+      box.append(link(donate, t("profile.donate", "Donate to this station"), hasTip ? "ptip pquiet" : "ptip"));
+      // Said plainly, because it is the line between a gift and payola: the
+      // money goes to the station, and it buys nothing here.
+      box.append(el("p", "pnote", t("profile.donateNote", "On the station's own page. AuralFM takes no part and no cut, and giving changes nothing about where the station appears.")));
+    }
+    if (!hasTip) {
       // No tips to a country under comprehensive US sanctions (scripts/profiles.mjs).
       if (p.noTips) box.append(el("p", "pnote", t("profile.noTips", "Tips can't be sent to stations in this country.")));
+      // Still asked with a Donate link: a donation page found on a homepage is
+      // not the station claiming its page.
       box.append(claimLine(ch));
     }
   }

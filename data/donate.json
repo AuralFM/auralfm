@@ -1,0 +1,8 @@
+{
+  "_about": "Donation pages AuralFM has checked by hand, for stations whose homepage the crawl cannot read (a site built in JavaScript shows no links until it runs). Each is the station's own page or its fiscal sponsor's page for it, never a page of ours. A station's claim (/.well-known/auralfm.json or the claim form) replaces an entry here. scripts/profiles.mjs reads it.",
+  "af-mv8mtpb5": {
+    "station": "8 Ball Radio, New York",
+    "url": "https://fundraising.fracturedatlas.org/8-ball-community-inc",
+    "why": "8-Ball Community is a 501(c)(3) through its fiscal sponsor, Fractured Atlas, which takes its gifts on this page. Checked 26 Sept 2026."
+  }
+}

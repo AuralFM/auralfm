@@ -1038,6 +1038,9 @@
   .plinks{display:flex;flex-wrap:wrap;gap:4px 12px}
   .plink{font-size:12px;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
   .ptip{align-self:flex-start;font-size:13px;font-weight:600;padding:6px 12px;border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);text-decoration:none}
+  /* The second of two: Donate beside a Tip is outlined, so the card has one
+     filled button. */
+  .ptip.pquiet{background:transparent;color:var(--label);box-shadow:inset 0 0 0 1px var(--line)}
   .ptip:focus-visible,.plink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .pnote,.pnone{font-size:12px;color:var(--label2)}
   /* ── The playing station's card, pulled up out of the player ─────────────────

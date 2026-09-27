@@ -2810,6 +2810,39 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   bad.length ? fail(name, bad.join("; ")) : pass("the bridge lifts it on explore:ready, launch.js reveals and removes it, and reveal.js waits");
 }
 
+// ── a donation link is the station's own page, and never for a sanctioned country
+// Stations that can't take a Lightning address (a 501(c)(3) like 8-Ball Radio)
+// get a Donate link to their own page (Melton, 26 Sept). It must be https, the
+// station's own page before any platform, not a paid membership, and absent
+// wherever tips are absent: Cuba, Iran, North Korea and Syria.
+{
+  const name = "a donation link is the station's own page, and never for a sanctioned country";
+  console.log(`\n${name}`);
+  const bad = [];
+  const src = fs.readFileSync(R("scripts/enrich.mjs"), "utf8");
+  const a = src.indexOf("const GIVING"), b = src.indexOf("/**\n * What a homepage says");
+  const donationPage = a < 0 || b < 0 ? null : new Function(src.slice(a, b) + "; return donationPage;")();
+  if (!donationPage) bad.push("scripts/enrich.mjs has no donationPage()");
+  else {
+    const cases = [
+      [["https://donorbox.org/x", "/donate"], "https://www.kexp.example/donate", "the station's own page before a platform"],
+      [["https://www.paypal.com/donate?hosted_button_id=1"], "https://www.paypal.com/donate?hosted_button_id=1", "a PayPal donation"],
+      [["http://kexp.example/donate"], undefined, "http is refused"],
+      [["/supporters", "/membership", "/support"], undefined, "a membership or help page is not a donation"],
+      [["https://pledge.kexp.example/give"], "https://pledge.kexp.example/give", "a giving page on its own subdomain"],
+    ];
+    for (const [hrefs, want, what] of cases) {
+      const got = donationPage(hrefs, "https://www.kexp.example/");
+      if (got !== want) bad.push(`${what}: got ${got}`);
+    }
+  }
+  const prof = fs.readFileSync(R("scripts/profiles.mjs"), "utf8");
+  if (!/donate:\s*NO_TIPS\.has\(c\.country\)\s*\?\s*undefined/.test(prof)) bad.push("scripts/profiles.mjs writes a donation page for a sanctioned country");
+  const ui = fs.readFileSync(R("src/renderer/explore-profile.js"), "utf8");
+  if (!/const donate = !p\.noTips && \/\^https:/.test(ui)) bad.push("the station card shows Donate without checking noTips and https");
+  bad.length ? fail(name, bad.join("; ")) : pass("own page first, https only, no memberships, none where tips are barred");
+}
+
 // ── a station plays from its own server, and no other directory is asked ──
 // The catalogue began as radio.garden's, and the desktop resolved every one of
 // those stations through radio.garden's listen endpoint — which answers only

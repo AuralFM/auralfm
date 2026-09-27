@@ -66,7 +66,12 @@ async function initGlobe() {
     .showAtmosphere(true)
     .atmosphereColor(palette?.atmosphere || "#8ab4f8")
     .atmosphereAltitude(0.17)
-    .pointsData(globePts)
+    // Empty, not globePts: the globe shows a budget of about 700 dots chosen
+    // by applyLod(), and the first applyLod(true) below replaces whatever is
+    // here. Handing it all 12,253 first meant building them into one merged
+    // mesh (the single biggest block of the launch after the city lights) only
+    // to throw it away a moment later.
+    .pointsData([])
     .pointLat("lat").pointLng("lng")
     // Amber for receivers so they read as a different kind of thing entirely —
     // these are antennas, not places, and conflating them would be a lie.
@@ -217,6 +222,7 @@ async function initGlobe() {
   watchGlobeSize();
   updateSun();
   layers = (await window.auralfm.layers()) || layers;
+  if (layers.clouds) startLiveImagery();
   syncWsprTimer();
   drawSky();
   tickISS();
@@ -556,6 +562,7 @@ function applyLayers(next) {
   paintLayers();          // the inspector reflects whatever main just confirmed
   if (!globe) return;
 
+  if (layers.clouds) startLiveImagery();
   withShader((sh) => {
     sh.uniforms.hasLive.value = (layers.clouds && liveTexReady) ? 1 : 0;
     // Sun fully overhead everywhere reads as permanent daylight, which is what

@@ -41,6 +41,11 @@
           "maxLength": 120,
           "trim": true
         },
+        "donate": {
+          "type": "string",
+          "maxLength": 300,
+          "trim": true
+        },
         "description": {
           "type": "string",
           "maxLength": 600,

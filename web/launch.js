@@ -40,7 +40,9 @@
   function step(key, fallback) {
     if (over || !say) return;
     say.dataset.i18n = key;             // so applyStrings translates it if it runs after
-    say.textContent = tr(key, fallback);
+    const text = tr(key, fallback);
+    // Turned over like a departure board once explore-brand.js has loaded.
+    if (window.AuralFlap) window.AuralFlap.flap(say, text); else say.textContent = text;
   }
 
   function done() {

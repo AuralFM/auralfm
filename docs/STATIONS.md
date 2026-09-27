@@ -48,6 +48,7 @@ With any of these fields, all optional:
   "genres": "reggae, dub, talk",
   "logo": "https://your-station.example/logo.png",
   "lightning": "tips@your-station.example",
+  "donate": "https://your-station.example/donate",
   "nostr": "npub1…",
   "contact": "hello@your-station.example"
 }
@@ -67,7 +68,31 @@ wallet pays yours. No fee to us, no account with us.
 The same goes for the people who run the public shortwave receivers AuralFM
 tunes: publish an address and listeners can thank you for the antenna.
 
-One exception: stations in Cuba, Iran, North Korea and Syria get no Tip button.
+## Or your own donation page
+
+Many stations can't take a Lightning address and shouldn't have to: a college
+station, or a community station that is a nonprofit and takes gifts through its
+own page or its fiscal sponsor's. Put that page in the file as **donate** (or in
+the claim form) and your station's page in AuralFM gets a **Donate** button that
+opens it. If your homepage links to a donation page, AuralFM may find it when it
+visits; the one you give us always wins.
+
+The listener gives on your page, to you. **AuralFM takes no part in it and no
+cut**, never sees who gave or how much, and does not handle the money.
+
+## Nothing here is for sale
+
+Giving to a station, and a station claiming its page, change nothing about where
+it appears: not its place on the globe, not its order in a list, not whether it
+comes up in a search or a shuffle. AuralFM does not sell placement, and a
+station cannot pay, tip or donate its way up. If that ever changes for anything
+(a sponsored feature, say), it will be labelled as paid where it appears.
+
+What your station plays is between you and your listeners. If someone pays you
+to play something, the rules on saying so on air are yours to follow, as they
+always were; AuralFM carries your stream and adds nothing to it.
+
+One exception: stations in Cuba, Iran, North Korea and Syria get no Tip or Donate button.
 Those countries are under comprehensive US sanctions, which forbid US listeners
 to send money there, so AuralFM does not show an address from them. Listening
 is not affected; the station's page is shown as usual.

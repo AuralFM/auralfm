@@ -262,6 +262,8 @@ const en = {
   "profile.explicit": "Explicit",
   "profile.website": "Website",
   "profile.tip": "Tip this station",
+  "profile.donate": "Donate to this station",
+  "profile.donateNote": "On the station's own page. AuralFM takes no part and no cut, and giving changes nothing about where the station appears.",
   "profile.noTips": "Tips can't be sent to stations in this country.",
   // Your show: the studio (explore-studio.js). A prototype; English until it ships.
   "studio.about": "What it is, in a line or two",

@@ -22,7 +22,7 @@
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../aural.css?v=c70267e4b9">
+<link rel="stylesheet" href="../aural.css?v=2127120304">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -83,7 +83,7 @@
       <p class="proof">Rather not be listed at all? Say so in the note, and we take the station off.</p>
     </div>
     <form class="cell wait-form" data-waitlist="../.herenow/data/claims" data-choice="role"
-          data-extra="station,station_id,site,lightning,description,links"
+          data-extra="station,station_id,site,lightning,donate,description,links"
           data-prefill="station:station,id:station_id"
           data-done="Thank you. We will check it is yours and put it on your page, usually within a few days." novalidate>
       <h2 id="claim-title" class="label">[ Claim your station ]</h2>
@@ -119,6 +119,11 @@
         <input id="c-lightning" name="lightning" type="text" maxlength="120" spellcheck="false" autocapitalize="off" placeholder="name@wallet.example" aria-describedby="c-lightning-error">
         <p class="field-hint">From any Lightning wallet. It looks like an email address: name@wallet.example.</p>
         <p class="field-error" id="c-lightning-error" hidden></p>
+      </div>
+      <div class="field">
+        <label for="c-donate">Your donation page <span class="opt">optional</span></label>
+        <input id="c-donate" name="donate" type="url" maxlength="300" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://">
+        <p class="field-hint">If listeners can give to the station on its own page, a nonprofit's or a fiscal sponsor's. It opens there; AuralFM takes no part and no cut.</p>
       </div>
       <div class="field">
         <label for="c-description">About the station <span class="opt">optional</span></label>
@@ -170,6 +175,6 @@
   </symbol>
 </svg>
 
-<script src="../aural.js?v=c70267e4b9" defer></script>
+<script src="../aural.js?v=2127120304" defer></script>
 </body>
 </html>

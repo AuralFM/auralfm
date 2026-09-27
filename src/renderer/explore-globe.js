@@ -231,7 +231,10 @@ async function applyDayNight() {
   // tens of seconds, and a globe that refuses to appear until the weather
   // downloads is a worse globe. Compile on Blue Marble now, swap the live layer
   // in when it lands.
-  loadLiveImagery(TexClass, dayTex);
+  // Only when Clouds is on (startLiveImagery). The desktop now starts with it
+  // off, and three satellite pictures stitched on a canvas and sent to the
+  // graphics chip are real work to do for a layer nobody asked to see.
+  liveStart = () => loadLiveImagery(TexClass, dayTex);
 
   mat.bumpMap = bumpTex;
   mat.bumpScale = 4;            // globe radius is 100, so this is subtle relief
@@ -383,6 +386,14 @@ const loadImage = (src) => new Promise((res, rej) => {
  * exists because it is ten minutes old rather than a day. Painting them the
  * other way round would bury the current data under yesterday's.
  */
+let liveStart = null, liveStarted = false;
+/** Fetch today's satellite imagery, once, the first time Clouds is on. */
+function startLiveImagery() {
+  if (liveStarted || !liveStart) return;
+  liveStarted = true;
+  liveStart();
+}
+
 async function loadLiveImagery(TexClass, like) {
   try {
     const sky = await window.auralfm.clouds();

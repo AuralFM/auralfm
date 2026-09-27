@@ -277,7 +277,7 @@
         if (!p) { if (!pinned) pick.hidden = true; return; }
         const href = `https://listen.auralfm.xyz/?place=${encodeURIComponent(p.title)}&country=${encodeURIComponent(p.country)}`;
         pick.innerHTML = `<span class="pick-name"></span><span class="pick-meta"></span><a class="pick-go" href="${href}">Listen here →</a>`;
-        pick.querySelector(".pick-name").textContent = p.title;
+        flapTo(pick.querySelector(".pick-name"), p.title);   // turns over, as the board does
         pick.querySelector(".pick-meta").textContent = `${p.country} · ${p.n} station${p.n === 1 ? "" : "s"}`;
         pick.hidden = false;
       };

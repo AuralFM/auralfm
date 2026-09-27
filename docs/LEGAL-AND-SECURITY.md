@@ -624,3 +624,82 @@ inspiration it was.
 > on a project whose whole argument is that it runs on hardware people already
 > own. The design, the measurements and what would have to change are in
 > [`CAPTIONS.md`](CAPTIONS.md).
+
+## 11. Donations and payola (26 Sept 2026)
+
+Stations now get a **Donate** link to their own donation page (a 501(c)(3)
+like 8-Ball Radio, or a college or community station's own page), beside or
+instead of a Lightning tip. Melton asked that this be checked against payola.
+Not legal advice; the questions at the end are for the lawyer.
+
+**What payola is.** Two sections of the Communications Act. §508 (47 U.S.C.
+508) requires anyone who pays, or promises to pay, to get something *put on
+the air* to disclose it before broadcast, ultimately to the station; §317
+requires the station to announce on air that the matter was paid for. Failing
+to is "payola": up to $10,000 and a year. Both are written for broadcast
+stations and the people paying them. By their terms they do not reach internet
+radio carried only online, and they do not reach AuralFM at all, which
+broadcasts nothing (FCC: Payola and Sponsorship Identification; Cornell LII).
+A station on AuralFM that is also on air remains bound by them for what it
+airs, as it always was.
+
+**Where the real risks for AuralFM sit instead:**
+
+1. **Paid placement without a label (FTC).** The FTC treats advertising that
+   is not clearly distinguished from ordinary results as potentially deceptive
+   (its 2013 letters to search engines, and the 2023 Endorsement Guides on
+   "material connections"). For AuralFM that would be a station paying, tipping
+   or donating to move up the globe, the lists, search or the shuffle. **The
+   rule, written into docs/STATIONS.md:** nothing a station gives changes where
+   it appears, and anything ever sold (a sponsored feature) is labelled as paid
+   where it appears. Sponsors (§9) fund AuralFM; they buy no placement either.
+2. **"Pay to request a song."** A feature where a listener's tip gets a record
+   played would put the *station* in §317 territory if it is on air, and would
+   make AuralFM the one arranging paid airplay. Do not build it. Tips and
+   donations are gifts to a station, not payment for what it plays.
+3. **Noncommercial stations.** College and community FM stations are usually
+   noncommercial educational licensees (47 CFR 73.503): listener donations are
+   exactly how they are meant to be funded, but they may not air promotional
+   announcements for for-profit businesses in return for money. AuralFM adds
+   nothing to their streams, so this stays theirs.
+4. **Charitable solicitation.** About 40 states regulate soliciting charitable
+   gifts. California's law on online "charitable fundraising platforms" (AB 488,
+   in force since 2023) covers sites that "perform, permit, or enable" online
+   solicitation for charities, and the sources seen do not say whether a plain
+   link to the charity's own page counts. AuralFM's design keeps it as far from
+   this as it can: no money, no donor data, no fee, no cut, just a link, said
+   so on the card. Whether a Donate button is still "enabling" is question 1
+   below.
+5. **Sanctions.** As with tips, no Donate link for stations in Cuba, Iran,
+   North Korea or Syria (the audit checks it).
+
+**What was built to stay on the right side:** the link opens the station's own
+page (or its fiscal sponsor's page for it), https only; the note under it says
+AuralFM takes no part and no cut and that giving changes nothing about where
+the station appears; a station's own claim wins over anything crawled; a list
+checked by hand (data/donate.json) covers sites the crawl cannot read; paid
+memberships ("supporters", "membership") are not treated as donations.
+
+**For the lawyer:**
+
+1. Does showing a Donate link to a charity's own page make AuralFM a
+   "charitable fundraising platform" under California AB 488, or a solicitor
+   under any other state's act, when it handles no money and no donor data?
+2. Same question for the Lightning tip button (§8), where the recipient is
+   usually not a charity.
+3. When sponsorship (§9) starts: the wording and placement of a "sponsored"
+   label that meets the FTC's clear-and-conspicuous standard in the app.
+
+Sources: FCC, Payola and Sponsorship Identification
+(https://www.fcc.gov/general/payola-and-sponsorship-identification); Cornell LII,
+sponsorship disclosure (https://www.law.cornell.edu/wex/sponsorship_disclosure);
+FTC, 2013 search-engine advertising guidance
+(https://www.ftc.gov/news-events/news/press-releases/2013/06/ftc-consumer-protection-staff-updates-agencys-guidance-search-engine-industry-need-distinguish);
+FTC Endorsement Guides, 2023
+(https://www.ftc.gov/news-events/news/press-releases/2023/06/federal-trade-commission-announces-updated-advertising-guides-combat-deceptive-reviews-endorsements);
+FCC, noncommercial nature of educational broadcasting
+(https://www.fcc.gov/media/radio/nature-of-educational-broadcasting);
+Ironwood Registrations on California's platform law
+(https://www.ironwoodregistrations.com/californias-law-online-platforms/);
+Fractured Atlas, 8 Ball Community Inc.
+(https://fundraising.fracturedatlas.org/8-ball-community-inc).

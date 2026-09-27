@@ -239,6 +239,32 @@ const SOCIAL = [
 ];
 
 /**
+ * The station's own donation page, if its homepage links to one: a page on its
+ * own site named for giving (/donate, /give, /pledge, /support-us), or a known
+ * giving platform. Many of the stations AuralFM is for are nonprofits (college,
+ * community, 501(c)(3)s like 8-Ball Radio) that take gifts this way and could
+ * never take a Lightning address. Only https, only the first, own site first.
+ * A link is all it is: the listener gives on the station's page, not here.
+ */
+const GIVING = /^https:\/\/(?:[\w-]+\.)*(?:donorbox\.org|givebutter\.com|givelively\.org|networkforgood\.org|classy\.org|every\.org|opencollective\.com|liberapay\.com|ko-fi\.com|patreon\.com|buymeacoffee\.com|fundrazr\.com)\//i;
+const GIVE_PATH = /\/(?:donate|donations?|give|giving|pledge|support-us|contribute)(?:[\/?#.-]|$)/i;
+function donationPage(hrefs, base) {
+  let host;
+  try { host = new URL(base).hostname.replace(/^www\./, ""); } catch { return undefined; }
+  let platform;
+  for (const h of hrefs) {
+    let u;
+    try { u = new URL(h, base); } catch { continue; }
+    if (u.protocol !== "https:") continue;
+    const own = u.hostname.replace(/^www\./, "");
+    const sameSite = own === host || own.endsWith(`.${host}`);
+    if (sameSite && (GIVE_PATH.test(u.pathname) || /^(donate|give|support)\./i.test(u.hostname))) return u.href.slice(0, 300);
+    if (!platform && (GIVING.test(u.href) || (/(^|\.)paypal\.com$/i.test(u.hostname) && /donat/i.test(u.href)))) platform = u.href.slice(0, 300);
+  }
+  return platform;
+}
+
+/**
  * What a homepage says, in one straight pass. The first version ran a dozen
  * backtracking patterns over up to 600 KB each; at a hundred pages at once that
  * starved the event loop long enough for every socket timer to fire first, and
@@ -267,6 +293,7 @@ function readPage(html, base) {
     const h = /href\s*=\s*["'](https:\/\/[^"'\s]+\/@\w+)["']/i.exec(m[1]);
     if (h && !/twitter|x\.com|instagram|facebook|threads/.test(h[1])) { social.mastodon = h[1]; break; }
   }
+  const donate = donationPage(hrefs, base);
   // A Lightning address the station publishes itself: lightning:name@host, or lud16.
   const ln = /lightning:([\w.+-]{1,64}@[\w.-]{1,120}\.[a-z]{2,})/i.exec(html) || /"lud16"\s*:\s*"([\w.+-]{1,64}@[\w.-]{1,120}\.[a-z]{2,})"/i.exec(html);
   let image = prop("og:image") || prop("twitter:image");
@@ -280,6 +307,7 @@ function readPage(html, base) {
     lang: (/<html\b[^>]{0,500}\blang\s*=\s*["']([\w-]{2,10})["']/i.exec(head) || [])[1],
     ...(Object.keys(social).length ? { social } : {}),
     ...(ln ? { lightning: ln[1] } : {}),
+    ...(donate ? { donate } : {}),
   };
   for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k];
   // A substring keeps its whole page alive in V8; kept for every homepage in the
@@ -295,7 +323,7 @@ const decode = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/
  * fields the spec names, each a short string, so a claim cannot smuggle in
  * anything else. Lightning addresses must look like name@host.
  */
-const CLAIM_FIELDS = { name: 120, description: 600, lightning: 120, nostr: 70, logo: 300, contact: 120, genres: 200 };
+const CLAIM_FIELDS = { name: 120, description: 600, lightning: 120, nostr: 70, logo: 300, contact: 120, genres: 200, donate: 300 };
 async function readClaim(origin) {
   try {
     const r = await fetch(`${origin}/.well-known/auralfm.json`, { headers: { "User-Agent": UA, Accept: "application/json" },
@@ -306,11 +334,12 @@ async function readClaim(origin) {
     // must not read as claims.
     if (r.status !== 200 || new URL(r.url).origin !== origin || !/json/i.test(r.headers.get("content-type") || "")) return null;
     const j = await r.json();
-    if (!j || typeof j !== "object" || !(j.lightning || j.nostr || j.description)) return null;
+    if (!j || typeof j !== "object" || !(j.lightning || j.nostr || j.description || j.donate)) return null;
     const c = {};
     for (const [k, max] of Object.entries(CLAIM_FIELDS)) if (typeof j[k] === "string" && j[k].trim()) c[k] = j[k].trim().slice(0, max);
     if (c.lightning && !/^[\w.+\-]+@[\w.\-]+\.[a-z]{2,}$/i.test(c.lightning)) delete c.lightning;
     if (c.nostr && !/^npub1[02-9ac-hj-np-z]{58}$/.test(c.nostr)) delete c.nostr;
+    if (c.donate && !/^https:\/\/[^\s"'<>]+$/.test(c.donate)) delete c.donate;
     return Object.keys(c).length ? c : null;
   } catch { return null; }
 }

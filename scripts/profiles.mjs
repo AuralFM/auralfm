@@ -18,7 +18,8 @@
  * hash of the station id, so the app fetches the one small file it needs when a
  * station is opened instead of carrying every description all the time:
  *   website, description, image, language, socials, bitrate, genres, moods,
- *   and a claim (Lightning address, Nostr key) when the station has published
+ *   a donation page when its homepage links to its own, and a claim
+ *   (Lightning address, Nostr key, donation page) when the station has published
  *   /.well-known/auralfm.json on its own site.
  * Where sources differ, the station's own claim wins, then its homepage, then
  * its stream. Images only over https, which is all a web page can show.
@@ -58,6 +59,10 @@ if (fs.existsSync(F.enrich)) for (const line of fs.readFileSync(F.enrich, "utf8"
 // Claims approved through scripts/claims.mjs (the form at docs.auralfm.xyz/claim):
 // the station's own words, which win over anything crawled. Names and emails
 // stay in data/claims.json; only what the station sent to be shown is used.
+// Donation pages checked by hand (data/donate.json), for the stations whose
+// homepage the crawl cannot read. The station's own claim still wins.
+const checkedDonate = fs.existsSync(path.join(ROOT, "data/donate.json"))
+  ? JSON.parse(fs.readFileSync(path.join(ROOT, "data/donate.json"), "utf8")) : {};
 const approved = fs.existsSync(path.join(ROOT, "data/claims.json"))
   ? JSON.parse(fs.readFileSync(path.join(ROOT, "data/claims.json"), "utf8")).approved || {} : {};
 const SOCIAL_HOST = [["instagram", /instagram\.com/], ["facebook", /facebook\.com|fb\.com/], ["x", /(^|\.)(x|twitter)\.com/],
@@ -108,7 +113,7 @@ const mended = (s) => {
 };
 const described = (s) => { const d = mended(String(s || "").trim()); return d && !PLACEHOLDER.test(d) ? d : undefined; };
 const shards = new Map();
-const n = { tagged: 0, newlyTagged: 0, onAir: 0, described: 0, social: 0, image: 0, claimed: 0, tips: 0 };
+const n = { tagged: 0, newlyTagged: 0, onAir: 0, described: 0, social: 0, image: 0, claimed: 0, tips: 0, donate: 0 };
 for (const c of full.channels) {
   const e = enrich.get(c.id), r = c.rbuuid ? rb.get(c.rbuuid) : null;
   const stream = e?.stream || {};
@@ -139,6 +144,10 @@ for (const c of full.channels) {
     stream: c.url && /^https?:\/\//i.test(c.url) && !/radio\.garden/i.test(c.url) ? c.url : undefined,
     claim: claim.lightning || claim.nostr
       ? clean({ lightning: NO_TIPS.has(c.country) ? undefined : claim.lightning, nostr: claim.nostr, contact: claim.contact }) : undefined,
+    // The station's own donation page: its claim first, then one checked by
+    // hand, then its homepage's link (scripts/enrich.mjs donationPage). Not for
+    // a sanctioned country.
+    donate: NO_TIPS.has(c.country) ? undefined : https(claim.donate) || https(checkedDonate[c.id]?.url) || https(site.donate),
     noTips: NO_TIPS.has(c.country) || undefined,
     checked: e?.at,
   });
@@ -147,6 +156,7 @@ for (const c of full.channels) {
   if (profile.image) n.image++;
   if (site.claim || form) n.claimed++;
   if (profile.claim?.lightning) n.tips++;
+  if (profile.donate) n.donate++;
   const s = shardOf(c.id);
   if (!shards.has(s)) shards.set(s, {});
   shards.get(s)[c.id] = profile;
@@ -154,7 +164,7 @@ for (const c of full.channels) {
 
 console.log(`  with tags ${n.tagged} (${n.newlyTagged} newly, from their own streams)   on air ${n.onAir}`);
 console.log(`  described ${n.described}   with an image ${n.image}   with socials ${n.social}`);
-console.log(`  claimed their page ${n.claimed}   with a tip address ${n.tips}`);
+console.log(`  claimed their page ${n.claimed}   with a tip address ${n.tips}   with a donation page ${n.donate}`);
 
 if (dry) { console.log("--dry: nothing written"); process.exit(0); }
 writeBundles(full, F);

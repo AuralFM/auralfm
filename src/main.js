@@ -483,6 +483,22 @@ const LAYERS = [
   { id: "statusBar",      key: "layer.statusBar",      default: true },
 ];
 
+/**
+ * Every launch starts quiet: the station dots and the shortwave receivers, and
+ * nothing else (Melton, 26 Sept). Clouds, day and night, the ISS, the
+ * constellations, the drift, the listeners' rings and the status read-out all
+ * come back off each time the app is started from closed, however they were
+ * left, so a cold start draws and fetches only what the globe is for. Turning
+ * one on lasts until the app quits; closing and reopening the window keeps it.
+ * Favourites, the last station and the preferences are untouched.
+ */
+const ON_AT_LAUNCH = new Set(["stations", "shortwave"]);
+function startQuiet() {
+  const st = load();
+  st.layers = Object.fromEntries(LAYERS.map((l) => [l.id, ON_AT_LAUNCH.has(l.id)]));
+  save(st);
+}
+
 function layerState() {
   const saved = load().layers || {};
   const out = {};
@@ -964,6 +980,7 @@ if (!app.requestSingleInstanceLock()) {
       const { state, moved } = catalog.relinkSaved(load());
       if (moved) { save(state); console.log(`catalog: ${moved} saved stations moved to their new ids`); }
     }
+    startQuiet();
     resolver.init(app.getPath("userData"));
     failures.init(app.getPath("userData"));
     clouds.init(app.getPath("userData"));
