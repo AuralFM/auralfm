@@ -2845,6 +2845,54 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   bad.length ? fail(name, bad.join("; ")) : pass("own page first, https only, no memberships, none where tips are barred");
 }
 
+// ── the web app's offline cache asks only for files that exist ─────────────
+// here.now's analytics showed 41 hits each on /data/profiles/profiles/00.json …
+// ff.json: the service worker's precache list doubled the folder of anything in
+// a subfolder, so every install asked for 256 files that do not exist. And had
+// the paths been right, it would have put all 32 MB of station profiles on every
+// phone, when they are meant to load one at a time as a station is opened. With
+// a build present, every entry must be a real file and the whole must stay small.
+{
+  const name = "the web app's offline cache asks only for files that exist";
+  console.log(`\n${name}`);
+  const swFile = R("dist-web/sw.js");
+  if (!fs.existsSync(swFile)) pass("no web build to check (run npm run web)");
+  else {
+    const m = fs.readFileSync(swFile, "utf8").match(/const SHELL = (\[[\s\S]*?\]);/);
+    const list = m ? JSON.parse(m[1]) : null;
+    const bad = [];
+    let bytes = 0;
+    if (!list) bad.push("dist-web/sw.js has no SHELL list");
+    else for (const u of list) {
+      const f = R(`dist-web/${u.split("?")[0].replace(/^\.\/?$/, "index.html") || "index.html"}`);
+      if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { if (u !== "./") bad.push(u); continue; }
+      bytes += fs.statSync(f).size;
+    }
+    const mb = bytes / 1e6;
+    if (bad.length) fail(name, `${bad.length} missing, e.g. ${bad.slice(0, 3).join(", ")}`);
+    else if (mb > 25) fail(name, `the precache is ${mb.toFixed(1)} MB; station profiles belong on demand`);
+    else pass(`${list.length} files, ${mb.toFixed(1)} MB, every one present`);
+  }
+}
+
+// ── nothing secret is ever in a published folder ───────────────────────────
+// Scanners ask every site for /.env, /.env.production, /.git/config (here.now's
+// analytics, 27 Sept: dozens a day). here.now refuses hidden files, but the only
+// sure defence is that no such file is ever in home/, site/, docs-site/ or
+// dist-web/. Keys live in ~/.herenow and ~/.resend, outside the repo.
+{
+  const name = "nothing secret is ever in a published folder";
+  console.log(`\n${name}`);
+  const SECRET = /^(\.env(\..*)?|\.git|\.npmrc|id_rsa.*|.*\.pem|.*\.key|credentials(\..*)?|\.netrc)$/i;
+  const bad = [];
+  const walk = (dir) => { for (const e of fs.readdirSync(R(dir), { withFileTypes: true })) {
+    if (SECRET.test(e.name)) bad.push(`${dir}/${e.name}`);
+    else if (e.isDirectory() && e.name !== "node_modules") walk(`${dir}/${e.name}`);
+  } };
+  for (const d of ["home", "site", "docs-site", "dist-web"]) if (fs.existsSync(R(d))) walk(d);
+  bad.length ? fail(name, bad.join(", ")) : pass("no .env, .git, keys or credentials in the four published folders");
+}
+
 // ── a station plays from its own server, and no other directory is asked ──
 // The catalogue began as radio.garden's, and the desktop resolved every one of
 // those stations through radio.garden's listen endpoint — which answers only

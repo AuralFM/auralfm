@@ -401,6 +401,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
+fs.copyFileSync(R("web", "robots.txt"), path.join(OUT, "robots.txt"));   // who may crawl what (web/robots.txt)
 for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
@@ -520,11 +521,17 @@ fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
  */
 {
   const shell = ["./", "index.html", "manifest.webmanifest", "web/web.css"];
-  const walk = (dir, base = "") => {
+  // Nested folders keep their own path (this once doubled it: data/profiles/
+  // profiles/00.json, 256 404s on every install, seen in here.now's analytics).
+  // The station profiles are not precached at all: 32 MB on every phone, when
+  // each loads on its own the moment its station is opened.
+  const ON_DEMAND = new Set(["data/profiles"]);
+  const walk = (dir) => {
+    if (ON_DEMAND.has(dir)) return;
     for (const e of fs.readdirSync(path.join(OUT, dir), { withFileTypes: true })) {
-      const rel = `${base}${e.name}`;
-      if (e.isDirectory()) walk(path.join(dir, e.name), `${rel}/`);
-      else if (/\.(js|json|jpg|png|svg|woff2)$/.test(e.name)) shell.push(`${dir}/${rel}`.replace(/^\.\//, ""));
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (/\.(js|json|jpg|png|svg|woff2)$/.test(e.name)) shell.push(rel.replace(/^\.\//, ""));
     }
   };
   for (const f of fs.readdirSync(OUT)) if (f.endsWith(".js")) shell.push(f);
