@@ -176,6 +176,9 @@
   .railtabs.ghost::before{display:none}
   @media (prefers-reduced-motion: reduce){ .railtabs::before{transition:none} }
   .railtabs.ghost{visibility:hidden}
+  /* The list of places has no place to have receivers near: the tabs' held
+     space was an empty band over "11,466 places" (Melton, 28 Sept). */
+  .placehead[hidden] ~ .railtabs{display:none}
   .railtabs button{
     flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
     position:relative;z-index:1;
@@ -1526,7 +1529,7 @@
     transition:color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   #nowShare:hover{color:var(--label)}
-  #nowShare:active{transform:scale(.9)}
+  #nowShare:active{transform:scale(.96)}
   .cmdmode{
     min-height:14px;padding:4px 10px 0;font-size:10.5px;line-height:1.3;
     color:var(--label3);letter-spacing:.005em;

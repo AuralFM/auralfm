@@ -148,7 +148,7 @@ contextBridge.exposeInMainWorld("auralfm", {
    * only pastes it. Nothing here uploads anything.
    */
   cardCopy: (dataUrl) => ipcRenderer.invoke("card:copy", dataUrl),
-  cardLink: (title) => ipcRenderer.invoke("card:link", title),
+  cardLink: (title, id) => ipcRenderer.invoke("card:link", title, id),
   cardSave: (dataUrl) => ipcRenderer.invoke("card:save", dataUrl),
   /** Explore asks for it; the popover is the window that can hear. */
   cardLevels: () => ipcRenderer.invoke("card:levels"),

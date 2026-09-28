@@ -233,44 +233,8 @@ them on trust.
 
 **hello@auralfm.xyz**
 
-## Live captions (off by default)
+## Live captions: removed
 
-> **Removed 7 Aug 2026.** Captions are no longer in the app. Enabling them
-> once downloaded about 1.3 GB of model weights that nothing ever cleaned up,
-> on a project whose whole argument is that it runs on hardware people already
-> own. The design, the measurements and what would have to change are in
-> [`CAPTIONS.md`](CAPTIONS.md).
-
-
-Switching captions on changes three things, and all three are worth stating
-plainly.
-
-**A one-time download from jsDelivr.** The speech runtime — 11 MB of ONNX
-WebAssembly — is fetched the first time captions are enabled, not shipped inside
-the app. It used to be shipped, and carrying 11 MB in every download for a
-feature most people never switch on was the wrong trade. The cost of the change
-is honest and belongs here: enabling captions now tells one more third party
-(jsDelivr, a public npm mirror) that a request was made, once. Nothing is sent
-but the request.
-
-**Every one of those files is pinned to a SHA-256 recorded when the app was
-built**, and checked before anything is written to disk or executed. A file that
-does not match is deleted and the feature refuses to start. This matters more
-than the download does: fetching executable WebAssembly from a CDN without
-verifying it would be handing a third party the ability to run code inside the
-app. The hashes come from the exact bytes the feature was tested against, so the
-CDN is trusted to *serve* the runtime and never to define what it is.
-
-**A one-time download from Hugging Face.** The speech model's weights are fetched
-the first time captions are enabled — roughly 120 MB — and cached after that.
-This is the only request AuralFM makes to Hugging Face, it carries no
-information about you beyond the fact that a model was downloaded, and **no audio
-ever leaves the machine.** Whisper runs entirely in the app. There is no cloud
-speech API, because sending the audio somewhere would mean transmitting what you
-are listening to.
-
-**Streams load with `crossOrigin`.** Web Audio cannot read a cross-origin stream
-— it returns silence — so captions require the station's server to permit it.
-This flag is applied *only* when captions are on; with the feature off, playback
-is byte-for-byte what it has always been. Where a station's server refuses, the
-app falls back to normal playback and says captions are unavailable there.
+Captions were taken out of the app on 7 August 2026. It no longer downloads a
+speech model or runtime from anyone, and nothing about what you hear is
+transcribed. (The design and why it went are in `CAPTIONS.md`.)

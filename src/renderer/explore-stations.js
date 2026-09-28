@@ -42,6 +42,15 @@ function renderRailTabs(nearby) {
     b.textContent = label;
     b.setAttribute("aria-checked", String(railMode === mode));
     b.setAttribute("role", "radio");
+    // One stop for Tab, arrows between the two, as a radio group is used.
+    b.tabIndex = railMode === mode ? 0 : -1;
+    b.onkeydown = (e) => {
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+      e.preventDefault();
+      const other = b.nextElementSibling || b.previousElementSibling;
+      other?.click();
+      requestAnimationFrame(() => $("railtabs").querySelector('[aria-checked="true"]')?.focus());
+    };
     b.onclick = () => {
       // Belt and braces: the tabs are hidden in the favourites view, but a tab
       // that switches the rail must never leave `showingFavorites` set — the

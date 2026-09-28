@@ -3,9 +3,6 @@
 
 /* ── what this version does not have yet ─────────────────────────────────────
    Hidden rather than removed, because the page's scripts still wire them up. */
-/* Sharing a card needs the clipboard and file writing the desktop app does in
-   its main process. */
-#nowShare { display: none !important; }
 /* Adding your own stations writes a file on the desktop; not here yet. */
 .addst { display: none !important; }
 /* The Stations / Shortwave tabs hold their space even when empty on the

@@ -29,6 +29,8 @@ const check = process.argv.includes("--check");
 const SHARED = [
   "aural.css", "aural.js", "404.html",
   "assets/favicon.ico", "assets/favicon.svg", "assets/apple-touch-icon.png", "assets/share.jpg", "assets/live.json", "assets/desktop.webp", "assets/phone-explore.webp",
+  // The patterns the shared stylesheet draws with.
+  "assets/patterns/halftone-waves.png", "assets/patterns/halftone-column.png", "assets/patterns/waves-a.png",
   ...fs.readdirSync(R("home/assets/fonts")).map((f) => `assets/fonts/${f}`),
 ];
 const SITES = ["site", "docs-site"];
@@ -36,8 +38,20 @@ const SITES = ["site", "docs-site"];
 const STAMP = crypto.createHash("sha256")
   .update(fs.readFileSync(R("home/aural.css"))).update(fs.readFileSync(R("home/aural.js")))
   .digest("hex").slice(0, 10);
-const stampLinks = (html) => html
-  .replace(/((?:href|src)="(?:\.\.\/)*aural\.(?:css|js))(?:\?v=[0-9a-f]*)?"/g, `$1?v=${STAMP}"`);
+/**
+ * The theme someone chose (aural.js, the half moon), on <html> before the first
+ * paint. Without it a light-theme reader got a flash of onyx on every page.
+ * Written into the head of every page that uses the shared stylesheet.
+ */
+const THEME = `<script>try{var t=localStorage.getItem("auralfm.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>`;
+const stampLinks = (html) => {
+  let out = html.replace(/((?:href|src)="(?:\.\.\/)*aural\.(?:css|js))(?:\?v=[0-9a-f]*)?"/g, `$1?v=${STAMP}"`);
+  if (/aural\.css/.test(out) && !out.includes(THEME)) {
+    out = out.replace(/<script>try\{var t=localStorage\.getItem\("auralfm\.theme"\)[^<]*<\/script>\n?/, "");
+    out = out.replace(/(<meta charset="utf-8">\n?)/i, `$1${THEME}\n`);
+  }
+  return out;
+};
 const pages = (dir) => fs.readdirSync(R(dir), { recursive: true })
   .filter((f) => String(f).endsWith(".html") && !String(f).includes("node_modules"))
   .map((f) => path.join(dir, String(f)));

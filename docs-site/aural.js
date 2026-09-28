@@ -22,6 +22,39 @@
   // leaves every headline at its full width rather than stuck condensed.
   document.documentElement.classList.add("js");
 
+  // ── light and dark ────────────────────────────────────────────────────────
+  // The system decides until someone presses the half moon; then their choice
+  // is kept (auralfm.theme) and put on <html> before the page paints, by the
+  // one-line script sync-sites.mjs writes into every page's head.
+  {
+    const root = document.documentElement;
+    const sys = matchMedia("(prefers-color-scheme: light)");
+    const current = () => root.dataset.theme || (sys.matches ? "light" : "dark");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const paintMeta = () => meta?.setAttribute("content", current() === "light" ? "#F4EFE6" : "#0C0B0B");
+    const bar = document.querySelector(".island");
+    if (bar) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "cell themebtn";
+      b.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.75a8.25 8.25 0 0 1 0 16.5z" fill="currentColor"/></svg>';
+      const label = () => {
+        const next = current() === "light" ? "dark" : "light";
+        b.setAttribute("aria-label", `Switch to the ${next} theme`);
+        b.title = `Switch to the ${next} theme`;
+      };
+      b.addEventListener("click", () => {
+        const next = current() === "light" ? "dark" : "light";
+        root.dataset.theme = next;
+        try { localStorage.setItem("auralfm.theme", next); } catch {}
+        label(); paintMeta();
+      });
+      sys.addEventListener?.("change", () => { label(); paintMeta(); });
+      bar.insertBefore(b, bar.querySelector(".go") || bar.querySelector(".burger"));
+      label(); paintMeta();
+    }
+  }
+
   // ── the menu ──────────────────────────────────────────────────────────────
   const island = document.querySelector(".island");
   const burger = document.querySelector(".burger");
@@ -164,7 +197,7 @@
   function paintSum() {
     if (!sum) return;
     const night = rows.filter((tr) => tr.classList.contains("night"));
-    const day = rows.filter((tr) => !tr.classList.contains("night")).map((tr) => tr.querySelector("th").textContent);
+    const day = rows.filter((tr) => !tr.classList.contains("night")).map((tr) => tr.dataset.city || tr.querySelector("th").textContent);
     sum.querySelector(".sum-big").innerHTML = `${night.length}<span>/${rows.length}</span>`;
     sum.querySelector(".sum-text").innerHTML =
       `of these cities are in the dark right now &mdash; when radio is most itself: the overnight shows, the stations nobody is watching.`
@@ -185,8 +218,55 @@
     });
     paintSum();
   }
+  /**
+   * Ten cities, not the same eight every visit: the board opens on ten picked
+   * from forty, and every few seconds one row turns over, split-flap, to a city
+   * not on it. Each keeps what it is known for on the air there.
+   */
+  const CITIES = [
+    ["Africa/Lagos", "Lagos", "Afrobeats · talk"], ["America/Chicago", "Chicago", "House"],
+    ["Asia/Tokyo", "Tokyo", "Jazz"], ["Asia/Tbilisi", "Tbilisi", "Techno"],
+    ["America/Mexico_City", "Mexico City", "Cumbia · news"], ["America/Detroit", "Detroit", "Techno · gospel"],
+    ["Atlantic/Reykjavik", "Reykjavík", "Ambient"], ["Asia/Jakarta", "Jakarta", "Dangdut · pop"],
+    ["America/New_York", "New York", "Hip hop · talk"], ["Europe/Paris", "Paris", "Chanson · news"],
+    ["America/Jamaica", "Kingston", "Reggae · dancehall"], ["Africa/Accra", "Accra", "Highlife"],
+    ["Africa/Nairobi", "Nairobi", "Benga · talk"], ["Africa/Kinshasa", "Kinshasa", "Rumba"],
+    ["Africa/Johannesburg", "Johannesburg", "Amapiano"], ["Africa/Cairo", "Cairo", "Shaabi · talk"],
+    ["Europe/Istanbul", "Istanbul", "Arabesk"], ["Asia/Beirut", "Beirut", "Tarab · talk"],
+    ["Asia/Kolkata", "Mumbai", "Filmi · news"], ["Asia/Dhaka", "Dhaka", "Baul · news"],
+    ["Asia/Seoul", "Seoul", "K-indie · talk"], ["Asia/Manila", "Manila", "OPM"],
+    ["America/Argentina/Buenos_Aires", "Buenos Aires", "Tango · talk"], ["America/Sao_Paulo", "São Paulo", "Samba · funk"],
+    ["America/Lima", "Lima", "Chicha · cumbia"], ["America/Bogota", "Bogotá", "Vallenato"],
+    ["America/Havana", "Havana", "Son · salsa"], ["America/Port-au-Prince", "Port-au-Prince", "Kompa"],
+    ["Africa/Dakar", "Dakar", "Mbalax"], ["Africa/Addis_Ababa", "Addis Ababa", "Ethio-jazz"],
+    ["Asia/Ulaanbaatar", "Ulaanbaatar", "Folk · news"], ["Europe/Berlin", "Berlin", "Techno"],
+    ["Europe/London", "London", "Grime · talk"], ["Europe/Lisbon", "Lisbon", "Fado"],
+    ["America/Chicago", "New Orleans", "Jazz · brass"], ["America/Toronto", "Montréal", "Indie · talk"],
+    ["Australia/Sydney", "Sydney", "Indie · talk"], ["Pacific/Auckland", "Auckland", "Reggae · talk"],
+    ["America/Los_Angeles", "Los Angeles", "Soul · talk"], ["Asia/Bangkok", "Bangkok", "Luk thung"],
+  ];
+  const onBoard = () => rows.map((tr) => tr.dataset.city);
+  const put = (tr, [tz, city, kind], turn) => {
+    tr.dataset.tz = tz;
+    tr.dataset.city = city;
+    const name = tr.querySelector("th .flap") || tr.querySelector("th");
+    if (turn) flapTo(name, city); else name.textContent = city;
+    const k = tr.querySelector("td:last-child");
+    if (turn) flapTo(k, kind); else k.textContent = kind;
+  };
   if (rows.length) {
+    // A fresh ten each visit.
+    const pool = CITIES.slice().sort(() => Math.random() - 0.5);
+    rows.forEach((tr, i) => put(tr, pool[i], false));
     paintBoard();
+    if (!still) setInterval(() => {
+      if (!boardShown || document.hidden) return;
+      const on = new Set(onBoard());
+      const next = CITIES.filter((c) => !on.has(c[1]));
+      const tr = rows[Math.floor(Math.random() * rows.length)];
+      put(tr, next[Math.floor(Math.random() * next.length)], true);
+      paintBoard();
+    }, 6000);
     // The first turn-over happens where it can be seen.
     seen([document.querySelector(".departures")], () => {
       boardShown = true;
@@ -198,6 +278,21 @@
       });
     });
     setInterval(paintBoard, 15000);
+  }
+
+  // ── on air now ────────────────────────────────────────────────────────────
+  // The light over the bands: a city where it is evening or night, its time,
+  // turning over to another every few seconds. Somewhere it is always late.
+  const onair = document.querySelector("[data-onair]");
+  if (onair) {
+    const late = () => CITIES.filter(([tz]) => { const h = +clockOf(tz).slice(0, 2); return h >= 19 || h < 5; });
+    const tick = () => {
+      const pool = late().length ? late() : CITIES;
+      const [tz, city] = pool[Math.floor(Math.random() * pool.length)];
+      flapTo(onair, `${clockOf(tz)} · ${city}`);
+    };
+    tick();
+    if (!still) setInterval(() => { if (!document.hidden) tick(); }, 7000);
   }
 
   // ── the live globe ─────────────────────────────────────────────────────────
@@ -238,7 +333,10 @@
       // eslint-disable-next-line no-undef
       const globe = Globe()(box)
         .width(box.clientWidth).height(box.clientHeight)
-        .backgroundColor("#000000")
+        // See-through: the stars are the figure's own (aural.css, .globe), crisp
+        // at any size and slowly twinkling, rather than a picture stretched
+        // over a sphere.
+        .backgroundColor("rgba(0,0,0,0)")
         .globeImageUrl(base + "earth.jpg")
         .showAtmosphere(true).atmosphereColor("#8ab4f8").atmosphereAltitude(0.17)
         .pointsData(pts).pointLat("lat").pointLng("lng")
@@ -258,7 +356,11 @@
       // on a phone, zoom.
       box.addEventListener("wheel", (e) => { c.enableZoom = e.ctrlKey || e.metaKey; }, { capture: true, passive: true });
       box.addEventListener("touchstart", (e) => { c.enableZoom = e.touches.length > 1; }, { capture: true, passive: true });
-      c.autoRotate = !still; c.autoRotateSpeed = 0.35;
+      // Turning slowly, always: a touch stops it, and it picks up again a few
+      // seconds after the hand lets go.
+      c.autoRotate = !still; c.autoRotateSpeed = 0.28;
+      let resume = 0;
+      const rest = () => { clearTimeout(resume); if (!still) resume = setTimeout(() => { c.autoRotate = true; }, 5000); };
       addEventListener("resize", () => globe.width(box.clientWidth).height(box.clientHeight));
 
       const rad = Math.PI / 180;
@@ -286,8 +388,9 @@
         return globe.toGlobeCoords(e.clientX - r.left, e.clientY - r.top);
       };
       let downAt = null;
-      box.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; c.autoRotate = false; });
+      box.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; c.autoRotate = false; clearTimeout(resume); });
       box.addEventListener("pointerup", (e) => {
+        rest();
         if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;   // a drag
         const g = at(e);
         if (g) show(nearest(g.lat, g.lng), true);
@@ -565,7 +668,7 @@
       const g = cv.getContext("2d");
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       g.clearRect(0, 0, w, h);
-      g.fillStyle = token(cv.dataset.ink || "onyx");
+      g.fillStyle = token(cv.dataset.ink || "ink");
       const r = Math.min(w, h) / 2 - 1, cx = w / 2, cy = h / 2;
       const cell = +(cv.dataset.cell || 9);
       const φ0 = (+cv.dataset.lat || 0) * rad, λ0 = lon0 * rad;
@@ -609,30 +712,35 @@
     });
   }
 
-  // ── the tower ─────────────────────────────────────────────────────────────
-  // A hyperboloid radio mast, in straight lines, after the one Shukhov built on
-  // Shabolovka in 1922 to carry Moscow's broadcasts: six sections, each a ring
-  // of straight struts twisted between two rings, narrowing as it climbs.
+  // ── the mast ──────────────────────────────────────────────────────────────
+  // A lattice radio mast in straight lines, the kind every town has on a hill:
+  // two legs tapering to the top, a zigzag between them, rungs, guy wires out to
+  // the ground, a red lamp, and the signal leaving it in rings (CSS animates them).
   for (const svg of document.querySelectorAll("svg[data-tower]")) {
-    const W = 200, H = 520, N = 20, parts = [];
-    let base = 150, y = H - 10;
-    for (let s = 0; s < 6; s++) {
-      const hgt = 88 - s * 6, top = base * 0.72, y2 = y - hgt;
-      for (let i = 0; i < N; i++) {
-        for (const dir of [1, -1]) {
-          const a = (i / N) * Math.PI * 2, b = a + dir * Math.PI * 0.55;
-          const x1 = W / 2 + Math.cos(a) * base / 2, x2 = W / 2 + Math.cos(b) * top / 2;
-          // Only the struts on the near side, lighter; the far side, lighter still.
-          const near = Math.sin(a) > 0 ? 1 : 0.45;
-          parts.push(`<line x1="${x1.toFixed(1)}" y1="${(y + Math.sin(a) * 4).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${(y2 + Math.sin(b) * 3).toFixed(1)}" opacity="${near}"/>`);
-        }
-      }
-      parts.push(`<ellipse cx="${W / 2}" cy="${y2}" rx="${top / 2}" ry="3"/>`);
-      base = top; y = y2;
+    const W = 240, H = 600, cx = W / 2, top = 70, foot = H - 6, parts = [];
+    const half = (y) => 6 + (y - top) / (foot - top) * 34;          // half-width at height y
+    const SEG = 18, step = (foot - top) / SEG;
+    parts.push(`<path d="M${cx - half(top)} ${top} L${cx - half(foot)} ${foot} M${cx + half(top)} ${top} L${cx + half(foot)} ${foot}" stroke-width="2.2"/>`);
+    let zig = "";
+    for (let i = 0; i < SEG; i++) {
+      const y1 = top + i * step, y2 = y1 + step;
+      const [l, r] = i % 2 ? [cx + half(y1), cx - half(y2)] : [cx - half(y1), cx + half(y2)];
+      zig += `M${l.toFixed(1)} ${y1.toFixed(1)} L${r.toFixed(1)} ${y2.toFixed(1)} `;
+      parts.push(`<line x1="${(cx - half(y2)).toFixed(1)}" y1="${y2.toFixed(1)}" x2="${(cx + half(y2)).toFixed(1)}" y2="${y2.toFixed(1)}" stroke-width=".9"/>`);
     }
-    parts.push(`<line x1="${W / 2}" y1="${y}" x2="${W / 2}" y2="${y - 34}" stroke-width="3"/>`);
-    svg.setAttribute("viewBox", `0 ${y - 40} ${W} ${H - y + 40}`);
-    svg.innerHTML = `<g fill="none" stroke="currentColor" stroke-width="1">${parts.join("")}</g>`;
+    parts.push(`<path d="${zig}" stroke-width="1.1"/>`);
+    // Guy wires, from three heights out to the ground on either side.
+    for (const f of [0.18, 0.45, 0.72]) {
+      const y = top + (foot - top) * f;
+      parts.push(`<path d="M${cx - half(y)} ${y} L4 ${foot} M${cx + half(y)} ${y} L${W - 4} ${foot}" stroke-width=".6" stroke-dasharray="3 4" opacity=".7"/>`);
+    }
+    // The antenna, its lamp, and the signal.
+    parts.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top - 42}" stroke-width="3"/>`);
+    parts.push(`<circle cx="${cx}" cy="${top - 46}" r="5" fill="#E5382C" stroke="currentColor" stroke-width="1.5"/>`);
+    const arc = (r) => `M${cx - r} ${top - 46 - r * 0.2} A${r} ${r} 0 0 1 ${cx + r} ${top - 46 - r * 0.2}`;
+    parts.push(`<g class="sig" stroke-width="2.2">${[18, 32, 46].map((r) => `<path d="${arc(r)}"/>`).join("")}</g>`);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = `<g fill="none" stroke="currentColor" stroke-linecap="round">${parts.join("")}</g>`;
   }
 
   // ── redactions ────────────────────────────────────────────────────────────

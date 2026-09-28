@@ -81,10 +81,18 @@ module.exports = function register(ctx) {
     } catch { return null; }
   });
 
-  ipcMain.handle("card:link", (_e, title) => {
-    const t = String(title || "").trim().slice(0, 120);
-    if (!t) return null;
-    const link = `auralfm://play?station=${encodeURIComponent(t)}`;
+  /**
+   * The station's own link on listen.auralfm.xyz, which opens it cued in any
+   * browser (web/bridge.js, ?station=). It was auralfm://, which opened nothing
+   * for anyone without the desktop app — most of the people a link is sent to.
+   */
+  ipcMain.handle("card:link", (_e, title, id) => {
+    const sid = String(id || "").trim().slice(0, 80);
+    const t = String(title || "").trim();
+    if (!sid && !t) return null;
+    const link = sid && !sid.startsWith("my:")
+      ? `https://listen.auralfm.xyz/?station=${encodeURIComponent(sid)}`
+      : "https://listen.auralfm.xyz/";
     clipboard.writeText(link);
     return link;
   });

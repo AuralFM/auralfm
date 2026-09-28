@@ -239,7 +239,7 @@
    *
    * Melton, 28 Sept: the card is the one place in the app that leaves it, so it
    * should look like the brand the way the site does, not like a screenshot of
-   * the app. So it borrows the site's language: the Earth as a halftone, a
+   * the app. So it borrows the site's language: the Earth under a tilted band, a
    * mast-red rule and foot, bracketed mono labels, the hairline grid, and the
    * station's name in Science Gothic as big as it will go — laid out like a
    * ticket, with the facts in labelled fields.
@@ -250,7 +250,6 @@
    */
   const DISPLAY = '"AuralCard Display", Inter, system-ui, sans-serif';
   const MONO = '"AuralCard Mono", ui-monospace, Menlo, monospace';
-  const MAST = "#E5382C";
   const LINE = "rgba(233,226,212,.26)";
 
   let fontsLoading = null;
@@ -283,29 +282,6 @@
     }
   }
 
-  /** The Earth as dots: bigger where it is brighter, so city lights show at night. */
-  function halftoneGlobe(ctx, cx, cy, r, lat, lon, sun, ink) {
-    const off = document.createElement("canvas");
-    off.width = off.height = r * 2;
-    const o = off.getContext("2d", { willReadFrequently: true });
-    if (!drawGlobe(o, r, r, r, lat, lon, sun)) return false;
-    const px = o.getImageData(0, 0, r * 2, r * 2).data;
-    const S = 11;                              // the screen, in card pixels
-    ctx.fillStyle = ink;
-    for (let y = S / 2; y < r * 2; y += S) {
-      for (let x = S / 2; x < r * 2; x += S) {
-        const dx = x - r, dy = y - r;
-        if (dx * dx + dy * dy > (r - 2) * (r - 2)) continue;
-        const i = ((y | 0) * r * 2 + (x | 0)) * 4;
-        const l = (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
-        const d = (S / 2) * 1.12 * Math.sqrt(Math.min(1, l * 1.5));
-        if (d < 0.7) continue;
-        ctx.beginPath(); ctx.arc(cx - r + x, cy - r + y, d, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-    return true;
-  }
-
   /** A registration mark, as printed at a sheet's corners. */
   function cross(ctx, x, y, s = 14) {
     ctx.beginPath();
@@ -320,10 +296,22 @@
     const cv = document.createElement("canvas");
     cv.width = W; cv.height = H;
     const ctx = cv.getContext("2d");
+    /**
+     * The palette in use when the card is made (Melton, 28 Sept): its ground,
+     * its words, its hairlines and its accent, which takes the place of the
+     * site's mast red in the rule, the band and the foot. Whatever sits on the
+     * accent is the palette's own on-accent colour, so it stays legible.
+     */
     const ACCENT = rgbTriplet(readVar("--accent", "#35C46A"));
+    const GROUND = readVar("--bg", INK), TEXT = readVar("--label", BONE), SOFT = readVar("--label2", DIM);
+    const HAIR = readVar("--label3", LINE), ON_ACC = readVar("--on-accent", INK), TINT = rgbTriplet(TEXT);
+    const HOT = `rgb(${ACCENT})`;
+    const lum = (t) => t.split(",").map(Number).reduce((a, v, i) => a + [0.2126, 0.7152, 0.0722][i] * v, 0);
+    // A code scans dark on light: the lighter of ground and words is its paper.
+    const [QR_PAPER, QR_INK] = lum(TINT) > lum(rgbTriplet(GROUND)) ? [TEXT, GROUND] : [GROUND, TEXT];
     const M = 64, inner = W - M * 2;
 
-    ctx.fillStyle = INK;
+    ctx.fillStyle = GROUND;
     ctx.fillRect(0, 0, W, H);
 
     // Grain, seeded from the station so the same station prints the same sheet.
@@ -332,22 +320,22 @@
     for (let i = 0; i < seedFrom.length; i++) seed = (seed * 31 + seedFrom.charCodeAt(i)) >>> 0;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
     for (let i = 0; i < 2400; i++) {
-      ctx.fillStyle = `rgba(233,226,212,${(rnd() * 0.05).toFixed(3)})`;
+      ctx.fillStyle = `rgba(${TINT},${(rnd() * 0.05).toFixed(3)})`;
       ctx.fillRect(rnd() * W, rnd() * H, 1.5, 1.5);
     }
 
     // ── the head: the name, and that it is live ─────────────────────────────
     const HEAD = 104;
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = BONE;
+    ctx.fillStyle = TEXT;
     ctx.font = `700 30px ${MONO}`;
     ctx.fillText("AURAL.FM", M, HEAD);
     ctx.font = `400 24px ${MONO}`;
     ctx.textAlign = "right";
-    ctx.fillStyle = DIM;
+    ctx.fillStyle = SOFT;
     ctx.fillText("HUMAN CURATED RADIO", W - M, HEAD);
     ctx.textAlign = "left";
-    ctx.fillStyle = MAST;
+    ctx.fillStyle = HOT;
     ctx.fillRect(0, 128, W, 6);
 
     // ── the Earth, over a tilted band, with the station marked ─────────────
@@ -355,18 +343,26 @@
     ctx.save();
     ctx.translate(CX, CY + 40);
     ctx.rotate(-0.12);
-    ctx.fillStyle = MAST;
+    ctx.fillStyle = HOT;
     ctx.fillRect(-W, -54, W * 2, 108);
     ctx.restore();
 
     const placed = Number.isFinite(now.lat) && Number.isFinite(now.lon);
     if (placed) {
       // A disc of ink first, so the band stops at the planet's edge.
-      ctx.fillStyle = INK;
+      ctx.fillStyle = GROUND;
       ctx.beginPath(); ctx.arc(CX, CY, R + 6, 0, Math.PI * 2); ctx.fill();
-      halftoneGlobe(ctx, CX, CY, R, now.lat, now.lon, now.sun || { lat: 0, lng: 0 }, BONE);
+      /**
+       * The real Earth, not a halftone (Melton, 28 Sept): the card is for
+       * showing where the station is, and a dot screen lost the coastlines
+       * that say so. The rest of the ticket keeps the site's look.
+       */
+      drawGlobe(ctx, CX, CY, R, now.lat, now.lon, now.sun || { lat: 0, lng: 0 });
+      ctx.strokeStyle = HAIR;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI * 2); ctx.stroke();
       // The orbit, dashed, and the crosshair through the station.
-      ctx.strokeStyle = "rgba(233,226,212,.34)";
+      ctx.strokeStyle = HAIR;
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 10]);
       ctx.beginPath(); ctx.arc(CX, CY, R + 30, 0, Math.PI * 2); ctx.stroke();
@@ -388,7 +384,7 @@
       ctx.beginPath(); ctx.arc(CX, CY, 10, 0, Math.PI * 2); ctx.fill();
       // Where, in the crosshair's own margin.
       ctx.font = `400 20px ${MONO}`;
-      ctx.fillStyle = DIM;
+      ctx.fillStyle = SOFT;
       ctx.fillText(coord(now.lat, "N", "S"), CX + 12, CY - R - 20);
       // Longitude outside the left arm, clear of the disc: the band crosses the right one.
       ctx.textAlign = "right";
@@ -396,7 +392,7 @@
       ctx.textAlign = "left";
     }
     // Registration marks at the corners of the picture.
-    ctx.strokeStyle = "rgba(233,226,212,.6)";
+    ctx.strokeStyle = SOFT;
     ctx.lineWidth = 2;
     for (const [x, y] of [[M + 14, 166], [W - M - 14, 166], [M + 14, 752], [W - M - 14, 752]]) cross(ctx, x, y);
 
@@ -406,7 +402,7 @@
     const tw = ctx.measureText(tag).width;
     ctx.fillStyle = `rgb(${ACCENT})`;
     ctx.fillRect(M + 40, 686, tw + 28, 40);
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ON_ACC;
     ctx.fillText(tag, M + 54, 714);
 
     // ── the station ────────────────────────────────────────────────────────
@@ -435,7 +431,7 @@
     ctx.font = `400 22px ${MONO}`;
     ctx.fillText("[ LISTENING TO ]", M, top + 20);
     ctx.font = disp(size);
-    ctx.fillStyle = BONE;
+    ctx.fillStyle = TEXT;
     let y = top + LABEL + size * 0.9;
     lines.forEach((line, i) => { ctx.fillText(line, M, y); if (i < lines.length - 1) y += size * LEAD; });
 
@@ -455,7 +451,7 @@
     // ── the ticket: the facts, in labelled fields, on the site's hairlines ──
     const GRID_TOP = 1070, ROW = 88, QRW = 176;
     const cols = 3, colW = (inner - QRW) / cols;
-    ctx.strokeStyle = LINE;
+    ctx.strokeStyle = HAIR;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(M, GRID_TOP); ctx.lineTo(W - M, GRID_TOP);
@@ -478,7 +474,7 @@
       const val = String(v).toUpperCase();
       const vs = fit(ctx, val, (s) => `700 ${s}px ${MONO}`, 28, 16, colW - 28);
       ctx.font = `700 ${vs}px ${MONO}`;
-      ctx.fillStyle = BONE;
+      ctx.fillStyle = TEXT;
       ctx.fillText(val, x, top + 70);
     });
 
@@ -491,14 +487,14 @@
         const n = q.getModuleCount(), quiet = 2, QR = 128;
         const qx = W - M - QRW + (QRW - QR) / 2 + 8, qy = GRID_TOP + 10;
         const cell = QR / (n + quiet * 2);
-        ctx.fillStyle = BONE;
+        ctx.fillStyle = QR_PAPER;
         ctx.fillRect(qx, qy, QR, QR);
-        ctx.fillStyle = INK;
+        ctx.fillStyle = QR_INK;
         for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
           if (q.isDark(r, c)) ctx.fillRect(qx + (c + quiet) * cell, qy + (r + quiet) * cell, Math.ceil(cell), Math.ceil(cell));
         }
         ctx.font = `400 16px ${MONO}`;
-        ctx.fillStyle = DIM;
+        ctx.fillStyle = SOFT;
         ctx.textAlign = "center";
         ctx.fillText(t_scan.toUpperCase(), qx + QR / 2, qy + QR + 24);
         ctx.textAlign = "left";
@@ -507,9 +503,9 @@
 
     // ── the foot: the argument, in mast red ────────────────────────────────
     const FOOT = 1266;
-    ctx.fillStyle = MAST;
+    ctx.fillStyle = HOT;
     ctx.fillRect(0, FOOT, W, H - FOOT);
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ON_ACC;
     const line = "LESS ALGORITHMS. MORE HUMANS.";
     const fs = fit(ctx, line, (s) => `900 ${s}px ${DISPLAY}`, 46, 26, inner - 170);
     ctx.font = `900 ${fs}px ${DISPLAY}`;

@@ -537,7 +537,7 @@ function wirePlayback() {
     if (where) $("sheetsaid").textContent = t("ctl.savedTo", "Saved");
   };
   $("sheetlink").onclick = async () => {
-    const link = await guard("cardLink", () => window.auralfm.cardLink(playing?.title), null);
+    const link = await guard("cardLink", () => window.auralfm.cardLink(inPlayer?.title, inPlayer?.sdr ? null : inPlayer?.id), null);
     $("sheetsaid").textContent = link
       ? t("ctl.linkCopied", "Link copied — it opens AuralFM for anyone who has it")
       : t("ctl.shareFailed", "Could not copy the link");

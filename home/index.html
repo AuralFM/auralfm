@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>try{var t=localStorage.getItem("auralfm.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AuralFM · Listen in.</title>
 <meta name="description" content="A globe you listen to. 60,096 live radio stations in 12,253 places, heard where they broadcast, at the time it is there. Free, no account.">
@@ -26,7 +27,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preload" href="assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/SpaceMono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="aural.css?v=3f4e57a3af">
+<link rel="stylesheet" href="aural.css?v=ed9836cf40">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -111,17 +112,19 @@
       <h2 id="board-title" class="display stretch">Where it is tonight</h2>
     </div>
     <table class="cell departures">
-      <caption class="sronly">Local time in cities on the globe, and what to listen for there</caption>
+      <caption class="sronly">Local time in ten cities on the globe, and what to listen for there. The cities change as you read.</caption>
       <thead><tr><th scope="col">City</th><th scope="col">Local time</th><th scope="col">Listen for</th></tr></thead>
       <tbody>
-        <tr data-tz="Africa/Lagos"><th scope="row">Lagos</th><td class="clock">--:--</td><td>Afrobeats · talk</td></tr>
-        <tr data-tz="America/Chicago"><th scope="row">Chicago</th><td class="clock">--:--</td><td>House</td></tr>
-        <tr data-tz="Asia/Tokyo"><th scope="row">Tokyo</th><td class="clock">--:--</td><td>Jazz</td></tr>
-        <tr data-tz="Asia/Tbilisi"><th scope="row">Tbilisi</th><td class="clock">--:--</td><td>Techno</td></tr>
-        <tr data-tz="America/Mexico_City"><th scope="row">Mexico City</th><td class="clock">--:--</td><td>Cumbia · news</td></tr>
-        <tr data-tz="America/Detroit"><th scope="row">Detroit</th><td class="clock">--:--</td><td>Techno · gospel</td></tr>
-        <tr data-tz="Atlantic/Reykjavik"><th scope="row">Reykjavík</th><td class="clock">--:--</td><td>Ambient</td></tr>
-        <tr data-tz="Asia/Jakarta"><th scope="row">Jakarta</th><td class="clock">--:--</td><td>Dangdut · pop</td></tr>
+        <tr data-tz="Africa/Lagos"><th scope="row"><span class="flap">Lagos</span></th><td class="clock">--:--</td><td class="kind">Afrobeats · talk</td></tr>
+        <tr data-tz="America/Chicago"><th scope="row"><span class="flap">Chicago</span></th><td class="clock">--:--</td><td class="kind">House</td></tr>
+        <tr data-tz="Asia/Tokyo"><th scope="row"><span class="flap">Tokyo</span></th><td class="clock">--:--</td><td class="kind">Jazz</td></tr>
+        <tr data-tz="Asia/Tbilisi"><th scope="row"><span class="flap">Tbilisi</span></th><td class="clock">--:--</td><td class="kind">Techno</td></tr>
+        <tr data-tz="America/Mexico_City"><th scope="row"><span class="flap">Mexico City</span></th><td class="clock">--:--</td><td class="kind">Cumbia · news</td></tr>
+        <tr data-tz="America/New_York"><th scope="row"><span class="flap">New York</span></th><td class="clock">--:--</td><td class="kind">Hip hop · talk</td></tr>
+        <tr data-tz="Europe/Paris"><th scope="row"><span class="flap">Paris</span></th><td class="clock">--:--</td><td class="kind">Chanson · news</td></tr>
+        <tr data-tz="America/Jamaica"><th scope="row"><span class="flap">Kingston</span></th><td class="clock">--:--</td><td class="kind">Reggae · dancehall</td></tr>
+        <tr data-tz="Atlantic/Reykjavik"><th scope="row"><span class="flap">Reykjavík</span></th><td class="clock">--:--</td><td class="kind">Ambient</td></tr>
+        <tr data-tz="Asia/Jakarta"><th scope="row"><span class="flap">Jakarta</span></th><td class="clock">--:--</td><td class="kind">Dangdut · pop</td></tr>
       </tbody>
     </table>
   </section>
@@ -165,20 +168,25 @@
     </div>
     <div class="paper-art" aria-hidden="true">
       <span class="wedge"></span>
-      <canvas class="paper-globe" data-halftone data-lat="10" data-lon="-25" data-ink="onyx" data-cell="10" data-spin="2.5"></canvas>
-      <svg class="tower" data-tower></svg>
-      <p class="log">03:12 LAGOS &mdash; the overnight call-in<br>21:40 KINGSTON &mdash; a selector takes requests<br>05:55 ULAANBAATAR &mdash; morning news<br>23:08 LIMA &mdash; cumbia for the night shift</p>
-      <p class="pin p1">Nº 0001</p>
-      <p class="pin p2">No algorithm</p>
-      <span class="reg g1"></span><span class="reg g2"></span><span class="reg g3"></span>
+      <!-- One frame for the picture, so the Earth and the mast stay together at
+           every width instead of drifting to opposite edges of the column. -->
+      <div class="paper-stage">
+        <canvas class="paper-globe" data-halftone data-lat="10" data-lon="-25" data-ink="ink" data-cell="10" data-spin="2.5"></canvas>
+        <svg class="tower" data-tower></svg>
+        <p class="pin">No algorithm</p>
+        <span class="reg g1"></span><span class="reg g2"></span>
+        <p class="log">03:12 LAGOS &mdash; the overnight call-in<br>21:40 KINGSTON &mdash; a selector takes requests<br>05:55 ULAANBAATAR &mdash; morning news<br>23:08 LIMA &mdash; cumbia for the night shift</p>
+      </div>
     </div>
   </section>
 
   <!-- ── the bands: the argument, tilted ────────────────────────────────── -->
   <section class="bands" aria-label="Less algorithms, more humans. No chart, no feed, no owner. Heard from Lagos to Ulaanbaatar.">
-    <p class="stamp" aria-hidden="true"><span class="live"></span>On air</p>
+    <!-- An on-air light, and what it means: somewhere on the globe it is late,
+         and somebody is on the air there right now. -->
+    <p class="stamp" aria-hidden="true"><span class="lamp"></span><span class="stamp-k">On air now</span><span class="stamp-v" data-onair>21:40 · Kingston</span></p>
     <p class="band-strip" aria-hidden="true"><span>Less algorithms, more humans · No chart · No feed · Nobody paying to be heard · Less algorithms, more humans · No chart · No feed · Nobody paying to be heard · Less algorithms, more humans · No chart · No feed · Nobody paying to be heard · Less algorithms, more humans · No chart · No feed · Nobody paying to be heard · </span></p>
-    <p class="band-strip places" aria-hidden="true"><span>Lagos · Kingston · Tbilisi · Kinshasa · Lima · Dhaka · Port-au-Prince · Ulaanbaatar · Accra · Lagos · Kingston · Tbilisi · Kinshasa · Lima · Dhaka · Port-au-Prince · Ulaanbaatar · Accra · Lagos · Kingston · Tbilisi · Kinshasa · Lima · Dhaka · Port-au-Prince · Ulaanbaatar · Accra · Lagos · Kingston · Tbilisi · Kinshasa · Lima · Dhaka · Port-au-Prince · Ulaanbaatar · Accra · </span></p>
+    <p class="band-strip places" aria-hidden="true"><span>Lagos · New York · Kingston · Paris · Tbilisi · Kinshasa · Mexico City · Dhaka · Port-au-Prince · Seoul · Accra · Lima · Nairobi · Ulaanbaatar · Lagos · New York · Kingston · Paris · Tbilisi · Kinshasa · Mexico City · Dhaka · Port-au-Prince · Seoul · Accra · Lima · Nairobi · Ulaanbaatar · Lagos · New York · Kingston · Paris · Tbilisi · Kinshasa · Mexico City · Dhaka · Port-au-Prince · Seoul · Accra · Lima · Nairobi · Ulaanbaatar · </span></p>
   </section>
 
   <!-- ── the tagline reveal ─────────────────────────────────────────────── -->
@@ -191,7 +199,7 @@
   <section class="manifesto grid" aria-labelledby="manifesto-title">
     <div class="cell manifesto-head">
       <p class="label">[ What AuralFM stands for ]</p>
-      <h2 id="manifesto-title" class="display stretch"><span class="hollow">Less</span> algorithms. More humans.</h2>
+      <h2 id="manifesto-title" class="display stretch"><span class="hollow">Less</span> algorithms. <span class="hollow">More</span> humans.</h2>
     </div>
     <ol class="rules">
       <li class="cell"><span class="num">01</span><b>Human curated radio &gt; algorithmic playlists.</b>
@@ -277,7 +285,7 @@
     </ul>
   </section>
 
-  <div class="pattern-band" aria-hidden="true"></div>
+  <div class="halftone-band" aria-hidden="true"></div>
 
   <!-- ── what it does ───────────────────────────────────────────────────── -->
   <section class="features grid" id="features" aria-labelledby="features-title">
@@ -317,19 +325,19 @@
           to use. Pick one, tune it, and hear what is crossing the ionosphere tonight. Each one is
           somebody&rsquo;s own equipment, so AuralFM connects to one at a time, only when you ask.</p>
       </div>
-      <span class="duo mast"><img src="assets/desktop-shortwave.jpg" width="1174" height="662" loading="lazy"
-           alt="The desktop app tuned to a shortwave receiver, broadcast paths crossing the globe"></span>
+      <img class="appshot" src="assets/desktop-shortwave.jpg" width="1174" height="662" loading="lazy"
+           alt="The desktop app tuned to a shortwave receiver, broadcast paths crossing the globe">
     </article>
     <article class="cell card card-wide card-share">
       <div>
         <p class="num">06</p>
         <h3>Share what you hear</h3>
         <p>Every station makes a card: the Earth over where it broadcasts, its name, its city and
-          a code that opens it live on anyone&rsquo;s phone. Post it anywhere. The link goes to the
-          station, not to a profile of you.</p>
+          a code that opens it live on anyone&rsquo;s phone, in the colours of the theme you listen
+          in. Post it anywhere. The link goes to the station, not to a profile of you.</p>
       </div>
       <img class="sharecard" src="assets/card.jpg" width="720" height="900" loading="lazy"
-           alt="A share card: a halftone Earth centred on London, the words Listening to NTS 4 To The Floor, the city, the time, and a code to scan">
+           alt="A share card: the Earth centred on London, the words Listening to NTS 4 To The Floor, the city, the time, and a code to scan">
     </article>
     <article class="cell card card-studio">
       <div>
@@ -338,7 +346,7 @@
         <p>A studio inside the app: your voice, your records under it, and your town lit on the globe
           while you are live. It is being tested now, and it reaches listeners when it is ready.</p>
       </div>
-      <canvas class="studio-globe" data-halftone data-lat="20" data-lon="-60" data-ink="aqua" data-cell="7" data-spin="6" aria-hidden="true"></canvas>
+      <canvas class="studio-globe" data-halftone data-lat="20" data-lon="-60" data-ink="aq" data-cell="7" data-spin="6" aria-hidden="true"></canvas>
     </article>
   </section>
 
@@ -390,7 +398,7 @@
     <div class="cell">
       <p class="label">[ Keep it independent ]</p>
       <h2 id="support-title" class="display stretch">Owned by the people listening.</h2>
-      <canvas class="support-globe" data-halftone data-lat="-5" data-lon="20" data-ink="onyx" data-cell="8" data-spin="4" aria-hidden="true"></canvas>
+      <canvas class="support-globe" data-halftone data-lat="-5" data-lon="20" data-ink="ink" data-cell="8" data-spin="4" aria-hidden="true"></canvas>
     </div>
     <div class="cell support-body">
       <p class="support-price"><b>From $3</b> a month</p>
@@ -481,6 +489,6 @@
   </symbol>
 </svg>
 
-<script src="aural.js?v=3f4e57a3af" defer></script>
+<script src="aural.js?v=ed9836cf40" defer></script>
 </body>
 </html>

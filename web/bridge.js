@@ -556,10 +556,11 @@
         return a.download;
       } catch { return null; }
     },
-    cardLink: async () => {
-      // The site, not a deep link: auralfm:// means nothing to a browser, and a
-      // link somebody cannot open is worse than no link at all.
-      try { await navigator.clipboard.writeText(location.origin + location.pathname); return true; }
+    cardLink: async (_title, id) => {
+      // The station's own link: it opens here, cued (?station=, below).
+      const link = id && !String(id).startsWith("my:")
+        ? `https://listen.auralfm.xyz/?station=${encodeURIComponent(id)}` : "https://listen.auralfm.xyz/";
+      try { await navigator.clipboard.writeText(link); return true; }
       catch { return false; }
     },
 
