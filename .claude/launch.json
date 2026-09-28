@@ -1,0 +1,68 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "auralfm-web",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "scripts/serve-web.mjs",
+        "8765"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "auralfm-home",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "scripts/serve-web.mjs",
+        "8766",
+        "home"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "auralfm-blog",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "scripts/serve-web.mjs",
+        "8767",
+        "site"
+      ],
+      "port": 8767
+    },
+    {
+      "name": "auralfm-docs",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "scripts/serve-web.mjs",
+        "8768",
+        "docs-site"
+      ],
+      "port": 8768
+    },
+    {
+      "name": "auralfm-home-v2",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "scripts/serve-web.mjs",
+        "8769",
+        "home-v2"
+      ],
+      "port": 8769
+    },
+    {
+      "name": "auralfm-halftone",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "PATH=/Users/mb3/.local/node/bin:/usr/bin:/bin",
+        "TOOLCRAFT_DEV_PORT=8790",
+        "npm",
+        "--prefix",
+        "/Users/mb3/Developer/auralfm-halftone",
+        "run",
+        "dev"
+      ],
+      "port": 8790
+    }
+  ]
+}

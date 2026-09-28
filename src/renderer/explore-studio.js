@@ -45,7 +45,7 @@
   const show = {
     title: saved.title || "", about: saved.about || "", vibe: saved.vibe || "", explicit: !!saved.explicit,
     deviceId: saved.deviceId || "", micVol: saved.micVol ?? 1, musicVol: saved.musicVol ?? 0.6,
-    duck: saved.duck ?? true, monitor: false, place: null, rights: false,
+    duck: saved.duck ?? true, monitor: false, place: null, rights: false, adult: false,
   };
   const keep = () => {
     const { title, about, vibe, explicit, deviceId, micVol, musicVol, duck } = show;
@@ -170,7 +170,11 @@
       if (phase !== "off") {
         const s = Math.floor((Date.now() - startedAt) / 1000);
         const el = $s("airclock");
-        if (el) el.textContent = `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+        if (el) {
+          const t = `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+          if (window.AuralFlap) window.AuralFlap.flap(el, t);
+          else el.textContent = t;
+        }
       }
     };
     frame();
@@ -185,7 +189,7 @@
   // panel, the player's status and the globe show what listeners will see.
   // A voice, or a track: a set with no talking is a show too.
   const hasSound = () => !!micStream || !!track;
-  const ready = () => hasSound() && !!show.title.trim() && show.rights && !!show.place;
+  const ready = () => hasSound() && !!show.title.trim() && show.rights && show.adult && !!show.place;
   async function go(to) {
     if (to !== "off" && !hasSound()) await openMic();
     if (to === "live" && !ready()) return paint();
@@ -229,26 +233,28 @@
 
     // On air, first: it is what the panel is for.
     const air = el("div", { class: "sec" }, head(tt("studio.onAir", "On air")));
-    const label = phase === "live" ? tt("studio.live", "Live") : phase === "rehearsal" ? tt("studio.rehearsing", "Rehearsing") : tt("studio.off", "Off air");
+    const label = phase === "live" ? tt("studio.live", "Live") : phase === "rehearsal" ? tt("studio.rehearsing", "Rehearsing") : phase === "planned" ? tt("studio.planned", "Planned") : tt("studio.off", "Off air");
     air.append(el("div", { class: "air" },
-      el("span", { class: "airpill", role: "status" }, el("i"), el("span", { text: label }), phase !== "off" ? el("span", { id: "airclock", text: "00:00:00" }) : null)));
+      el("span", { class: "airpill", role: "status" }, el("i"), el("span", { text: label }), (phase === "live" || phase === "rehearsal") ? el("span", { id: "airclock", text: "00:00:00" }) : null)));
     const why = !hasSound() ? tt("studio.needMic", "Turn on your microphone, or add a track, below.")
       : !show.title.trim() ? tt("studio.needTitle", "Give your show a name.")
       : !show.place ? tt("studio.needPlace", "Choose the town you go out from.")
-      : !show.rights ? tt("studio.needRights", "Confirm what you will play is yours to play.") : "";
+      : (!show.rights || !show.adult) ? tt("studio.needRights", "Confirm what you will play is yours to play and you are 18 or older.") : "";
     const btns = el("div", { class: "btns" });
     if (phase === "off") {
       btns.append(
         el("button", { class: "sheetbtn", type: "button", id: "stRehearse", onclick: () => go("rehearsal") }, tt("studio.rehearse", "Rehearse")),
+        el("button", { class: "sheetbtn", type: "button", id: "stPlan", disabled: !ready(), onclick: () => go("planned") }, tt("studio.plan", "Announce")),
         el("button", { class: "sheetbtn primary", type: "button", id: "stLive", disabled: !ready(), "aria-describedby": "stWhy", onclick: () => go("live") }, tt("studio.goLive", "Go live")));
     } else {
-      if (phase === "rehearsal") btns.append(el("button", { class: "sheetbtn primary", type: "button", id: "stLive", disabled: !ready(), "aria-describedby": "stWhy", onclick: () => go("live") }, tt("studio.goLive", "Go live")));
+      if (phase === "rehearsal" || phase === "planned") btns.append(el("button", { class: "sheetbtn primary", type: "button", id: "stLive", disabled: !ready(), "aria-describedby": "stWhy", onclick: () => go("live") }, tt("studio.goLive", "Go live")));
       btns.append(el("button", { class: `sheetbtn${phase === "live" ? " onair" : ""}`, type: "button", id: "stEnd", onclick: () => go("off") },
-        phase === "live" ? tt("studio.end", "End the show") : tt("studio.stop", "Stop rehearsing")));
+        phase === "live" ? tt("studio.end", "End the show") : phase === "planned" ? tt("studio.cancel", "Cancel announcement") : tt("studio.stop", "Stop rehearsing")));
     }
     air.append(btns);
     air.append(el("p", { class: "airnote", id: "stWhy", text:
       phase === "live" ? tt("studio.livePrototype", "This is a prototype: your town is marked live on the globe, but nobody can hear you yet. Sending the sound to listeners is the next step.")
+      : phase === "planned" ? tt("studio.plannedPrototype", "This is a prototype: your town is marked on the globe as planned.")
       : phase === "rehearsal" ? tt("studio.rehearsalNote", "Only you can hear this. Put on headphones and turn on “Hear yourself” to check your mix.")
       : why || tt("studio.readyNote", "Ready. Rehearse first: only you will hear it.") }));
     body.append(air);
@@ -320,10 +326,15 @@
     // Before it goes out.
     const rights = el("div", { class: "sec" }, head(tt("studio.before", "Before you go live")));
     rights.append(toggleRow(tt("studio.rights", "Everything I play is mine, or I have the rights to play it"), show.rights, () => { show.rights = !show.rights; paint(); }));
+    rights.append(toggleRow(tt("studio.adult", "I am 18 or older"), show.adult, () => { show.adult = !show.adult; paint(); }));
     const conduct = el("p", { class: "fine" });
     conduct.append(tt("studio.conduct", "Talk, your own music and music you are licensed to play. Shows follow the "),
       el("a", { href: "https://docs.auralfm.xyz/conduct/", target: "_blank", rel: "noopener noreferrer", class: "linkbtn" }, tt("studio.conductLink", "Code of Conduct")), ".");
     rights.append(conduct);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      rights.append(el("p", { class: "fine", text: tt("studio.iosWarning", "On an iPhone, your show lasts as long as the app stays open and the screen stays on. If you switch to another app, the broadcast will pause.") }));
+    }
     body.append(rights);
 
     if (wasFocus && $s(wasFocus)) $s(wasFocus).focus({ preventScroll: true });

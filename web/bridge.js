@@ -132,6 +132,15 @@
     // and the ISS, and it is not what somebody opening a radio wants first.
     ["listeners", true], ["statusBar", false],
   ];
+  
+  const ON_AT_LAUNCH = new Set(["stations", "shortwave"]);
+  function startQuiet() {
+    const st = {};
+    for (const [id] of LAYERS) st[id] = ON_AT_LAUNCH.has(id);
+    write("layers", st);
+  }
+  startQuiet();
+
   const layerState = () => {
     const saved = read("layers", {});
     return Object.fromEntries(LAYERS.map(([id, d]) => [id, saved[id] ?? d]));
