@@ -700,10 +700,34 @@
   applyOutput();
   // After the page's own scripts have subscribed, or they would miss it.
   addEventListener("DOMContentLoaded", () => {
+    const asked = new URLSearchParams(location.search).get("station");
+    if (asked) return cueAsked(asked);
     const saved = getState().lastChannel;
     if (saved) { current = saved; setStatus("Press play"); }
     else cueHome();
   });
+
+  /**
+   * A shared card's link: listen.auralfm.xyz/?station=<id>.
+   *
+   * The code on a share card opens the station it names, cued and paused —
+   * sound is still something the listener starts — with the globe gone to its
+   * place and its card open. A station that has left the catalogue falls back
+   * to the usual first visit rather than an empty player.
+   */
+  async function cueAsked(id) {
+    await catalogReady;
+    const ch = M.catalog.byId(String(id));
+    if (!ch || (!ch.secure && location.protocol === "https:")) {
+      const saved = getState().lastChannel;
+      if (saved) { current = saved; setStatus("Press play"); } else cueHome();
+      return;
+    }
+    current = ch;
+    setStatus("Press play");
+    const show = () => (document.getElementById("launch") ? setTimeout(show, 400) : window.AuralOpenStation?.(ch));
+    show();
+  }
 
   /**
    * A first visit opens with something to press play on.

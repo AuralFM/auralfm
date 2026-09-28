@@ -81,6 +81,9 @@ async function paintDistance() {
 }
 let favorites = [];
 let playing = null;          // channel currently playing, per the popover
+// What is in the player, playing or not: a paused or cued station can still be
+// saved and shared, so the star and share act on this rather than `playing`.
+let inPlayer = null;
 let debounce = null, seq = 0;
 let catalogEmpty = false;     // set by loadPlaces(""), read by search
 

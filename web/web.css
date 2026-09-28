@@ -330,13 +330,15 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     appearance: none; border: 0; background: none; padding: 0; cursor: default;
   }
   .nowopen:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
-  body.phonebar .now > *:not(.nowopen) { position: relative; z-index: 1; }
+  body.phonebar .now > *:not(.nowopen):not(.sronly) { position: relative; z-index: 1; }
   body.phonebar .now .brand svg { height: 15px; }
-  body.phonebar .now b { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* The name gives way before the status does: "Press play" is an instruction,
+     and the station's name is also on the globe and in the card above. */
+  body.phonebar .now b { flex: 0 4 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   body.phonebar .now #nowStatus { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Volume and the output picker belong to iOS here: the hardware keys set one
      and Control Centre sets the other, from outside any app. */
-  body.phonebar .now .volwrap, body.phonebar .now #nowStar, body.phonebar .now .outwrap:not(.route),
+  body.phonebar .now .volwrap, body.phonebar .now .outwrap:not(.route),
   body.phonebar .now .brand { display: none; }
   /* Except the way to AirPods: iOS's own route picker (web/after.js), shown
      only when there is somewhere to send the sound. Drawn at 32 like share,
@@ -347,6 +349,19 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   }
   body.phonebar .now .outwrap.route #outbtn::before { content: ""; position: absolute; inset: -6px; border-radius: var(--r-md); }
   body.phonebar .now .outwrap.route #outbtn:active { background: var(--fill); }
+  /* The star, left of play: the same 32pt glyph button as share on its right,
+     so the three read as one set. The name takes the slack, not a gap. */
+  body.phonebar .now #nowStatus { margin-right: auto; }
+  body.phonebar .now #nowStar {
+    display: grid; place-items: center; flex: none;
+    width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;
+    font-size: 14px; color: var(--label2);
+    background: none; border: 0; border-radius: var(--r-md); cursor: default;
+  }
+  body.phonebar .now #nowStar[hidden] { display: none; }
+  body.phonebar .now #nowStar.on { color: var(--accent); }
+  body.phonebar .now #nowStar:active { background: var(--fill); }
+  body.phonebar .now #nowStar::before { content: ""; position: absolute; inset: -6px; border-radius: var(--r-md); }
   /* Sharing works here after all: the card goes into the system's share sheet
      rather than needing a clipboard and a file dialog of our own. */
   body.phonebar .now #nowShare {
@@ -365,7 +380,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
      control inside a strip should be. Lock and share match, so the three read
      as one set acting on one station. */
   body.phonebar .now #play {
-    margin-left: auto; width: 30px; height: 30px; min-width: 30px; min-height: 30px;
+    width: 30px; height: 30px; min-width: 30px; min-height: 30px;
     font-size: 11px;
   }
   /* The ring stays 30px; the target around it is 44. Play is the one control
@@ -375,8 +390,17 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
      edge, over the big button, and wide enough for a thumb. The drawer runs
      the full width here and sits with the chrome, above the panels. */
   body.phonebar .now > .nowgrab.nowgrab { position: absolute; z-index: 2; width: 64px; margin-left: -32px; height: 18px; }
-  body.phonebar .nowdrawer { width: 100vw; z-index: 5; border-radius: var(--r-xl) var(--r-xl) 0 0;
+  /* One sheet: the row rides up (explore-profile.js) and the card is the rest
+     of it, flush under the row — same ground, no edge, no second handle. */
+  body.phonebar .nowdrawer { width: 100vw; z-index: 5; border-radius: 0; box-shadow: none;
+    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
     background: color-mix(in srgb, var(--bg) 94%, transparent); }
+  body.phonebar .nowcard { padding-top: 6px; }
+  body.phonebar .nowcard::before { display: none; }
+  body.phonebar .now.raised { border-radius: var(--r-xl) var(--r-xl) 0 0; box-shadow: 0 -14px 28px -10px rgba(0,0,0,.4); }
+  body.phonebar .now.settling { transition: transform var(--dur-panel) var(--ease-out); }
+  body.phonebar .now > .nowgrab[aria-expanded="true"]::before { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { body.phonebar .now.settling { transition: none; } }
   body.phonebar #stationlist, body.phonebar #placelist { padding-bottom: var(--drawer, 0px); }
   body.phonebar .now #lock {
     flex: none; width: 32px; height: 32px; min-width: 32px; min-height: 32px;

@@ -528,4 +528,114 @@
     // Every 6.5s: often enough to feel alive, not so often it pulls the eye.
     if (!still) setInterval(next, 6500);
   }
+  // ── halftones ─────────────────────────────────────────────────────────────
+  // The Earth as a dot screen, the way the posters this page borrows from print
+  // a photograph: bigger dots where it is brighter. <canvas data-halftone> with
+  // data-lat/data-lon for the view, data-ink naming a colour token, data-cell
+  // for the screen and data-spin (degrees a second) to turn it.
+  //
+  // Only the dots are sampled, not every pixel: a few thousand look-ups into
+  // the one equirectangular image the live globe already uses, so a spinning
+  // halftone costs less than the page's own scrolling. Paused off screen, still
+  // for prefers-reduced-motion.
+  const tones = [...document.querySelectorAll("canvas[data-halftone]")];
+  if (tones.length) {
+    let earth = null;
+    const loadEarth = () => earth || (earth = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = 1024; c.height = 512;
+        const x = c.getContext("2d", { willReadFrequently: true });
+        x.drawImage(img, 0, 0, 1024, 512);
+        resolve({ w: 1024, h: 512, d: x.getImageData(0, 0, 1024, 512).data });
+      };
+      img.onerror = () => resolve(null);
+      img.src = "/assets/globe/earth.jpg";
+    }));
+    const css = getComputedStyle(document.documentElement);
+    const token = (name) => css.getPropertyValue(`--${name}`).trim() || name;
+    const rad = Math.PI / 180;
+
+    function paint(cv, tex, lon0) {
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      const w = cv.clientWidth, h = cv.clientHeight;
+      if (!w || !h) return;
+      if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+      const g = cv.getContext("2d");
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = token(cv.dataset.ink || "onyx");
+      const r = Math.min(w, h) / 2 - 1, cx = w / 2, cy = h / 2;
+      const cell = +(cv.dataset.cell || 9);
+      const φ0 = (+cv.dataset.lat || 0) * rad, λ0 = lon0 * rad;
+      const s0 = Math.sin(φ0), c0 = Math.cos(φ0);
+      const invert = cv.dataset.invert === "true";
+      for (let py = cy - r + cell / 2; py < cy + r; py += cell) {
+        for (let px = cx - r + cell / 2; px < cx + r; px += cell) {
+          const x = (px - cx) / r, y = (cy - py) / r, ρ2 = x * x + y * y;
+          if (ρ2 > 1) continue;
+          const ρ = Math.sqrt(ρ2), c = Math.asin(ρ), sc = Math.sin(c), cc = Math.cos(c);
+          const φ = Math.asin(cc * s0 + (ρ ? y * sc * c0 / ρ : 0));
+          const λ = λ0 + Math.atan2(x * sc, ρ * c0 * cc - y * s0 * sc);
+          let u = ((λ / Math.PI + 1) / 2) % 1; if (u < 0) u += 1;
+          const t = ((Math.min(tex.h - 1, ((0.5 - φ / Math.PI) * tex.h) | 0) * tex.w) + ((u * tex.w) | 0)) * 4;
+          let l = (0.2126 * tex.d[t] + 0.7152 * tex.d[t + 1] + 0.0722 * tex.d[t + 2]) / 255;
+          l = Math.min(1, l * 1.6) * (0.6 + 0.4 * Math.sqrt(1 - ρ2));   // the limb, darker
+          if (invert) l = 1 - l;
+          const d = (cell / 2) * 1.1 * Math.sqrt(l);
+          if (d < 0.5) continue;
+          g.beginPath(); g.arc(px, py, d, 0, Math.PI * 2); g.fill();
+        }
+      }
+    }
+
+    loadEarth().then((tex) => {
+      if (!tex) return;
+      for (const cv of tones) {
+        let lon = +cv.dataset.lon || 0, on = false, last = 0, raf = 0;
+        const spin = still ? 0 : +(cv.dataset.spin || 0);
+        const tick = (t) => {
+          if (!on) { raf = 0; return; }
+          if (last) lon += spin * (t - last) / 1000;
+          last = t;
+          paint(cv, tex, lon);
+          raf = spin ? requestAnimationFrame(tick) : 0;
+        };
+        const run = () => { if (!raf) { last = 0; raf = requestAnimationFrame(tick); } };
+        new IntersectionObserver(([e]) => { on = e.isIntersecting; if (on) run(); }).observe(cv);
+        new ResizeObserver(() => { if (!spin) paint(cv, tex, lon); }).observe(cv);
+      }
+    });
+  }
+
+  // ── the tower ─────────────────────────────────────────────────────────────
+  // A hyperboloid radio mast, in straight lines, after the one Shukhov built on
+  // Shabolovka in 1922 to carry Moscow's broadcasts: six sections, each a ring
+  // of straight struts twisted between two rings, narrowing as it climbs.
+  for (const svg of document.querySelectorAll("svg[data-tower]")) {
+    const W = 200, H = 520, N = 20, parts = [];
+    let base = 150, y = H - 10;
+    for (let s = 0; s < 6; s++) {
+      const hgt = 88 - s * 6, top = base * 0.72, y2 = y - hgt;
+      for (let i = 0; i < N; i++) {
+        for (const dir of [1, -1]) {
+          const a = (i / N) * Math.PI * 2, b = a + dir * Math.PI * 0.55;
+          const x1 = W / 2 + Math.cos(a) * base / 2, x2 = W / 2 + Math.cos(b) * top / 2;
+          // Only the struts on the near side, lighter; the far side, lighter still.
+          const near = Math.sin(a) > 0 ? 1 : 0.45;
+          parts.push(`<line x1="${x1.toFixed(1)}" y1="${(y + Math.sin(a) * 4).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${(y2 + Math.sin(b) * 3).toFixed(1)}" opacity="${near}"/>`);
+        }
+      }
+      parts.push(`<ellipse cx="${W / 2}" cy="${y2}" rx="${top / 2}" ry="3"/>`);
+      base = top; y = y2;
+    }
+    parts.push(`<line x1="${W / 2}" y1="${y}" x2="${W / 2}" y2="${y - 34}" stroke-width="3"/>`);
+    svg.setAttribute("viewBox", `0 ${y - 40} ${W} ${H - y + 40}`);
+    svg.innerHTML = `<g fill="none" stroke="currentColor" stroke-width="1">${parts.join("")}</g>`;
+  }
+
+  // ── redactions ────────────────────────────────────────────────────────────
+  // A bar over the words the feed kept from you, lifted once it is read.
+  seen(document.querySelectorAll(".redact"), (el) => el.classList.add("lift"), "0px 0px -30% 0px");
 })();

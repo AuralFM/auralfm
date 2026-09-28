@@ -160,7 +160,8 @@ const CSP = [
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
-  "img-src 'self' data: blob: https://gibs.earthdata.nasa.gov",
+  // Station logos come from each station's own site, like its audio does.
+  "img-src 'self' data: blob: https:",
   "media-src https: blob:",
   "worker-src blob: 'self'",
   "frame-src 'self'",
@@ -401,6 +402,7 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
+copy("src/renderer/fonts", "fonts");        // the share card's type (card.js), nothing else
 fs.copyFileSync(R("web", "robots.txt"), path.join(OUT, "robots.txt"));   // who may crawl what (web/robots.txt)
 for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 

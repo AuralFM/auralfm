@@ -1276,6 +1276,31 @@ console.log("\nlight theme agrees with itself");
   else pass("the waveform is measured from a private copy of the stream, never the playing element");
 }
 
+// ── the studio's music bed plays only its own copy of a local file ─────────
+// Tracks were decoded whole into memory, and an hour-long mix did not fit
+// (Melton, 28 Sept). studio-deck.js streams them through an <audio> element
+// instead, which is the one other place an element may be routed through Web
+// Audio: it must be an element that file made itself with `new Audio(`, fed
+// only from `URL.createObjectURL` — a file already on this device, never a
+// station's stream, which would play silence (the rule above).
+{
+  console.log("\nthe studio's music bed plays only its own copy of a local file");
+  const code = readSrc("src/renderer/studio-deck.js")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const made = new Set([...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*new Audio\(/g)].map((m) => m[1]));
+  const routed = [...code.matchAll(/createMediaElementSource\s*\(\s*([^)]*?)\s*\)/g)].map((m) => m[1]);
+  const srcs = [...code.matchAll(/(\w+)\.src\s*=\s*([^;]+);/g)];
+  const blobbed = new Set([...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*URL\.createObjectURL\(/g)].map((m) => m[1]));
+  const foreign = routed.filter((arg) => !made.has(arg));
+  const badSrc = srcs.filter(([, el, v]) => made.has(el) && !blobbed.has(v.trim()));
+  const studio = readSrc(EXPLORE);
+  if (!routed.length) fail("the studio's music bed", "studio-deck.js routes nothing — tracks are not playing through it");
+  else if (foreign.length) fail("the studio's music bed plays its own element", `studio-deck.js routes ${foreign.join(", ")}, which it did not create`);
+  else if (badSrc.length || !srcs.length) fail("the studio's music bed plays a local file", `an element is fed ${badSrc.map((m) => m[2]).join(", ") || "nothing"}, not a blob: URL`);
+  else if (/decodeAudioData\s*\(/.test(studio)) fail("the studio streams its tracks", "explore-studio.js decodes a whole track into memory again");
+  else pass("tracks stream from a blob: URL through an element the deck made, never decoded whole");
+}
+
 // ── the output button does not come and go ──────────────────────────────────
 // It hid whenever fewer than two outputs were enumerated. macOS reports
 // `default` plus the built-in speakers and nothing else once a bluetooth speaker

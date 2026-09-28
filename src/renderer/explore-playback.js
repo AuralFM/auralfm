@@ -55,7 +55,8 @@ function paintSignal(rssi) {
 function paintNowStar() {
   const b = $("nowStar");
   if (!b) return;
-  const ch = playing;
+  // Paused counts: a station you stopped is still one you can save and share.
+  const ch = inPlayer;
   // Sharing works for shortwave too — a frequency and a receiver is exactly the
   // kind of thing worth posting — so it follows `playing`, not `canFav`.
   const share = $("nowShare");
@@ -276,7 +277,8 @@ const behindSheet = () => [document.querySelector(".toolbar"), document.querySel
  * rather than four buttons of our own.
  */
 async function buildCard() {
-  if (!playing) return null;
+  const ch = inPlayer;
+  if (!ch) return null;
   {
     const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
     /**
@@ -289,9 +291,9 @@ async function buildCard() {
      * and a stored file does not fix itself, so this looks the station up by id
      * rather than making people re-save anything.
      */
-    let { lat, lon } = playing;
+    let { lat, lon } = ch;
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      const found = await guard("cardWhere", () => window.auralfm.stationById(playing.id), null);
+      const found = await guard("cardWhere", () => window.auralfm.stationById(ch.id), null);
       if (found) { lat = found.lat; lon = found.lon; }
     }
     /**
@@ -303,17 +305,17 @@ async function buildCard() {
      * Angeles). The place is on the favourite, and a place is enough to put the
      * Earth under the words.
      */
-    if ((!Number.isFinite(lat) || !Number.isFinite(lon)) && playing.place) {
-      const q = [playing.place, playing.country].filter(Boolean).join(" ");
+    if ((!Number.isFinite(lat) || !Number.isFinite(lon)) && ch.place) {
+      const q = [ch.place, ch.country].filter(Boolean).join(" ");
       const hit = (await guard("cardPlace", () => window.auralfm.places(q, 1), null))?.places?.[0]
-        || (await guard("cardPlace", () => window.auralfm.places(playing.place, 1), null))?.places?.[0];
+        || (await guard("cardPlace", () => window.auralfm.places(ch.place, 1), null))?.places?.[0];
       if (hit) { lat = hit.lat; lon = hit.lon; }
     }
     sheetPng = await window.Card.make({
-      title: playing.title || "",
-      place: playing.place || "",
-      country: playing.country || "",
-      sdr: !!playing.sdr,
+      title: ch.title || "",
+      place: ch.place || "",
+      country: ch.country || "",
+      sdr: !!ch.sdr,
       freq: tuneState?.freq ?? null,
       when: new Date(),
       lat: Number.isFinite(lat) ? lat : null,
@@ -323,22 +325,21 @@ async function buildCard() {
       sun: subsolarPoint(),
       levels,
       /**
-       * What the code points at.
-       *
-       * The repository, because it is real and it is where the app lives. There
-       * is no site yet, and encoding a URL that does not exist would be the same
-       * mistake as a donation button that goes nowhere. One constant to change
-       * the day there is somewhere better — a station's own page is what this is
-       * eventually for.
+       * What the code points at: the station itself, on listen.auralfm.xyz,
+       * which opens it cued and paused (web/bridge.js, ?station=). A receiver
+       * or a station you added yourself has no page there, so those reach the
+       * globe instead.
        */
-      qr: "https://github.com/meltonbell3/auralfm",
+      qr: ch.sdr || String(ch.id || "").startsWith("my:") || !ch.id
+        ? "https://listen.auralfm.xyz/"
+        : `https://listen.auralfm.xyz/?station=${encodeURIComponent(ch.id)}`,
     });
     return sheetPng;
   }
 }
 
 async function openShareSheet() {
-  if (!playing) return;
+  if (!inPlayer) return;
   const sheet = $("sheet"), said = $("sheetsaid");
   said.textContent = "";
   $("sheetimg").removeAttribute("src");
@@ -436,6 +437,7 @@ function wirePlayback() {
       }
     }
     playing = s.playing ? s.channel : null;
+    inPlayer = s.channel || null;
     document.body.classList.toggle("playing", !!s.playing);
     const bar = $("now");
     if (!s.channel) {
@@ -477,8 +479,8 @@ function wirePlayback() {
   });
 
   $("nowStar").onclick = async () => {
-    if (!playing || !playing.id || playing.sdr) return;
-    await toggleFav(playing);          // it reloads `favorites` from disk; paint after
+    if (!inPlayer || !inPlayer.id || inPlayer.sdr) return;
+    await toggleFav(inPlayer);          // it reloads `favorites` from disk; paint after
     paintNowStar();
   };
 

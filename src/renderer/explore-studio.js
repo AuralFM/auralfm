@@ -67,7 +67,13 @@
   };
   function graph() {
     if (ctx) return;
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
+    /**
+     * Headphones changing mode (a Bluetooth set going to call quality when its
+     * microphone opens, or back) can stop the context under us. It resumes
+     * itself, rather than leaving a panel with live meters and no sound.
+     */
+    ctx.onstatechange = () => { if (ctx.state !== "running" && ctx.state !== "closed" && phase !== "off") ctx.resume().catch(() => {}); };
     mix = ctx.createGain();
     mixAn = ctx.createAnalyser(); mixAn.fftSize = 1024;
     mixDest = ctx.createMediaStreamDestination();
@@ -127,6 +133,19 @@
       }
       micSrc = ctx.createMediaStreamSource(micStream);
       micSrc.connect(micGain);
+      /**
+       * A microphone can go away mid-show: headphones taken off or out of
+       * range, a cable pulled. Its track ends and the stream carries silence,
+       * while the panel went on showing it as on. Now the panel says so.
+       */
+      const mt = micStream.getAudioTracks()[0];
+      if (mt) mt.onended = () => {
+        if (micStream?.getAudioTracks()[0] !== mt) return;
+        micStream = null;
+        try { micSrc?.disconnect(); } catch {}
+        micError = tt("studio.micEnded", "The microphone stopped. It may have been disconnected: turn it on again, or pick another.");
+        listDevices().then(paint);
+      };
     } catch (e) {
       micStream = null;
       micBlocked = /^(NotAllowedError|SecurityError|denied|restricted)$/.test(e?.name);
@@ -151,17 +170,24 @@
     if (on) mix.connect(ctx.destination);
   }
   // A track from this device, under the voice: the station's music bed.
-  // Decoded and played as a buffer, not through an <audio> element: this app
-  // never routes an element through Web Audio, because a radio stream from
-  // another origin would go silent there (npm run audit).
-  async function loadTrack(file) { return loadTrackData(file.name, await file.arrayBuffer()); }
-  async function loadTrackData(name, data) {
+  // Streamed from the file as it plays, never decoded whole (studio-deck.js).
+  let trackLoading = false, trackNote = "";
+  async function loadTrack(file) { return loadBlob(file.name, file); }
+  async function loadTrackData(name, data) { return loadBlob(name, new Blob([data])); }
+  async function loadBlob(name, blob) {
     graph();
     stopTrack();
+    track?.release();
+    track = null;
+    trackNote = "";
+    trackLoading = true;
+    paint();
     try {
-      const buffer = await ctx.decodeAudioData(data);
-      track = { name, buffer, node: null, from: 0, at: 0 };
-    } catch { track = null; micError = tt("studio.trackBad", "That file could not be played. Try an MP3, WAV or AAC file."); }
+      track = await window.StudioDeck.load(ctx, musicGain, blob, name);
+    } catch {
+      trackNote = tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file.");
+    }
+    trackLoading = false;
     paint();
   }
   /**
@@ -196,21 +222,9 @@
     }[r?.error] || tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again.");
     paint();
   }
-  const playing = () => !!track?.node;
-  function playTrack() {
-    if (!track || track.node) return;
-    const n = ctx.createBufferSource();
-    n.buffer = track.buffer; n.loop = true;
-    n.connect(musicGain);
-    n.start(0, track.from % track.buffer.duration);
-    track.node = n; track.at = ctx.currentTime;
-  }
-  function stopTrack() {
-    if (!track?.node) return;
-    track.from += ctx.currentTime - track.at;
-    try { track.node.stop(); } catch {}
-    track.node.disconnect(); track.node = null;
-  }
+  const playing = () => !!track && !track.el.paused;
+  function playTrack() { track?.el.play().catch(() => { trackNote = tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file."); paint(); }); }
+  function stopTrack() { track?.el.pause(); }
   // Every frame: the meters, and the music dipping under the voice.
   function meters() {
     if (raf || !ctx) return;
@@ -369,18 +383,32 @@
       }
       // A headset's microphone switches it to call quality while it is on.
       const using = devices.find((d) => d.deviceId === micStream.getAudioTracks()[0]?.getSettings().deviceId)?.label || micStream.getAudioTracks()[0]?.label || "";
-      if (/airpods|bluetooth|headset|buds|beats|hands-free/i.test(using)) sound.append(el("p", { class: "fine", text:
-        tt("studio.micHeadset", "Wireless headphones play at call quality while their microphone is on. For a better sound, use the computer's microphone or a wired one, and keep the headphones to listen.") }));
+      if (/airpods|bluetooth|headset|buds|beats|hands-free/i.test(using)) {
+        sound.append(el("p", { class: "fine", text:
+          tt("studio.micHeadset", "Wireless headphones play at call quality while their microphone is on. For a better sound, use the computer's microphone or a wired one, and keep the headphones to listen.") }));
+        /**
+         * One tap to do what that says. With AirPods Max the headset's own
+         * microphone is the system default once they connect, so every show
+         * started on it (Melton, 28 Sept) — and at call quality, the
+         * headphones dropped the station's sound to match.
+         */
+        const builtIn = devices.find((d) => d.deviceId !== "default" && /macbook|built-in|internal|imac|studio display/i.test(d.label));
+        if (builtIn) sound.append(el("button", { class: "linkbtn", type: "button", id: "stBuiltIn",
+          onclick: () => { show.deviceId = builtIn.deviceId; keep(); openMic(); } }, tt("studio.micUseBuiltIn", "Use the computer's microphone")));
+      }
       sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.voice", "Voice") }),
         el("input", { type: "range", min: "0", max: "2", step: "0.01", value: String(show.micVol), "aria-label": tt("studio.voiceLevel", "Voice level"),
           oninput: (e) => { show.micVol = +e.target.value; micGain.gain.value = show.micVol; keep(); } })), meter("meterMic"));
     }
-    const pick = el("input", { type: "file", accept: "audio/*", id: "stFile", hidden: true, onchange: (e) => { const f = e.target.files?.[0]; if (f) loadTrack(f); } });
+    const pick = el("input", { type: "file", accept: "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm", id: "stFile", hidden: true,
+      onchange: (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) loadTrack(f); } });
     sound.append(pick);
     if (!track) {
-      sound.append(el("div", { class: "deck" }, el("span", { class: "name", text: tt("studio.noTrack", "No music under you yet") }),
-        el("button", { class: "linkbtn", type: "button", onclick: () => pick.click() }, tt("studio.addTrack", "Add a track"))));
+      sound.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status",
+        text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.noTrack", "No music under you yet") }),
+        el("button", { class: "linkbtn", type: "button", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addTrack", "Add a track"))));
     }
+    if (trackNote) sound.append(el("p", { class: "fine", role: "alert", text: trackNote }));
     // From a link: the desktop only, which can fetch it (on the web the page's
     // security rules forbid reaching an arbitrary address, so it is not offered).
     // `in`, not a truthy test: the web bridge answers any name it lacks with an
@@ -395,7 +423,7 @@
     }
     if (track) {
       sound.append(el("div", { class: "deck" },
-        el("button", { class: "sheetbtn", type: "button", id: "stPlay", onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); paint(); } },
+        el("button", { class: "sheetbtn", type: "button", id: "stPlay", onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); setTimeout(paint, 50); } },
           playing() ? tt("studio.pause", "Pause") : tt("studio.play", "Play")),
         el("span", { class: "name", text: track.name }),
         el("button", { class: "linkbtn", type: "button", onclick: () => pick.click() }, tt("studio.change", "Change"))));

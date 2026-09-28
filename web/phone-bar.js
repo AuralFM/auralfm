@@ -276,9 +276,9 @@
    * If this browser has no share sheet, the app's own falls back in.
    */
   async function shareCard() {
-    // `playing` and `buildCard` are explore-playback.js's own top-level
-    // bindings; these are plain scripts sharing one scope.
-    const ch = typeof playing !== "undefined" ? playing : null;
+    // `inPlayer` and `buildCard` are explore-playback.js's own top-level
+    // bindings; these are plain scripts sharing one scope. Paused counts.
+    const ch = typeof inPlayer !== "undefined" ? inPlayer : null;
     if (!ch) return;
     let png = null;
     try { png = await buildCard(); } catch {}
@@ -311,7 +311,13 @@
       // they sit after its name: what is on, then what to do with it. Lock
       // holds a station rather than a city — in the sheet's heading it read as
       // locking onto the place, which is not a thing it can do.
-      const play = $("play"), share = $("nowShare");
+      /**
+       * Star, play, share: the station's three things, in one group at the
+       * right, there whether it is playing or paused (Melton, 28 Sept: paused,
+       * the row was a name, a gap and a lone play button).
+       */
+      const play = $("play"), share = $("nowShare"), star = $("nowStar");
+      if (star) { remember(star); now.append(star); }
       if (play) { remember(play); now.append(play); }
       if (share) { remember(share); now.append(share); share.onclick = shareCard; }
       now.insertBefore(open, now.firstChild);
@@ -345,7 +351,13 @@
   }
 
   // The big button sits under the row's text, so the text has to say what it is.
-  open.addEventListener("click", () => window.AuralRailSheet?.open());
+  // With the station's card pulled up, the row is the top of that sheet: a tap
+  // puts it back down rather than opening a list behind it.
+  open.addEventListener("click", () => {
+    const grab = $("nowGrab");
+    if (grab?.getAttribute("aria-expanded") === "true") grab.click();
+    else window.AuralRailSheet?.open();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && shown.explore()) setTab("none");
   });

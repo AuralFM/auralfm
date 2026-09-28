@@ -190,18 +190,36 @@
     row.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     btn.focus({ preventScroll: true });
   }
+  // A shared card's link opens its station this way (web/bridge.js, ?station=).
+  window.AuralOpenStation = (ch) => openInRail(ch);
   const grab = document.getElementById("nowGrab");
   const drawer = document.getElementById("nowdrawer");
   const card = document.getElementById("nowcard");
   let nowCh = null, h = 0, isOpen = false, drag = null, painted = null;
 
-  const barTop = () => Math.max(0, innerHeight - now.getBoundingClientRect().top);
+  /**
+   * One sheet, not two (Melton, 28 Sept).
+   *
+   * The card used to rise out of the player as a card of its own, above it,
+   * with a handle of its own — so a pull showed two handles and two edges, and
+   * the row you were holding stayed put while something else came up. Now the
+   * row itself is the top of the sheet: it rides up by exactly the card's
+   * height, and the card fills the space it leaves, between the row and the
+   * tabs. Pull it down and the row goes back to where it lives.
+   */
+  const tabsTop = () => {
+    const tabs = document.querySelector(".tabbar:not([hidden])");
+    return Math.max(0, innerHeight - (tabs ? tabs.getBoundingClientRect().top : innerHeight));
+  };
   const full = () => Math.min(card.scrollHeight, card.offsetHeight || card.scrollHeight);
   const setH = (v) => {
     h = Math.max(0, v);
-    // Fixed above the player on a phone; on a wide window it is in the layout.
-    drawer.style.bottom = document.body.classList.contains("phonebar") ? `${barTop()}px` : "";
+    const phoneBar = document.body.classList.contains("phonebar");
+    // Fixed on the tabs on a phone; on a wide window it is in the layout.
+    drawer.style.bottom = phoneBar ? `${tabsTop()}px` : "";
     drawer.style.height = `${Math.round(h)}px`;
+    now.style.transform = phoneBar && h > 0 ? `translateY(${-Math.round(h)}px)` : "";
+    now.classList.toggle("raised", phoneBar && h > 0);
     document.documentElement.style.setProperty("--drawer", `${Math.round(h)}px`);
   };
   const say = () => {
@@ -227,6 +245,7 @@
     isOpen = open;
     drawer.hidden = false;
     drawer.classList.add("settling");
+    now.classList.add("settling");
     setH(open ? full() : 0);
     say();
     if (open && focus) card.focus({ preventScroll: true });
@@ -259,6 +278,7 @@
       fill();
       drawer.hidden = false;
       drawer.classList.remove("settling");
+      now.classList.remove("settling");
     }
     const dt = Math.max(1, e.timeStamp - drag.at);
     drag.v = ((e.clientY - drag.last) / dt) * 1000;

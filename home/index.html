@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preload" href="assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/SpaceMono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="aural.css?v=d1a3bd9193">
+<link rel="stylesheet" href="aural.css?v=3f4e57a3af">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -79,6 +79,8 @@
         <span class="bl">Drag · pinch to zoom · tap a dot</span>
         <span class="br">Live</span>
       </figcaption>
+      <p class="pin p1" aria-hidden="true">60,096 voices</p>
+      <p class="pin p2" aria-hidden="true">0 algorithms</p>
       <button class="globe-go" type="button">Spin the globe</button>
       <p class="globe-pick" aria-live="polite" hidden></p>
     </figure>
@@ -139,6 +141,36 @@
         world is still broadcasting, in thousands of voices no feed was ever going to serve you.</p>
       <p>AuralFM puts them all on one globe. No charts, no rankings, nobody paying to be first.
         You go where you want and hear what is there.</p>
+    </div>
+  </section>
+
+  <!-- ── on paper: community to community ────────────────────────────────
+       The one bone sheet on the page: a halftone Earth over a mast-red wedge, a
+       tower in straight lines, a log of the night, and the words the feed kept
+       from you under a bar that lifts as you read (aural.js). -->
+  <section class="paper" aria-labelledby="paper-title">
+    <div class="paper-copy">
+      <p class="label">[ Community to community ]</p>
+      <h2 id="paper-title" class="display stretch">The feed kept 60,096 stations <span class="redact">from&nbsp;you.</span></h2>
+      <p class="hi"><span>A station in Kingston and a station in Lagos are neighbours here. Neither
+        needs a platform&rsquo;s permission to reach the other, and neither do you.</span></p>
+      <ol class="paper-rules">
+        <li><b>01</b><span><strong>Local first.</strong> A station belongs to the block, the town and
+          the language it speaks for. That is where you find it.</span></li>
+        <li><b>02</b><span><strong>Connected directly.</strong> Community to community, across every
+          border, with nobody in the middle selling your attention.</span></li>
+        <li><b>03</b><span><strong>Held in common.</strong> No owner of the dial, no chart, and nobody
+          paying to be heard.</span></li>
+      </ol>
+    </div>
+    <div class="paper-art" aria-hidden="true">
+      <span class="wedge"></span>
+      <canvas class="paper-globe" data-halftone data-lat="10" data-lon="-25" data-ink="onyx" data-cell="10" data-spin="2.5"></canvas>
+      <svg class="tower" data-tower></svg>
+      <p class="log">03:12 LAGOS &mdash; the overnight call-in<br>21:40 KINGSTON &mdash; a selector takes requests<br>05:55 ULAANBAATAR &mdash; morning news<br>23:08 LIMA &mdash; cumbia for the night shift</p>
+      <p class="pin p1">Nº 0001</p>
+      <p class="pin p2">No algorithm</p>
+      <span class="reg g1"></span><span class="reg g2"></span><span class="reg g3"></span>
     </div>
   </section>
 
@@ -288,6 +320,26 @@
       <span class="duo mast"><img src="assets/desktop-shortwave.jpg" width="1174" height="662" loading="lazy"
            alt="The desktop app tuned to a shortwave receiver, broadcast paths crossing the globe"></span>
     </article>
+    <article class="cell card card-wide card-share">
+      <div>
+        <p class="num">06</p>
+        <h3>Share what you hear</h3>
+        <p>Every station makes a card: the Earth over where it broadcasts, its name, its city and
+          a code that opens it live on anyone&rsquo;s phone. Post it anywhere. The link goes to the
+          station, not to a profile of you.</p>
+      </div>
+      <img class="sharecard" src="assets/card.jpg" width="720" height="900" loading="lazy"
+           alt="A share card: a halftone Earth centred on London, the words Listening to NTS 4 To The Floor, the city, the time, and a code to scan">
+    </article>
+    <article class="cell card card-studio">
+      <div>
+        <p class="num">07 <span class="tag">In testing</span></p>
+        <h3>Go on air yourself</h3>
+        <p>A studio inside the app: your voice, your records under it, and your town lit on the globe
+          while you are live. It is being tested now, and it reaches listeners when it is ready.</p>
+      </div>
+      <canvas class="studio-globe" data-halftone data-lat="20" data-lon="-60" data-ink="aqua" data-cell="7" data-spin="6" aria-hidden="true"></canvas>
+    </article>
   </section>
 
   <!-- ── how it works ───────────────────────────────────────────────────── -->
@@ -334,10 +386,11 @@
   </figure>
 
   <!-- ── support ────────────────────────────────────────────────────────── -->
-  <section class="support-cta grid" aria-labelledby="support-title">
+  <section class="support-cta grid red" aria-labelledby="support-title">
     <div class="cell">
       <p class="label">[ Keep it independent ]</p>
       <h2 id="support-title" class="display stretch">Owned by the people listening.</h2>
+      <canvas class="support-globe" data-halftone data-lat="-5" data-lon="20" data-ink="onyx" data-cell="8" data-spin="4" aria-hidden="true"></canvas>
     </div>
     <div class="cell support-body">
       <p class="support-price"><b>From $3</b> a month</p>
@@ -428,6 +481,6 @@
   </symbol>
 </svg>
 
-<script src="aural.js?v=d1a3bd9193" defer></script>
+<script src="aural.js?v=3f4e57a3af" defer></script>
 </body>
 </html>

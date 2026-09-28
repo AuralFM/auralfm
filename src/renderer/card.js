@@ -19,16 +19,13 @@
  * hears the actual broadcast from the actual station rather than our recording
  * of it, which is also the better experience.
  *
- * **No web address.** There is nowhere honest to send somebody yet: no site, and
- * the repository is private. A URL that goes nowhere is worse than none, so the
- * card carries none and the `auralfm://` link is offered separately, for the
- * people who already have the app.
+ * **One web address:** the code opens the station on listen.auralfm.xyz, cued
+ * and paused, so whoever scans it hears the broadcast from the station itself.
  *
- * ## Why 1080 square
+ * ## Why 1080 by 1350
  *
- * It is Instagram's native shape and it survives every other timeline without
- * being cropped through the middle. A 1200x630 card is better on one platform
- * and gets its top and bottom eaten on the rest.
+ * Instagram's portrait shape, which every other timeline shows whole too. A
+ * 1200x630 card is better on one platform and gets eaten on the rest.
  */
 (() => {
   const W = 1080, H = 1350;
@@ -122,12 +119,12 @@
       } else line = next;
     }
     if (out.length < lines && line) out.push(line);
-    if (out.length === lines && words.length) {
+    const kept = out.join(" ").split(/\s+/).filter(Boolean).length;
+    if (out.length === lines && kept < words.length) {
       // Something was dropped: mark it rather than ending mid-thought.
-      const last = out[lines - 1];
-      if (ctx.measureText(last).width > maxWidth - 30) {
-        out[lines - 1] = last.replace(/\s+\S+$/, "") + "…";
-      }
+      let last = out[lines - 1] + "…";
+      while (ctx.measureText(last).width > maxWidth && /\s/.test(last)) last = last.replace(/\s+\S+…$/, "…");
+      out[lines - 1] = last;
     }
     return out;
   }
@@ -238,298 +235,289 @@
   }
 
   /**
-   * Draw the card.
+   * ─── The card as a broadcast ticket ────────────────────────────────────────
    *
-   * @param {{title:string, place:string, country:string, sdr:boolean,
-   *          freq:number|null, when:Date, lat:number|null, lon:number|null,
-   *          sun:{lat:number,lng:number}, levels:number[]|null}} now
-   * @returns {string} a data URL
+   * Melton, 28 Sept: the card is the one place in the app that leaves it, so it
+   * should look like the brand the way the site does, not like a screenshot of
+   * the app. So it borrows the site's language: the Earth as a halftone, a
+   * mast-red rule and foot, bracketed mono labels, the hairline grid, and the
+   * station's name in Science Gothic as big as it will go — laid out like a
+   * ticket, with the facts in labelled fields.
+   *
+   * The site's type is used here and only here. The app's own fonts do not
+   * change (Melton: never); these faces are loaded under names of their own
+   * ("AuralCard …") so no rule in the app's stylesheet can reach them.
    */
+  const DISPLAY = '"AuralCard Display", Inter, system-ui, sans-serif';
+  const MONO = '"AuralCard Mono", ui-monospace, Menlo, monospace';
+  const MAST = "#E5382C";
+  const LINE = "rgba(233,226,212,.26)";
+
+  let fontsLoading = null;
+  function loadFonts() {
+    if (fontsLoading) return fontsLoading;
+    const face = (family, file, desc) => {
+      try {
+        const f = new FontFace(family, `url(fonts/${file})`, desc);
+        return f.load().then((ok) => document.fonts.add(ok)).catch(() => {});
+      } catch { return Promise.resolve(); }
+    };
+    const wide = { weight: "100 900", stretch: "50% 200%" };
+    fontsLoading = Promise.all([
+      face("AuralCard Display", "ScienceGothic-latin.woff2", { ...wide, unicodeRange: "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212" }),
+      face("AuralCard Display", "ScienceGothic-latin-ext.woff2", { ...wide, unicodeRange: "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF" }),
+      face("AuralCard Display", "ScienceGothic-cyrillic.woff2", { ...wide, unicodeRange: "U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116" }),
+      face("AuralCard Mono", "SpaceMono-400.woff2", { weight: "400" }),
+      face("AuralCard Mono", "SpaceMono-700.woff2", { weight: "700" }),
+    ]);
+    return fontsLoading;
+  }
+
+  /** `fitted`, for the ticket's own faces. */
+  function fit(ctx, text, font, start, min, maxWidth) {
+    let size = start;
+    for (;;) {
+      ctx.font = font(size);
+      if (ctx.measureText(text).width <= maxWidth || size <= min) return size;
+      size -= 2;
+    }
+  }
+
+  /** The Earth as dots: bigger where it is brighter, so city lights show at night. */
+  function halftoneGlobe(ctx, cx, cy, r, lat, lon, sun, ink) {
+    const off = document.createElement("canvas");
+    off.width = off.height = r * 2;
+    const o = off.getContext("2d", { willReadFrequently: true });
+    if (!drawGlobe(o, r, r, r, lat, lon, sun)) return false;
+    const px = o.getImageData(0, 0, r * 2, r * 2).data;
+    const S = 11;                              // the screen, in card pixels
+    ctx.fillStyle = ink;
+    for (let y = S / 2; y < r * 2; y += S) {
+      for (let x = S / 2; x < r * 2; x += S) {
+        const dx = x - r, dy = y - r;
+        if (dx * dx + dy * dy > (r - 2) * (r - 2)) continue;
+        const i = ((y | 0) * r * 2 + (x | 0)) * 4;
+        const l = (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
+        const d = (S / 2) * 1.12 * Math.sqrt(Math.min(1, l * 1.5));
+        if (d < 0.7) continue;
+        ctx.beginPath(); ctx.arc(cx - r + x, cy - r + y, d, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    return true;
+  }
+
+  /** A registration mark, as printed at a sheet's corners. */
+  function cross(ctx, x, y, s = 14) {
+    ctx.beginPath();
+    ctx.moveTo(x - s, y); ctx.lineTo(x + s, y);
+    ctx.moveTo(x, y - s); ctx.lineTo(x, y + s);
+    ctx.stroke();
+  }
+
+  const coord = (v, pos, neg) => `${v >= 0 ? pos : neg} ${Math.abs(v).toFixed(2)}°`;
+
   function draw(now) {
     const cv = document.createElement("canvas");
     cv.width = W; cv.height = H;
     const ctx = cv.getContext("2d");
+    const ACCENT = rgbTriplet(readVar("--accent", "#35C46A"));
+    const M = 64, inner = W - M * 2;
 
     ctx.fillStyle = INK;
     ctx.fillRect(0, 0, W, H);
 
-    /**
-     * Space, fading out before the words start.
-     *
-     * The Earth was floating on flat ink, which is not where the Earth is. Stars
-     * put it somewhere. They stop before the text does, though: a starfield
-     * behind a caption is a caption you have to work to read, so density falls to
-     * nothing by the time the type begins and the lower third is honest black.
-     *
-     * Deterministic from the station's own coordinates rather than random, so
-     * the same station gives the same sky twice. A card that reshuffles its
-     * background every time you press the button feels like a slot machine.
-     */
+    // Grain, seeded from the station so the same station prints the same sheet.
     const seedFrom = `${now.title}|${now.lat}|${now.lon}`;
     let seed = 0;
     for (let i = 0; i < seedFrom.length; i++) seed = (seed * 31 + seedFrom.charCodeAt(i)) >>> 0;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
-
-    for (let i = 0; i < 620; i++) {
-      const x = rnd() * W, y = rnd() * H;
-      // Fade the field out across the middle so nothing competes with the type.
-      const depth = Math.max(0, 1 - Math.max(0, y - 340) / 560);
-      if (depth <= 0.02) continue;
-      const r = rnd() * 1.5 + 0.4;
-      const a = (0.12 + rnd() * 0.55) * depth;
-      ctx.fillStyle = `rgba(233,226,212,${a.toFixed(3)})`;
-      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    }
-    // And a wash back to black underneath them, so the fade has no seam.
-    const wash = ctx.createLinearGradient(0, 620, 0, 980);
-    wash.addColorStop(0, "rgba(12,11,11,0)");
-    wash.addColorStop(1, INK);
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 620, W, 360);
-
-    /**
-     * The layout, as bands.
-     *
-     * The first version placed each element from its own constant and they
-     * collided — the waveform landed across the title and the foot sat on top of
-     * the place. Bands are stated once here and everything hangs off them.
-     */
-    const M = 96;
-    /**
-     * The code belongs in the foot row, not beside the words.
-     *
-     * It sat up beside the title, which cost the type a third of the card's
-     * width for something that is a footnote — you scan it after reading, not
-     * instead of reading. Down here it lines up with the wordmark and the time,
-     * which is the row of small permanent things, and everything above gets the
-     * full measure back: the station, the city, and the waveform.
-     */
-    const QR = 116;
-    const QR_X = W - M - QR, QR_Y = 1160;     // 1160 .. 1276, label under it
-    const inner = W - M * 2;                  // the full measure, back again
-    const GLOBE_CY = 380, GLOBE_R = 330;      //   50 ..  710
-    const WAVE_Y = 772, WAVE_H = 88;          //  772 ..  860
-    const LABEL_Y = 916;
-    // Close under the label, because the three lines are one thought: what, and
-    // where. They were spread far enough apart to read as three separate facts.
-    const TITLE_TOP = 942;
-    const TEXT_FLOOR = 1150;                  // the words stop where the foot begins
-    const FOOT_NAME = 1236, FOOT_TIME = 1278;
-
-    // The Earth, centred on the station, above the words about it.
-    const R = GLOBE_R, CX = W / 2, CY = GLOBE_CY;
-    const placed = Number.isFinite(now.lat) && Number.isFinite(now.lon)
-      && drawGlobe(ctx, CX, CY, R, now.lat, now.lon, now.sun || { lat: 0, lng: 0 });
-
-    if (placed) {
-      /**
-       * The station, in the app's own green.
-       *
-       * Drawn as a dot inside two fading rings. A still image cannot pulse, and
-       * pretending otherwise is not available — but a pulse *stopped* looks like
-       * this, and the rings read as the wave that just left. The live globe is
-       * where an actual pulse belongs.
-       */
-      /**
-       * The station, in the palette's accent.
-       *
-       * It was fixed green — right in Onyx and On Air, wrong in the other seven.
-       * `--accent` is the one token every palette redefines, so this is the
-       * single most visible way a card can belong to the person who made it.
-       */
-      const GREEN = rgbTriplet(readVar("--accent", "#35C46A"));
-      const glow = ctx.createRadialGradient(CX, CY, 4, CX, CY, 46);
-      glow.addColorStop(0, `rgba(${GREEN},.55)`);
-      glow.addColorStop(1, `rgba(${GREEN},0)`);
-      ctx.fillStyle = glow;
-      ctx.beginPath(); ctx.arc(CX, CY, 46, 0, Math.PI * 2); ctx.fill();
-
-      ctx.strokeStyle = `rgba(${GREEN},.75)`;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(CX, CY, 20, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = `rgba(${GREEN},.30)`;
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(CX, CY, 34, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = `rgb(${GREEN})`;
-      ctx.beginPath(); ctx.arc(CX, CY, 8.5, 0, Math.PI * 2); ctx.fill();
-      // The limb, so the sphere has an edge against the ink.
-      ctx.strokeStyle = "rgba(233,226,212,.18)";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 2400; i++) {
+      ctx.fillStyle = `rgba(233,226,212,${(rnd() * 0.05).toFixed(3)})`;
+      ctx.fillRect(rnd() * W, rnd() * H, 1.5, 1.5);
     }
 
+    // ── the head: the name, and that it is live ─────────────────────────────
+    const HEAD = 104;
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = FAINT;
-    ctx.font = "590 26px Inter, system-ui, sans-serif";
-    ctx.letterSpacing = "2px";
-    ctx.fillText("LISTENING TO", M, LABEL_Y);
-    ctx.letterSpacing = "0px";
+    ctx.fillStyle = BONE;
+    ctx.font = `700 30px ${MONO}`;
+    ctx.fillText("AURAL.FM", M, HEAD);
+    ctx.font = `400 24px ${MONO}`;
+    ctx.textAlign = "right";
+    ctx.fillStyle = DIM;
+    ctx.fillText("HUMAN CURATED RADIO", W - M, HEAD);
+    ctx.textAlign = "left";
+    ctx.fillStyle = MAST;
+    ctx.fillRect(0, 128, W, 6);
 
-    /**
-     * The station, as large as it can be without being cut — by width *and* by
-     * height.
-     *
-     * `fitted` only ever answered the width question, so a name long enough to
-     * take two lines was still set at the full size and the second line pushed
-     * the city down onto the foot. The clamp that stopped it hitting "AuralFM"
-     * then parked the city 20px under the second baseline, which is a collision
-     * wearing a seatbelt. The budget below is the honest fix: whatever is left
-     * between the label and the foot has to hold every line plus the gap under
-     * them, so a two-line title is set smaller rather than allowed to overflow.
-     */
-    const GAP = 64;                           // last title baseline -> city baseline
-    const LEAD = 1.14;
-    let titleSize = fitted(ctx, now.title, 700, 88, 44, inner);
-    ctx.font = `700 ${titleSize}px Inter, system-ui, sans-serif`;
-    let lines = wrap(ctx, now.title, inner, 2);
+    // ── the Earth, over a tilted band, with the station marked ─────────────
+    const CX = W / 2, CY = 452, R = 276;
+    ctx.save();
+    ctx.translate(CX, CY + 40);
+    ctx.rotate(-0.12);
+    ctx.fillStyle = MAST;
+    ctx.fillRect(-W, -54, W * 2, 108);
+    ctx.restore();
+
+    const placed = Number.isFinite(now.lat) && Number.isFinite(now.lon);
+    if (placed) {
+      // A disc of ink first, so the band stops at the planet's edge.
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(CX, CY, R + 6, 0, Math.PI * 2); ctx.fill();
+      halftoneGlobe(ctx, CX, CY, R, now.lat, now.lon, now.sun || { lat: 0, lng: 0 }, BONE);
+      // The orbit, dashed, and the crosshair through the station.
+      ctx.strokeStyle = "rgba(233,226,212,.34)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 10]);
+      ctx.beginPath(); ctx.arc(CX, CY, R + 30, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = `rgba(${ACCENT},.9)`;
+      ctx.beginPath();
+      ctx.moveTo(CX - R - 44, CY); ctx.lineTo(CX - 30, CY);
+      ctx.moveTo(CX + 30, CY); ctx.lineTo(CX + R + 44, CY);
+      ctx.moveTo(CX, CY - R - 44); ctx.lineTo(CX, CY - 30);
+      ctx.moveTo(CX, CY + 30); ctx.lineTo(CX, CY + R + 44);
+      ctx.stroke();
+      // The station: rings going out, the way the site's stations pulse.
+      for (const [rr, a, w] of [[22, 0.95, 3], [38, 0.55, 2], [56, 0.28, 2]]) {
+        ctx.strokeStyle = `rgba(${ACCENT},${a})`;
+        ctx.lineWidth = w;
+        ctx.beginPath(); ctx.arc(CX, CY, rr, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.fillStyle = `rgb(${ACCENT})`;
+      ctx.beginPath(); ctx.arc(CX, CY, 10, 0, Math.PI * 2); ctx.fill();
+      // Where, in the crosshair's own margin.
+      ctx.font = `400 20px ${MONO}`;
+      ctx.fillStyle = DIM;
+      ctx.fillText(coord(now.lat, "N", "S"), CX + 12, CY - R - 20);
+      // Longitude outside the left arm, clear of the disc: the band crosses the right one.
+      ctx.textAlign = "right";
+      ctx.fillText(coord(now.lon, "E", "W"), CX - R - 52, CY + 7);
+      ctx.textAlign = "left";
+    }
+    // Registration marks at the corners of the picture.
+    ctx.strokeStyle = "rgba(233,226,212,.6)";
+    ctx.lineWidth = 2;
+    for (const [x, y] of [[M + 14, 166], [W - M - 14, 166], [M + 14, 752], [W - M - 14, 752]]) cross(ctx, x, y);
+
+    // A label box, as the site pins them over its pictures.
+    const tag = now.sdr ? "SHORTWAVE · LIVE" : "ON AIR · LIVE";
+    ctx.font = `700 22px ${MONO}`;
+    const tw = ctx.measureText(tag).width;
+    ctx.fillStyle = `rgb(${ACCENT})`;
+    ctx.fillRect(M + 40, 686, tw + 28, 40);
+    ctx.fillStyle = INK;
+    ctx.fillText(tag, M + 54, 714);
+
+    // ── the station ────────────────────────────────────────────────────────
+    const title = String(now.title || "").toUpperCase();
+    const disp = (s) => `900 ${s}px ${DISPLAY}`;
+    const LEAD = 0.92, hasWave = Array.isArray(now.levels) && now.levels.length;
+    // Between the picture and the ticket, centred, however many lines it takes.
+    const AREA_TOP = 772, AREA_END = hasWave ? 1008 : 1050, LABEL = 40;
+    let size = fit(ctx, title, disp, 128, 60, inner);
+    ctx.font = disp(size);
+    let lines = wrap(ctx, title, inner, 2);
     if (lines.length > 1) {
-      const budget = TEXT_FLOOR - TITLE_TOP;
-      const fits = Math.floor((budget - GAP) / (1 + LEAD * (lines.length - 1)));
-      if (fits < titleSize) {
-        titleSize = Math.max(44, fits);
-        ctx.font = `700 ${titleSize}px Inter, system-ui, sans-serif`;
-        lines = wrap(ctx, now.title, inner, 2);
+      // Two lines have to fit the band too, not only the width.
+      const fits = Math.floor((AREA_END - AREA_TOP - LABEL) / (0.9 + LEAD));
+      size = Math.min(size, Math.max(52, fits));
+      for (;;) {
+        ctx.font = disp(size);
+        lines = wrap(ctx, title, inner, 2);
+        if (lines.every((l) => ctx.measureText(l).width <= inner) || size <= 52) break;
+        size -= 2;
       }
     }
+    const blockH = LABEL + size * 0.9 + (lines.length - 1) * size * LEAD;
+    const top = Math.round(AREA_TOP + (AREA_END - AREA_TOP - blockH) / 2);
+    ctx.fillStyle = `rgb(${ACCENT})`;
+    ctx.font = `400 22px ${MONO}`;
+    ctx.fillText("[ LISTENING TO ]", M, top + 20);
+    ctx.font = disp(size);
     ctx.fillStyle = BONE;
-    let y = TITLE_TOP + titleSize;
-    lines.forEach((line, i) => {
-      ctx.fillText(line, M, y);
-      // Between lines only. Advancing after the last one left a whole empty line
-      // of air under the title, which is what put the city adrift from it.
-      if (i < lines.length - 1) y += titleSize * LEAD;
+    let y = top + LABEL + size * 0.9;
+    lines.forEach((line, i) => { ctx.fillText(line, M, y); if (i < lines.length - 1) y += size * LEAD; });
+
+    // The sound, if there was any: real levels, never a drawn squiggle.
+    const WAVE_Y = 1024, WAVE_H = 30;
+    if (Array.isArray(now.levels) && now.levels.length) {
+      const bars = now.levels, loudest = Math.max(0.15, ...bars), gap = 4;
+      const bw = (inner + gap) / bars.length - gap;
+      ctx.fillStyle = `rgb(${ACCENT})`;
+      for (let i = 0; i < bars.length; i++) {
+        const v = Math.max(0.04, Math.min(1, bars[i] / loudest));
+        const h = Math.max(3, v * WAVE_H);
+        ctx.fillRect(M + i * (bw + gap), WAVE_Y + (WAVE_H - h) / 2, Math.max(1.5, bw), h);
+      }
+    }
+
+    // ── the ticket: the facts, in labelled fields, on the site's hairlines ──
+    const GRID_TOP = 1070, ROW = 88, QRW = 176;
+    const cols = 3, colW = (inner - QRW) / cols;
+    ctx.strokeStyle = LINE;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(M, GRID_TOP); ctx.lineTo(W - M, GRID_TOP);
+    ctx.moveTo(M, GRID_TOP + ROW); ctx.lineTo(W - M - QRW, GRID_TOP + ROW);
+    for (let c = 1; c <= cols; c++) { ctx.moveTo(M + c * colW, GRID_TOP); ctx.lineTo(M + c * colW, GRID_TOP + ROW * 2); }
+    ctx.stroke();
+
+    const stamp = now.when.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+    const signal = now.sdr && now.freq ? `${Number(now.freq.toFixed(2))} kHz` : "Stream";
+    const fields = [
+      ["City", now.place || "—"], ["Country", now.country || "—"], ["Heard", stamp],
+      ["Coordinates", placed ? `${Math.abs(now.lat).toFixed(1)}${now.lat >= 0 ? "N" : "S"} ${Math.abs(now.lon).toFixed(1)}${now.lon >= 0 ? "E" : "W"}` : "—"],
+      ["Signal", signal], ["Algorithms", "0"],
+    ];
+    fields.forEach(([k, v], i) => {
+      const x = M + (i % cols) * colW + 16, top = GRID_TOP + Math.floor(i / cols) * ROW;
+      ctx.font = `400 18px ${MONO}`;
+      ctx.fillStyle = `rgb(${ACCENT})`;
+      ctx.fillText(k.toUpperCase(), x, top + 30);
+      const val = String(v).toUpperCase();
+      const vs = fit(ctx, val, (s) => `700 ${s}px ${MONO}`, 28, 16, colW - 28);
+      ctx.font = `700 ${vs}px ${MONO}`;
+      ctx.fillStyle = BONE;
+      ctx.fillText(val, x, top + 70);
     });
 
-    /**
-     * Where it is coming from.
-     *
-     * A constant gap, not a multiple of the title size — it was a multiple, and
-     * a long station name, which is exactly the case that shrinks the title,
-     * pulled the place up against it. Close, because the station and the place
-     * it broadcasts from are one thought, not two facts that happen to be
-     * stacked. The clamp stays as a backstop, but the height budget above is
-     * what actually keeps this off the foot now.
-     */
-    const where = [now.place, now.country].filter(Boolean).join(", ");
-    if (where) {
-      const ps = fitted(ctx, where, 500, 40, 26, inner);
-      ctx.font = `500 ${ps}px Inter, system-ui, sans-serif`;
-      ctx.fillStyle = DIM;
-      y = Math.min(y + GAP, TEXT_FLOOR);
-      ctx.fillText(where, M, y);
-      y += 30;
-    }
-
-    // Shortwave says so, with the frequency, because that is the whole identity
-    // of a shortwave broadcast in a way a station name is not.
-    if (now.sdr && now.freq) {
-      ctx.font = "500 32px Inter, system-ui, sans-serif";
-      ctx.fillStyle = FAINT;
-      ctx.fillText(`${Number(now.freq.toFixed(2))} kHz · shortwave`,
-                   M, Math.min(y + 12, TEXT_FLOOR + 42));
-    }
-
-    /**
-     * The sound, across the card.
-     *
-     * Real levels, sampled from what was actually playing over the last few
-     * seconds — never a generated squiggle. A decorative waveform on a card that
-     * says "listening to" is a lie told in a picture, and this app does not tell
-     * them. If there is nothing to draw the band is simply absent.
-     */
-    if (Array.isArray(now.levels) && now.levels.length) {
-      const bars = now.levels;
-      /**
-       * Scaled to its own loudest moment, not to an absolute.
-       *
-       * Somebody listening quietly is still listening, and an absolute scale
-       * draws them a flat line that reads as a broken feature. The *shape* is
-       * the true thing here — which second was louder than which — and the floor
-       * keeps genuine silence looking silent rather than being amplified into a
-       * pattern that was never there.
-       */
-      const loudest = Math.max(0.15, ...bars);
-      const bandY = WAVE_Y;
-      const bandH = WAVE_H;
-      const gap = 5;
-      const bw = (inner + gap) / bars.length - gap;
-      for (let i = 0; i < bars.length; i++) {
-        const v = Math.max(0.02, Math.min(1, bars[i] / loudest));
-        const h = Math.max(3, v * bandH);
-        const x = M + i * (bw + gap);
-        // Brighter where it is louder, so the shape reads even at a glance.
-        ctx.fillStyle = `rgba(233,226,212,${0.22 + v * 0.55})`;
-        ctx.beginPath();
-        ctx.roundRect(x, bandY + (bandH - h) / 2, Math.max(1.5, bw), h, Math.min(3, bw / 2));
-        ctx.fill();
-      }
-    }
-
-    /**
-     * The code, on the right.
-     *
-     * A prototype, and it says so honestly by pointing somewhere real rather
-     * than somewhere invented: the repository, which is where the app itself
-     * lives. It 404s until that repository is public, and it is one constant to
-     * change the day there is a site — or, later, the day a station has a page
-     * of its own, which is what Melton actually wants it to reach.
-     *
-     * Encoded by a library rather than by hand. A subtly wrong QR looks perfect
-     * and scans as nothing, and there is no way to check that from here — the
-     * only honest verification is a phone, so the encoder is one that is already
-     * verified by everybody else using it.
-     */
+    // The code, in its own cell of the ticket.
     if (now.qr && typeof qrcode === "function") {
       try {
         const q = qrcode(0, "M");
         q.addData(now.qr);
         q.make();
-        const n = q.getModuleCount();
-        const quiet = 3;                       // a code with no margin will not scan
+        const n = q.getModuleCount(), quiet = 2, QR = 128;
+        const qx = W - M - QRW + (QRW - QR) / 2 + 8, qy = GRID_TOP + 10;
         const cell = QR / (n + quiet * 2);
-        ctx.fillStyle = "rgba(233,226,212,.92)";
-        ctx.beginPath();
-        ctx.roundRect(QR_X, QR_Y, QR, QR, 12);
-        ctx.fill();
+        ctx.fillStyle = BONE;
+        ctx.fillRect(qx, qy, QR, QR);
         ctx.fillStyle = INK;
-        for (let r = 0; r < n; r++) {
-          for (let c = 0; c < n; c++) {
-            if (!q.isDark(r, c)) continue;
-            ctx.fillRect(QR_X + (c + quiet) * cell, QR_Y + (r + quiet) * cell,
-                         Math.ceil(cell), Math.ceil(cell));
-          }
+        for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+          if (q.isDark(r, c)) ctx.fillRect(qx + (c + quiet) * cell, qy + (r + quiet) * cell, Math.ceil(cell), Math.ceil(cell));
         }
-        /**
-         * Under the code, centred on it.
-         *
-         * A caption belongs under the thing it captions. It was right-aligned,
-         * because the words are a little wider than the code and centring them
-         * put a few pixels past the card's right margin — but right-aligned it
-         * read as off-centre, which is the thing people actually saw. So it is
-         * centred, and set just small enough to fit inside the code's width,
-         * which keeps the margin straight as well.
-         */
-        ctx.fillStyle = FAINT;
-        const capSize = fitted(ctx, t_scan, 500, 20, 14, QR);
-        ctx.font = `500 ${capSize}px Inter, system-ui, sans-serif`;
+        ctx.font = `400 16px ${MONO}`;
+        ctx.fillStyle = DIM;
         ctx.textAlign = "center";
-        ctx.fillText(t_scan, QR_X + QR / 2, QR_Y + QR + 30);
+        ctx.fillText(t_scan.toUpperCase(), qx + QR / 2, qy + QR + 24);
         ctx.textAlign = "left";
       } catch { /* no code rather than a broken one */ }
     }
 
-    // The foot: the app, and when. The time is the point of a card like this —
-    // it says "right now", which is the only claim it is making.
-    ctx.font = "700 34px Inter, system-ui, sans-serif";
-    ctx.fillStyle = BONE;
-    ctx.fillText("AuralFM", M, FOOT_NAME);
-
-    ctx.font = "500 27px Inter, system-ui, sans-serif";
-    ctx.fillStyle = FAINT;
-    const stamp = now.when.toLocaleString([], {
-      weekday: "short", hour: "numeric", minute: "2-digit",
-    });
-    ctx.fillText(stamp, M, FOOT_TIME);
+    // ── the foot: the argument, in mast red ────────────────────────────────
+    const FOOT = 1266;
+    ctx.fillStyle = MAST;
+    ctx.fillRect(0, FOOT, W, H - FOOT);
+    ctx.fillStyle = INK;
+    const line = "LESS ALGORITHMS. MORE HUMANS.";
+    const fs = fit(ctx, line, (s) => `900 ${s}px ${DISPLAY}`, 46, 26, inner - 170);
+    ctx.font = `900 ${fs}px ${DISPLAY}`;
+    ctx.fillText(line, M, FOOT + 58);
+    ctx.font = `700 22px ${MONO}`;
+    ctx.textAlign = "right";
+    ctx.fillText("AURALFM.XYZ", W - M, FOOT + 54);
+    ctx.textAlign = "left";
 
     return cv.toDataURL("image/png");
   }
@@ -566,7 +554,7 @@
      * loads is drawn in the system fallback and looks like somebody else's app.
      */
     async make(now) {
-      try { await document.fonts.ready; } catch { /* draw in whatever we have */ }
+      try { await loadFonts(); await document.fonts.ready; } catch { /* draw in whatever we have */ }
       // Loaded once and kept: two megabytes of texture decoded per card would be
       // felt, and these are the same files the globe already has in memory.
       if (!TEX.day) {
