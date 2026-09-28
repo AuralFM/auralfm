@@ -398,7 +398,10 @@ function showSplash() {
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
   lockDown(splash);
-  splash.loadFile(path.join(__dirname, "renderer", "splash.html"));
+  // The wave wears the chosen palette's accent (splash.js reads it).
+  let accent = "";
+  try { accent = require("./palettes").byId(getPrefs().palette)?.accent || ""; } catch { /* bone */ }
+  splash.loadFile(path.join(__dirname, "renderer", "splash.html"), { query: accent ? { accent } : {} });
   splash.once("ready-to-show", () => {
     if (!splash || splash.isDestroyed()) return;
     const pt = screen.getCursorScreenPoint();

@@ -27,7 +27,10 @@ let byPlace = [];       // placeIndex -> [channelIndex] — built once, so Explo
 let placeHay = null;    // "place ∙ country" per place, on first search
 let bands = [];         // "am" | "fm" | null, derived from the title
 let generated = null;
-let nowhere = new Uint8Array(0); // 1 for "Somewhere in …" and "Online only": no town, no real dot
+let nowhere = new Uint8Array(0); // 1 for "Across …" and "Online, no country": no town, no real dot
+// The bundle's names for them (scripts/lib/match.mjs shown()); the older names
+// too, so a bundle built before 27 Sept still reads right.
+const NOWHERE = /^(Across |Somewhere in |Online, no country$|Online only$)/;
 
 /**
  * Broadcast band, inferred from the station name — the only signal there is.
@@ -83,14 +86,13 @@ function load() {
 
   // Explore browses by place constantly, so invert the relation once at load
   // instead of scanning 38k channels on every click.
-  byPlace = places.map(() => []);
-  channels.forEach((c, i) => byPlace[c[2]]?.push(i));
+  indexPlaces();
   bands = channels.map((c) => detectBand(c[1]));
-  // Stations whose town nobody gave live at "Somewhere in <country>" (or
-  // "Online only"), made by scripts/expand.mjs. Their position is a stand-in, so
+  // Stations whose town nobody gave live at "Across <country>" (or
+  // "Online, no country"), made by scripts/expand.mjs. Their position is a stand-in, so
   // they come after every real town wherever places are listed, and draw no dot
   // on the globe (Melton, 26 Sept: the real cities first; these at the end).
-  nowhere = Uint8Array.from(places, (p) => (/^(Somewhere in |Online only$)/.test(p[0]) ? 1 : 0));
+  nowhere = Uint8Array.from(places, (p) => (NOWHERE.test(p[0]) ? 1 : 0));
   setRegion();
 
   console.log(`catalog: ${channels.length} channels across ${places.length} places`);
@@ -107,7 +109,7 @@ function setRegion(zone) { home = region.homeFor(zone); open = null; }
 // What may play here, for the shuffle: most of the catalogue is held back in the
 // UK, so drawing at random from all of it and skipping would mostly skip.
 let open = null;
-const openHere = () => (open ||= channels.map((_, i) => i).filter((i) => !heldBack(i)));
+const openHere = () => (open ||= channels.map((_, i) => i).filter((i) => !heldBack(i) && !unplayable(i)));
 const heldBack = (i) => !!home && channels[i]?.[8] !== 1 && !home.countries.has(places[channels[i][2]]?.[1]);
 /** For the player: may this station play here? Stations not in the catalogue (your own) always may. */
 function held(ch) {
@@ -212,7 +214,23 @@ let hideExplicit = false;
 function setHideExplicit(on) { hideExplicit = !!on; }
 const isExplicit = (i) => channels[i]?.[7] === 1;
 
+/**
+ * Only what can play here (the web app and the iPhone app): a page served over
+ * https may not play an http-only stream, so those stations were listed and
+ * then failed ("Only an insecure stream"). On the web they are left out of
+ * every list, count, dot, search and shuffle, the parity rule: nothing
+ * half-working on the web or a phone. The desktop plays them and keeps them.
+ */
+let playableOnly = false;
+function setPlayableOnly(on) { playableOnly = !!on; indexPlaces(); open = null; }
+const unplayable = (i) => playableOnly && !channels[i]?.[3];
+function indexPlaces() {
+  byPlace = places.map(() => []);
+  channels.forEach((c, i) => { if (!unplayable(i)) byPlace[c[2]]?.push(i); });
+}
+
 function passes(i, { band, tag } = {}) {
+  if (unplayable(i)) return false;
   if (hideExplicit && isExplicit(i)) return false;
   if (band && bands[i] !== band) return false;
   if (tag) {
@@ -391,7 +409,7 @@ function placeSearch(query, limit = 400, opts = {}) {
   }
   if (terms.length) {
     const first = terms[0];
-    // Real towns before "Somewhere in …", then prefix matches first ("berlin"
+    // Real towns before "Across …", then prefix matches first ("berlin"
     // before "new berlin"), then by station count.
     out.sort((a, b) => nowhere[a] - nowhere[b] ||
       (ph[a].startsWith(first) ? 0 : 1) - (ph[b].startsWith(first) ? 0 : 1) ||
@@ -438,7 +456,7 @@ function randomChannel() {
   if (pool && !pool.length) return null;
   for (let tries = 0; tries < 12; tries++) {
     const i = pool ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * channels.length);
-    if (hideExplicit && isExplicit(i)) continue;
+    if ((hideExplicit && isExplicit(i)) || unplayable(i)) continue;
     const c = hydrate(i);
     if (Number.isFinite(c.lat) && Number.isFinite(c.lon)) return c;
   }
@@ -519,4 +537,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { setHideExplicit, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };
+module.exports = { setHideExplicit, setPlayableOnly, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };

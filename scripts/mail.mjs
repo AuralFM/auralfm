@@ -21,7 +21,8 @@
  *
  * There is no server here to send the moment somebody signs up; this is run
  * by hand, like the claims review. Every email says why it came and how to be
- * taken off the list (a reply that says "remove"), and carries List-Unsubscribe.
+ * taken off the list (a reply that says "remove", or the Unsubscribe link),
+ * carries List-Unsubscribe, and ends with a postal address (see POSTAL).
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -35,6 +36,16 @@ const PREVIEWS = fs.existsSync(VAULT) ? path.join(VAULT, "Email previews") : R("
 const SENT = R("data/mail-sent.json");
 const FROM = "AuralFM <hello@auralfm.xyz>";
 const REPLY = "hello@auralfm.xyz";
+/**
+ * A postal address in every email. US law on commercial email (CAN-SPAM)
+ * requires a valid physical postal address in each one (a PO box or a
+ * registered agent's address counts), and the beta and sponsor emails invite
+ * people to pay, so they count. Melton puts his in ~/.resend/postal-address, one
+ * line; it is kept out of the repo like the key. --send refuses without it;
+ * previews and --test show where it goes.
+ */
+const postalFile = path.join(os.homedir(), ".resend", "postal-address");
+const POSTAL = process.env.MAIL_POSTAL_ADDRESS || (fs.existsSync(postalFile) ? fs.readFileSync(postalFile, "utf8").trim().split("\n")[0] : "");
 const argv = process.argv.slice(2);
 const send = argv.includes("--send");
 const testTo = argv.includes("--test") ? argv[argv.indexOf("--test") + 1] : null;
@@ -121,11 +132,13 @@ function html(e, test) {
 <p style="margin:24px 0 0;font:16px/1.55 ${FONT};color:${ONYX}">— Melton, AuralFM</p></td></tr>
 <tr><td style="padding:28px 0 0;border-top:1px solid #D9D4CB">
 <p style="margin:0 0 8px;font:12px/1.5 ${FONT};color:${MUTED}">${esc(e.why)} Reply with “remove” and you’re off the list; reply with anything else and it reaches a person.</p>
+<p style="margin:0 0 8px;font:12px/1.5 ${FONT};color:${MUTED}"><a href="mailto:${REPLY}?subject=remove" style="color:${MUTED}">Unsubscribe</a> · AuralFM · ${esc(POSTAL || "[postal address goes here]")}</p>
 <p style="margin:0;font:12px/1.5 ${MONO};color:${MUTED}">A globe you listen to · <a href="https://auralfm.xyz" style="color:${MUTED}">auralfm.xyz</a> · <a href="https://docs.auralfm.xyz/privacy/" style="color:${MUTED}">Privacy</a></p>
 </td></tr></table></td></tr></table></body></html>`;
 }
 const text = (e) => [...e.body.map((p) => p.replace(/\*\*/g, "")), ...(e.button ? [`${e.button[0]}: ${e.button[1]}`] : []), "— Melton, AuralFM", "",
-  `${e.why} Reply with "remove" and you're off the list.`, "auralfm.xyz"].join("\n\n");
+  `${e.why} Reply with "remove" and you're off the list, or write to ${REPLY} with "remove" in the subject.`,
+  `AuralFM · ${POSTAL || "[postal address goes here]"}`, "auralfm.xyz"].join("\n\n");
 
 // ── who ────────────────────────────────────────────────────────────────────
 const key = (() => { const f = path.join(os.homedir(), ".herenow", "credentials"); return fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim().split(/\s+/).pop() : ""; })();
@@ -166,6 +179,10 @@ for (const [k, make] of Object.entries(EMAILS)) fs.writeFileSync(path.join(PREVI
 console.log(`mail: ${queue.length} to send` + (queue.length ? `: ${Object.entries(queue.reduce((a, [k]) => ((a[k] = (a[k] || 0) + 1), a), {})).map(([k, n]) => `${n} ${k}`).join(", ")}` : "") +
   `; previews in ${PREVIEWS}`);
 if (!send && !testTo) { if (queue.length) console.log("nothing sent — run with --send to send them"); process.exit(0); }
+if (send && !POSTAL) {
+  console.error("mail: no postal address — put one line in ~/.resend/postal-address (a PO box or registered agent is fine); every email must carry one (CAN-SPAM)");
+  process.exit(1);
+}
 
 // ── send ───────────────────────────────────────────────────────────────────
 const rkeyFile = path.join(os.homedir(), ".resend", "credentials");

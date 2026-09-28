@@ -533,6 +533,7 @@ p { text-wrap: pretty; }
 .wait-form input[aria-invalid=true] { border-color: #FF8A7A; }
 .wait-form .choice { display: flex; align-items: center; gap: 12px; min-height: 44px; font: 400 16px/24px var(--body); text-transform: none; letter-spacing: 0; cursor: pointer; }
 .wait-form .choice input { width: 20px; height: 20px; margin: 0; accent-color: var(--aqua); }
+.wait-form .choice.age { margin-top: 8px; }
 .wait-form .btn { align-self: flex-start; border: 0; cursor: pointer; }
 .wait-form .btn[disabled] { opacity: .6; cursor: progress; }
 .field-error { color: #FF8A7A; font: 400 14px/20px var(--body); }
@@ -795,3 +796,22 @@ body::after {
   background: var(--mast); translate: -1px 0;
 }
 .departures tr:not([style]) .clock::after { display: none; }
+
+/* Renewal terms beside every price and every subscribe button, in plain words
+   (California's auto-renewal law wants them right there, not in the Terms). */
+.renew { font: 400 13px/20px var(--body); color: var(--bone2); max-width: 48ch; margin-top: 8px; }
+
+/* ── what AuralFM stands for (27 Sept) ────────────────────────────────────── */
+/* Melton's line as the argument, numbered like a poster's points. After
+   worldwidefm.net's plain, typographic structure; in this page's own type. */
+.manifesto { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+.manifesto-head { display: flex; flex-direction: column; gap: 16px; }
+.manifesto .rules { display: grid; gap: 1px; background: var(--line); margin: 0; padding: 0; list-style: none; }
+.manifesto .rules li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 16px; align-items: baseline; }
+.manifesto .num { grid-row: span 2; font: 700 14px/1 var(--mono); letter-spacing: .08em; color: var(--aqua); }
+.manifesto b { font: 900 clamp(22px, 2.4vw, 34px)/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; text-wrap: balance; }
+.manifesto .rules p { grid-column: 2; color: var(--bone2); max-width: 52ch; }
+.support-price { font: 400 16px/24px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
+.support-price b { font: 900 clamp(40px, 5vw, 64px)/1 var(--display); color: var(--bone); font-variation-settings: "wdth" 70; margin-right: 8px; }
+@media (max-width: 1080px) { .manifesto { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) { .manifesto .rules li { grid-template-columns: 40px minmax(0, 1fr); } }

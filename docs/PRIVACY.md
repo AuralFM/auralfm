@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 26 September 2026**
+**Last updated: 27 September 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -130,7 +130,9 @@ sponsorship. If you join either, we keep:
 - your **name** and **email address**,
 - **which computer** you use (for the desktop beta) or **which sponsorship** you
   are interested in,
-- anything you chose to write in the **note**.
+- anything you chose to write in the **note**,
+- that you **confirmed you are 13 or older** (a tick box; we keep the tick, not
+  your age or birthday).
 
 It is stored with the company that hosts the website, as that site's own data.
 Only we can read it; it is not public. The host also sees your IP address when
@@ -153,7 +155,8 @@ sent us. We do not put tracking pixels or tracked links in our emails.
 People who run a station can claim its page with a form on docs.auralfm.xyz. It
 asks for the station, your **name** and **email address**, and whatever you choose
 to add: the station's website, a description, your links, a Nostr key and a
-**Lightning address** for tips. It is stored the same way as the waitlists: with
+**Lightning address** for tips or a **donation page**, and that you confirmed you are
+18 or older. It is stored the same way as the waitlists: with
 the company that hosts the website, readable only by us, capped per connection.
 
 We use your email to confirm the station is yours, and to write to you about
@@ -214,10 +217,11 @@ you are.
 
 ## Children
 
-AuralFM is not directed at children, and it is for people aged 13 and over. The
-app collects no information from anyone. The waitlists are the one place anyone
-gives us a name or an email; if we learn that someone under 13 has joined one, we
-delete what they gave us.
+AuralFM is not directed at children, and it is for people aged 13 and over (18
+and over to go live, or to claim a station). The app collects no information from
+anyone. The waitlists are the one place anyone gives us a name or an email, and
+each asks you to confirm you are 13 or older before it sends; if we learn that
+someone under 13 has joined one anyway, we delete what they gave us.
 
 ## Changes
 

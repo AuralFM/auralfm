@@ -1870,10 +1870,12 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     const inOutside = outside && c.index > outside.index && c.index < outside.index + outside[0].length;
     // mailto: drafts are built in main from a literal address; nothing else is.
     const mailto = /["'`]mailto:/.test(main.slice(c.index, c.index + 120)) || /const url = "mailto:/.test(before);
-    if (!inOutside && !mailto) bad.push(`main.js:${line} opens a URL without openOutside()`);
+    // macOS's own Microphone settings page, a fixed literal (Your show): no input reaches it.
+    const settings = /\(\s*["']x-apple\.systempreferences:com\.apple\.preference\.security\?Privacy_Microphone["']\s*\)/.test(main.slice(c.index, c.index + 120));
+    if (!inOutside && !mailto && !settings) bad.push(`main.js:${line} opens a URL without openOutside()`);
   }
   bad.length ? fail("external links", bad.join("; "))
-             : pass("every shell.openExternal is http(s)-checked or a mailto: we built");
+             : pass("every shell.openExternal is http(s)-checked, a mailto: we built, or macOS's Microphone settings");
 
   console.log("\nthe resolver keeps no cookies");
   const res = main.match(/new BrowserWindow\(\{[\s\S]*?partition:\s*(\w+)[\s\S]*?\n\s*\}\);([\s\S]{0,200})/);

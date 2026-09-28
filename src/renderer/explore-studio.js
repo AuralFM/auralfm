@@ -80,33 +80,64 @@
     musicGain.connect(musicAn); musicGain.connect(mix);
   }
   let asking = false;
+  const getMic = (deviceId) => navigator.mediaDevices.getUserMedia({
+    audio: { deviceId: deviceId ? { exact: deviceId } : undefined,
+      echoCancellation: false, noiseSuppression: true, autoGainControl: false },
+  });
+  /**
+   * What went wrong, in words someone can act on. It used to be "blocked" or
+   * "No microphone was found" for everything, so a microphone busy in a call,
+   * or headphones that had been unplugged since last time, read as having no
+   * microphone at all (Melton, 27 Sept: it struggled with the computer's and
+   * with headphones).
+   */
+  const micTrouble = (name) =>
+    name === "NotAllowedError" || name === "SecurityError" || name === "denied" || name === "restricted"
+      ? tt("studio.micDenied", "The microphone is blocked. Allow it for AuralFM in your system's privacy settings, then try again.")
+    : name === "NotFoundError" || name === "OverconstrainedError"
+      ? tt("studio.micMissing", "No microphone was found. Plug one in, or connect headphones that have one, then try again.")
+    : name === "NotReadableError" || name === "AbortError" || name === "TrackStartError"
+      ? tt("studio.micBusy", "The microphone could not start. Another app may be using it (a call, a recorder): close it, or pick another microphone, then try again.")
+    : tt("studio.micFailed", "The microphone could not start. Try again, or pick another one.");
+  let micBlocked = false, micNote = "";
   async function openMic() {
     graph();
     await ctx.resume();
     micStream?.getTracks().forEach((tr) => tr.stop());
     micSrc?.disconnect();
-    micError = "";
+    micError = ""; micNote = ""; micBlocked = false;
     // The system may take its time, or wait on a prompt the listener has not
     // seen: say so rather than sitting on a button that seems to do nothing.
     asking = true;
     const slow = setTimeout(() => { if (asking) { micError = tt("studio.micWaiting", "Waiting for permission to use the microphone. Look for your system's prompt."); paint(); } }, 2500);
     try {
-      micStream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: show.deviceId ? { exact: show.deviceId } : undefined,
-          echoCancellation: false, noiseSuppression: true, autoGainControl: false },
-      });
+      // The desktop asks macOS first (src/main/ipc-app.js): a microphone the
+      // system has blocked otherwise opens as silence.
+      const access = "micAccess" in window.auralfm ? await window.auralfm.micAccess() : null;
+      if (access && access !== "granted") { const e = new Error(access); e.name = access; throw e; }
+      try {
+        micStream = await getMic(show.deviceId);
+      } catch (e) {
+        // The microphone chosen last time (headphones, an interface) is not
+        // plugged in: use the system's own, and say so, rather than failing.
+        if (!show.deviceId || !/^(OverconstrainedError|NotFoundError)$/.test(e?.name)) throw e;
+        show.deviceId = ""; keep();
+        micStream = await getMic("");
+        micNote = tt("studio.micFellBack", "The microphone you used last time is not connected, so this is your system's default. Pick another below.");
+      }
       micSrc = ctx.createMediaStreamSource(micStream);
       micSrc.connect(micGain);
     } catch (e) {
       micStream = null;
-      micError = e?.name === "NotAllowedError"
-        ? tt("studio.micDenied", "The microphone is blocked. Allow it for AuralFM in your system's privacy settings, then try again.")
-        : tt("studio.micMissing", "No microphone was found.");
+      micBlocked = /^(NotAllowedError|SecurityError|denied|restricted)$/.test(e?.name);
+      micError = micTrouble(e?.name);
     } finally { asking = false; clearTimeout(slow); }
     await listDevices();
     paint();
     meters();
   }
+  // Headphones plugged in or out while the studio is open: the list follows.
+  navigator.mediaDevices?.addEventListener?.("devicechange", async () => { await listDevices(); paint(); });
   function closeAudio() {
     cancelAnimationFrame(raf); raf = 0;
     micStream?.getTracks().forEach((tr) => tr.stop()); micStream = null;
@@ -123,13 +154,46 @@
   // Decoded and played as a buffer, not through an <audio> element: this app
   // never routes an element through Web Audio, because a radio stream from
   // another origin would go silent there (npm run audit).
-  async function loadTrack(file) {
+  async function loadTrack(file) { return loadTrackData(file.name, await file.arrayBuffer()); }
+  async function loadTrackData(name, data) {
     graph();
     stopTrack();
     try {
-      const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
-      track = { name: file.name, buffer, node: null, from: 0, at: 0 };
+      const buffer = await ctx.decodeAudioData(data);
+      track = { name, buffer, node: null, from: 0, at: 0 };
     } catch { track = null; micError = tt("studio.trackBad", "That file could not be played. Try an MP3, WAV or AAC file."); }
+    paint();
+  }
+  /**
+   * A track from a link (desktop: main fetches it, src/main/ipc-app.js). Melton,
+   * 27 Sept, asked for "a link to stream from any platform". Mixcloud,
+   * SoundCloud, YouTube and the rest do not give other apps their audio and
+   * their terms forbid taking it, so a link to one of them is answered with how
+   * to use your own show from there instead; a direct link to an audio file you
+   * host works.
+   */
+  const PLATFORM = /(^|\.)(mixcloud\.com|soundcloud\.com|youtube\.com|youtu\.be|spotify\.com|music\.apple\.com|bandcamp\.com|twitch\.tv|tidal\.com|deezer\.com|audiomack\.com)$/i;
+  let linking = false, linkNote = "";
+  async function loadLink(url) {
+    url = String(url || "").trim();
+    linkNote = "";
+    let host = "";
+    try { host = new URL(url).hostname; } catch { linkNote = tt("studio.linkBad", "That is not a link. Paste one that starts with https://."); return paint(); }
+    if (PLATFORM.test(host)) {
+      linkNote = tt("studio.linkPlatform", "Mixcloud, SoundCloud, YouTube and services like them don't let other apps play their audio, and their terms don't allow it. If the show is yours, download it from there and add the file, or use a direct link to the audio file.");
+      return paint();
+    }
+    linking = true; paint();
+    const r = await window.auralfm.studioFetchTrack(url);
+    linking = false;
+    if (r?.data) { linkNote = ""; await loadTrackData(r.name, r.data); return; }
+    linkNote = {
+      https: tt("studio.linkBad", "That is not a link. Paste one that starts with https://."),
+      page: tt("studio.linkPage", "That link is a web page, not an audio file. Use the link to the file itself (it usually ends in .mp3, .m4a or .wav)."),
+      stream: tt("studio.linkStream", "That is a live stream. A track has to be a file with an end: use a link to a recording."),
+      big: tt("studio.linkBig", "That file is over 300 MB. Use a shorter or smaller file."),
+      slow: tt("studio.linkSlow", "That took too long to download. Try again, or download it and add the file."),
+    }[r?.error] || tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again.");
     paint();
   }
   const playing = () => !!track?.node;
@@ -170,11 +234,9 @@
       if (phase !== "off") {
         const s = Math.floor((Date.now() - startedAt) / 1000);
         const el = $s("airclock");
-        if (el) {
-          const t = `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-          if (window.AuralFlap) window.AuralFlap.flap(el, t);
-          else el.textContent = t;
-        }
+        // Plain text, not the split-flap: this runs every frame, and a flap
+        // restarted sixty times a second never settles into numbers.
+        if (el) el.textContent = `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
       }
     };
     frame();
@@ -192,7 +254,9 @@
   const ready = () => hasSound() && !!show.title.trim() && show.rights && show.adult && !!show.place;
   async function go(to) {
     if (to !== "off" && !hasSound()) await openMic();
-    if (to === "live" && !ready()) return paint();
+    // Live or announced, a show needs every confirmation, the 18 and over and
+    // the rights among them; only rehearsing, which nobody else hears, does not.
+    if ((to === "live" || to === "planned") && !ready()) return paint();
     // One sound at a time: the station you were playing would go out under
     // your voice through the microphone.
     if (to !== "off" && document.body.classList.contains("playing")) window.auralfm.transport?.({ action: "toggle" });
@@ -201,7 +265,9 @@
     window.AuralStudio.live = phase === "live" && show.place ? { lat: show.place.lat, lon: show.place.lon, title: show.title } : null;
     if (typeof paintRings === "function") paintRings();
     if (phase === "live" && show.place && typeof flyTo === "function") flyTo(show.place.lat, show.place.lon);
-    if (phase === "off") { stopTrack(); setMonitor(false); }
+    // Confirmed again each time: the 18 and over and the rights are asked
+    // before every show, not remembered from the last one (docs/TERMS.md).
+    if (phase === "off") { stopTrack(); setMonitor(false); show.rights = false; show.adult = false; }
     paint();
     meters();
   }
@@ -291,13 +357,20 @@
       sound.append(el("button", { class: "sheetbtn", type: "button", id: "stMic", disabled: asking, onclick: openMic },
         asking ? tt("studio.micAsking", "Asking for the microphone…") : tt("studio.micOn", "Turn on the microphone")));
       if (micError) sound.append(el("p", { class: "fine", role: "alert", text: micError }));
+      if (micBlocked && "micSettings" in window.auralfm) sound.append(el("button", { class: "linkbtn", type: "button", onclick: () => window.auralfm.micSettings() },
+        tt("studio.micSettings", "Open microphone settings")));
     } else {
+      if (micNote) sound.append(el("p", { class: "fine", role: "status", text: micNote }));
       if (devices.length > 1) {
         const sel = el("select", { id: "stDevice", "aria-label": tt("studio.micPick", "Microphone"),
           onchange: (e) => { show.deviceId = e.target.value; keep(); openMic(); } });
         for (const d of devices) sel.append(el("option", { value: d.deviceId, selected: d.deviceId === (show.deviceId || micStream.getAudioTracks()[0]?.getSettings().deviceId) }, d.label || tt("studio.micPick", "Microphone")));
         sound.append(el("label", { class: "field" }, el("span", { text: tt("studio.micPick", "Microphone") }), sel));
       }
+      // A headset's microphone switches it to call quality while it is on.
+      const using = devices.find((d) => d.deviceId === micStream.getAudioTracks()[0]?.getSettings().deviceId)?.label || micStream.getAudioTracks()[0]?.label || "";
+      if (/airpods|bluetooth|headset|buds|beats|hands-free/i.test(using)) sound.append(el("p", { class: "fine", text:
+        tt("studio.micHeadset", "Wireless headphones play at call quality while their microphone is on. For a better sound, use the computer's microphone or a wired one, and keep the headphones to listen.") }));
       sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.voice", "Voice") }),
         el("input", { type: "range", min: "0", max: "2", step: "0.01", value: String(show.micVol), "aria-label": tt("studio.voiceLevel", "Voice level"),
           oninput: (e) => { show.micVol = +e.target.value; micGain.gain.value = show.micVol; keep(); } })), meter("meterMic"));
@@ -307,7 +380,20 @@
     if (!track) {
       sound.append(el("div", { class: "deck" }, el("span", { class: "name", text: tt("studio.noTrack", "No music under you yet") }),
         el("button", { class: "linkbtn", type: "button", onclick: () => pick.click() }, tt("studio.addTrack", "Add a track"))));
-    } else {
+    }
+    // From a link: the desktop only, which can fetch it (on the web the page's
+    // security rules forbid reaching an arbitrary address, so it is not offered).
+    // `in`, not a truthy test: the web bridge answers any name it lacks with an
+    // empty stand-in (web/bridge.js), so only `in` tells the desktop apart.
+    if ("studioFetchTrack" in window.auralfm) {
+      const url = el("input", { type: "url", id: "stLink", inputmode: "url", spellcheck: "false", autocapitalize: "off",
+        placeholder: "https://…/show.mp3", "aria-label": tt("studio.linkLabel", "Link to an audio file") });
+      sound.append(el("form", { class: "srcrow linkrow", onsubmit: (e) => { e.preventDefault(); loadLink(url.value); } },
+        url, el("button", { class: "linkbtn", type: "submit", disabled: linking },
+          linking ? tt("studio.linkFetching", "Fetching…") : tt("studio.linkAdd", "Add from a link"))));
+      if (linkNote) sound.append(el("p", { class: "fine", role: "alert", text: linkNote }));
+    }
+    if (track) {
       sound.append(el("div", { class: "deck" },
         el("button", { class: "sheetbtn", type: "button", id: "stPlay", onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); paint(); } },
           playing() ? tt("studio.pause", "Pause") : tt("studio.play", "Play")),

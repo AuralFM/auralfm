@@ -119,11 +119,21 @@ export function speech(c, country = "") {
     && !classify({ tags: [], title: c.title }).genres.length;
 }
 
+/**
+ * A place with no town, as the apps call it. The catalogue says "Somewhere in
+ * Germany" (every script matches on it); the apps say "Across Germany", which
+ * is true of a station that is nationwide and of one that is only online, and
+ * reads as a category rather than a shrug (Melton, 27 Sept: the old name made a
+ * country's list look unorganized). "Online only", for stations that gave no
+ * country at all, becomes "Online, no country". src/catalog.js keys off these.
+ */
+export const shown = (title) => title === "Online only" ? "Online, no country" : String(title).replace(/^Somewhere in /, "Across ");
+
 export function writeBundles(full, F) {
   fs.writeFileSync(F.full, JSON.stringify(full));
   const min = {
     g: full.generated,
-    p: full.places.map((p) => [p.title, p.country, p.geo[0], p.geo[1]]),
+    p: full.places.map((p) => [shown(p.title), p.country === "Null Island" ? "" : p.country, p.geo[0], p.geo[1]]),
     // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit, speech]
     // Fixed arity now that later slots exist — optional trailing fields stop
     // working the moment anything follows them.

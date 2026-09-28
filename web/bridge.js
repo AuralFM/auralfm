@@ -71,6 +71,8 @@
     .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
     .then((text) => {
       M.files["stations.min.json"] = text; M.catalog.load(); M.catalog.setHideExplicit(getPrefs().hideExplicit);
+      // Only what a page served over https can play (src/catalog.js setPlayableOnly).
+      M.catalog.setPlayableOnly(true);
       window.AuralLaunch?.step("launch.globe", "Drawing the globe");
       // Favourites and the last station saved under the catalogue's old ids find
       // themselves again by name (catalog.relinkSaved), and so does a station

@@ -178,9 +178,9 @@
     const find = () => stationListEl.querySelector(`.st[data-id="${CSS.escape(String(st.id))}"]`);
     // Its place, unless the rail already shows it with the station in the list
     // (a filter can hide it; going to the place again clears the filter).
-    // A station with no town ("Somewhere in …") has no dot to fly to, and flying
+    // A station with no town ("Across …") has no dot to fly to, and flying
     // to its stand-in lets the spinning globe pick whatever town it passes.
-    const nowhere = /^(Somewhere in |Online only$)/.test(st.place || "");
+    const nowhere = /^(Across |Somewhere in |Online, no country$|Online only$)/.test(st.place || "");
     // And held there while it is read: the drift must not swap it out (explore-view.js).
     if (selection.placeIndex !== st.pi || stationListEl.hidden || !find()) await goToPlace(st.pi, { fly: !nowhere, hold: true });
     else holdCentre = true;

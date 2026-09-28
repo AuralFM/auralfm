@@ -26,6 +26,11 @@
 (() => {
   const veil = document.getElementById("launch");
   if (!veil) return;
+  // The theme's accent for the wave, as the app last applied it (explore-prefs.js).
+  try {
+    const accent = localStorage.getItem("auralfm.accent");
+    if (/^#[0-9a-f]{6}$/i.test(accent || "")) veil.style.setProperty("--launch-accent", accent);
+  } catch { /* private mode: bone until the app applies its own */ }
   const say = veil.querySelector(".launch-say");
   const slow = veil.querySelector(".launch-slow");
   let over = false;

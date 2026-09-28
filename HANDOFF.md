@@ -128,6 +128,35 @@ Node lives at `/Users/mb3/.local/node/bin` (put it on `PATH`).
 
 ## 5. What was built (most recent first)
 
+### 5.0 27 Sept 2026 (session after testing)
+- **"Somewhere in" stations:** `scripts/place.mjs` (now in `npm run catalogue`, after enrich) moves stations
+  whose name or tags name a town or region in their country (872 of 14,310 on the first run; homepage-only
+  matches were tried and dropped as unreliable). What stays is shown as **"Across <country>"** /
+  "Across <region>" (renamed only in the bundle: `shown()` in `scripts/lib/match.mjs`; every script still
+  says "Somewhere in"); Null Island is "Online, no country".
+- **Web/iPhone play only what they can:** `catalog.setPlayableOnly(true)` in `web/bridge.js` drops
+  http-only stations (41% of the no-town ones) from lists, counts, dots, search and shuffle there.
+- **Wave in the theme:** `.wave` uses `var(--accent)`; the web launch screen reads the last accent from
+  `localStorage["auralfm.accent"]`; the desktop splash gets `?accent=` from main.
+- **Studio:** macOS microphone permission checked first (`mic:access`, `mic:settings` in
+  `src/main/ipc-app.js`), clear error per failure, a missing saved mic falls back to the default,
+  device list follows plug-ins, headset note; 18+ and rights required for Live **and** Announce and
+  reset after every show; **track from a link** on the desktop only (`studio:fetchTrack`, direct audio
+  files over https; Mixcloud/SoundCloud/YouTube links get an explanation). Terms have a "Your show"
+  section. Desktop-only features are detected with `"name" in window.auralfm` (the web bridge's Proxy
+  answers every missing name).
+- **Legal traps:** no Google Fonts, no analytics/replay (checked); 13+ box on the waitlists and 18+ on
+  the claim form (stored as `age`); renewal terms beside every sponsorship price; emails carry an
+  Unsubscribe link and a postal address, and `--send` refuses without `~/.resend/postal-address`.
+  **Still to do by Melton: register a DMCA agent** (copyright.gov, $6, renew every 3 years).
+- **Voice:** "Less algorithms, more humans" / "Human curated radio > algorithmic playlists" on the
+  homepage (hero label, red band, a numbered manifesto section), the app ticker and the launch screen.
+- **Worldwide FM pass:** the manifesto, a one-offer sponsor band, Discord links hidden until
+  `DISCORD` is set in `home/aural.js`. Plans in the vault: `MIXCLOUD-FEATURES.md`, `DISCORD.md`.
+- **Another agent's work reviewed:** its studio "Announce" and 18+ toggle kept; its per-frame
+  split-flap on the live clock removed; `transport.js`/`toast.js` (kind-12, unsigned Nostr events that
+  would have replaced the app's play/pause) moved out of the app to `~/Desktop/auralfm-attic/`.
+
 ### 5.1 The two "i" buttons are one switch (commit 8572e4a)
 The station row's "i" and the player bar's "i" now open and close the same description; both show it
 lit while open (`syncInfo()` in `src/renderer/explore-profile.js`). On a phone the player is pulled up

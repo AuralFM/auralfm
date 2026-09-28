@@ -268,17 +268,21 @@ function launchScreen() {
      lightest corner of the gradient, 8.9:1 on the darkest. */
   .launch-name,.launch-say{letter-spacing:.14em;text-transform:uppercase;color:#B3AEA3}
   .launch-say{margin:10px 0 0;letter-spacing:.06em;text-transform:none;font-weight:500}
+  .launch-line{margin:-6px 0 0;font-weight:400;letter-spacing:.02em;color:#B3AEA3}
   /* In the layout from the start and faded in, so the stack above it does not
      jump when it arrives. */
   .launch-slow{margin:0;max-width:32ch;min-height:3em;text-align:center;font-weight:400;line-height:1.5;color:#B3AEA3;
     opacity:0;transition:opacity .6s cubic-bezier(.32,.72,0,1)}
   .launch-slow.on{opacity:1}
-  #launch .wave{--wave:20px;color:#B3AEA3;margin-top:6px}
+  /* The palette's accent: the one remembered from last time (web/launch.js),
+     then the one the app applies as it starts, then bone before either. */
+  #launch .wave{--wave:20px;color:var(--launch-accent, var(--accent-night, #B3AEA3));margin-top:6px}
   @media (prefers-reduced-motion: reduce){ #launch{transition:opacity .2s linear} }
 </style>`;
   const markup = `<div id="launch" role="status" aria-live="polite">
   <div class="launch-mark">${mark.trim()}</div>
   <div class="launch-name">AuralFM</div>
+  <p class="launch-line">Less algorithms, more humans.</p>
   <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
   <p class="launch-say" data-i18n="launch.stations">Fetching the stations</p>
   <p class="launch-slow" data-i18n="launch.slow" aria-hidden="true">The first visit brings the whole globe to this device. After that it opens at once.</p>

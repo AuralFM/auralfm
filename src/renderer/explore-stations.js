@@ -270,7 +270,7 @@ function renderStations() {
 /**
  * The rest of the country, after this town's own stations.
  *
- * Stations that gave only their country live at "Somewhere in <country>"
+ * Stations that gave only their country live at "Across <country>"
  * (scripts/expand.mjs). They have no dot and come last in every list, so this
  * row, at the end of any real town in that country, is how you reach them:
  * the town first, then the country's stations with no town (Melton, 26 Sept).
@@ -281,9 +281,11 @@ async function paintElsewhere() {
   const mine = selection.placeIndex;
   let found = null;
   try {
-    const r = await window.auralfm.places(`somewhere ${here.country}`, 12);
-    found = (r.places || []).find((p) => p.nowhere && p.country === here.country && /^Somewhere in (the )?/.test(p.title)
-      && !/, /.test(p.title) && p.title.replace(/^Somewhere in (the )?/, "") === here.country.replace(/^The /, ""));
+    // "Across <country>" (older bundles: "Somewhere in <country>").
+    const lead = /^(Across|Somewhere in) (the )?/;
+    const r = await window.auralfm.places(`across ${here.country}`, 12);
+    found = (r.places || []).find((p) => p.nowhere && p.country === here.country && lead.test(p.title)
+      && !/, /.test(p.title) && p.title.replace(lead, "") === here.country.replace(/^The /, ""));
   } catch { /* nothing to add */ }
   if (!found || selection.placeIndex !== mine) return;
   stationListEl.append(placeSuggestion(found, `${found.count} ` +
@@ -349,10 +351,10 @@ async function paintNearby() {
     return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
   };
 
-  // "Somewhere in France" and "Online only" hold stations whose town nobody
+  // "Across France" and "Online, no country" hold stations whose town nobody
   // gave (scripts/expand.mjs); their dot is a stand-in, so a distance to it
   // would be made up, and their size would crowd out the real towns nearby.
-  const nowhere = (p) => /^(Somewhere in |Online only$)/.test(p.title);
+  const nowhere = (p) => p.nowhere || /^(Across |Somewhere in |Online, no country$|Online only$)/.test(p.title);
   const near = placeCache
     .filter((p) => p.i !== here.i && p.count > 0 && !nowhere(p))
     .map((p) => ({ ...p, km: km(here, p) }))

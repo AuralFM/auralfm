@@ -79,6 +79,10 @@ contextBridge.exposeInMainWorld("auralfm", {
   mineRemove: (id) => ipcRenderer.invoke("mine:remove", id),
   onMineChanged: (fn) => ipcRenderer.on("mine:changed", () => fn()),
   version: () => ipcRenderer.invoke("app:version"),
+  // Your show: the microphone as the system sees it, and its settings page.
+  micAccess: () => ipcRenderer.invoke("mic:access"),
+  micSettings: () => ipcRenderer.send("mic:settings"),
+  studioFetchTrack: (url) => ipcRenderer.invoke("studio:fetchTrack", url),
 
   // shortwave receivers
   sdrPoints: () => ipcRenderer.invoke("sdr:points"),

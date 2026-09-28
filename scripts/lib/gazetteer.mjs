@@ -94,6 +94,9 @@ export function loadGazetteer(dir) {
   }
 
   return {
+    /** Towns a name means by their main names only, biggest first: for reading free text,
+     *  where an alternate name ("Ross" for Ross-on-Wye) says more about the reader than the town. */
+    mainTowns(cc, name) { return [...(byNameMain.get(`${cc}|${key(name)}`) || [])].sort((a, b) => b.pop - a.pop); },
     /** Every town a name can mean in a country, biggest first (main and alternate names). */
     towns(cc, name) { return [...(byName.get(`${cc}|${key(name)}`) || [])].sort((a, b) => b.pop - a.pop); },
     /** A region's name from its code ("US", "IL" → "Illinois"). */

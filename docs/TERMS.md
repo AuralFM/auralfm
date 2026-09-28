@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 26 September 2026**
+**Last updated: 27 September 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -112,9 +112,35 @@ or anything AuralFM shows infringes your copyright, send a notice to
 We remove or disable what the notice identifies, tell the station where we can,
 and restore it if a valid counter-notice follows and no court action is filed.
 
+## Your show
+
+AuralFM is building a way to go live from inside the app ("Your show"). It is a
+prototype today: while it is, nothing you say or play reaches anyone else. These
+terms apply to it now and when it carries sound.
+
+- **You must be 18 or over to go live or to announce a show.** Listening stays
+  open to everyone 13 and over.
+- **Play only what you have the right to play:** your own voice and music, and
+  music you are licensed to broadcast. Playing other people's recordings to the
+  public needs licences (in the US from SoundExchange and the songwriters' bodies,
+  in the UK from PPL and PRS); when the sound goes from your device to listeners,
+  **you are the broadcaster** and those licences are yours to hold.
+- The [Code of Conduct](https://docs.auralfm.xyz/conduct/) applies to shows as
+  it does to the chat.
+- **If someone pays you to play something, say so on the air.** AuralFM sells no
+  placement, and a show cannot pay its way up the globe or a list.
+- AuralFM does not record or keep your show. It can hide a show from the apps,
+  for a report or a breach of these terms, and it removes what a valid copyright
+  notice identifies (see Copyright, above), including a show from someone who
+  keeps infringing.
+
+The app asks you to confirm that you are 18 or over and that what you play is
+yours to play **every time** before you go live or announce a show, and will not
+put a show on the air without both.
+
 ## Who may use it
 
-AuralFM is for people aged 13 and over. It is not directed at children. The app
+AuralFM is for people aged 13 and over (18 and over to go live, see Your show). It is not directed at children. The app
 asks for no personal information and has no accounts, profiles, or advertising;
 the waitlists on the website are the one place anyone gives a name or an email,
 and they too are for people aged 13 and over.

@@ -44,6 +44,9 @@ async function applyPalette() {
   r.style.setProperty("--accent", light ? palette.accentLight : palette.accent);
   // What sits on the globe is on space, which is dark in both themes.
   r.style.setProperty("--accent-night", palette.accent);
+  // Remembered for the web launch screen, which paints before any of this has
+  // loaded and so can only wear the theme it was last given (web/launch.js).
+  try { localStorage.setItem("auralfm.accent", palette.accent); } catch { /* private mode */ }
   // In light theme the star follows the accent, not `palette.star`.
   // Every palette's star is a near-white or a pale tint -- #F5F0E4, #DCE7FF,
   // #FFE9B0 -- because it was chosen to sit on the night side of a globe. On the

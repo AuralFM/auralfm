@@ -21,7 +21,7 @@
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../aural.css?v=2127120304">
+<link rel="stylesheet" href="../aural.css?v=d1a3bd9193">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -113,6 +113,8 @@
         <textarea id="w-note" name="note" rows="3" maxlength="500"
                   placeholder="What you listen to, where you are"></textarea>
       </div>
+      <label class="choice age"><input type="checkbox" id="w-age" name="age" value="13+" aria-describedby="w-age-error"> I&rsquo;m 13 or older</label>
+      <p class="field-error" id="w-age-error" hidden></p>
       <!-- Left empty by people; filled in by bots that fill in everything. -->
       <div class="hp" aria-hidden="true">
         <label for="w-website">Leave this empty</label>
@@ -151,6 +153,6 @@
   </symbol>
 </svg>
 
-<script src="../aural.js?v=2127120304" defer></script>
+<script src="../aural.js?v=d1a3bd9193" defer></script>
 </body>
 </html>

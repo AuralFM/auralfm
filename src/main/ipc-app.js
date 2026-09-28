@@ -6,7 +6,7 @@
  * — getters, because the windows are created and destroyed after registration.
  */
 
-const { app, ipcMain, shell } = require("electron");
+const { app, ipcMain, shell, systemPreferences } = require("electron");
 const docs = require("../docs");
 const geo = require("../geo");
 const i18n = require("../i18n");
@@ -98,6 +98,47 @@ module.exports = function register(ctx) {
   ipcMain.handle("prefs:set", (_e, patch) => setPrefs(patch));
   ipcMain.on("settings:open", openSettings);
   ipcMain.on("mail:open", () => shell.openExternal("mailto:hello@auralfm.xyz?subject=AuralFM"));
+  /**
+   * The microphone, as macOS sees it (Your show). Chromium can be handed a
+   * microphone macOS has blocked and get silence, or a vague error; asking the
+   * system first gives the studio a true answer and, the first time, the
+   * system's own prompt. Anything but macOS answers "granted" and lets the
+   * browser decide as it always did.
+   */
+  ipcMain.handle("mic:access", async () => {
+    if (process.platform !== "darwin") return "granted";
+    let status = systemPreferences.getMediaAccessStatus("microphone");
+    if (status === "not-determined") status = (await systemPreferences.askForMediaAccess("microphone")) ? "granted" : "denied";
+    return status;
+  });
+  /**
+   * Your show: a track from a link, fetched here because the studio's page may
+   * not reach arbitrary addresses (its Content-Security-Policy). A direct link
+   * to an audio file the host has the right to play, over https, up to 300 MB;
+   * never a web page (a Mixcloud or SoundCloud page is not the audio, and those
+   * services do not let other apps take it), and never a live stream, which has
+   * no end to download.
+   */
+  ipcMain.handle("studio:fetchTrack", async (_e, url) => {
+    if (typeof url !== "string" || !/^https:\/\/\S+$/i.test(url)) return { error: "https" };
+    try {
+      const res = await fetch(url, { redirect: "follow", headers: { "User-Agent": "AuralFM/0.1" }, signal: AbortSignal.timeout(90000) });
+      if (!res.ok) return { error: "status", status: res.status };
+      const type = res.headers.get("content-type") || "";
+      if (/text\/html|application\/xhtml/i.test(type)) return { error: "page" };
+      if (/mpegurl|x-scpls/i.test(type) || res.headers.get("icy-name") || res.headers.get("icy-br")) return { error: "stream" };
+      if (+res.headers.get("content-length") > 300e6) return { error: "big" };
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length > 300e6) return { error: "big" };
+      const name = decodeURIComponent(new URL(res.url).pathname.split("/").pop() || "") || "Track from a link";
+      return { name, data: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length) };
+    } catch (e) {
+      return { error: e?.name === "TimeoutError" ? "slow" : "failed" };
+    }
+  });
+  ipcMain.on("mic:settings", () => {
+    if (process.platform === "darwin") shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone");
+  });
   ipcMain.handle("i18n:strings", () => getStrings());
   ipcMain.handle("i18n:languages", () => i18n.LANGUAGES);
   ipcMain.handle("palettes:list", () => palettes.list());

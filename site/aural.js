@@ -309,6 +309,14 @@
     if (!navigator.connection?.saveData) start();
   }
 
+  // ── the Discord ───────────────────────────────────────────────────────────
+  // Links to it wait here until there is a server to link to: set the invite and
+  // every [data-discord] on the three sites shows and points at it.
+  const DISCORD = "";
+  for (const a of document.querySelectorAll("[data-discord]")) {
+    if (DISCORD) { a.href = DISCORD; a.hidden = false; a.rel = "noopener"; }
+  }
+
   // ── the waitlists ─────────────────────────────────────────────────────────
   // The desktop beta (beta/) and sponsorship (support/#waitlist). Each form posts
   // to its own collection, declared in home/.herenow/data.json: anyone can add a
@@ -354,6 +362,14 @@
       if (lightning && lightning.value.trim() && !/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(lightning.value.trim())) {
         wrong(lightning, "A Lightning address looks like name@wallet.example. Check it and try again."); bad ||= lightning;
       } else if (lightning) wrong(lightning, "");
+      // Age, as the box says: 13 and over for a list (COPPA: we do not collect
+      // from children), 18 and over to claim a station, which can take money.
+      const age = form.elements.age;
+      if (age && !age.checked) {
+        const err = document.getElementById(age.getAttribute("aria-describedby"));
+        err.textContent = `Confirm you are ${parseInt(age.value, 10)} or older to send this.`; err.hidden = false;
+        age.setAttribute("aria-invalid", "true"); bad ||= age;
+      } else if (age) { document.getElementById(age.getAttribute("aria-describedby")).hidden = true; age.setAttribute("aria-invalid", "false"); }
       if (bad) { bad.focus(); return; }
       const done = () => { form.classList.add("sent"); say(form.dataset.done, "ok"); };
       // A person never fills in the hidden field. Tell a bot it worked and send nothing.
@@ -365,6 +381,7 @@
           method: "POST",
           headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
           body: JSON.stringify({ name: who, email: value, ...(choice ? { [choice]: form.elements[choice].value } : {}),
+            ...(age ? { age: age.value } : {}),
             ...(note ? { note } : {}),
             ...Object.fromEntries(extra.map((f) => [f, form.elements[f]?.value.trim()]).filter(([, v]) => v)) }),
         });

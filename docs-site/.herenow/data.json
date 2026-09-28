@@ -60,6 +60,11 @@
           "type": "string",
           "maxLength": 500,
           "trim": true
+        },
+        "age": {
+          "type": "string",
+          "maxLength": 8,
+          "trim": true
         }
       },
       "access": {

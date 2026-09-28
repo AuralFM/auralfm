@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "catalogue": "node scripts/base.mjs && node --max-old-space-size=4096 scripts/tags.mjs --refresh && node scripts/expand.mjs && node scripts/enrich.mjs && node scripts/profiles.mjs && node scripts/base.mjs --save",
+    "catalogue": "node scripts/base.mjs && node --max-old-space-size=4096 scripts/tags.mjs --refresh && node scripts/expand.mjs && node scripts/enrich.mjs && node --max-old-space-size=4096 scripts/place.mjs && node scripts/profiles.mjs && node scripts/base.mjs --save",
     "icons": "electron scripts/make-icons.js",
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
     "vendor": "node scripts/vendor.mjs && node scripts/lights.mjs",

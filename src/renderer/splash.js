@@ -23,3 +23,11 @@
     if (res.ok) document.getElementById("mark").innerHTML = await res.text();
   } catch { /* onyx and a wordmark is enough */ }
 })();
+
+// The wave in the palette's accent, which main passes in the address (?accent=).
+// Anything that is not a plain colour is ignored and the wave stays bone.
+{
+  const accent = new URLSearchParams(location.search).get("accent");
+  const wave = document.querySelector(".wave");
+  if (wave && /^#[0-9a-f]{6}$/i.test(accent || "")) wave.style.color = accent;
+}
