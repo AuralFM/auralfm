@@ -25,7 +25,9 @@ const common = {
   fixture: "Uploaded 1600×1000 sunset test image drawn by e2e/riso-test-helpers.ts",
 } as const;
 
-const controlsSpec = "e2e/product-riso-controls.spec.ts" as const;
+// The delivery catalog allows one acceptance domain (the first id segment) per
+// browser file, so each control section has its own spec.
+const controlsSpec = (target: string): `e2e/${string}.spec.ts` => `e2e/product-riso-${target.split(".")[0]}.spec.ts`;
 const ownedInteraction: Partial<Record<string, string>> = {
   [risoTarget("amount")]: "edit-slice-offset",
   [risoTarget("misregistration")]: "edit-misregistration",
@@ -44,7 +46,7 @@ const sliderRows: ToolcraftComponentAcceptance[] = risoSliders.map((parameter: R
     ...(interactionId ? { interactionId } : {}),
     userAction: `Drag ${parameter.label} while holding the pointer.`,
     expectedObservable: parameter.help,
-    browser: { file: controlsSpec, testName: `browser: riso ${parameter.key} changes the print live`, budget: "standard" },
+    browser: { file: controlsSpec(target), testName: `browser: riso ${parameter.key} changes the print live`, budget: "standard" },
   };
 });
 
@@ -58,7 +60,7 @@ const selectorRows: ToolcraftComponentAcceptance[] = Object.entries(risoSelector
   optionCoverage: "each-visible-item",
   userAction: "Select every option in turn.",
   expectedObservable: "Each option prints a visibly different image and reveals only the controls it uses.",
-  browser: { file: controlsSpec, testName: `browser: riso ${key} options change the print`, budget: "standard" },
+  browser: { file: controlsSpec(target), testName: `browser: riso ${key} options change the print`, budget: "standard" },
 }));
 
 const inkColorRows: ToolcraftComponentAcceptance[] = risoInkTargets.map((target, index) => ({
@@ -70,7 +72,7 @@ const inkColorRows: ToolcraftComponentAcceptance[] = risoInkTargets.map((target,
   evidence: "rendered-pixels",
   userAction: "Type a new hex colour for this ink.",
   expectedObservable: `Ink ${index + 1} prints in the new colour and the image is re-separated for the new ink set.`,
-  browser: { file: controlsSpec, testName: `browser: riso ink ${index + 1} colour reprints the image`, budget: "standard" },
+  browser: { file: controlsSpec(target), testName: `browser: riso ink ${index + 1} colour reprints the image`, budget: "standard" },
 }));
 
 export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
