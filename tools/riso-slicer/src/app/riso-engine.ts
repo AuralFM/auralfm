@@ -79,8 +79,9 @@ function flipRows(pixels: Uint8Array, width: number, height: number): Uint8Clamp
 }
 
 export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
-  const gl = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
-  if (!gl) throw new Error("WebGL2 is unavailable.");
+  const context = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
+  if (!context) throw new Error("WebGL2 is unavailable.");
+  const gl: WebGL2RenderingContext = context;
   const program = link(gl);
   const vertexArray = gl.createVertexArray();
   const location = (name: string) => gl.getUniformLocation(program, name);

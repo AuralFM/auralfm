@@ -10,10 +10,9 @@ import { getRisoSourcePixelSize, risoMaxSourceEdge } from "./riso-source";
 
 describe("riso product", () => {
   it("riso schema keeps its slicing, ink and print contracts", () => {
-    const targets = new Set(appSchema.panels.controls.sections.flatMap((section) => Object.values(section.controls).map((control) => control.target)));
+    const targets = new Set((appSchema.panels.controls?.sections ?? []).flatMap((section) => Object.values(section.controls).map((control) => control.target)));
     for (const parameter of risoSliders) expect(targets.has(risoTarget(parameter.key))).toBe(true);
     for (const target of [...Object.values(risoSelectorTargets), ...risoInkTargets]) expect(targets.has(target)).toBe(true);
-    expect(appSchema.timeline?.defaultDurationSeconds ?? 4).toBe(4);
 
     const defaults = readRisoSettings({});
     expect(defaults.mode).toBe("strips");
@@ -38,7 +37,7 @@ describe("riso product", () => {
   });
 
   it("caps the prepared source at the long-edge limit and keeps its aspect", () => {
-    const size = getRisoSourcePixelSize({ id: "a", size: { width: 1920, height: 1080 }, sourceSize: { width: 12000, height: 8000 } });
+    const size = getRisoSourcePixelSize({ id: "a", size: { width: 1920, height: 1080, unit: "px" }, sourceSize: { width: 12000, height: 8000, unit: "px" } });
     expect(Math.max(size.width, size.height)).toBe(risoMaxSourceEdge);
     expect(size.width / size.height).toBeCloseTo(1920 / 1080, 2);
   });

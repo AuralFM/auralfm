@@ -14,7 +14,7 @@ const model: ToolcraftPerformanceConfig = {
   rendererStrategy: "webgl",
   rendererPipeline: risoPipeline,
   rendererTechnique: {
-    sourceRepresentation: "raster-image",
+    sourceRepresentation: "image-media",
     productRepresentation: "pixel",
     previewRenderer: "webgl",
     exportRenderer: "webgl",
@@ -33,7 +33,7 @@ const model: ToolcraftPerformanceConfig = {
       "Preview cost is quadratic in backing pixels; playback reruns one fragment pass per frame and pauses while the viewport is dragged.",
       "8K export renders and reads back in 2048 px tiles to bound GPU memory.",
     ],
-    layers: [{ id: "riso-print", kind: "product-foreground", content: ["image", "shader", "noise"], renderer: "webgl", primitiveCount: "low", exportMode: "included", uiSelector: "[data-riso-canvas]" }],
+    layers: [{ id: "riso-print", kind: "product-foreground", content: ["bitmap-media", "shader", "noise"], renderer: "webgl", primitiveCount: "low", exportMode: "included", uiSelector: "[data-riso-canvas]" }],
   },
   workloadEnvelope: {
     dimensions: [
