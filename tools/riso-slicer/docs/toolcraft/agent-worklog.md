@@ -83,9 +83,13 @@ Active change: riso-slicer-first-delivery
 
 ## Verification
 
-Functional checks so far were manual headless-browser inspections during development. The protected `npm run verify:delivery` gate has not produced a receipt yet.
+- `npm run verify:delivery` passed on commit 0561148 (bare command): docs and code-health checks, typecheck and production build, Vitest 715 passed / 1 skipped, and all 32 product browser proofs passed with their runtime evidence (source, 17 sliders, 5 selectors with every applicability case, 3 ink colours, timeline loop, backing scale, background and finite stacking, image export, Infinity canvas, persistence). `npm run verify:receipt` reports the delivery authority current and valid. The receipt lives in the gitignored `.toolcraft/verification/`.
+- Sandbox-only settings used for the run, none of which change the app: an IPv4 loopback shim (the container has no IPv6, which the generated port finder needs) and `VITEST_MAX_THREADS=2 VITEST_MAX_FORKS=2` (with default parallelism on four CPUs, one framework unit test importing the Playwright fixture exceeded its 5 s limit while the build ran beside it; alone it takes about 3 s).
+- Bugs found by the proofs and fixed: Wedges had no visible effect with the Wave pattern (every wedge in a ring turned by the same angle); reloading could leave the print empty (a shared source decode was aborted); a playhead at the loop end read as phase 1.
+- Cover: `public/toolcraft/cover.png`, the app's own 2K PNG export at the recorded settings in `app-cover-state.json`, inspected after capture.
 
 ## Risks
 
 - Risk: The reference GIF was never seen; slice styles follow the user's description, so the default look may differ from the example.
 - Risk: The sandbox has no IPv6, so the generated port finder needed an environment-only shim to start the dev server here; this does not affect normal machines.
+- Risk: Browser proofs ran on software GL (SwiftShader). Several control proofs take 20 to 25 s of their 30 s budget here; a slower machine without a GPU could time out.
