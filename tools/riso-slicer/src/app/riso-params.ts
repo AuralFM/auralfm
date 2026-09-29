@@ -67,7 +67,7 @@ export type RisoSliderKey =
   | "count" | "columns" | "rows" | "rings" | "wedges" | "amount" | "frequency" | "gap" | "seed"
   | "cycles" | "inkLag" | "density" | "contrast" | "cell" | "grain" | "misregistration" | "boil";
 
-export const risoInkDefaults = [risoInksControls.first.defaultValue, risoInksControls.second.defaultValue, risoInksControls.third.defaultValue] as const;
+export const risoInkDefaults = [risoInksControls["First ink"].defaultValue, risoInksControls["Second ink"].defaultValue, risoInksControls["Third ink"].defaultValue] as const;
 
 export type RisoSettings = Record<RisoSliderKey, number> & {
   mode: RisoSliceMode;

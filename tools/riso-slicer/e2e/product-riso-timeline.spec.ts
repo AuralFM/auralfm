@@ -96,7 +96,8 @@ async function collectLoopCycle(page: Page): Promise<ToolcraftTimelineLoopCycleP
       let wrapped = false;
       const deadline = performance.now() + 10_000;
       const sample = () => {
-        const phase = Number(scrubber.getAttribute("aria-valuenow")) / duration;
+        // The loop end reads as the full duration; it is the same phase as the start.
+        const phase = (Number(scrubber.getAttribute("aria-valuenow")) / duration) % 1;
         const previous = phases.at(-1);
         if (previous === undefined || Math.abs(phase - previous) > 0.001) {
           if (previous !== undefined && phase < previous) wrapped = true;

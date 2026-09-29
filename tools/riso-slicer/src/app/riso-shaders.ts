@@ -145,7 +145,8 @@ vec2 sliceSample(vec2 p, float progress, out float mask) {
   float ringDensity = uRings / length(vec2(aspect, 1.0) * 0.5);
   float wedgeDensity = uWedges / (TAU * max(length(q), 1e-3));
   mask = gutter(fract(ringPosition), ringDensity) * (uWedges > 1.5 ? gutter(fract(wedgePosition), wedgeDensity) : 1.0);
-  float turn = uAmount * PI * sliceWave(ring / uRings, id, progress);
+  // The wave runs out along the rings and around each ring, so wedges turn out of step.
+  float turn = uAmount * PI * sliceWave(ring / uRings + wedge / uWedges, id, progress);
   float c = cos(turn);
   float s = sin(turn);
   vec2 rotated = vec2(c * q.x - s * q.y, s * q.x + c * q.y);

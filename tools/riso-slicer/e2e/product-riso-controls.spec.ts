@@ -78,6 +78,7 @@ for (const [key, target] of Object.entries(risoSelectorTargets) as [keyof typeof
 }
 
 const inkHex = ["#00A95C", "#FF6C2F", "#765BA7"] as const;
+const inkName = ["First ink", "Second ink", "Third ink"] as const;
 risoInkTargets.forEach((target, index) => {
   test(`browser: riso ink ${index + 1} colour reprints the image`, async ({ page }) => {
     const session = await openRiso(page);
@@ -85,7 +86,8 @@ risoInkTargets.forEach((target, index) => {
     await expectToolcraftProductObservableToChange(
       session,
       session.controlAction(target, async () => {
-        const input = field(page, target).getByRole("textbox").first();
+        // Paired colours render as one row, so the input is found by its accessible name.
+        const input = page.getByRole("textbox", { name: `${inkName[index]} hex`, exact: true });
         await input.fill(inkHex[index]!);
         await input.press("Enter");
       }),

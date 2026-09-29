@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "source": {
+    "kind": "generated-sample",
+    "generator": "e2e/riso-test-helpers.ts#risoSampleImage",
+    "description": "1600x1000 sunset: navy-to-cream sky gradient, yellow sun, three wave bands, white bar at the top left. Uploaded as riso-sample.png, fitted as a cover crop to the 1920x1080 canvas."
+  },
+  "controls": "Every Slices, Motion, Inks and Print control at its schema default (Strips, Rows, Wave, 14 strips, 3 drums #FF48B0 / #0078BF / #FFE800, Grain screen). Background included, #F4F0E8.",
+  "timeline": { "durationSeconds": 4, "heldAtSeconds": 1.2 },
+  "export": { "format": "PNG", "resolution": "2K", "width": 2048, "height": 1152 }
+}

@@ -104,16 +104,18 @@ export async function chooseSegment(page: Page, target: string, label: string) {
 
 export async function dragNumber(page: Page, target: string, during?: () => Promise<void>) {
   const slider = field(page, target).getByRole("slider");
-  // Centre it: at the panel's bottom edge the timeline bar would take the pointer.
-  await slider.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  // Centre it without smooth scrolling: at the panel's bottom edge the timeline bar
+  // would take the pointer, and a box measured mid-scroll misses the thumb.
+  await slider.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   const rect = await slider.boundingBox();
   if (!rect) throw new Error(`Missing slider ${target}`);
   const before = await slider.getAttribute("aria-valuenow");
   await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2);
   await page.mouse.down();
   try {
-    const min = Number(await slider.getAttribute("aria-valuemin"));
-    const max = Number(await slider.getAttribute("aria-valuemax"));
+    // The range input carries its bounds as min/max, not aria-valuemin/max.
+    const min = Number(await slider.getAttribute("min"));
+    const max = Number(await slider.getAttribute("max"));
     const direction = Number(before) > (min + max) / 2 ? -1 : 1;
     await page.mouse.move(rect.x + rect.width / 2 + direction * 70, rect.y + rect.height / 2, { steps: 7 });
     await expect(slider).not.toHaveAttribute("aria-valuenow", before!);
