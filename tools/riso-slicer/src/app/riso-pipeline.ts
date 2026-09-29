@@ -16,11 +16,11 @@ const frameBounds = {
 
 export const risoPipeline = registerToolcraftRendererPipeline<{
   resources: ToolcraftRendererPipelinePassContract<RisoEngine, RisoEngine, readonly ["riso"]>;
-  source: ToolcraftRendererPipelinePassContract<HTMLCanvasElement>;
+  source: ToolcraftRendererPipelinePassContract<ImageBitmap>;
   preview: ToolcraftRendererPipelinePassContract<void>;
   export: ToolcraftRendererPipelinePassContract<void>;
 }>()({
-  runtimeId: "riso-slicer-three-v1",
+  runtimeId: "riso-slicer-webgl2-v1",
   passes: [
     { id: "resources", kind: "preprocess", runsOn: "main", output: "source", quality: "full", inputs: ["surface"], invalidatedBy: ["renderer-mount"], cacheKey: ["surface"], lifecycle: { cache: "retained-resource", resourceScope: "renderer" }, cost: { dimensions: [], frequency: "once", relationship: "constant" }, sceneBounds: frameBounds },
     { id: "source", kind: "decode", runsOn: "main", output: "source", quality: "full", inputs: [risoSourceTarget], invalidatedBy: [risoSourceTarget], cacheKey: [risoSourceTarget], lifecycle: { cache: "memoized", resourceScope: "source" }, cost: { dimensions: [], frequency: "discrete", relationship: "constant" }, sceneBounds: frameBounds },

@@ -151,11 +151,9 @@ export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
+  // The bitmap belongs to the memoized source pass, which may hand it to a later engine; never close it here.
   function setSource(next: RisoSource | null) {
-    if (sourceKey === (next?.key ?? null)) {
-      next?.bitmap.close();
-      return;
-    }
+    if (sourceKey === (next?.key ?? null)) return;
     if (texture) gl.deleteTexture(texture);
     texture = null;
     sourceKey = next?.key ?? null;
@@ -169,7 +167,6 @@ export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    next.bitmap.close();
   }
 
   function draw(frame: RisoFrame, width: number, height: number) {
