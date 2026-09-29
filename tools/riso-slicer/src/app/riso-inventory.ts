@@ -27,8 +27,8 @@ export const appControlSectionInventory: readonly ToolcraftControlSectionInvento
     groupingReason: "Style, pattern and geometry of how the image is cut and displaced share one reset scope.",
     targets: [risoSelectorTargets.mode, risoSelectorTargets.direction, risoSelectorTargets.pattern, ...sliderTargets("slices")],
     finiteSelectors: [
-      { target: risoSelectorTargets.mode, role: "branch", affectedTargets: [risoTarget("amount"), risoTarget("gap"), risoTarget("seed"), risoSelectorTargets.pattern], reason: "Strips, Grid and Radial cut the image differently and reveal their own count controls." },
-      { target: risoSelectorTargets.pattern, role: "branch", affectedTargets: [risoTarget("amount")], reason: "Wave, Random and Steps set how slices move; only Wave uses Wave cycles." },
+      { target: risoSelectorTargets.mode, role: "branch", affectedTargets: [], reason: "Strips, Grid and Radial cut the image differently and reveal their own count controls; the shared slice controls stay relevant in every style." },
+      { target: risoSelectorTargets.pattern, role: "branch", affectedTargets: [], reason: "Wave, Random and Steps set how slices move; only Wave uses Wave cycles." },
       { target: risoSelectorTargets.direction, role: "parameter", reason: "Chooses horizontal or vertical strips." },
       ...discreteSelectors("slices"),
     ],
@@ -44,7 +44,7 @@ export const appControlSectionInventory: readonly ToolcraftControlSectionInvento
     groupingReason: "Number of drums, their colours and how much ink they lay down define the colour separation.",
     targets: [risoSelectorTargets.inkCount, ...risoInkTargets, ...sliderTargets("inks")],
     finiteSelectors: [
-      { target: risoSelectorTargets.inkCount, role: "branch", affectedTargets: [risoInkTargets[0], risoTarget("density"), risoTarget("contrast")], reason: "One, two or three drums re-separate the image and reveal their colours and pass controls." },
+      { target: risoSelectorTargets.inkCount, role: "branch", affectedTargets: [], reason: "One, two or three drums re-separate the image and reveal their colours and pass controls." },
     ],
   },
   {
@@ -52,7 +52,7 @@ export const appControlSectionInventory: readonly ToolcraftControlSectionInvento
     groupingReason: "Screen, ink texture and registration are properties of the printed pass, not of the slicing.",
     targets: [risoSelectorTargets.screen, ...sliderTargets("print")],
     finiteSelectors: [
-      { target: risoSelectorTargets.screen, role: "branch", affectedTargets: [risoTarget("grain")], reason: "Grain, Halftone and Tone screen each ink differently; Tone has no screen size." },
+      { target: risoSelectorTargets.screen, role: "branch", affectedTargets: [], reason: "Grain, Halftone and Tone screen each ink differently; Tone has no screen size." },
     ],
   },
   {

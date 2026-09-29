@@ -1,4 +1,6 @@
-import { expectToolcraftBackgroundOutputSemantics } from "./browser-background-output-evidence";
+import { expectToolcraftBackgroundOutputSemantics, expectToolcraftFiniteBackgroundMediaStacking } from "./browser-background-output-evidence";
+import type { ToolcraftFiniteBackgroundStackingObservation } from "./browser-background-stacking-observation";
+import { readToolcraftBrowserObservation } from "./browser-proof-session";
 import { expectToolcraftInfinityCanvasBackgroundEvidence, observeInfinityCanvasBackground } from "./browser-infinity-canvas-evidence";
 import { expectToolcraftProductObservableToChange } from "./product-observable-helpers";
 import { chooseSegment, downloadImage, expandSection, field, inspectImage, openRiso, setChoice, setNumber } from "./riso-test-helpers";
@@ -22,6 +24,52 @@ test("browser: riso paper background matches preview and artifact", async ({ pag
       await input.press("Enter");
     }),
     { requirementId: "background.color", selector: "[data-toolcraft-editable-canvas]" },
+  );
+  // The source image is processed, not shown, so the stack is Background -> print.
+  await page.getByRole("switch", { name: "Background", exact: true }).uncheck();
+  const stacking = session.observe((root): ToolcraftFiniteBackgroundStackingObservation => {
+    const surface = root.querySelector<HTMLElement>("[data-toolcraft-canvas-mode]");
+    const background = root.querySelector<HTMLElement>("[data-toolcraft-finite-background-layer]");
+    const canvas = root.querySelector<HTMLCanvasElement>("[data-riso-canvas]")!;
+    const scratch = new OffscreenCanvas(96, 54);
+    const context = scratch.getContext("2d", { willReadFrequently: true })!;
+    context.imageSmoothingEnabled = false;
+    context.drawImage(canvas, 0, 0, 96, 54);
+    const pixels = context.getImageData(0, 0, 96, 54).data;
+    let hash = 2166136261;
+    let transparent = false;
+    for (let index = 0; index < pixels.length; index += 1) {
+      hash = Math.imul(hash ^ pixels[index]!, 16777619);
+      if (index % 4 === 3 && pixels[index]! < 255) transparent = true;
+    }
+    const layers = [background && ["background", background] as const, ["product", canvas] as const].filter(Boolean) as (readonly [string, Element])[];
+    layers.sort(([, a], [, b]) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+    const backgroundColor = background ? getComputedStyle(background).backgroundColor : "";
+    return {
+      backgroundColor,
+      backgroundVisible: Boolean(background),
+      canvasMode: surface?.getAttribute("data-toolcraft-canvas-mode") === "infinite" ? "infinite" : "finite",
+      layerOrder: layers.map(([name]) => name),
+      mediaVisible: false,
+      outputSignature: `${backgroundColor || "none"}|${(hash >>> 0).toString(16)}`,
+      productForegroundTransparent: transparent,
+    };
+  });
+  const bare = await readToolcraftBrowserObservation(stacking);
+  const printSignature = bare.outputSignature.split("|")[1];
+  await expectToolcraftFiniteBackgroundMediaStacking(
+    stacking,
+    session.controlAction("export.includeBackground", async (control) => control.getByRole("switch").check()),
+    {
+      backgroundColor: "rgb(217, 231, 245)",
+      backgroundVisible: true,
+      canvasMode: "finite",
+      layerOrder: ["background", "product"],
+      mediaVisible: false,
+      outputSignature: `rgb(217, 231, 245)|${printSignature}`,
+      productForegroundTransparent: true,
+    },
+    { requirementId: "background.include" },
   );
   const observation = session.observe((root) => {
     const background = root.querySelector<HTMLElement>("[data-toolcraft-finite-background-layer]");
