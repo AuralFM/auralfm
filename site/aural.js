@@ -726,38 +726,4 @@
     });
   }
 
-  // ── the mast ──────────────────────────────────────────────────────────────
-  // A lattice radio mast in straight lines, the kind every town has on a hill:
-  // two legs tapering to the top, a zigzag between them, rungs, guy wires out to
-  // the ground, a red lamp, and the signal leaving it in rings (CSS animates them).
-  for (const svg of document.querySelectorAll("svg[data-tower]")) {
-    const W = 240, H = 600, cx = W / 2, top = 70, foot = H - 6, parts = [];
-    const half = (y) => 6 + (y - top) / (foot - top) * 34;          // half-width at height y
-    const SEG = 18, step = (foot - top) / SEG;
-    parts.push(`<path d="M${cx - half(top)} ${top} L${cx - half(foot)} ${foot} M${cx + half(top)} ${top} L${cx + half(foot)} ${foot}" stroke-width="2.2"/>`);
-    let zig = "";
-    for (let i = 0; i < SEG; i++) {
-      const y1 = top + i * step, y2 = y1 + step;
-      const [l, r] = i % 2 ? [cx + half(y1), cx - half(y2)] : [cx - half(y1), cx + half(y2)];
-      zig += `M${l.toFixed(1)} ${y1.toFixed(1)} L${r.toFixed(1)} ${y2.toFixed(1)} `;
-      parts.push(`<line x1="${(cx - half(y2)).toFixed(1)}" y1="${y2.toFixed(1)}" x2="${(cx + half(y2)).toFixed(1)}" y2="${y2.toFixed(1)}" stroke-width=".9"/>`);
-    }
-    parts.push(`<path d="${zig}" stroke-width="1.1"/>`);
-    // Guy wires, from three heights out to the ground on either side.
-    for (const f of [0.18, 0.45, 0.72]) {
-      const y = top + (foot - top) * f;
-      parts.push(`<path d="M${cx - half(y)} ${y} L4 ${foot} M${cx + half(y)} ${y} L${W - 4} ${foot}" stroke-width=".6" stroke-dasharray="3 4" opacity=".7"/>`);
-    }
-    // The antenna, its lamp, and the signal.
-    parts.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${top - 42}" stroke-width="3"/>`);
-    parts.push(`<circle cx="${cx}" cy="${top - 46}" r="5" fill="#E5382C" stroke="currentColor" stroke-width="1.5"/>`);
-    const arc = (r) => `M${cx - r} ${top - 46 - r * 0.2} A${r} ${r} 0 0 1 ${cx + r} ${top - 46 - r * 0.2}`;
-    parts.push(`<g class="sig" stroke-width="2.2">${[18, 32, 46].map((r) => `<path d="${arc(r)}"/>`).join("")}</g>`);
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.innerHTML = `<g fill="none" stroke="currentColor" stroke-linecap="round">${parts.join("")}</g>`;
-  }
-
-  // ── redactions ────────────────────────────────────────────────────────────
-  // A bar over the words the feed kept from you, lifted once it is read.
-  seen(document.querySelectorAll(".redact"), (el) => el.classList.add("lift"), "0px 0px -30% 0px");
 })();

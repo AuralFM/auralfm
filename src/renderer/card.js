@@ -323,6 +323,19 @@
       ctx.fillStyle = `rgba(${TINT},${(rnd() * 0.05).toFixed(3)})`;
       ctx.fillRect(rnd() * W, rnd() * H, 1.5, 1.5);
     }
+    /**
+     * Space, behind everything, fading out before the words (Melton, 28 Sept:
+     * the stars were missed — the planet sits somewhere, and the sky thins into
+     * the station's name). Seeded like the grain, so a station keeps its sky.
+     */
+    for (let i = 0; i < 620; i++) {
+      const x = rnd() * W, y = rnd() * H;
+      const depth = Math.max(0, 1 - Math.max(0, y - 380) / 560);
+      if (depth <= 0.02) continue;
+      const r = rnd() * 1.5 + 0.4;
+      ctx.fillStyle = `rgba(${TINT},${((0.12 + rnd() * 0.55) * depth).toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
 
     // ── the head: the name, and that it is live ─────────────────────────────
     const HEAD = 104;
@@ -410,7 +423,7 @@
     const disp = (s) => `900 ${s}px ${DISPLAY}`;
     const LEAD = 0.92, hasWave = Array.isArray(now.levels) && now.levels.length;
     // Between the picture and the ticket, centred, however many lines it takes.
-    const AREA_TOP = 772, AREA_END = hasWave ? 1008 : 1050, LABEL = 40;
+    const AREA_TOP = 772, AREA_END = hasWave ? 994 : 1036, LABEL = 40;
     let size = fit(ctx, title, disp, 128, 60, inner);
     ctx.font = disp(size);
     let lines = wrap(ctx, title, inner, 2);
@@ -436,7 +449,7 @@
     lines.forEach((line, i) => { ctx.fillText(line, M, y); if (i < lines.length - 1) y += size * LEAD; });
 
     // The sound, if there was any: real levels, never a drawn squiggle.
-    const WAVE_Y = 1024, WAVE_H = 30;
+    const WAVE_Y = 1010, WAVE_H = 30;
     if (Array.isArray(now.levels) && now.levels.length) {
       const bars = now.levels, loudest = Math.max(0.15, ...bars), gap = 4;
       const bw = (inner + gap) / bars.length - gap;
@@ -449,7 +462,7 @@
     }
 
     // ── the ticket: the facts, in labelled fields, on the site's hairlines ──
-    const GRID_TOP = 1070, ROW = 88, QRW = 176;
+    const GRID_TOP = 1054, ROW = 104, QRW = 176;
     const cols = 3, colW = (inner - QRW) / cols;
     ctx.strokeStyle = HAIR;
     ctx.lineWidth = 1.5;
@@ -472,8 +485,11 @@
       : dial?.[2] && +dial[2] >= 150 && +dial[2] <= 1710 ? `AM ${dial[2]}`
       : "Stream";
     const sound = (now.tags || []).join(" · ") || (now.sdr ? "Shortwave" : "Live radio");
+    // A station placed only by its country has no town yet: say so plainly
+    // rather than print "Somewhere in …" across two cells.
+    const city = /^(Across |Somewhere in |Online, no country$|Online only$)/.test(now.place || "") ? "Unknown" : now.place;
     const fields = [
-      ["City", now.place || "—"], ["Country", now.country || "—"], ["Heard", stamp],
+      ["City", city || "Unknown"], ["Country", now.country || "—"], ["Heard", stamp],
       ["Coordinates", placed ? `${Math.abs(now.lat).toFixed(1)}${now.lat >= 0 ? "N" : "S"} ${Math.abs(now.lon).toFixed(1)}${now.lon >= 0 ? "E" : "W"}` : "—"],
       ["Signal", signal], ["Sound", sound],
     ];
@@ -482,11 +498,20 @@
       ctx.font = `400 18px ${MONO}`;
       ctx.fillStyle = `rgb(${ACCENT})`;
       ctx.fillText(k.toUpperCase(), x, top + 30);
-      const val = String(v).toUpperCase();
-      const vs = fit(ctx, val, (s) => `700 ${s}px ${MONO}`, 28, 16, colW - 28);
-      ctx.font = `700 ${vs}px ${MONO}`;
+      // One line if it fits at a readable size; otherwise two, never over the
+      // next cell (long cities, "Democratic Republic of the Congo").
+      const val = String(v).toUpperCase(), room = colW - 28;
+      const vs = fit(ctx, val, (s) => `700 ${s}px ${MONO}`, 28, 22, room);
       ctx.fillStyle = TEXT;
-      ctx.fillText(val, x, top + 70);
+      ctx.font = `700 ${vs}px ${MONO}`;
+      if (ctx.measureText(val).width <= room) { ctx.fillText(val, x, top + 72); return; }
+      let lines2 = [];
+      for (const size of [21, 19, 17]) {
+        ctx.font = `700 ${size}px ${MONO}`;
+        lines2 = wrap(ctx, val, room, 2);
+        if (!lines2.at(-1)?.endsWith("…")) break;
+      }
+      lines2.forEach((line, n) => ctx.fillText(line, x, top + 62 + n * 26));
     });
 
     // The code, in its own cell of the ticket.

@@ -27,7 +27,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preload" href="assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/SpaceMono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="aural.css?v=50d79e685e">
+<link rel="stylesheet" href="aural.css?v=c05140b84f">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -148,13 +148,12 @@
   </section>
 
   <!-- ── on paper: community to community ────────────────────────────────
-       The one bone sheet on the page: a halftone Earth over a mast-red wedge, a
-       tower in straight lines, a log of the night, and the words the feed kept
-       from you under a bar that lifts as you read (aural.js). -->
+       The one bone sheet on the page: a halftone Earth over a mast-red wedge,
+       a log of the night, and the words the feed kept from you in red. -->
   <section class="paper" aria-labelledby="paper-title">
     <div class="paper-copy">
       <p class="label">[ Community to community ]</p>
-      <h2 id="paper-title" class="display stretch">The feed kept 60,096 stations <span class="redact">from&nbsp;you.</span></h2>
+      <h2 id="paper-title" class="display stretch">The feed kept 60,096 stations <span class="red">from&nbsp;you.</span></h2>
       <p class="hi"><span>A station in Kingston and a station in Lagos are neighbours here. Neither
         needs a platform&rsquo;s permission to reach the other, and neither do you.</span></p>
       <ol class="paper-rules">
@@ -168,11 +167,9 @@
     </div>
     <div class="paper-art" aria-hidden="true">
       <span class="wedge"></span>
-      <!-- One frame for the picture, so the Earth and the mast stay together at
-           every width instead of drifting to opposite edges of the column. -->
+      <!-- One frame for the picture, so it holds together at every width. -->
       <div class="paper-stage">
         <canvas class="paper-globe" data-halftone data-lat="10" data-lon="-25" data-ink="ink" data-cell="10" data-spin="2.5"></canvas>
-        <svg class="tower" data-tower></svg>
         <p class="pin">No algorithm</p>
         <span class="reg g1"></span><span class="reg g2"></span>
         <p class="log">03:12 LAGOS &mdash; the overnight call-in<br>21:40 KINGSTON &mdash; a selector takes requests<br>05:55 ULAANBAATAR &mdash; morning news<br>23:08 LIMA &mdash; cumbia for the night shift</p>
@@ -489,6 +486,6 @@
   </symbol>
 </svg>
 
-<script src="aural.js?v=50d79e685e" defer></script>
+<script src="aural.js?v=c05140b84f" defer></script>
 </body>
 </html>
