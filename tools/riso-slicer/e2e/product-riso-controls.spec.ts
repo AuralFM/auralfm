@@ -1,5 +1,4 @@
 import { risoInkTargets, risoSelectorTargets, risoSliders, risoTarget, type RisoSliderParameter } from "../src/app/riso-params";
-import { createToolcraftBrowserProofSession } from "./browser-proof-session";
 import { expectToolcraftProductObservableToChange, getToolcraftProductObservableSnapshot } from "./product-observable-helpers";
 import { chooseSegment, dragNumber, expandSection, field, openRiso, risoSelector } from "./riso-test-helpers";
 import { expect, test, type Page } from "./toolcraft-product-test";
@@ -23,9 +22,8 @@ async function prepareFor(page: Page, parameter: RisoSliderParameter) {
 
 for (const parameter of risoSliders as readonly RisoSliderParameter[]) {
   test(`browser: riso ${parameter.key} changes the print live`, async ({ page }) => {
-    await openRiso(page);
+    const session = await openRiso(page);
     await prepareFor(page, parameter);
-    const session = await createToolcraftBrowserProofSession(page);
     const target = risoTarget(parameter.key);
     const before = await getToolcraftProductObservableSnapshot(page, { selector: risoSelector });
     await expectToolcraftProductObservableToChange(
@@ -54,9 +52,8 @@ const selectorSection: Record<keyof typeof risoSelectorTargets, string> = {
 
 for (const [key, target] of Object.entries(risoSelectorTargets) as [keyof typeof risoSelectorTargets, string][]) {
   test(`browser: riso ${key} options change the print`, async ({ page }) => {
-    await openRiso(page);
+    const session = await openRiso(page);
     await expandSection(page, selectorSection[key]);
-    const session = await createToolcraftBrowserProofSession(page);
     for (const label of selectorOptions[key]) {
       await expectToolcraftProductObservableToChange(
         session,
@@ -83,9 +80,8 @@ for (const [key, target] of Object.entries(risoSelectorTargets) as [keyof typeof
 const inkHex = ["#00A95C", "#FF6C2F", "#765BA7"] as const;
 risoInkTargets.forEach((target, index) => {
   test(`browser: riso ink ${index + 1} colour reprints the image`, async ({ page }) => {
-    await openRiso(page);
+    const session = await openRiso(page);
     await expandSection(page, "Inks");
-    const session = await createToolcraftBrowserProofSession(page);
     await expectToolcraftProductObservableToChange(
       session,
       session.controlAction(target, async () => {

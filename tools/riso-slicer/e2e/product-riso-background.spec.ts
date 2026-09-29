@@ -1,13 +1,17 @@
 import { expectToolcraftBackgroundOutputSemantics } from "./browser-background-output-evidence";
 import { expectToolcraftInfinityCanvasBackgroundEvidence, observeInfinityCanvasBackground } from "./browser-infinity-canvas-evidence";
-import { createToolcraftBrowserProofSession } from "./browser-proof-session";
 import { expectToolcraftProductObservableToChange } from "./product-observable-helpers";
-import { downloadImage, field, inspectImage, openRiso, setChoice } from "./riso-test-helpers";
+import { chooseSegment, downloadImage, expandSection, field, inspectImage, openRiso, setChoice, setNumber } from "./riso-test-helpers";
 import { expect, test } from "./toolcraft-product-test";
 
 test("browser: riso paper background matches preview and artifact", async ({ page }) => {
-  await openRiso(page);
-  const session = await createToolcraftBrowserProofSession(page);
+  const session = await openRiso(page);
+  // One drum and the widest gutter leave bare paper along the top edge, where
+  // the transparent-export check samples.
+  await expandSection(page, "Inks");
+  await chooseSegment(page, "inks.count", "1");
+  await expandSection(page, "Slices");
+  await setNumber(page, "slices.gap", 0.45);
   await setChoice(page, "export.image.resolution", "2K");
   await page.getByRole("switch", { name: "Background", exact: true }).setChecked(true);
   await expectToolcraftProductObservableToChange(

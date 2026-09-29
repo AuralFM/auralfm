@@ -42,6 +42,6 @@ test("browser: riso infinity keeps the print and its crop", async ({ page }) => 
   // The print is defined on the image frame, which covers the canvas, so both crops match.
   await expectToolcraftInfinityCanvasImageExportEvidence(
     { finite, infinite: infiniteExport },
-    { expectedFiniteSize: { width: 2048, height: 1152 }, expectedInfiniteSize: { width: 2048, height: 1152 }, requirementId: "riso.infinity-export", target: "actions.output" },
+    { expectedSize: { width: 2048, height: 1152 }, requirementId: "riso.infinity-export", target: "actions.output" },
   );
 });

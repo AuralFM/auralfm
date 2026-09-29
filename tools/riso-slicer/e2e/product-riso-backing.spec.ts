@@ -1,4 +1,3 @@
-import { createToolcraftBrowserProofSession } from "./browser-proof-session";
 import { expectToolcraftCanvasRenderScaleEvidence } from "./browser-render-scale-evidence";
 import { expectToolcraftDiscreteSliderMarkers } from "./performance-control-layout-helpers";
 import { expectToolcraftProductObservableToChange } from "./product-observable-helpers";
@@ -6,14 +5,13 @@ import { expandSection, field, openRiso, risoSelector, setNumber } from "./riso-
 import { expect, test } from "./toolcraft-product-test";
 
 test("browser: riso keeps selected backing resolution", async ({ page }) => {
-  await openRiso(page);
-  const session = await createToolcraftBrowserProofSession(page);
+  const session = await openRiso(page);
   await expectToolcraftProductObservableToChange(
     session,
-    session.controlAction("canvas.renderScale", async () => setNumber(page, "canvas.renderScale", 1)),
+    // openRiso starts at scale 1; returning to the default 2 doubles the backing.
+    session.controlAction("canvas.renderScale", async () => setNumber(page, "canvas.renderScale", 2)),
     { requirementId: "riso.backing", selector: risoSelector },
   );
-  await setNumber(page, "canvas.renderScale", 2);
   await expectToolcraftDiscreteSliderMarkers(page, "canvas.renderScale", "riso.backing");
   await expandSection(page, "Print");
   const slider = field(page, "print.grain").getByRole("slider");

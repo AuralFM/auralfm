@@ -1,13 +1,23 @@
-import { createToolcraftBrowserProofSession } from "./browser-proof-session";
 import { expectToolcraftImageExportArtifact } from "./browser-media-export-evidence";
-import { chooseSegment, downloadImage, expandSection, field, openRiso, setChoice, setNumber } from "./riso-test-helpers";
+import { chooseSegment, downloadImage, expandSection, field, inspectImage, openRiso, setChoice, setNumber } from "./riso-test-helpers";
 import { expect, test } from "./toolcraft-product-test";
 
 const paper = [244, 240, 232, 255] as const;
 
 test("browser: riso image export has selected format and size", async ({ page }) => {
-  await openRiso(page);
-  const session = await createToolcraftBrowserProofSession(page);
+  const session = await openRiso(page);
+
+  // Export renders the frame under the playhead.
+  await setChoice(page, "export.image.resolution", "2K");
+  const scrubber = page.getByRole("slider", { name: "Playback position" });
+  await scrubber.press("Home");
+  const first = await inspectImage(page, await downloadImage(page));
+  const box = await scrubber.boundingBox();
+  if (!box) throw new Error("Timeline scrubber is unavailable.");
+  await page.mouse.click(box.x + box.width * 0.25, box.y + box.height / 2);
+  const later = await inspectImage(page, await downloadImage(page));
+  expect(later.inspection.decodedPixelHash).not.toBe(first.inspection.decodedPixelHash);
+
   // One black ink in continuous tone makes the decoded pixels predictable.
   await expandSection(page, "Slices");
   await setNumber(page, "slices.amount", 0);
@@ -22,7 +32,8 @@ test("browser: riso image export has selected format and size", async ({ page })
   await chooseSegment(page, "print.screen", "Tone");
   await setNumber(page, "print.grain", 0);
 
-  // 1920×1080 canvas; the sample is cover-cropped into it.
+  // 1920×1080 canvas; the sample is cover-cropped into it. Full black ink keeps
+  // 2% transmission, so over the paper it decodes to 0.02 × (244, 240, 232) ≈ 5.
   for (const [format, resolution, edge] of [["PNG", "2K", 2048], ["JPG", "4K", 4096], ["PNG", "8K", 8192]] as const) {
     await setChoice(page, "export.image.format", format);
     await setChoice(page, "export.image.resolution", resolution);
@@ -37,7 +48,7 @@ test("browser: riso image export has selected format and size", async ({ page })
       expectedBounds: { x: 0, y: 0, width: 1, height: 1 },
       expectedPixels: [
         { xRatio: 0.2, yRatio: 0.17, rgba: paper },
-        { xRatio: 0.5, yRatio: 0.96, rgba: [7, 7, 7, 255] },
+        { xRatio: 0.5, yRatio: 0.96, rgba: [5, 5, 5, 255] },
       ],
       additionalArtifactRequirements: [
         { requirementId: "export.image.format", target: "export.image.format" },

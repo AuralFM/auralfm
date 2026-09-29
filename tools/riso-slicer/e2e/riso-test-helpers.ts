@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { expect, type Download, type Page } from "@playwright/test";
 
+import { createToolcraftBrowserProofSession, type ToolcraftBrowserProofSession } from "./browser-proof-session";
 import { inspectToolcraftImageDownload } from "./image-artifact-inspection";
 
 export const risoSelector = "[data-riso-canvas]";
@@ -52,15 +53,26 @@ export async function pausePlayback(page: Page) {
   if (await pause.isVisible()) await pause.click();
 }
 
-/** Opens the app with the sample printed, playback paused and the whole frame in view. */
-export async function openRiso(page: Page) {
+/**
+ * Opens the app with the sample printed, playback paused and the whole frame
+ * in view. The proof session reloads the page, so it is created first.
+ */
+export async function openRiso(page: Page): Promise<ToolcraftBrowserProofSession> {
   await page.goto("/");
   await page.locator(risoSelector).waitFor({ state: "attached" });
-  await uploadRisoSample(page);
+  const session = await createToolcraftBrowserProofSession(page);
+  await page.locator(risoSelector).waitFor({ state: "attached" });
+  // Pause, lower the backing scale and zoom out before printing, so software-GL
+  // test browsers render few, small frames. Backing-scale proof sets 2 again itself.
   await pausePlayback(page);
-  await page.getByRole("slider", { name: "Playback position" }).press("Home").catch(() => undefined);
-  for (let i = 0; i < 3; i += 1) await page.getByRole("button", { name: "Zoom out", exact: true }).click();
+  await setNumber(page, "canvas.renderScale", 1);
+  for (let i = 0; i < 8; i += 1) await page.getByRole("button", { name: "Zoom out", exact: true }).click();
   await page.getByRole("button", { name: "Center canvas", exact: true }).click();
+  await uploadRisoSample(page);
+  // The extended timeline exposes the scrubber; start every test at frame zero.
+  await page.getByRole("switch", { name: "Timeline", exact: true }).check();
+  await page.getByRole("slider", { name: "Playback position" }).press("Home");
+  return session;
 }
 
 export async function expandSection(page: Page, title: string) {

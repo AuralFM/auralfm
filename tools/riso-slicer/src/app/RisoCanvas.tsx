@@ -55,9 +55,10 @@ export function RisoCanvas() {
       setLoadedKey(null);
       return;
     }
+    // Stale results are ignored; the shared load itself is never cancelled.
     const controller = new AbortController();
     void pipeline
-      .runPass(risoPipeline.getPass("source"), { "source.image": sourceKey }, () => loadRisoSource(sourceUrl, asset, controller.signal))
+      .runPass(risoPipeline.getPass("source"), { "source.image": sourceKey }, () => loadRisoSource(sourceUrl, asset))
       .then((prepared) => {
         if (controller.signal.aborted) return;
         engine.setSource({ key: sourceKey, pixels: prepared });

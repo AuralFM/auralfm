@@ -89,15 +89,15 @@ export function prepareRisoSource(image: ImageBitmap, asset: ImageAssetLike): Ri
 
 /**
  * Fetches, decodes and prepares the uploaded image. Only plain pixels leave
- * this chain; the decoded bitmap is closed inside it.
+ * this chain; the decoded bitmap is closed inside it. The result is shared
+ * through the memoized source pass, so no single consumer may cancel it.
  */
-export function loadRisoSource(url: string, asset: ImageAssetLike, signal: AbortSignal): Promise<RisoPixels> {
-  return fetch(url, { signal })
+export function loadRisoSource(url: string, asset: ImageAssetLike): Promise<RisoPixels> {
+  return fetch(url)
     .then((response) => response.blob())
     .then((blob) => createImageBitmap(blob))
     .then((bitmap) => {
       try {
-        signal.throwIfAborted();
         return prepareRisoSource(bitmap, asset);
       } finally {
         bitmap.close();

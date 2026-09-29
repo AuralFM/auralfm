@@ -92,8 +92,8 @@ function paintTile(
 }
 
 export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
-  const view = canvas.getContext("2d");
-  if (!view) throw new Error("A 2D canvas is unavailable.");
+  const view = canvas.getContext("bitmaprenderer");
+  if (!view) throw new Error("Canvas bitmap presentation is unavailable.");
   // WebGL renders offscreen; the preview and every export tile are painted from this surface.
   const surface = new OffscreenCanvas(1, 1);
   const gl = surface.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
@@ -101,7 +101,7 @@ export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
   return buildEngine(canvas, view, surface, gl);
 }
 
-function buildEngine(canvas: HTMLCanvasElement, view: CanvasRenderingContext2D, surface: OffscreenCanvas, gl: WebGL2RenderingContext): RisoEngine {
+function buildEngine(canvas: HTMLCanvasElement, view: ImageBitmapRenderingContext, surface: OffscreenCanvas, gl: WebGL2RenderingContext): RisoEngine {
   const program = link(gl);
   const vertexArray = gl.createVertexArray();
   const location = (name: string) => gl.getUniformLocation(program, name);
@@ -198,12 +198,15 @@ function buildEngine(canvas: HTMLCanvasElement, view: CanvasRenderingContext2D, 
   function draw(frame: RisoFrame, width: number, height: number) {
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
-    view.clearRect(0, 0, width, height);
-    if (!texture) return;
+    if (!texture) {
+      view.transferFromImageBitmap(null);
+      return;
+    }
     resizeSurface(width, height);
     configure(frame);
     render(0, 0, 1, 1);
-    paintTile(view, surface, width, height, { x: 0, y: 0, width, height });
+    // Hands the rendered frame to the visible canvas without copying pixels.
+    view.transferFromImageBitmap(surface.transferToImageBitmap());
   }
 
   function exportFrame(frame: RisoFrame, request: ToolcraftProductExportFrameContext) {

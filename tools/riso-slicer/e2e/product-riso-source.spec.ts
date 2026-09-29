@@ -15,7 +15,7 @@ test("browser: riso source upload, transform and removal", async ({ page }) => {
 
   const session = await createToolcraftBrowserProofSession(page);
   const media = session.observe((root) => ({
-    itemIds: Array.from(root.querySelectorAll<HTMLImageElement>('[data-slot="file-upload-preview-item"] img')).map((image) => image.alt),
+    itemIds: Array.from(root.querySelectorAll<HTMLImageElement>('[data-toolcraft-control-target="source.image"] img')).map((image) => image.alt),
     outputSignature: root.querySelector("[data-riso-canvas]")?.getAttribute("data-riso-source") === "ready" ? "printed" : "empty",
   }));
   const sample = await risoSampleImage(page);
@@ -32,9 +32,9 @@ test("browser: riso source upload, transform and removal", async ({ page }) => {
   // Uploading keeps the canvas size and prints the image as a cover crop.
   await expect(page.getByRole("textbox", { name: "Canvas width" })).toHaveValue("1920");
 
-  for (const action of ["90°", "Flip H", "Flip V"]) {
+  for (const action of ["90° Right", "Flip horizontal", "Flip vertical"]) {
     await expectToolcraftProductObservableToChange(page, async () => {
-      await page.getByRole("button", { name: new RegExp(`^${action.replace("°", "°?")}`) }).first().click();
+      await page.getByRole("button", { name: action, exact: true }).click();
     }, { selector: risoSelector });
   }
 

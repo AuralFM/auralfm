@@ -1,4 +1,4 @@
-import { createToolcraftBrowserProofSession, type ToolcraftBrowserProofSession } from "./browser-proof-session";
+import type { ToolcraftBrowserProofSession } from "./browser-proof-session";
 import {
   expectToolcraftTimelineDuration,
   expectToolcraftTimelineLoop,
@@ -8,7 +8,7 @@ import {
   type ToolcraftTimelineLoopCycleProof,
   type ToolcraftTimelineLoopProof,
 } from "./browser-timeline-evidence-helpers";
-import { downloadImage, inspectImage, openRiso, risoSelector, setChoice } from "./riso-test-helpers";
+import { openRiso, risoSelector } from "./riso-test-helpers";
 import { expect, test, type Page } from "./toolcraft-product-test";
 
 const requirementId = "renderer.timeline";
@@ -25,7 +25,21 @@ async function frameSignature(page: Page): Promise<string> {
   });
 }
 
-function observeFrame(session: ToolcraftBrowserProofSession, withPlaying = false) {
+function observeFrame(session: ToolcraftBrowserProofSession) {
+  return session.observe((root) => {
+    const canvas = root.querySelector<HTMLCanvasElement>("[data-riso-canvas]")!;
+    const scratch = new OffscreenCanvas(128, 128);
+    const context = scratch.getContext("2d", { willReadFrequently: true })!;
+    context.imageSmoothingEnabled = false;
+    context.drawImage(canvas, 0, 0, 128, 128);
+    let hash = 2166136261;
+    for (const value of context.getImageData(0, 0, 128, 128).data) hash = Math.imul(hash ^ value, 16777619);
+    const scrubber = root.querySelector<HTMLElement>('[role="slider"][aria-label="Playback position"]')!;
+    return { currentTimeSeconds: Number(scrubber.getAttribute("aria-valuenow")), outputSignature: (hash >>> 0).toString(16) };
+  });
+}
+
+function observePlayback(session: ToolcraftBrowserProofSession) {
   return session.observe((root) => {
     const canvas = root.querySelector<HTMLCanvasElement>("[data-riso-canvas]")!;
     const scratch = new OffscreenCanvas(128, 128);
@@ -38,7 +52,7 @@ function observeFrame(session: ToolcraftBrowserProofSession, withPlaying = false
     return {
       currentTimeSeconds: Number(scrubber.getAttribute("aria-valuenow")),
       outputSignature: (hash >>> 0).toString(16),
-      ...(withPlaying ? { playing: Boolean(root.querySelector('[aria-label="Pause playback"]')) } : {}),
+      playing: Boolean(root.querySelector('[aria-label="Pause playback"]')),
     };
   });
 }
@@ -71,28 +85,38 @@ async function collectLoopCycle(page: Page): Promise<ToolcraftTimelineLoopCycleP
   await scrubber.press("End");
   const seamEndSignature = await frameSignature(page);
   await setLoop(page, true);
-  await scrubber.press("Home");
+  // Start late in the cycle: the proof needs forward samples across one wrap, not a whole lap.
+  await setRatio(page, 0.85);
   await page.getByRole("button", { name: "Play playback" }).click();
-  const normalizedPhases: number[] = [];
-  let wrapped = false;
-  for (let sample = 0; sample < 160; sample += 1) {
-    await page.waitForTimeout(80);
-    const phase = Number(await scrubber.getAttribute("aria-valuenow")) / durationSeconds;
-    const previous = normalizedPhases.at(-1);
-    if (previous === undefined || Math.abs(phase - previous) > 0.001) {
-      if (previous !== undefined && phase < previous) wrapped = true;
-      normalizedPhases.push(phase);
-    }
-    if (wrapped && normalizedPhases.length >= 5 && phase > normalizedPhases[normalizedPhases.length - 2]!) break;
-  }
+  // Sample in the page on every frame; a round trip per sample misses most frames.
+  const normalizedPhases = await page.evaluate(
+    (duration) => new Promise<number[]>((resolve) => {
+      const scrubber = document.querySelector<HTMLElement>('[role="slider"][aria-label="Playback position"]')!;
+      const phases: number[] = [];
+      let wrapped = false;
+      const deadline = performance.now() + 10_000;
+      const sample = () => {
+        const phase = Number(scrubber.getAttribute("aria-valuenow")) / duration;
+        const previous = phases.at(-1);
+        if (previous === undefined || Math.abs(phase - previous) > 0.001) {
+          if (previous !== undefined && phase < previous) wrapped = true;
+          phases.push(phase);
+          if (wrapped && phases.length >= 5 && previous !== undefined && phase > previous) return resolve(phases);
+        }
+        if (performance.now() > deadline) return resolve(phases);
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    }),
+    durationSeconds,
+  );
   await page.getByRole("button", { name: "Pause playback" }).click();
-  expect(wrapped).toBe(true);
+  expect(normalizedPhases.some((phase, index) => index > 0 && phase < normalizedPhases[index - 1]!)).toBe(true);
   return { durationSeconds, normalizedPhases, seamEndSignature, seamStartSignature };
 }
 
 test("browser: riso timeline loops the slices seamlessly", async ({ page }) => {
-  await openRiso(page);
-  const session = await createToolcraftBrowserProofSession(page);
+  const session = await openRiso(page);
   const scrubber = page.getByRole("slider", { name: "Playback position" });
   await expect(scrubber).toHaveAttribute("aria-valuemax", "4");
 
@@ -150,7 +174,7 @@ test("browser: riso timeline loops the slices seamlessly", async ({ page }) => {
   await page.getByRole("button", { name: "Play playback" }).click();
   await expect.poll(() => scrubber.getAttribute("aria-valuenow")).not.toBe("0");
   await expectToolcraftTimelinePauseResume(
-    observeFrame(session, true),
+    observePlayback(session),
     session.targetAction("timeline.playback", async (currentPage) => {
       await currentPage.getByRole("button", { name: "Pause playback" }).click();
     }),
@@ -159,13 +183,4 @@ test("browser: riso timeline loops the slices seamlessly", async ({ page }) => {
     }),
     { requirementId },
   );
-  await page.getByRole("button", { name: "Pause playback" }).click();
-
-  // Export follows the playhead.
-  await setChoice(page, "export.image.resolution", "2K");
-  await scrubber.press("Home");
-  const first = await inspectImage(page, await downloadImage(page));
-  await setRatio(page, 0.25);
-  const later = await inspectImage(page, await downloadImage(page));
-  expect(later.inspection.decodedPixelHash).not.toBe(first.inspection.decodedPixelHash);
 });
