@@ -159,7 +159,9 @@ export function registerRisoControlTests(section: RisoSection) {
         { requirementId: target, selector: risoSelector },
       );
       if (requirements.get(target)?.has("discrete-slider-layout")) await expectToolcraftDiscreteSliderMarkers(page, target);
-      await proveApplicabilityCases(page, session, target, requirements, () => nudgeNumber(page, target));
+      await proveApplicabilityCases(page, session, target, requirements, () => nudgeNumber(page, target), async (requirementId) => {
+        if (requirements.get(requirementId)?.has("discrete-slider-layout")) await expectToolcraftDiscreteSliderMarkers(page, target, requirementId);
+      });
     });
   }
 
