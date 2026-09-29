@@ -15,7 +15,7 @@ test("browser: riso keeps selected backing resolution", async ({ page }) => {
   await expectToolcraftDiscreteSliderMarkers(page, "canvas.renderScale", "riso.backing");
   await expandSection(page, "Print");
   const slider = field(page, "print.grain").getByRole("slider");
-  await slider.scrollIntoViewIfNeeded();
+  await slider.evaluate((element) => element.scrollIntoView({ block: "center" }));
   const box = (await slider.boundingBox())!;
   await expectToolcraftCanvasRenderScaleEvidence(page, {
     canvasSelector: risoSelector,

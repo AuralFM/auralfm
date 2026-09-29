@@ -18,19 +18,19 @@ Active change: riso-slicer-first-delivery
 - Reference inputs: None. The GIF was unreachable, so no frames were studied and `referenceInputs` is empty; the behaviour comes from the user's answer, not from reference parity.
 - Docs/contracts read: workflow.md, core/media-upload.md, core/setup-export.md, core/runtime-boundary.md, core/timeline-animation.md, core/layout.md, core/performance.md, renderer-technique.md, schema-reference.md, acceptance-testing.md.
 - Contract rules applied: editable-output canvas with runtime-owned background; uploaded source via `fileDrop` with no placeholder art; `renderDefaultCanvasMedia: false` with a custom renderer that consumes the runtime media transform; playback timeline with a product-derived loop; image export only (no SVG/video request); product styles only in a local CSS module; no DOM listeners, element factories or DOM-holding product objects.
-- View interaction intent: `non-spatial` — the product is a flat printed image with no camera.
+- View interaction intent: `non-spatial`. The product is a flat printed image with no camera.
 - Interaction ownership: slice Offset and Misregistration are global property edits owned by the panel; canvas drag was rejected because it would edit one slice/plate while the effect applies to all.
 - Decision: One full-frame WebGL2 fragment pass per frame. Each ink plate maps its output position through the slice geometry (strip wrap, tile shift/shuffle, ring rotation with mirrored sampling) at its own lagged loop phase, samples the prepared source, separates coverage with a least-squares Beer–Lambert model against the chosen ink colours, applies ink texture and the chosen screen, and multiplies plates on white. The result is unmixed from white so it stays a transparent foreground over the runtime paper colour.
 - Alternatives rejected: Three.js WebGLRenderer (it stores the DOM canvas in a structural object, which the product boundary rejects, and its type graph overflowed the boundary checker); Canvas 2D per-pixel CPU slicing (too slow for live drags at retina backing); SVG (the output is dithered raster by nature).
 - State/output mapping: `source.image` → decoded once, cover-cropped with the runtime rotation/flip into the asset's scene frame, uploaded as a texture; `slices.*` → slice geometry uniforms; `motion.*` and timeline playback progress → slice phase and per-ink lag; `inks.*` → separation matrix, ink colours, density and contrast; `print.*` → screen, texture, misregistration and drift; export renders the same pass in 2048 px tiles at the selected resolution into the runtime export context.
-- Verification: Interactive checks in headless Chromium against the dev server: upload renders; Strips/Grid/Radial and Grain/Halftone/Tone each print distinctly; the timeline animates the slices. Typecheck passed before the WebGL2 port. The protected delivery gate has not been run yet; see Verification below for the current state.
+- Verification: see Verification below.
 - Risks: see Risks.
 
 ## Decisions
 
 ### Renderer
 
-- Decision: Native WebGL2 single-pass fragment renderer (`src/app/riso-engine.ts`, `src/app/riso-shaders.ts`); source preparation through `fetch` → `createImageBitmap` → `OffscreenCanvas`.
+- Decision: Native WebGL2 single-pass fragment renderer (`src/app/riso-engine.ts`, `src/app/riso-shaders.ts`). WebGL draws into an engine-owned `OffscreenCanvas`; the preview canvas only holds a `bitmaprenderer` context that receives each frame with `transferFromImageBitmap`, and export tiles are painted from the same surface. The source pass decodes with `fetch` → `createImageBitmap` and returns plain RGBA pixels, which the engine uploads as a texture.
 - Reason: The effect is a per-pixel function of the source and a handful of uniforms, so one stateless full-screen pass keeps live drags and playback cheap at the selected backing scale.
 - Evidence: Output is bounded to the uploaded image's frame (`sceneBounds: intrinsic`): strips and tiles wrap inside it, rings mirror inside it, and plates that drift past the edge leave the page.
 
@@ -74,7 +74,7 @@ Active change: riso-slicer-first-delivery
 
 - Decision: One `preview-scale` dimension (render scale) and one `export-edge` dimension (export resolution); the source pass is bounded by a 4096 px long-edge cap.
 - Reason: Cost is quadratic in output pixels and constant in every other control.
-- Evidence: `src/app/riso-pipeline.ts`, `src/app/app-performance.ts`. No measured performance has been run.
+- Evidence: `src/app/riso-pipeline.ts`, `src/app/app-performance.ts`. No targeted performance run has been made. In this sandbox Chromium uses software GL (SwiftShader), where one 480×270 preview frame takes about 75 ms, almost all of it spent waiting for the software GPU to finish the pass.
 
 ## Evidence
 

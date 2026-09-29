@@ -2,22 +2,17 @@
 
 A [toolcraft.sh](https://toolcraft.sh) tool: upload an image, cut it into animated strips, a grid of tiles or radial rings, and print it as one to three layered risograph inks (grain, halftone or tone screen) with misregistration between the colour passes.
 
-## Status of this folder
+## Layout
 
-This commit holds the product-owned source only (`src/app/riso-*`, `RisoCanvas*`, `useRisoEngine.ts`, `app-*.ts` product files, `e2e/product-riso-*.spec.ts`, `e2e/riso-test-helpers.ts`, `docs/toolcraft/agent-worklog.md`). The Toolcraft framework files around it come from the generator:
-
-```bash
-cd tools
-npx --yes @pixel-point/toolcraft create riso-slicer --yes   # generator v0.0.26
-```
-
-and are committed together with the product source once verified.
+The app was generated with `npx @pixel-point/toolcraft create riso-slicer` (generator v0.0.26). Product code lives in `src/app/riso-*`, `src/app/RisoCanvas*`, `src/app/useRisoEngine.ts` and the `src/app/app-*` product files; browser proofs are `e2e/product-riso-*.spec.ts`. Everything else is Toolcraft framework code and is covered by its integrity check. Decisions and verification are logged in `docs/toolcraft/agent-worklog.md`.
 
 ## Run
 
 ```bash
 npm install
 npm run dev      # http://localhost:3002
+npm test         # integrity, unit and script tests
+npm run test:browser # browser proofs
 ```
 
 Drop an image on the canvas or into Source, then use Slices, Motion, Inks and Print. Play the timeline to animate; export from the footer.

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "title": "Riso Slicer",
+  "asset": "public/toolcraft/cover.png",
+  "generation": {
+    "kind": "app-composition",
+    "source": "src/app/app-composition.tsx",
+    "state": "app-cover-state.json",
+    "description": "Actual app export (PNG, 2K, 1920x1080) of the sample sunset image at default Slices, Motion, Inks and Print settings, held at 1.2 s of the 4 s loop; no editor UI."
+  }
+}

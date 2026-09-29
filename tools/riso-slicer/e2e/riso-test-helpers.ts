@@ -104,7 +104,8 @@ export async function chooseSegment(page: Page, target: string, label: string) {
 
 export async function dragNumber(page: Page, target: string, during?: () => Promise<void>) {
   const slider = field(page, target).getByRole("slider");
-  await slider.scrollIntoViewIfNeeded();
+  // Centre it: at the panel's bottom edge the timeline bar would take the pointer.
+  await slider.evaluate((element) => element.scrollIntoView({ block: "center" }));
   const rect = await slider.boundingBox();
   if (!rect) throw new Error(`Missing slider ${target}`);
   const before = await slider.getAttribute("aria-valuenow");
