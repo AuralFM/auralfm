@@ -10,7 +10,7 @@ import {
 import { getRisoProgress, type RisoTimeline } from "./riso-animation";
 import { readRisoSettings } from "./riso-params";
 import { risoPipeline, risoRenderTargets } from "./riso-pipeline";
-import { getRisoSourceAsset, getRisoSourceKey, loadRisoImage, prepareRisoSource } from "./riso-source";
+import { getRisoSourceAsset, getRisoSourceKey, loadRisoSource } from "./riso-source";
 import { useRisoEngine } from "./useRisoEngine";
 import styles from "./RisoCanvas.module.css";
 
@@ -57,18 +57,10 @@ export function RisoCanvas() {
     }
     const controller = new AbortController();
     void pipeline
-      .runPass(risoPipeline.getPass("source"), { "source.image": sourceKey }, async () =>
-      {
-        const image = await loadRisoImage(sourceUrl, controller.signal);
-        try {
-          return prepareRisoSource(image, asset);
-        } finally {
-          image.close();
-        }
-      })
+      .runPass(risoPipeline.getPass("source"), { "source.image": sourceKey }, () => loadRisoSource(sourceUrl, asset, controller.signal))
       .then((prepared) => {
         if (controller.signal.aborted) return;
-        engine.setSource({ key: sourceKey, bitmap: prepared });
+        engine.setSource({ key: sourceKey, pixels: prepared });
         setLoadedKey(sourceKey);
       })
       .catch((error: unknown) => {

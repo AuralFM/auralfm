@@ -100,7 +100,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     timelineLoopProof: { direction: "forward-only", durationChange: "reproved-after-edit", reversePlayback: "forbidden", seam: "first-last-match" },
     userAction: "Play, pause, scrub, edit duration and toggle loop in the runtime Timeline.",
     expectedObservable: "Slices and ink passes move with the playhead, the first and last frames match, and the same cycle stretches to an edited duration.",
-    browser: { file: "e2e/product-riso-timeline.spec.ts", testName: "browser: riso timeline loops the slices seamlessly", budget: "extended-io" },
+    browser: { file: "e2e/product-riso-timeline.spec.ts", testName: "browser: riso timeline loops the slices seamlessly", budget: "standard" },
   },
   {
     ...common,
@@ -124,7 +124,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     backgroundOutputCoverage: "all-required-background-output",
     userAction: "Turn Background off and on, export a PNG, and repeat in Infinity canvas.",
     expectedObservable: "Paper colour disappears from preview and the PNG becomes transparent around the inks; turning it back on restores the paper.",
-    browser: { file: "e2e/product-riso-background.spec.ts", testName: "browser: riso paper background matches preview and artifact", budget: "extended-io" },
+    browser: { file: "e2e/product-riso-background.spec.ts", testName: "browser: riso paper background matches preview and artifact", budget: "standard" },
   },
   {
     ...common,
@@ -135,7 +135,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     evidence: "product-output",
     userAction: "Type a new Background color.",
     expectedObservable: "The paper under the inks changes colour.",
-    browser: { file: "e2e/product-riso-background.spec.ts", testName: "browser: riso paper background matches preview and artifact", budget: "extended-io" },
+    browser: { file: "e2e/product-riso-background.spec.ts", testName: "browser: riso paper background matches preview and artifact", budget: "standard" },
   },
   {
     ...common,
@@ -172,7 +172,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     infinityCanvasCoverage: "mode-continuity-and-restoration",
     userAction: "Toggle Infinity canvas, pan, reload and toggle back.",
     expectedObservable: "The same print and backing survive both mode changes and finite sizing is restored.",
-    browser: { file: "e2e/product-riso-infinity.spec.ts", testName: "browser: riso infinity keeps the print and its crop", budget: "extended-io" },
+    browser: { file: "e2e/product-riso-infinity.spec.ts", testName: "browser: riso infinity keeps the print and its crop", budget: "standard" },
   },
   {
     ...common,
@@ -184,7 +184,7 @@ export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
     infinityCanvasCoverage: "scene-bounds-image-export",
     userAction: "Enable Infinity canvas and export PNG.",
     expectedObservable: "The export crops to the image frame the print is defined on.",
-    browser: { file: "e2e/product-riso-infinity.spec.ts", testName: "browser: riso infinity keeps the print and its crop", budget: "extended-io" },
+    browser: { file: "e2e/product-riso-infinity.spec.ts", testName: "browser: riso infinity keeps the print and its crop", budget: "standard" },
   },
   {
     ...common,

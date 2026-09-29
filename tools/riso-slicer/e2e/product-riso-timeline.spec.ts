@@ -129,8 +129,8 @@ test("browser: riso timeline loops the slices seamlessly", async ({ page }) => {
       const duration = Number(root.querySelector<HTMLElement>('[role="slider"][aria-label="Playback position"]')!.getAttribute("aria-valuemax"));
       return { renderedCycleDurationSeconds: duration, timelineDurationSeconds: duration };
     }),
-    session.targetAction("timeline.playback", (currentPage) => editDuration(currentPage, 6)),
-    6,
+    session.targetAction("timeline.playback", (currentPage) => editDuration(currentPage, 2)),
+    2,
     { requirementId },
   );
   // The same phase of the loop draws the same frame at the new duration.

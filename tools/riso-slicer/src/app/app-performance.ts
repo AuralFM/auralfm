@@ -37,7 +37,7 @@ const model: ToolcraftPerformanceConfig = {
   },
   workloadEnvelope: {
     dimensions: [
-      { id: "preview-scale", unit: "backing scale", source: { kind: "schema-target", target: "canvas.renderScale", workloadBoundary: "maximum" }, mapping: "quadratic", defaultValue: 2, interactiveMax: 2 },
+      { id: "preview-scale", unit: "backing scale", source: { kind: "runtime-state", path: "canvas.renderScale" }, mapping: "quadratic", defaultValue: 2, interactiveMax: 2, batchMax: 2 },
       { id: "export-edge", unit: "pixels", source: { kind: "schema-target", target: "export.image.resolution" }, mapping: "quadratic", defaultValue: 4096, batchMax: 8192 },
     ],
   },

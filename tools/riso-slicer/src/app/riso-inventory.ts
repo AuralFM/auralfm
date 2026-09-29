@@ -6,7 +6,7 @@ const sliderTargets = (section: RisoSliderParameter["section"]) =>
 
 const discreteSelectors = (section: RisoSliderParameter["section"]): ToolcraftFiniteSelectorInventoryEntry[] =>
   risoSliders
-    .filter((parameter: RisoSliderParameter) => parameter.section === section && parameter.discrete)
+    .filter((parameter: RisoSliderParameter) => parameter.section === section && parameter.discrete && (parameter.max - parameter.min) / parameter.step + 1 <= 32)
     .map((parameter) => ({ target: risoTarget(parameter.key), role: "parameter" as const, reason: `Sets the whole-number ${parameter.label.toLowerCase()} used by the print.` }));
 
 export const appControlSectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = [

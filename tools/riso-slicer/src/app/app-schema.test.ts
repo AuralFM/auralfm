@@ -8,139 +8,53 @@ import { appPerformance } from "./app-performance";
 import { appSchema } from "./app-schema";
 
 describe("appSchema", () => {
-  it("publishes the base Toolcraft template app contract for AI assembly", () => {
-    expect(appSchema.canvas.draggable).toBe(true);
+  it("assembles the riso slicer on an editable canvas with upload, playback and image export", () => {
     expect(appSchema.canvas.enabled).toBe(true);
     expect(appSchema.canvas.sizing).toEqual({ mode: "editable-output" });
     expect(appSchema.canvas.upload).toBe(true);
-    expect(appSchema.panels.controls?.sections[1]?.title).toBe("Settings");
-    expect(
-      appSchema.panels.controls?.sections[0]?.controls.settingsTransfer,
-    ).toMatchObject({
-      target: "runtime.settingsTransfer",
-      type: "settingsTransfer",
-    });
-    expect(
-      appSchema.panels.controls?.sections[1]?.controls.canvasAspectRatio,
-    ).toMatchObject({
-      target: "canvas.aspectRatio",
-      type: "aspectRatio",
-    });
-    expect(
-      appSchema.panels.controls?.sections[1]?.controls.canvasWidth,
-    ).toMatchObject({
-      target: "canvas.size.width",
-      type: "text",
-    });
-    expect(
-      appSchema.panels.controls?.sections[1]?.controls.canvasHeight,
-    ).toMatchObject({
-      target: "canvas.size.height",
-      type: "text",
-    });
     expect(appSchema.panels.layers).toBeUndefined();
-    expect(appSchema.panels.timeline).toBeUndefined();
-    expect(appSchema.toolbar).toEqual({
-      history: true,
-      radar: true,
-      theme: true,
-      zoom: true,
-    });
-    expect(appSchema.assembly.components).toEqual([
-      "canvas",
-      "controlsPanel",
-      "toolbar",
-    ]);
     expect(appSchema.assembly.capabilities).toEqual(
-      expect.arrayContaining([
-        "canvas.draggable",
-        "canvas.editableSize",
-        "canvas.upload",
-        "controls.defaults",
-        "controls.panel",
-        "toolbar.history",
-        "toolbar.radar",
-        "toolbar.theme",
-        "toolbar.zoom",
-      ]),
+      expect.arrayContaining(["canvas.upload", "timeline.playback"]),
     );
-    expect(appSchema.assembly.capabilities).not.toContain(
-      "timeline.playback",
-    );
-    expect(appSchema.assembly.capabilities).not.toContain(
-      "timeline.keyframes",
-    );
-    expect(appSchema.assembly.commands).toEqual(
-      expect.arrayContaining([
-        "canvas.center",
-        "canvas.setSize",
-        "canvas.setViewport",
-        "canvas.zoomIn",
-        "controls.reset",
-        "controls.setValue",
-        "history.undo",
-        "media.delete",
-        "media.importBatch",
-      ]),
-    );
-    expect(appSchema.assembly.commands).not.toContain(
-      "timeline.setCurrentTime",
-    );
+    expect(appSchema.assembly.capabilities).not.toContain("timeline.keyframes");
     expect(
-      appSchema.modulePlan.capabilities.map(
-        ({ capabilityId }) => capabilityId,
-      ),
-    ).toEqual(["media.source"]);
-    expect(appSchema.modulePlan.modules.map(({ id }) => id)).toEqual([
-      "media-source",
-    ]);
-    expect(
-      appSchema.modulePlan.capabilities.some(({ capabilityId }) =>
-        capabilityId.startsWith("artifact."),
-      ),
-    ).toBe(false);
+      appSchema.modulePlan.capabilities.map(({ capabilityId }) => capabilityId),
+    ).toEqual(expect.arrayContaining(["media.source"]));
+    expect(appSchema.modulePlan.modules.map(({ id }) => id)).toEqual(
+      expect.arrayContaining(["media-source"]),
+    );
   });
 
-  it("starts with runtime setup but without product-specific panels or controls", () => {
-    const productSections =
-      appSchema.panels.controls?.sections.filter(
-        (section) => section.id !== "runtime.setup" && section.id !== "runtime.defaults",
-      ) ?? [];
+  it("lists the product sections after runtime Setup in workflow order", () => {
+    const productTitles =
+      appSchema.panels.controls?.sections
+        .filter((section) => !section.id.startsWith("runtime."))
+        .map((section) => section.title) ?? [];
 
     expect(appSchema.panels.controls?.sections[1]?.title).toBe("Settings");
-    expect(productSections).toEqual([]);
-    expect(appSchema.panels.layers).toBeUndefined();
-    expect(appSchema.panels.timeline).toBeUndefined();
+    expect(productTitles).toEqual(
+      expect.arrayContaining(["Source", "Slices", "Motion", "Inks", "Print"]),
+    );
+    expect(productTitles.indexOf("Source")).toBeLessThan(productTitles.indexOf("Slices"));
+    expect(productTitles.indexOf("Inks")).toBeLessThan(productTitles.indexOf("Print"));
   });
 
-  it("does not imply timeline behavior before a product needs it", () => {
-    expect(appSchema.assembly.capabilities).not.toContain(
-      "timeline.playback",
-    );
-    expect(appSchema.assembly.capabilities).not.toContain(
-      "timeline.keyframes",
-    );
-    expect(appSchema.assembly.commands).not.toContain(
-      "timeline.toggleControlKeyframes",
-    );
-    expect(appSchema.assembly.commands).not.toContain(
-      "timeline.moveKeyframe",
-    );
+  it("derives a performance scenario for every canonical renderer path", () => {
+    expect(appPerformance.workloadEnvelope.dimensions.map(({ id }) => id)).toEqual([
+      "preview-scale",
+      "export-edge",
+    ]);
+    expect(appPerformance.scenarios.length).toBeGreaterThan(0);
   });
 
-  it("keeps starter performance paths empty until the generated product adds controls", () => {
-    expect(appPerformance.scenarios).toEqual([]);
-    expect(appPerformance.workloadEnvelope).toEqual({ dimensions: [] });
-  });
-
-  it("declares production reload coverage for the starter schema", () => {
+  it("declares production reload coverage for the product schema", () => {
     expect(appSchema.persistence.storage).toBe("localStorage");
     if (appSchema.persistence.storage !== "localStorage") {
-      throw new Error(
-        "The starter must persist user settings in localStorage.",
-      );
+      throw new Error("The product must persist user settings in localStorage.");
     }
-    expect(appSchema.persistence.include).toContain("canvas");
+    expect(appSchema.persistence.include).toEqual(
+      expect.arrayContaining(["canvas", "values", "media", "timeline"]),
+    );
     expect(
       appAcceptance.find((entry) => entry.id === "persistence.reload"),
     ).toMatchObject({

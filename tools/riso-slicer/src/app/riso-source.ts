@@ -54,12 +54,15 @@ export function getRisoSourcePixelSize(asset: ImageAssetLike): { width: number; 
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
+/** Prepared source pixels: RGBA rows top to bottom, not premultiplied. */
+export type RisoPixels = Readonly<{ width: number; height: number; data: Uint8ClampedArray<ArrayBuffer> }>;
+
 /**
  * Draws the uploaded image into the asset's scene frame as a cover crop with
  * the runtime's rotation and flips applied, so the riso pass samples the
- * composition the user placed. Rows run top to bottom.
+ * composition the user placed.
  */
-export function prepareRisoSource(image: ImageBitmap, asset: ImageAssetLike): ImageBitmap {
+export function prepareRisoSource(image: ImageBitmap, asset: ImageAssetLike): RisoPixels {
   const { width, height } = getRisoSourcePixelSize(asset);
   const surface = new OffscreenCanvas(width, height);
   const context = surface.getContext("2d");
@@ -78,15 +81,26 @@ export function prepareRisoSource(image: ImageBitmap, asset: ImageAssetLike): Im
   context.rotate((rotation * Math.PI) / 180);
   context.scale(asset.transform?.flipHorizontal ? -1 : 1, asset.transform?.flipVertical ? -1 : 1);
   context.drawImage(image, (image.width - cropWidth) / 2, (image.height - cropHeight) / 2, cropWidth, cropHeight, -frameWidth / 2, -frameHeight / 2, frameWidth, frameHeight);
-  return surface.transferToImageBitmap();
+  // Copy into a plain array owned by the product so no canvas-backed buffer outlives this call.
+  const data = new Uint8ClampedArray(width * height * 4);
+  data.set(context.getImageData(0, 0, width, height).data);
+  return { width, height, data };
 }
 
-export async function loadRisoImage(url: string, signal: AbortSignal): Promise<ImageBitmap> {
-  const response = await fetch(url, { signal });
-  const bitmap = await createImageBitmap(await response.blob());
-  if (signal.aborted) {
-    bitmap.close();
-    signal.throwIfAborted();
-  }
-  return bitmap;
+/**
+ * Fetches, decodes and prepares the uploaded image. Only plain pixels leave
+ * this chain; the decoded bitmap is closed inside it.
+ */
+export function loadRisoSource(url: string, asset: ImageAssetLike, signal: AbortSignal): Promise<RisoPixels> {
+  return fetch(url, { signal })
+    .then((response) => response.blob())
+    .then((blob) => createImageBitmap(blob))
+    .then((bitmap) => {
+      try {
+        signal.throwIfAborted();
+        return prepareRisoSource(bitmap, asset);
+      } finally {
+        bitmap.close();
+      }
+    });
 }

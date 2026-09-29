@@ -1,6 +1,7 @@
 import { registerToolcraftRendererPipeline, type ToolcraftRendererPipelinePassContract } from "@/toolcraft/runtime";
 
 import type { RisoEngine } from "./riso-engine";
+import type { RisoPixels } from "./riso-source";
 import { risoInkTargets, risoSelectorTargets, risoSliders, risoSourceTarget, risoTarget } from "./riso-params";
 
 export const risoRenderTargets = [
@@ -16,7 +17,7 @@ const frameBounds = {
 
 export const risoPipeline = registerToolcraftRendererPipeline<{
   resources: ToolcraftRendererPipelinePassContract<RisoEngine, RisoEngine, readonly ["riso"]>;
-  source: ToolcraftRendererPipelinePassContract<ImageBitmap>;
+  source: ToolcraftRendererPipelinePassContract<RisoPixels>;
   preview: ToolcraftRendererPipelinePassContract<void>;
   export: ToolcraftRendererPipelinePassContract<void>;
 }>()({
@@ -24,11 +25,11 @@ export const risoPipeline = registerToolcraftRendererPipeline<{
   passes: [
     { id: "resources", kind: "preprocess", runsOn: "main", output: "source", quality: "full", inputs: ["surface"], invalidatedBy: ["renderer-mount"], cacheKey: ["surface"], lifecycle: { cache: "retained-resource", resourceScope: "renderer" }, cost: { dimensions: [], frequency: "once", relationship: "constant" }, sceneBounds: frameBounds },
     { id: "source", kind: "decode", runsOn: "main", output: "source", quality: "full", inputs: [risoSourceTarget], invalidatedBy: [risoSourceTarget], cacheKey: [risoSourceTarget], lifecycle: { cache: "memoized", resourceScope: "source" }, cost: { dimensions: [], frequency: "discrete", relationship: "constant" }, sceneBounds: frameBounds },
-    { id: "preview", kind: "rasterize", runsOn: "gpu", output: "preview", quality: "retina", inputs: [...risoRenderTargets, risoSourceTarget, "timeline.time", "canvas.renderScale", "canvas.zoom"], invalidatedBy: [...risoRenderTargets, risoSourceTarget, "timeline.time", "canvas.renderScale", "canvas.zoom"], lifecycle: { cache: "none", resourceScope: "call" }, cost: { dimensions: ["preview-scale"], frequency: "frame", relationship: "quadratic" }, gpu: { stage: "render", resources: "uniforms-only", state: "stateless", surfaces: ["preview"] }, sceneBounds: frameBounds },
+    { id: "preview", kind: "composite", runsOn: "gpu", output: "preview", quality: "retina", inputs: [...risoRenderTargets, risoSourceTarget, "timeline.time", "canvas.renderScale", "canvas.zoom"], invalidatedBy: [...risoRenderTargets, risoSourceTarget, "timeline.time", "canvas.renderScale", "canvas.zoom"], lifecycle: { cache: "none", resourceScope: "call" }, cost: { dimensions: ["preview-scale"], frequency: "frame", relationship: "quadratic" }, gpu: { stage: "render", resources: "uniforms-only", state: "stateless", surfaces: ["preview"] }, sceneBounds: frameBounds },
     { id: "export", kind: "export", runsOn: "gpu", output: "export", quality: "export", inputs: [...risoRenderTargets, risoSourceTarget, "timeline.time", "export.image.resolution", "export.image.format"], invalidatedBy: ["export", "timeline.time"], lifecycle: { cache: "none", resourceScope: "call" }, cost: { dimensions: ["export-edge"], frequency: "batch", relationship: "quadratic" }, gpu: { stage: "render", resources: "uniforms-only", state: "stateless", surfaces: ["export"] } },
   ],
   interactionInvalidation: [
-    { interaction: "initial-render", targets: [], invalidates: ["resources", "preview"] },
+    { interaction: "initial-render", targets: ["surface"], invalidates: ["resources", "preview"] },
     { interaction: "media-import", targets: [risoSourceTarget], invalidates: ["source", "preview"], mustNotInvalidate: ["resources"] },
     { interaction: "control-drag", targets: [...risoSliders.map((parameter) => risoTarget(parameter.key)), ...risoInkTargets, "canvas.renderScale"], invalidates: ["preview"], mustNotInvalidate: ["resources", "source"] },
     { interaction: "control-change", targets: Object.values(risoSelectorTargets), invalidates: ["preview"], mustNotInvalidate: ["resources", "source"] },

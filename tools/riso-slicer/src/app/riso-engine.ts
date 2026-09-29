@@ -3,6 +3,7 @@ import type { ToolcraftProductExportFrameContext } from "@/toolcraft/runtime";
 import type { RisoSettings } from "./riso-params";
 import { hexToRgb, inkSeparationMatrix } from "./riso-separation";
 import { risoFragmentShader, risoVertexShader } from "./riso-shaders";
+import type { RisoPixels } from "./riso-source";
 
 export type RisoFrame = Readonly<{
   settings: RisoSettings;
@@ -13,19 +14,23 @@ export type RisoFrame = Readonly<{
   frameHeight: number;
 }>;
 
-/** Prepared source pixels, rows top to bottom, keyed by what produced them. */
-export type RisoSource = Readonly<{ key: string; bitmap: ImageBitmap }>;
+/** Prepared source pixels, keyed by what produced them. */
+export type RisoSource = Readonly<{ key: string; pixels: RisoPixels }>;
 
 export type RisoEngine = Readonly<{
   isBoundTo: (canvas: HTMLCanvasElement) => boolean;
   setSource: (source: RisoSource | null) => void;
   sourceKey: () => string | null;
   draw: (frame: RisoFrame, width: number, height: number) => void;
-  exportFrame: (frame: RisoFrame, request: ToolcraftProductExportFrameContext) => Promise<void>;
+  /** Paints the frame into the runtime's export context; the live preview canvas is untouched. */
+  exportFrame: (frame: RisoFrame, request: ToolcraftProductExportFrameContext) => void;
   dispose: () => void;
 }>;
 
-/** Export renders in tiles so 8K output never needs one oversized GPU target or readback. */
+/**
+ * Export renders in tiles so 8K output never needs one oversized drawing buffer.
+ * 2048 is the smallest MAX_TEXTURE_SIZE WebGL2 allows, so a tile always fits.
+ */
 export const risoExportTileSize = 2048;
 
 const modeIndex = { strips: 0, grid: 1, radial: 2 } as const;
@@ -69,19 +74,34 @@ function link(gl: WebGL2RenderingContext): WebGLProgram {
   return program;
 }
 
-function flipRows(pixels: Uint8Array, width: number, height: number): Uint8ClampedArray<ArrayBuffer> {
-  const flipped = new Uint8ClampedArray(pixels.length);
-  const stride = width * 4;
-  for (let row = 0; row < height; row += 1) {
-    flipped.set(pixels.subarray((height - row - 1) * stride, (height - row) * stride), row * stride);
-  }
-  return flipped;
+function uploadPixels(gl: WebGL2RenderingContext, width: number, height: number, data: Uint8ClampedArray<ArrayBuffer>) {
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+}
+
+/** Paints the top-left `width`×`height` of the render surface into a rectangle of `context`. */
+function paintTile(
+  context: CanvasRenderingContext2D,
+  surface: OffscreenCanvas,
+  width: number,
+  height: number,
+  rect: Readonly<{ x: number; y: number; width: number; height: number }>,
+) {
+  context.drawImage(surface, 0, 0, width, height, rect.x, rect.y, rect.width, rect.height);
 }
 
 export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
-  const context = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
-  if (!context) throw new Error("WebGL2 is unavailable.");
-  const gl: WebGL2RenderingContext = context;
+  const view = canvas.getContext("2d");
+  if (!view) throw new Error("A 2D canvas is unavailable.");
+  // WebGL renders offscreen; the preview and every export tile are painted from this surface.
+  const surface = new OffscreenCanvas(1, 1);
+  const gl = surface.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
+  if (!gl) throw new Error("WebGL2 is unavailable.");
+  return buildEngine(canvas, view, surface, gl);
+}
+
+function buildEngine(canvas: HTMLCanvasElement, view: CanvasRenderingContext2D, surface: OffscreenCanvas, gl: WebGL2RenderingContext): RisoEngine {
   const program = link(gl);
   const vertexArray = gl.createVertexArray();
   const location = (name: string) => gl.getUniformLocation(program, name);
@@ -96,7 +116,6 @@ export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
   let sourceKey: string | null = null;
   let separationKey = "";
   let separationMatrix = new Float32Array(9);
-  let lastFrame: RisoFrame | null = null;
 
   function configure(frame: RisoFrame) {
     const s = frame.settings;
@@ -152,7 +171,6 @@ export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  // The bitmap belongs to the memoized source pass, which may hand it to a later engine; never close it here.
   function setSource(next: RisoSource | null) {
     if (sourceKey === (next?.key ?? null)) return;
     if (texture) gl.deleteTexture(texture);
@@ -163,73 +181,51 @@ export function createRisoEngine(canvas: HTMLCanvasElement): RisoEngine {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, next.bitmap);
+    uploadPixels(gl, next.pixels.width, next.pixels.height, next.pixels.data);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  function draw(frame: RisoFrame, width: number, height: number) {
-    lastFrame = frame;
-    if (canvas.width !== width) canvas.width = width;
-    if (canvas.height !== height) canvas.height = height;
+  function resizeSurface(width: number, height: number) {
+    if (surface.width !== width) surface.width = width;
+    if (surface.height !== height) surface.height = height;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    if (!texture) {
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      return;
-    }
-    configure(frame);
-    render(0, 0, 1, 1);
+    gl.viewport(0, 0, width, height);
   }
 
-  async function exportFrame(frame: RisoFrame, request: ToolcraftProductExportFrameContext) {
+  function draw(frame: RisoFrame, width: number, height: number) {
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+    view.clearRect(0, 0, width, height);
+    if (!texture) return;
+    resizeSurface(width, height);
+    configure(frame);
+    render(0, 0, 1, 1);
+    paintTile(view, surface, width, height, { x: 0, y: 0, width, height });
+  }
+
+  function exportFrame(frame: RisoFrame, request: ToolcraftProductExportFrameContext) {
     request.signal.throwIfAborted();
     if (!texture) throw new Error("Add a source image before exporting.");
     const width = Math.max(1, Math.round(request.frame.width * request.pixelRatio));
     const height = Math.max(1, Math.round(request.frame.height * request.pixelRatio));
-    const tileSize = Math.min(risoExportTileSize, gl.getParameter(gl.MAX_TEXTURE_SIZE) as number);
-    const target = gl.createTexture();
-    const framebuffer = gl.createFramebuffer();
-    try {
-      gl.bindTexture(gl.TEXTURE_2D, target);
-      gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, tileSize, tileSize);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target, 0);
-      configure(frame);
-      const pixels = new Uint8Array(tileSize * tileSize * 4);
-      for (let top = 0; top < height; top += tileSize) {
-        for (let left = 0; left < width; left += tileSize) {
-          request.signal.throwIfAborted();
-          const tileWidth = Math.min(tileSize, width - left);
-          const tileHeight = Math.min(tileSize, height - top);
-          gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-          gl.viewport(0, 0, tileWidth, tileHeight);
-          render(left / width, top / height, tileWidth / width, tileHeight / height);
-          const view = pixels.subarray(0, tileWidth * tileHeight * 4);
-          gl.readPixels(0, 0, tileWidth, tileHeight, gl.RGBA, gl.UNSIGNED_BYTE, view);
-          const bitmap = await createImageBitmap(new ImageData(flipRows(view, tileWidth, tileHeight), tileWidth, tileHeight));
-          try {
-            request.signal.throwIfAborted();
-            request.context.drawImage(
-              bitmap,
-              request.frame.x + (left / width) * request.frame.width,
-              request.frame.y + (top / height) * request.frame.height,
-              (tileWidth / width) * request.frame.width,
-              (tileHeight / height) * request.frame.height,
-            );
-          } finally {
-            bitmap.close();
-          }
-        }
+    configure(frame);
+    for (let top = 0; top < height; top += risoExportTileSize) {
+      for (let left = 0; left < width; left += risoExportTileSize) {
+        request.signal.throwIfAborted();
+        const tileWidth = Math.min(risoExportTileSize, width - left);
+        const tileHeight = Math.min(risoExportTileSize, height - top);
+        resizeSurface(tileWidth, tileHeight);
+        render(left / width, top / height, tileWidth / width, tileHeight / height);
+        paintTile(request.context, surface, tileWidth, tileHeight, {
+          x: request.frame.x + (left / width) * request.frame.width,
+          y: request.frame.y + (top / height) * request.frame.height,
+          width: (tileWidth / width) * request.frame.width,
+          height: (tileHeight / height) * request.frame.height,
+        });
       }
-    } finally {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.deleteFramebuffer(framebuffer);
-      gl.deleteTexture(target);
-      if (lastFrame) draw(lastFrame, canvas.width, canvas.height);
     }
   }
 
