@@ -292,9 +292,11 @@ async function buildCard() {
      * rather than making people re-save anything.
      */
     let { lat, lon } = ch;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      const found = await guard("cardWhere", () => window.auralfm.stationById(ch.id), null);
-      if (found) { lat = found.lat; lon = found.lon; }
+    let tags = Array.isArray(ch.tags) ? ch.tags : [];
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !tags.length) {
+      const found = !ch.sdr && await guard("cardWhere", () => window.auralfm.stationById(ch.id), null);
+      if (found && (!Number.isFinite(lat) || !Number.isFinite(lon))) { lat = found.lat; lon = found.lon; }
+      if (found?.tags?.length) tags = found.tags;
     }
     /**
      * And if the station has left the catalogue, its city has not.
@@ -316,6 +318,8 @@ async function buildCard() {
       place: ch.place || "",
       country: ch.country || "",
       sdr: !!ch.sdr,
+      // What it sounds like, in the station's own tags (the catalogue's).
+      tags: tags.filter((t) => t && t.length < 24).slice(0, 2),
       freq: tuneState?.freq ?? null,
       when: new Date(),
       lat: Number.isFinite(lat) ? lat : null,
@@ -344,6 +348,12 @@ async function openShareSheet() {
   said.textContent = "";
   $("sheetimg").removeAttribute("src");
   sheet.hidden = false;
+  // On a touch screen Save hands the card to the system's sheet (Save Image,
+  // Instagram, Messages), and touching and holding the card saves it outright.
+  const touch = matchMedia("(pointer: coarse)").matches;
+  $("sheetsave").textContent = touch ? t("ctl.saveShareCard", "Save or share…") : t("ctl.saveCard", "Save…");
+  $("sheethint").hidden = !touch;
+  $("sheethint").textContent = t("ctl.holdToSave", "Or touch and hold the card to save it straight to Photos.");
   for (const el of behindSheet()) if (el) el.inert = true;
   $("sheetclose").focus();
   try {
@@ -534,7 +544,8 @@ function wirePlayback() {
     const where = await guard("cardSave", () => window.auralfm.cardSave(sheetPng), null);
     // A cancelled save is a decision, not a failure, and should not be reported
     // as one.
-    if (where) $("sheetsaid").textContent = t("ctl.savedTo", "Saved");
+    // "shared" went to the system's sheet, which says for itself what it did.
+    if (where && where !== "shared") $("sheetsaid").textContent = t("ctl.savedTo", "Saved");
   };
   $("sheetlink").onclick = async () => {
     const link = await guard("cardLink", () => window.auralfm.cardLink(inPlayer?.title, inPlayer?.sdr ? null : inPlayer?.id), null);

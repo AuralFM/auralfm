@@ -1485,7 +1485,11 @@
   }
   .sheetbtn:hover{background:var(--fill-hi)}
   .sheetbtn.primary{background:var(--accent);color:var(--on-accent);font-weight:590}
-  .sheetsaid{min-height:15px;font-size:11px;color:var(--label3)}
+  .sheetsaid{min-height:16px;font-size:12px;color:var(--label2)}
+  .sheethint{margin:0;font-size:12px;line-height:1.4;color:var(--label2)}
+  .sheethint[hidden]{display:none}
+  /* Touch and hold saves it: the page's no-select must not reach the card. */
+  #sheetimg{-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
   .outwrap{flex:none;display:flex;align-items:center;color:var(--label2)}
   /* Same shape as the star and the mute button beside it — these are three
      controls of one kind and were three different sizes. */
@@ -1946,6 +1950,8 @@
       <button id="sheetclose" class="sheetbtn" data-i18n="ctl.close">Close</button>
     </div>
     <div id="sheetsaid" class="sheetsaid" role="status" aria-live="polite"></div>
+    <!-- A phone: the one way a web page's picture goes straight into Photos. -->
+    <p id="sheethint" class="sheethint" hidden></p>
   </div>
 </div>
 

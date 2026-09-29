@@ -460,11 +460,22 @@
     ctx.stroke();
 
     const stamp = now.when.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
-    const signal = now.sdr && now.freq ? `${Number(now.freq.toFixed(2))} kHz` : "Stream";
+    /**
+     * What it is on the dial, when its name says (most FM and AM stations put
+     * the frequency in it), and what it sounds like, from its own tags. These
+     * took the place of "Algorithms: 0" (Melton, 28 Sept: a statement, but
+     * nothing a listener can use on a card about one station).
+     */
+    const dial = String(now.title || "").match(/\b(\d{2,3}[.,]\d{1,2})\s*(?:fm|mhz)?\b|\b(\d{3,4})\s*(?:am|khz)\b/i);
+    const signal = now.sdr && now.freq ? `${Number(now.freq.toFixed(2))} kHz`
+      : dial?.[1] && +dial[1].replace(",", ".") >= 64 && +dial[1].replace(",", ".") <= 108 ? `FM ${dial[1].replace(",", ".")}`
+      : dial?.[2] && +dial[2] >= 150 && +dial[2] <= 1710 ? `AM ${dial[2]}`
+      : "Stream";
+    const sound = (now.tags || []).join(" · ") || (now.sdr ? "Shortwave" : "Live radio");
     const fields = [
       ["City", now.place || "—"], ["Country", now.country || "—"], ["Heard", stamp],
       ["Coordinates", placed ? `${Math.abs(now.lat).toFixed(1)}${now.lat >= 0 ? "N" : "S"} ${Math.abs(now.lon).toFixed(1)}${now.lon >= 0 ? "E" : "W"}` : "—"],
-      ["Signal", signal], ["Algorithms", "0"],
+      ["Signal", signal], ["Sound", sound],
     ];
     fields.forEach(([k, v], i) => {
       const x = M + (i % cols) * colW + 16, top = GRID_TOP + Math.floor(i / cols) * ROW;

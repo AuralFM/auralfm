@@ -71,14 +71,14 @@
    8.9:1, teal 5.1:1, lines 1.6:1 (decorative). */
 :root[data-theme="light"] {
   color-scheme: light;
-  --onyx: #F4EFE6; --bone: #0C0B0B; --bone2: rgba(12, 11, 11, .74); --line: rgba(12, 11, 11, .2);
-  --aq: #00705F; --paper: #E6DCC8;
+  --onyx: #FFFFFF; --bone: #0C0B0B; --bone2: rgba(12, 11, 11, .74); --line: rgba(12, 11, 11, .2);
+  --aq: #00705F; --paper: #EDE6D8;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
-    --onyx: #F4EFE6; --bone: #0C0B0B; --bone2: rgba(12, 11, 11, .74); --line: rgba(12, 11, 11, .2);
-    --aq: #00705F; --paper: #E6DCC8;
+    --onyx: #FFFFFF; --bone: #0C0B0B; --bone2: rgba(12, 11, 11, .74); --line: rgba(12, 11, 11, .2);
+    --aq: #00705F; --paper: #EDE6D8;
   }
 }
 
@@ -442,8 +442,11 @@ h1, h2, h3, .display, .lede, .hi { text-wrap: balance; }
 /* ── the support page ─────────────────────────────────────────────────────── */
 .support-hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 /* The waves in red above the ask, where the column stood empty. */
+.support-hero .intro { justify-content: flex-start; }
+/* It fills whatever the column has above the words, edge to edge, instead of
+   floating in the middle with a gap over it. */
 .support-hero .intro::before {
-  content: ""; display: block; height: 140px; margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 8px;
+  content: ""; display: block; flex: 1 1 140px; min-height: 140px; margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 8px;
   background: url("assets/patterns/halftone-waves.png") 0 0 / 1600px 220px repeat-x;
   animation: htdrift 80s linear infinite;
 }
@@ -757,7 +760,8 @@ body::after {
    for the argument, aqua for the places, a stamp for what is live. */
 .bands { position: relative; overflow: hidden; padding: 72px 0; border-bottom: 1px solid var(--line); }
 .band-strip {
-  margin: 0 -48px; padding: 22px 64px; white-space: nowrap; overflow: hidden;
+  /* Wide enough that the tilt never shows its ends, even at 1920. */
+  margin: 0 -12%; padding: 22px 64px; white-space: nowrap; overflow: hidden;
   font: 900 clamp(30px, 5vw, 84px)/.9 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70;
   color: var(--ink); background: var(--mast); transform: rotate(-3.5deg);
 }
@@ -771,12 +775,12 @@ body::after {
   position: absolute; right: 6%; top: 18px; z-index: 2; transform: rotate(6deg);
   display: grid; grid-template-columns: auto auto; column-gap: 10px; align-items: center;
   padding: 10px 14px; background: var(--ink); color: var(--bone-fixed);
-  border: 2px solid var(--mast); box-shadow: 6px 6px 0 var(--mast), 0 0 28px rgba(229, 56, 44, .35);
+  border: 2px solid var(--aqua); box-shadow: 6px 6px 0 var(--aqua), 0 0 28px rgba(2, 232, 205, .3);
   font: 700 13px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase;
 }
-.stamp .lamp { grid-row: span 2; width: 12px; height: 12px; border-radius: 50%; background: var(--mast); box-shadow: 0 0 10px 2px rgba(229, 56, 44, .8); animation: lamp 2.4s ease-in-out infinite; }
+.stamp .lamp { grid-row: span 2; width: 12px; height: 12px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 10px 2px rgba(2, 232, 205, .7); animation: lamp 2.4s ease-in-out infinite; }
 @keyframes lamp { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
-.stamp-k { color: var(--mast); font-size: 11px; }
+.stamp-k { color: var(--aqua); font-size: 11px; }
 .stamp-v { font-variant-numeric: tabular-nums; }
 /* The radio waves behind the bands: Melton's drawing, drifting, a whisper of
    the ink so the tilt has something to move across. */
@@ -915,8 +919,8 @@ body::after {
    a halftone Earth in onyx over a mast-red wedge, a tower in straight lines,
    highlighter bars under the words, and registration marks at the corners. */
 :root { --paper: #EDE6D8; --ink-soft: rgba(12, 11, 11, .72); }
-:root[data-theme="light"] { --paper: #E6DCC8; }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --paper: #E6DCC8; } }
+:root[data-theme="light"] { --paper: #EDE6D8; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --paper: #EDE6D8; } }
 .paper {
   position: relative; overflow: hidden; isolation: isolate;
   display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
@@ -1017,8 +1021,9 @@ body::after {
 .card-studio > div { display: flex; flex-direction: column; gap: 12px; }
 .studio-globe { width: 200px; aspect-ratio: 1; justify-self: center; }
 @media (max-width: 760px) { .card-studio { grid-template-columns: minmax(0, 1fr); } .studio-globe { width: 160px; } }
-/* The app as it is: a window sitting on the page, corners and shadow, no filter. */
-.appshot { width: 100%; border-radius: 10px; box-shadow: 0 0 0 1px rgba(247, 244, 238, .14), 0 24px 60px rgba(0, 0, 0, .55), 0 8px 18px rgba(0, 0, 0, .4); }
+/* The app as it is: the whole window, its own corners and shadow, uncropped,
+   as the docs show theirs. */
+.appshot { width: 100%; height: auto; }
 
 /* The red halftone: Melton's radio waves through a dot screen, drifting. Where
    the topography strip was, and in the gaps a grid leaves at the end of a row. */

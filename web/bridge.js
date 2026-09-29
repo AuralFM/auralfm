@@ -540,14 +540,26 @@
     cardLevels: async () => (live && playingUrl
       ? await window.AuralLevels?.sample(playingUrl).catch(() => null)
       : null),
-    cardCopy: async (dataUrl) => {
+    /**
+     * Straight from the tap, with no await in front of it. Safari (and so every
+     * iPhone) only lets a page copy or share inside the gesture that asked, and
+     * fetching the data URL first spent it — Copy did nothing on a phone, and
+     * Save fell through to opening the picture on a page of its own.
+     */
+    cardCopy: (dataUrl) => {
       try {
-        const blob = await (await fetch(dataUrl)).blob();
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        return true;
-      } catch { return false; }
+        return navigator.clipboard.write([new ClipboardItem({ "image/png": pngFile(dataUrl) })])
+          .then(() => true, () => false);
+      } catch { return Promise.resolve(false); }
     },
     cardSave: async (dataUrl) => {
+      // A phone: the system's sheet, whose first row is Save Image. A page
+      // cannot write into Photos itself; touching and holding the card can.
+      const file = pngFile(dataUrl, true);
+      if (matchMedia("(pointer: coarse)").matches && navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return "shared"; }
+        catch (e) { if (e?.name === "AbortError") return null; }
+      }
       try {
         const a = document.createElement("a");
         const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
@@ -681,6 +693,14 @@
     tipNext: none, tipDonate: noop, tipRetire: noop,
     reportError: noop,
   };
+
+  /** A data: URL as a PNG, made synchronously so it can be used inside a tap. */
+  function pngFile(dataUrl, named) {
+    const bin = atob(String(dataUrl).split(",")[1] || "");
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return named ? new File([bytes], "AuralFM.png", { type: "image/png" }) : new Blob([bytes], { type: "image/png" });
+  }
 
   // Anything the pages ask for that is not above is a feature this version does
   // not have. Answer it with nothing, once, and say so in the console, rather

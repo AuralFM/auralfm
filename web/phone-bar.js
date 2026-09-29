@@ -267,33 +267,15 @@
   open.setAttribute("aria-label", "Show the station list");
 
   /**
-   * Share, through the system's own sheet.
+   * Share opens the app's own sheet here too, with the card in it.
    *
-   * The desktop offers a card with Copy, Save and Copy link beside it, which is
-   * four buttons doing what iOS already does better — and does with every app
-   * on the phone, not just the ones we thought of. So here the card goes
-   * straight into the share sheet as a file, and the phone takes it from there.
-   * If this browser has no share sheet, the app's own falls back in.
+   * It went straight to the system's share sheet, but the card takes a moment
+   * to draw and iOS only shares inside the tap that asked: by the time the
+   * card was ready the tap was spent, the share was refused, and it fell back
+   * to this sheet anyway, with Copy and Save that could not work from there
+   * (Melton, 28 Sept). Now the card is drawn first and each button acts inside
+   * its own tap: Save or share opens the system sheet, Copy copies.
    */
-  async function shareCard() {
-    // `inPlayer` and `buildCard` are explore-playback.js's own top-level
-    // bindings; these are plain scripts sharing one scope. Paused counts.
-    const ch = typeof inPlayer !== "undefined" ? inPlayer : null;
-    if (!ch) return;
-    let png = null;
-    try { png = await buildCard(); } catch {}
-    if (!png) return;
-    const where = [ch.place, ch.country].filter(Boolean).join(", ");
-    const text = where ? `${ch.title} — ${where}` : ch.title;
-    try {
-      const file = new File([await (await fetch(png)).blob()], "auralfm.png", { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) return await navigator.share({ files: [file], text });
-      if (navigator.share) return await navigator.share({ title: "AuralFM", text, url: location.href });
-    } catch (e) {
-      if (e?.name === "AbortError") return;        // they closed the sheet
-    }
-    openShareSheet();
-  }
 
   function layout(on) {
     tabs.hidden = !on;
@@ -319,7 +301,7 @@
       const play = $("play"), share = $("nowShare"), star = $("nowStar");
       if (star) { remember(star); now.append(star); }
       if (play) { remember(play); now.append(play); }
-      if (share) { remember(share); now.append(share); share.onclick = shareCard; }
+      if (share) { remember(share); now.append(share); }
       now.insertBefore(open, now.firstChild);
       const chat = $("chat");
       if (chat) { remember(chat); chatPanel.append(chat, chatNone); }
@@ -339,8 +321,6 @@
       sync();                // nothing is open; the globe has the screen
     } else {
       open.remove(); side.remove();
-      const share = $("nowShare");
-      if (share) share.onclick = openShareSheet;      // the desktop's own sheet
       searchbar.remove(); chatPanel.remove(); tabs.remove();
       for (const el of home.keys()) {
         const [parent, before] = home.get(el);

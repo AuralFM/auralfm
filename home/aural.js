@@ -31,7 +31,7 @@
     const sys = matchMedia("(prefers-color-scheme: light)");
     const current = () => root.dataset.theme || (sys.matches ? "light" : "dark");
     const meta = document.querySelector('meta[name="theme-color"]');
-    const paintMeta = () => meta?.setAttribute("content", current() === "light" ? "#F4EFE6" : "#0C0B0B");
+    const paintMeta = () => meta?.setAttribute("content", current() === "light" ? "#FFFFFF" : "#0C0B0B");
     const bar = document.querySelector(".island");
     if (bar) {
       const b = document.createElement("button");
@@ -279,6 +279,20 @@
     });
     setInterval(paintBoard, 15000);
   }
+
+  // ── the bands never run out ───────────────────────────────────────────────
+  // Each strip slides by half its text, so the text has to be at least twice
+  // as wide as the strip or the end shows on a wide screen. Doubled until it is.
+  const fillBands = () => {
+    for (const span of document.querySelectorAll(".band-strip span")) {
+      const strip = span.parentElement;
+      span.dataset.unit ||= span.textContent;
+      span.textContent = span.dataset.unit;
+      while (span.scrollWidth < strip.clientWidth * 2.2 && span.textContent.length < 40000) span.textContent += span.textContent;
+    }
+  };
+  fillBands();
+  addEventListener("resize", () => { clearTimeout(fillBands.t); fillBands.t = setTimeout(fillBands, 200); });
 
   // ── on air now ────────────────────────────────────────────────────────────
   // The light over the bands: a city where it is evening or night, its time,

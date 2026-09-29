@@ -119,6 +119,8 @@ const en = {
   "ctl.copyLink": "Copy link",
   "ctl.savedTo": "Saved",
   "ctl.linkCopied": "Link copied — it opens this station in any browser",
+  "ctl.saveShareCard": "Save or share…",
+  "ctl.holdToSave": "Or touch and hold the card to save it straight to Photos.",
   "ctl.noWave": "No sound yet — play for a moment and open this again.",
   "ctl.share": "Copy a card of what you are listening to",
   "ctl.shareDone": "Card copied — paste it into a post",
