@@ -367,7 +367,12 @@ duties. None of this is legal advice; items marked **lawyer** want one.
 
 **Only Melton can do (needs his name, address or payment)**
 
-- [ ] **Register a DMCA designated agent** at the Copyright Office's
+- [x] **Registered 4 Oct 2026: DMCA-1081921** (service provider Melton Bell;
+      agent "Copyright Agent, AuralFM"; hello@auralfm.xyz). The agent is in the
+      Terms' Copyright section. **Renew by 4 Oct 2029** (it lapses after three
+      years), and amend ($6) if the address, phone or names change. The bare
+      domain auralfm.xyz was not among the alternate names; add it at the next
+      amendment. Original note: Register a DMCA designated agent at the Copyright Office's
       [DMCA Designated Agent Directory](https://www.copyright.gov/dmca-directory/).
       $6, renewed every three years. It matters now, not later: the safe harbour
       covers "directories and other information location tools", which is what

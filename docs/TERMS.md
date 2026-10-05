@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 27 September 2026**
+**Last updated: 4 October 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -111,6 +111,16 @@ or anything AuralFM shows infringes your copyright, send a notice to
 
 We remove or disable what the notice identifies, tell the station where we can,
 and restore it if a valid counter-notice follows and no court action is filed.
+
+**Designated agent.** Notices of claimed infringement go to AuralFM's agent,
+registered with the U.S. Copyright Office (registration DMCA-1081921):
+
+- **Agent:** Copyright Agent, AuralFM
+- **Address:** 201 Emerson St., Apt 14, Houston, TX 77006-4551, United States
+- **Telephone:** (512) 387-1033
+- **Email:** hello@auralfm.xyz
+
+Email is the fastest way to reach the agent.
 
 ## Your show
 
