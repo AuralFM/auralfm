@@ -129,6 +129,11 @@ export function speech(c, country = "") {
  */
 export const shown = (title) => title === "Online only" ? "Online, no country" : String(title).replace(/^Somewhere in /, "Across ");
 
+/** A "name" that is a web address is a stream URL somebody pasted into the
+ *  name field: nothing a listener can read or find, and unbreakable in every
+ *  list and on the share card. Kept in stations.json, left out of the app. */
+export const urlTitle = (title) => /^\s*(https?:\/\/|www\.)\S+\s*$/i.test(String(title || ""));
+
 export function writeBundles(full, F) {
   fs.writeFileSync(F.full, JSON.stringify(full));
   const min = {
@@ -137,9 +142,10 @@ export function writeBundles(full, F) {
     // [id, title, placeIndex, secure, tags, radioBrowserUuid, lastCheckOk, explicit, speech]
     // Fixed arity now that later slots exist — optional trailing fields stop
     // working the moment anything follows them.
-    c: full.channels.map((c) => [
+    c: full.channels.filter((c) => !urlTitle(c.title)).map((c) => [
       c.id, c.title, c.p, c.secure ? 1 : 0,
-      c.tags?.length ? c.tags.join(",") : "",
+      // "undefined" and "null" are a form's empty value, sent as a tag.
+      c.tags?.length ? c.tags.filter((t) => t && !/^(undefined|null|none|n\/a)$/i.test(t)).join(",") : "",
       c.rbuuid || "",
       c.ok === 0 ? 0 : c.ok === 1 ? 1 : "",
       c.explicit ? 1 : "",

@@ -28,6 +28,7 @@
     { label: "Sponsors", text: "Keep it independent — join the sponsorship waitlist", href: "https://auralfm.xyz/support/#waitlist", site: true },
     { label: "How it works", text: "The docs: vibes, headlines, chat and privacy", href: "https://docs.auralfm.xyz/" },
     { label: "iPhone", text: "Add AuralFM to your home screen", href: "https://docs.auralfm.xyz/#iphone" },
+    { label: "Instagram", text: "Follow @auralfm.xyz: stations worth your ears, and the cards people post", href: "https://www.instagram.com/auralfm.xyz/" },
     { text: "No chart. No feed. Nobody paying to be heard." },
   ].filter((it) => SITE_PUBLIC || !it.site);
 

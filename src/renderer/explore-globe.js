@@ -219,12 +219,12 @@ async function applyDayNight() {
   const TexClass = dayTex.constructor;
 
   const [nightTex, bumpTex, lightsTex] = await Promise.all([
-    loadTexture("vendor/earth-night.jpg", TexClass, dayTex),
-    loadTexture("vendor/earth-topology.png", TexClass, dayTex),
+    loadTexture(texUrl("earth-night.jpg"), TexClass, dayTex),
+    loadTexture(texUrl("earth-topology.png"), TexClass, dayTex),
     // 4096x2048 city lights (scripts/lights.mjs says why not 8192). Fails soft:
     // if it is missing the shader keeps the
     // vendored night texture, which is the same imagery at a quarter the size.
-    loadTexture("vendor/earth-lights.jpg", TexClass, dayTex).catch(() => null),
+    loadTexture(texUrl("earth-lights.jpg"), TexClass, dayTex).catch(() => null),
   ]);
 
   // Satellite imagery is fetched *without* blocking: on a cold start it can take

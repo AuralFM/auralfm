@@ -3263,6 +3263,90 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── a phone does not keep a hover ───────────────────────────────────────────
+// A touch browser leaves :hover on the last thing tapped. On the iPhone app the
+// star stayed lit after it was switched off, a row looked selected when nothing
+// was, and a tap on the ticker paused it until the next tap somewhere else
+// (4 Oct 2026, the mobile-native pass). Every :hover rule in the app's pages
+// and in web.css sits inside `@media (hover:hover)`, on its own line.
+{
+  console.log("\na phone does not keep a hover");
+  const bare = [];
+  for (const f of ["src/renderer/explore.html", "src/renderer/settings.html", "web/web.css"]) {
+    const src = fs.readFileSync(R(f), "utf8").replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+    src.split("\n").forEach((line, i) => {
+      if (/:hover/.test(line) && /\{/.test(line) && !/@media \(hover: ?hover\)/.test(line)) bare.push(`${f}:${i + 1}`);
+    });
+  }
+  bare.length ? fail("a phone does not keep a hover", `:hover outside @media (hover:hover) at ${bare.slice(0, 6).join(", ")}`)
+    : pass("every :hover rule is inside @media (hover:hover)");
+}
+
+// ── a phone gets the half-size globe ────────────────────────────────────────
+// Four 4096-pixel textures are about 180 MB of graphics memory with their
+// mipmaps: what makes iOS discard a web app and reload it. The web build makes
+// 2048-pixel copies (vendor/lite/) and every picture the globe loads goes
+// through texUrl(), which picks them on a phone.
+{
+  console.log("\na phone gets the half-size globe");
+  const gaps = [];
+  const direct = [];
+  for (const f of EXPLORE_FILES) {
+    const code = fs.readFileSync(R(f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    if (/["'`]vendor\/(earth-|night-sky)/.test(code)) direct.push(f);
+  }
+  if (direct.length) gaps.push(`${direct.join(", ")} names a globe picture without texUrl()`);
+  if (!/const texUrl\s*=/.test(readSrc("src/renderer/explore-core.js"))) gaps.push("texUrl() is gone from explore-core.js");
+  if (!/window\.AuralLite\s*=\s*matchMedia/.test(readSrc("web/bridge.js"))) gaps.push("web/bridge.js no longer sets AuralLite");
+  const lite = R("dist-web/vendor/lite");
+  if (!fs.existsSync(R("dist-web"))) skip("a phone gets the half-size globe: the build", "dist-web/ is not built");
+  else {
+    for (const f of ["earth-blue-marble.jpg", "earth-night.jpg", "earth-lights.jpg", "night-sky.png", "earth-topology.png"]) {
+      const file = path.join(lite, f);
+      if (!fs.existsSync(file)) { gaps.push(`dist-web/vendor/lite/${f} is missing`); continue; }
+      const full = path.join(R("dist-web/vendor"), f);
+      // A JPEG's or PNG's width, read from its header.
+      const width = (p) => {
+        const b = fs.readFileSync(p);
+        if (b[0] === 0x89) return b.readUInt32BE(16);
+        for (let i = 2; i < b.length - 9;) { if (b[i] !== 0xFF) break; const m = b[i + 1]; if (m >= 0xC0 && m <= 0xC3) return b.readUInt16BE(i + 7); i += 2 + b.readUInt16BE(i + 2); }
+        return 0;
+      };
+      if (width(file) > 2048 || (fs.existsSync(full) && width(file) >= width(full))) gaps.push(`vendor/lite/${f} is ${width(file)}px wide, no smaller than the full one`);
+    }
+  }
+  gaps.length ? fail("a phone gets the half-size globe", gaps.join("; "))
+    : pass("every globe picture goes through texUrl(), and the build carries 2048px copies");
+}
+
+// ── a description is words, and a name is a name ────────────────────────────
+// 2,190 stations showed their description as "&#x62F;&#x627;…": pages in
+// Arabic, Russian and Thai write letters as hexadecimal references and the
+// decoder knew only decimal ones. Twenty more were "named" by a stream URL
+// pasted into the name field, which no list or card can wrap. Both were found
+// by throwing the catalogue's own worst cases at the phone layout (break-ui).
+{
+  console.log("\na description is words, and a name is a name");
+  const { decodeEntities } = await import("./lib/entities.mjs");
+  const { urlTitle } = await import("./lib/match.mjs");
+  const gaps = [];
+  const cases = [["&#x62F;&#x627;&#x631;", "دار"], ["Caf&eacute; &amp; bar", "Café & bar"], ["&amp;#1056;&#1072;&#1076;&#1080;&#1086;", "Радио"], ["R&B", "R&B"]];
+  for (const [inp, want] of cases) if (decodeEntities(inp) !== want) gaps.push(`decodeEntities(${inp}) gives ${decodeEntities(inp)}, not ${want}`);
+  if (!urlTitle("https://stream.example.com/live.mp3") || urlTitle("Radio https://example.com") || urlTitle("KEXP 90.3")) gaps.push("urlTitle no longer tells a web address from a name");
+  const min = R("data/stations.min.json"), prof = R("data/profiles");
+  if (!fs.existsSync(min) || !fs.existsSync(prof)) skip("a description is words: the catalogue", "data/ is not built");
+  else {
+    const named = JSON.parse(fs.readFileSync(min, "utf8")).c.filter((c) => urlTitle(c[1])).length;
+    if (named) gaps.push(`${named} station(s) in the bundle are named by a web address`);
+    let coded = 0;
+    for (const f of fs.readdirSync(prof)) if (/&#x?[0-9a-f]{2,6};/i.test(fs.readFileSync(path.join(prof, f), "utf8"))) coded++;
+    if (coded) gaps.push(`${coded} profile file(s) still carry character references`);
+  }
+  gaps.length ? fail("a description is words, and a name is a name", gaps.join("; "))
+    : pass("character references are decoded (decimal, hex, named, twice-escaped) and no station is named by a URL");
+}
+
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

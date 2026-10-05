@@ -19,6 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
@@ -36,6 +37,10 @@ if (missing.length) {
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, "web"), { recursive: true });
 const copy = (from, to = from) => fs.cpSync(R(from), path.join(OUT, to), { recursive: true });
+// The phone layout's own question (web/web.css), and its complement.
+const PHONE = "(max-width: 700px), (pointer: coarse) and (max-height: 500px)";
+const NOT_PHONE = "(min-width: 701px) and (min-height: 501px), (min-width: 701px) and (pointer: fine), (min-width: 701px) and (pointer: none)";
+const LITE = [["earth-blue-marble.jpg", 2048], ["earth-night.jpg", 2048], ["earth-lights.jpg", 2048], ["night-sky.png", 2048], ["earth-topology.png", 1024]];
 
 // ── the desktop modules, wrapped ─────────────────────────────────────────────
 // Order does not matter (require is lazy), but every module a wrapped one
@@ -298,7 +303,7 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
   html = html.replace(csp, `<meta http-equiv="Content-Security-Policy" content="${CSP}">`);
   html = html.replaceAll("../../assets/", "assets/");
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0C0B0B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -333,11 +338,13 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
     html = html.replace('<link rel="manifest"', `<link rel="preload" href="web/web.css" as="style">
 <link rel="preload" href="data/stations.min.json" as="fetch" crossorigin>
 <link rel="preload" href="vendor/globe.gl.min.js" as="script">
-<link rel="preload" href="vendor/earth-blue-marble.jpg" as="image" crossorigin>
-<link rel="preload" href="vendor/night-sky.png" as="image" crossorigin>
-<link rel="preload" href="vendor/earth-night.jpg" as="image">
-<link rel="preload" href="vendor/earth-topology.png" as="image">
-<link rel="preload" href="vendor/earth-lights.jpg" as="image">
+${["earth-blue-marble.jpg crossorigin", "night-sky.png crossorigin", "earth-night.jpg", "earth-topology.png", "earth-lights.jpg"].map((t) => {
+  // A phone preloads the half-size pictures it will use (LITE below), a wide
+  // screen the full ones: the two media queries are each other's complement.
+  const [file, cors = ""] = t.split(" ");
+  return `<link rel="preload" href="vendor/lite/${file}" as="image" media="${PHONE}"${cors && " " + cors}>
+<link rel="preload" href="vendor/${file}" as="image" media="${NOT_PHONE}"${cors && " " + cors}>`;
+}).join("\n")}
 <link rel="manifest"`);
     const { style, markup } = launchScreen();
     html = html.replace('<link rel="preload" href="web/web.css"', `${style}\n<link rel="preload" href="web/web.css"`);
@@ -402,6 +409,22 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
   if (f.endsWith(".js") && !DESKTOP_ONLY.includes(f)) copy(`src/renderer/${f}`, f);
 }
 copy("src/renderer/vendor", "vendor");
+// Half-size globe pictures for phones (explore-core.js, texUrl): 2048 across
+// instead of 4096, a quarter of the graphics memory. Made with sips, which
+// macOS ships and scripts/lights.mjs already relies on; kept in the cache so a
+// rebuild does not redo them.
+{
+  const cache = R("node_modules", ".cache", "lite");
+  fs.mkdirSync(cache, { recursive: true });
+  fs.mkdirSync(path.join(OUT, "vendor", "lite"), { recursive: true });
+  for (const [file, width] of LITE) {
+    const src = R("src", "renderer", "vendor", file), made = path.join(cache, file);
+    if (!fs.existsSync(made) || fs.statSync(made).mtimeMs < fs.statSync(src).mtimeMs) {
+      execFileSync("sips", ["--resampleWidth", String(width), src, "--out", made], { stdio: "ignore" });
+    }
+    fs.copyFileSync(made, path.join(OUT, "vendor", "lite", file));
+  }
+}
 copy("src/renderer/fonts", "fonts");        // the share card's type (card.js), nothing else
 fs.copyFileSync(R("web", "robots.txt"), path.join(OUT, "robots.txt"));   // who may crawl what (web/robots.txt)
 for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);

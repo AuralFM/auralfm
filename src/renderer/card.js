@@ -438,6 +438,14 @@
         size -= 2;
       }
     }
+    // A name with no spaces (a web address, a hashtag run) cannot wrap: cut it
+    // to the measure with "…" rather than let it run off the card's edge.
+    ctx.font = disp(size);
+    lines = lines.map((line) => {
+      let cut = line;
+      while (cut.length > 4 && ctx.measureText(cut).width > inner) cut = cut.slice(0, -2).trimEnd() + "…";
+      return cut;
+    });
     const blockH = LABEL + size * 0.9 + (lines.length - 1) * size * LEAD;
     const top = Math.round(AREA_TOP + (AREA_END - AREA_TOP - blockH) / 2);
     ctx.fillStyle = `rgb(${ACCENT})`;
@@ -574,8 +582,8 @@
     async ready() {
       if (!TEX.day) {
         [TEX.day, TEX.night] = await Promise.all([
-          loadTexture("vendor/earth-blue-marble.jpg"),
-          loadTexture("vendor/earth-night.jpg"),
+          loadTexture(`vendor/${window.AuralLite ? "lite/" : ""}earth-blue-marble.jpg`),
+          loadTexture(`vendor/${window.AuralLite ? "lite/" : ""}earth-night.jpg`),
         ]);
       }
       return !!TEX.day;
@@ -591,8 +599,8 @@
       // felt, and these are the same files the globe already has in memory.
       if (!TEX.day) {
         [TEX.day, TEX.night] = await Promise.all([
-          loadTexture("vendor/earth-blue-marble.jpg"),
-          loadTexture("vendor/earth-night.jpg"),
+          loadTexture(`vendor/${window.AuralLite ? "lite/" : ""}earth-blue-marble.jpg`),
+          loadTexture(`vendor/${window.AuralLite ? "lite/" : ""}earth-night.jpg`),
         ]);
       }
       return draw(now);

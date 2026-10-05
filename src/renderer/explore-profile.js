@@ -51,7 +51,10 @@
       img.src = p.image;
       head.append(img);
     }
-    const where = [p.place, p.region && p.region !== p.place ? p.region : null, p.country].filter(Boolean).join(" · ");
+    // A station placed only by its country has no town to name: "Somewhere in
+    // China · China" said the country twice and the town not at all.
+    const town = /^(Across |Somewhere in |Online, no country$|Online only$)/.test(p.place || "") ? null : p.place;
+    const where = [town, p.region && p.region !== town ? p.region : null, p.country].filter(Boolean).join(" · ");
     // Languages arrive as "portuguese", "pt-BR" or "PORTUGUESE": say them once, plainly.
     // "en_GB" is "en-GB" written by a different tool.
     const lang = p.lang ? (/^[a-z]{2}([-_][a-z]{2})?$/i.test(p.lang) ? p.lang.toLowerCase().split(/[-_]/)[0]
@@ -65,7 +68,9 @@
     // Thirty words at most, then "…" (Melton): a taste of the station, not its page.
     if (p.description) {
       const words = p.description.trim().split(/\s+/);
-      box.append(el("p", "pdesc", words.length > 30 ? `${words.slice(0, 30).join(" ").replace(/[,;:.\-–—]+$/, "")}…` : p.description));
+      const desc = el("p", "pdesc", words.length > 30 ? `${words.slice(0, 30).join(" ").replace(/[,;:.\-–—]+$/, "")}…` : p.description);
+      desc.dir = "auto";          // Arabic, Hebrew and Persian read from the right
+      box.append(desc);
     }
 
     const chips = [...(p.explicit ? [t("profile.explicit", "Explicit")] : []), ...(p.genres || []).slice(0, 4), ...(p.moods || []).slice(0, 3)];
@@ -212,7 +217,14 @@
     return Math.max(0, innerHeight - (tabs ? tabs.getBoundingClientRect().top : innerHeight));
   };
   const full = () => Math.min(card.scrollHeight, card.offsetHeight || card.scrollHeight);
-  const setH = (v) => {
+  /**
+   * `rest` is false while a finger is dragging. The two page-wide values
+   * (--drawer, and --chrome in web/phone-bar.js, which the lists and panels
+   * are laid out from) are then left alone: writing a custom property on the
+   * root restyles the whole document, and doing it on every frame of a drag
+   * was the stutter in the pull-up. They are set once, where the sheet rests.
+   */
+  const setH = (v, rest = true) => {
     h = Math.max(0, v);
     const phoneBar = document.body.classList.contains("phonebar");
     // Fixed on the tabs on a phone; on a wide window it is in the layout.
@@ -220,7 +232,9 @@
     drawer.style.height = `${Math.round(h)}px`;
     now.style.transform = phoneBar && h > 0 ? `translateY(${-Math.round(h)}px)` : "";
     now.classList.toggle("raised", phoneBar && h > 0);
+    if (!rest) return;
     document.documentElement.style.setProperty("--drawer", `${Math.round(h)}px`);
+    dispatchEvent(new Event("auralfm:drawer"));
   };
   const say = () => {
     grab.setAttribute("aria-expanded", String(isOpen));
@@ -286,7 +300,7 @@
     const max = full();
     let next = drag.base - dy;
     if (next > max) next = max + band(next - max, max || 200);
-    setH(next);
+    setH(next, false);
     e.preventDefault();
   }
   function up(e) {

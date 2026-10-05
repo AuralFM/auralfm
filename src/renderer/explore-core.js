@@ -79,6 +79,14 @@ async function paintDistance() {
   el.textContent = `${d} from ${prev.title}`;
   el.hidden = false;
 }
+/**
+ * Where a globe picture lives. On a phone the web build serves half-size ones
+ * (vendor/lite/, made by scripts/build-web.mjs; the flag is set in
+ * web/bridge.js): four 4096-pixel textures are about 180 MB of graphics memory
+ * with their mipmaps, which is what makes iOS throw a web app out and reload
+ * it, for detail a 390-point screen cannot show. The desktop never sets it.
+ */
+const texUrl = (name) => `vendor/${window.AuralLite ? "lite/" : ""}${name}`;
 let favorites = [];
 let playing = null;          // channel currently playing, per the popover
 // What is in the player, playing or not: a paused or cued station can still be

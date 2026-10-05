@@ -39,3 +39,4 @@ data/claims-review.csv
 # who has had which email (scripts/mail.mjs): addresses, local only
 data/mail-sent.json
 data/email-previews/
+data/review/

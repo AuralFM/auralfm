@@ -24,6 +24,7 @@
  * Where sources differ, the station's own claim wins, then its homepage, then
  * its stream. Images only over https, which is all a web page can show.
  */
+import { decodeDeep } from "./lib/entities.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -159,7 +160,9 @@ for (const c of full.channels) {
   if (profile.donate) n.donate++;
   const s = shardOf(c.id);
   if (!shards.has(s)) shards.set(s, {});
-  shards.get(s)[c.id] = profile;
+  // What was gathered before the decoder knew hexadecimal references is still
+  // in the cache as codes: every string is decoded on the way out.
+  shards.get(s)[c.id] = decodeDeep(profile);
 }
 
 console.log(`  with tags ${n.tagged} (${n.newlyTagged} newly, from their own streams)   on air ${n.onAir}`);

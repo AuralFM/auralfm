@@ -24,6 +24,9 @@
  * app's throwaway identity makes.
  */
 (() => {
+  // A phone gets the half-size globe pictures (explore-core.js, texUrl). The
+  // same question the phone layout asks (web/web.css), asked once at load.
+  window.AuralLite = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)").matches;
   "use strict";
   // Settings opens as a popover over the app, in a frame. One bridge serves
   // both: a second would open its own relay connections, and a mute made in

@@ -82,9 +82,22 @@ function vibePage(v) {
     const href = `${APP}?place=${encodeURIComponent(p.title)}&country=${encodeURIComponent(p.country)}&vibe=${v.id}`;
     // Folded like the app's search: "sao paulo" finds São Paulo.
     const q = [p.title, p.country, ...p.stations].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    return `      <li class="cell vplace" data-q="${esc(q)}">
-        <a href="${esc(href)}"><b>${esc(p.title)}</b><span>${esc(p.country)}${p.country ? " · " : ""}${plural(p.n, "station")}</span></a>
-        <ul class="vst">${p.stations.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+    /**
+     * A timetable row, not a paragraph (Melton, 4 Oct: the run-on list of names
+     * separated by dots was not legible). The place on the left, its stations
+     * on the right, one to a line and numbered; a name that is really a slogan
+     * is cut to one line with the whole of it in its title. The first eight
+     * show, the rest fold under "more", so Paris does not push Dakar off the page.
+     */
+    const SHOW = 8;
+    const item = (t) => `<li title="${esc(t)}">${esc(t)}</li>`;
+    const first = p.stations.slice(0, SHOW), rest = p.stations.slice(SHOW);
+    return `      <li class="vplace" data-q="${esc(q)}">
+        <a class="vp-head" href="${esc(href)}"><b>${esc(p.title)}</b><span class="vp-meta">${esc(p.country)}${p.country ? " · " : ""}${plural(p.n, "station")}</span><span class="vp-go" aria-hidden="true">Open on the globe →</span></a>
+        <div class="vp-list">
+          <ol class="vst">${first.map(item).join("")}</ol>${rest.length ? `
+          <details class="vp-more"><summary>${rest.length} more</summary><ol class="vst" start="${SHOW + 1}">${rest.map(item).join("")}</ol></details>` : ""}
+        </div>
       </li>`;
   }).join("\n");
   return `${c.head}<main id="main">

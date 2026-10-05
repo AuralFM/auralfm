@@ -155,7 +155,7 @@ function load() {
     if (image && !fs.existsSync(path.join(IMAGES, image))) fail(`journal/${f}: site/assets/journal/${image} is missing`);
     return {
       slug, title: meta.title, topic: meta.topic || "", author: meta.author || "",
-      summary: meta.summary, image, alt: meta.alt || "", body,
+      summary: meta.summary, image, alt: meta.alt || "", body, featured: truthy(meta.featured),
       sort: `${d[1]}${d[2]}${d[3]}${d[4] || "00"}${d[5] || "00"}`,
       when: `${d[3]}.${d[2]}.${d[1]}`, iso: `${d[1]}-${d[2]}-${d[3]}`,
     };
@@ -195,6 +195,42 @@ function stories(posts) {
       </div>
     </article>`;
   }).join("\n");
+}
+
+// ── the featured story, on auralfm.xyz's front page ─────────────────────────
+// One story from the Journal on the homepage (Melton, 4 Oct): the post marked
+// `featured: true`, or the newest, with its cover, and the two after it as
+// lines. The homepage is its own here.now site and cannot reach the blog's
+// files, so the cover is copied into home/assets/journal/.
+const HOME = R("home/index.html");
+const HOME_IMAGES = R("home/assets/journal");
+const F_OPEN = "<!-- journal:featured -->", F_CLOSE = "<!-- /journal:featured -->";
+function featured(posts) {
+  const withPage = posts.filter((p) => p.body);
+  const f = withPage.find((p) => p.featured) || withPage[0];
+  if (!f) return "";
+  const link = `${ORIGIN}/${f.slug}/`;
+  const s = f.image ? size(path.join(IMAGES, f.image)) : null;
+  const cover = f.image
+    ? `<a class="cell jf-cover" href="${link}" tabindex="-1" aria-hidden="true"><img src="assets/journal/${f.image}" alt="" loading="lazy"${s ? ` width="${s[0]}" height="${s[1]}"` : ""}><span class="pin">Featured</span></a>`
+    : `<div class="cell jf-cover jf-none" aria-hidden="true"><span class="pin">Featured</span></div>`;
+  const more = withPage.filter((p) => p !== f).slice(0, 3).map((p) =>
+    `        <li><a href="${ORIGIN}/${p.slug}/"><span class="jf-when">${esc(p.when)}${p.topic ? ` · ${esc(p.topic)}` : ""}</span><b>${esc(p.title)}</b></a></li>`).join("\n");
+  return `  <section class="journal-feature grid" aria-labelledby="jf-title">
+    ${cover}
+    <div class="cell jf-body">
+      <p class="label">[ From the Journal${f.topic ? ` · ${esc(f.topic)}` : ""} · ${esc(f.when)} ]</p>
+      <h2 id="jf-title" class="display stretch"><a href="${link}">${esc(f.title)}</a></h2>
+      <p class="lede">${esc(plain(f.summary))}</p>
+      <p class="jf-go"><a class="btn" href="${link}">Read the story</a><a class="textlink" href="${ORIGIN}/">All stories</a></p>
+    </div>${more ? `
+    <div class="cell jf-more">
+      <p class="label">[ More from the Journal ]</p>
+      <ol>
+${more}
+      </ol>
+    </div>` : ""}
+  </section>`;
 }
 
 // ── a post's own page ───────────────────────────────────────────────────────
@@ -268,6 +304,23 @@ const index = fs.readFileSync(INDEX, "utf8");
 const a = index.indexOf(OPEN), b = index.indexOf(CLOSE);
 if (a < 0 || b < a) fail(`site/index.html needs ${OPEN} … ${CLOSE} where the stories go`);
 want.set(INDEX, index.slice(0, a + OPEN.length) + "\n" + stories(posts) + "\n    " + index.slice(b));
+
+{
+  const home = fs.readFileSync(HOME, "utf8");
+  const fa = home.indexOf(F_OPEN), fb = home.indexOf(F_CLOSE);
+  if (fa < 0 || fb < fa) fail(`home/index.html needs ${F_OPEN} … ${F_CLOSE} where the featured story goes`);
+  want.set(HOME, home.slice(0, fa + F_OPEN.length) + "\n" + featured(posts) + "\n  " + home.slice(fb));
+  // Its cover, beside the homepage.
+  const f = posts.filter((p) => p.body).find((p) => p.featured) || posts.filter((p) => p.body)[0];
+  if (f?.image) {
+    const from = path.join(IMAGES, f.image), to = path.join(HOME_IMAGES, f.image);
+    const same = fs.existsSync(to) && fs.readFileSync(to).equals(fs.readFileSync(from));
+    if (!same) {
+      if (check) { console.log(`journal: home/assets/journal/${f.image} is behind — run node scripts/build-journal.mjs`); process.exitCode = 1; }
+      else { fs.mkdirSync(HOME_IMAGES, { recursive: true }); fs.copyFileSync(from, to); }
+    }
+  }
+}
 
 const c = chrome();
 posts.forEach((p, i) => { if (p.body) want.set(R("site", p.slug, "index.html"), page(p, i, posts, c)); });

@@ -120,7 +120,7 @@
     padding:8px 4px;border-radius:var(--r-md);
     transition:background var(--dur-hover) var(--ease-out);
   }
-  .ico:hover{background:var(--fill)}
+  @media (hover:hover){.ico:hover{background:var(--fill)}}
   /* The icon is already a squircle; this only stops the PNG corners showing
      through at the very edge. --r-xl is the panel radius and reads right at 46px. */
   .ico img{width:46px;height:46px;display:block;border-radius:var(--r-xl)}
@@ -134,7 +134,7 @@
     box-shadow:inset 0 0 0 .5px var(--line);
     transition:background var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
-  .pal:hover{background:var(--fill-hi)}
+  @media (hover:hover){.pal:hover{background:var(--fill-hi)}}
   .pal:active{transform:scale(.98)}
   .pal[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--accent)}
   .pal:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -153,13 +153,13 @@
     flex:none;border:0;border-radius:var(--r-md);background:var(--fill-hi);color:var(--label);
     font:inherit;font-size:12px;padding:5px 10px;cursor:default;
   }
-  #relay-btn:hover{background:var(--label);color:var(--bg)}
+  @media (hover:hover){#relay-btn:hover{background:var(--label);color:var(--bg)}}
   #relaylist .row .tag{margin-left:auto;font-size:10px;color:var(--label3)}
   #relaylist .row button{
     flex:none;border:0;background:none;color:var(--label3);cursor:default;
     font-size:14px;line-height:1;padding:0 2px;margin-left:6px;
   }
-  #relaylist .row button:hover{color:var(--label)}
+  @media (hover:hover){#relaylist .row button:hover{color:var(--label)}}
   .pal .tag{display:block;font-size:10px;color:var(--label2);margin-top:1px}
 
   .row .name b{display:block;font-weight:530}
@@ -170,7 +170,7 @@
   }
   /* --err, not Apple's #FF453A. This was the last system red left in the app
      and it is the one colour a user is guaranteed to see up close. */
-  .row .rm:hover{background:var(--err);color:var(--on-err)}
+  @media (hover:hover){.row .rm:hover{background:var(--err);color:var(--on-err)}}
   .row .rm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   *{box-sizing:border-box}
@@ -219,7 +219,7 @@
   .docback{appearance:none;background:none;border:0;color:var(--accent);
            font:inherit;font-size:13px;cursor:default;padding:3px 7px;
            border-radius:var(--r-sm);flex:none}
-  .docback:hover{background:var(--fill)}
+  @media (hover:hover){.docback:hover{background:var(--fill)}}
   .docback:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .docbody{flex:1;overflow-y:auto;padding:18px 22px 40px;max-width:74ch}
   /* Reading measure and rhythm. The prose in these files was written to be read,
@@ -294,7 +294,7 @@
     padding:4px 11px;border-radius:var(--r-sm);cursor:default;white-space:nowrap;
     transition:background var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
-  .seg button:hover{background:var(--fill-hi)}
+  @media (hover:hover){.seg button:hover{background:var(--fill-hi)}}
   .seg button:active{transform:scale(.97)}
   .seg button[aria-checked="true"]{
     background:var(--label);color:var(--bg);font-weight:590;
@@ -329,7 +329,7 @@
     appearance:none;background:none;border:0;color:var(--accent);font:inherit;
     padding:0;cursor:default;text-align:left;
   }
-  .link:hover{text-decoration:underline}
+  @media (hover:hover){.link:hover{text-decoration:underline}}
   .link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
 
   .promise{

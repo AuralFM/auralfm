@@ -25,6 +25,13 @@ html, body { overscroll-behavior: none; }
 html { -webkit-tap-highlight-color: transparent; }
 /* A tap is a tap: no double-tap-zoom wait on anything in the app. */
 button, [role="button"], a, input, select { touch-action: manipulation; }
+/* Holding a finger on a control must not select its label or raise the copy
+   callout: that is what a web page does and an app never does. Content (station
+   descriptions, links in a card, chat) stays selectable. */
+button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Windows High Contrast and other forced-colour modes drop box-shadow rings,
+   which is how several fields show focus: give every focus a real outline there. */
+@media (forced-colors: active) { :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; } }
 
 /* The sheet's handle exists only where the sheet does. In a wide window the
    rail does not move, and an unstyled button above the place name is all that
@@ -67,7 +74,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--r-md);
   color: var(--accent); font: inherit; font-size: 17px; font-weight: 600;
 }
-.setsheet-done:hover { background: var(--fill); }
+@media (hover:hover){.setsheet-done:hover{ background: var(--fill); }}
 .setsheet-done:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .setsheet-frame { flex: 1; width: 100%; border: 0; background: var(--bg); color-scheme: normal; }
 
@@ -83,14 +90,15 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   font-size: 10.5px; line-height: 26px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
 .ticker-run { display: flex; flex: none; animation: ticker var(--ticker-s, 60s) linear infinite; }
-.ticker:hover .ticker-run, .ticker:focus-within .ticker-run { animation-play-state: paused; }
+.ticker:focus-within .ticker-run{ animation-play-state: paused; }
+@media (hover:hover){.ticker:hover .ticker-run{ animation-play-state: paused; }}
 @keyframes ticker { to { transform: translateX(calc(-1 * var(--ticker-w, 50%))); } }
 .ticker ul { display: flex; flex: none; margin: 0; padding: 0; list-style: none; }
 .ticker li { flex: none; padding: 0 22px; white-space: nowrap; }
 /* A dot before every item, the first of each copy included, so the join of the loop reads like every other gap. */
 .ticker li::before { content: "●"; font-size: 5px; vertical-align: 2px; margin: 0 22px 0 -22px; opacity: .55; }
 .ticker a, .ticker span { color: inherit; text-decoration: none; }
-.ticker a:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (hover:hover){.ticker a:hover{ text-decoration: underline; text-underline-offset: 3px; }}
 .ticker a:focus-visible { outline: 2px solid #0C0B0B; outline-offset: -2px; }
 .ticker b { font-weight: 800; }
 .ticker-x {
@@ -156,7 +164,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   appearance: none; border: 0; background: none; cursor: default;
   font: inherit; font-size: 15px; color: var(--label2); border-radius: var(--r-md);
 }
-.installlater:hover { color: var(--label); }
+@media (hover:hover){.installlater:hover{ color: var(--label); }}
 .installlater:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (prefers-reduced-motion: reduce) {
   .installhint, .installhero svg, .installhero[data-step="toggle"] .knob { animation: none; }
@@ -315,11 +323,19 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
    * with a click handler, which is a control that exists for a finger and not
    * for a keyboard or VoiceOver. The transport sits above it.
    */
+  /**
+   * Solid, not glass. The player row and the tabs are on screen the whole time
+   * the globe is turning, and a blur behind them is re-rendered from the
+   * planet on every frame, for a ground that was already 94% opaque: nothing
+   * you could see, paid for sixty times a second on a phone's GPU.
+   */
   body.phonebar .now {
     position: relative; z-index: 5; gap: 10px; font-size: 14px;
     padding: 8px 12px 8px 14px;
-    background: color-mix(in srgb, var(--bg) 94%, transparent);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+    background: var(--bg);
+    /* The row is a handle (explore-profile.js pulls the station's card up by
+       it): without this iOS takes a vertical drag for a scroll and cancels it. */
+    touch-action: none;
     box-shadow: inset 0 .5px 0 var(--line);
   }
   .nowopen {
@@ -331,8 +347,10 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   body.phonebar .now .brand svg { height: 15px; }
   /* The name gives way before the status does: "Press play" is an instruction,
      and the station's name is also on the globe and in the card above. */
-  body.phonebar .now b { flex: 0 4 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  body.phonebar .now #nowStatus { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.phonebar .now b { flex: 0 1 auto; min-width: 3ch; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* The status keeps its words ("Press play") up to two fifths of the row; it
+     was the first thing squeezed, down to "P…", beside any long name. */
+  body.phonebar .now #nowStatus { flex: 0 0 auto; max-width: 40%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Volume and the output picker belong to iOS here: the hardware keys set one
      and Control Centre sets the other, from outside any app. */
   body.phonebar .now .volwrap, body.phonebar .now .outwrap:not(.route),
@@ -390,8 +408,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
   /* One sheet: the row rides up (explore-profile.js) and the card is the rest
      of it, flush under the row — same ground, no edge, no second handle. */
   body.phonebar .nowdrawer { width: 100vw; z-index: 5; border-radius: 0; box-shadow: none;
-    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
-    background: color-mix(in srgb, var(--bg) 94%, transparent); }
+    -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--bg); }
   body.phonebar .nowcard { padding-top: 6px; }
   body.phonebar .nowcard::before { display: none; }
   body.phonebar .now.raised { border-radius: var(--r-xl) var(--r-xl) 0 0; box-shadow: 0 -14px 28px -10px rgba(0,0,0,.4); }
@@ -413,8 +430,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     /* The home indicator's strip is already empty space; the bar does not need
        to add its own on top, so it keeps only what is left after 8pt of it. */
     padding: 3px 4px max(2px, calc(env(safe-area-inset-bottom) - 8px));
-    background: color-mix(in srgb, var(--bg) 94%, transparent);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+    background: var(--bg);
     box-shadow: inset 0 .5px 0 var(--line);
   }
   .tabbar[hidden] { display: none; }
@@ -599,6 +615,7 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
     background: color-mix(in srgb, var(--bg) 96%, transparent);
   }
   #sheetimg { max-height: 58dvh; max-width: 100%; }
+  #sheetwait { height: min(58dvh, 480px); }
   .sheetrow { width: 100%; gap: 6px; }
   .sheetbtn { flex: 1; min-height: 44px; font-size: 13px; padding: 7px 8px; }
 
@@ -611,16 +628,13 @@ button, [role="button"], a, input, select { touch-action: manipulation; }
 
 /* ── touch ─────────────────────────────────────────────────────────────────── */
 /**
- * Hover does not exist here, and a phone fakes it.
- *
- * Touch browsers leave :hover applied to the last thing tapped, so every
- * hover style became a highlight stuck under your finger's last stop —
- * a row that looks selected when nothing is. The press states stay.
+ * Hover does not exist on a phone, and a phone fakes it: touch browsers leave
+ * :hover on the last thing tapped, so a row looked selected when nothing was,
+ * the star stayed lit after it was switched off, and the ticker stayed paused
+ * after a tap. Every :hover rule in the app and here now sits inside
+ * `@media (hover:hover)` (npm run audit holds that line); press states stay.
  */
 @media (hover: none) {
-  .toolbar button:hover::before { background: var(--fill); }
-  .st:hover, .place:hover, .story:hover, .layrow:hover, .convos .row:hover,
-  .chips button:hover { background: none; }
   .toolbar button[aria-pressed="true"]::before { background: var(--fill-hi); }
 }
 

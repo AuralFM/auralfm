@@ -352,18 +352,21 @@
   const chrome = () => {
     // The station's card, pulled up out of the player, is chrome too while it is
     // up: the panels above move with it instead of being covered.
+    // Where the card rests, not where it is mid-drag or mid-slide: read from
+    // --drawer, which explore-profile.js sets once per rest (measuring the
+    // element here ran this on every frame of its animation).
     const drawer = $("nowdrawer");
-    const h = (tabs.hidden ? 0 : tabs.offsetHeight) + (now.hidden ? 0 : now.offsetHeight)
-      + (drawer && !drawer.hidden ? drawer.offsetHeight : 0);
+    const rest = drawer && !drawer.hidden ? parseFloat(document.documentElement.style.getPropertyValue("--drawer")) || 0 : 0;
+    const h = (tabs.hidden ? 0 : tabs.offsetHeight) + (now.hidden ? 0 : now.offsetHeight) + rest;
     document.documentElement.style.setProperty("--chrome", `${h}px`);
   };
   if (typeof ResizeObserver !== "undefined") {
     const ro = new ResizeObserver(chrome);
     ro.observe(tabs); ro.observe(now);
-    if ($("nowdrawer")) ro.observe($("nowdrawer"));
   }
   new MutationObserver(chrome).observe(now, { attributes: true, attributeFilter: ["hidden"] });
   addEventListener("resize", chrome);
+  addEventListener("auralfm:drawer", chrome);
   visualViewport?.addEventListener("resize", chrome);
 
   layout(phone.matches);

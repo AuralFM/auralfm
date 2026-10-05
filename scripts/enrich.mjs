@@ -39,6 +39,7 @@
  * refuses outright, so the stream question is asked over a plain socket and the
  * reply read by hand. Answers are appended to data/_enrich.jsonl as they come.
  */
+import { decodeEntities } from "./lib/entities.mjs";
 import fs from "node:fs";
 import dns from "node:dns";
 import net from "node:net";
@@ -315,8 +316,7 @@ function readPage(html, base) {
   // string out, and the pages can go.
   return JSON.parse(JSON.stringify(out));
 }
-const decode = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<")
-  .replace(/&gt;/g, ">").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/\s+/g, " ");
+const decode = (s) => decodeEntities(s).replace(/\s+/g, " ");
 
 /**
  * A station's claim: /.well-known/auralfm.json on its own site. Kept only as the

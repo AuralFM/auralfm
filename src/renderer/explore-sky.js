@@ -21,7 +21,7 @@
  */
 async function drawSky() {
   if (!layers.constellations) {
-    globe.backgroundImageUrl("vendor/night-sky.png");   // plain stars, no figures
+    globe.backgroundImageUrl(texUrl("night-sky.png"));   // plain stars, no figures
     return;
   }
   const sky = await window.auralfm.sky();

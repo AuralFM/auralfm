@@ -346,7 +346,17 @@ async function openShareSheet() {
   if (!inPlayer) return;
   const sheet = $("sheet"), said = $("sheetsaid");
   said.textContent = "";
-  $("sheetimg").removeAttribute("src");
+  const img = $("sheetimg"), wait = $("sheetwait");
+  img.removeAttribute("src");
+  img.hidden = true;
+  // Say what is happening for the seconds it takes: with a station playing the
+  // card listens to it first, to draw the wave from the real sound.
+  wait.hidden = false;
+  $("sheetwaitline").textContent = t("ctl.cardMaking", "Making your card");
+  $("sheetwaitnote").textContent = playing
+    ? t("ctl.cardListening", "One moment: it is listening to the station for a few seconds, to draw its sound.")
+    : t("ctl.cardDrawing", "One moment.");
+  for (const id of ["sheetcopy", "sheetsave"]) $(id).disabled = true;
   sheet.hidden = false;
   // On a touch screen Save hands the card to the system's sheet (Save Image,
   // Instagram, Messages), and touching and holding the card saves it outright.
@@ -357,10 +367,14 @@ async function openShareSheet() {
   for (const el of behindSheet()) if (el) el.inert = true;
   $("sheetclose").focus();
   try {
-    $("sheetimg").src = await buildCard();
-    // No waveform is now the normal case, not a symptom of anything, so the
-    // sheet no longer tells people to wait for sound that is already playing.
+    const png = await buildCard();
+    if (sheet.hidden) return;                 // closed while it was being made
+    img.src = png;
+    img.hidden = false;
+    wait.hidden = true;
+    for (const id of ["sheetcopy", "sheetsave"]) $(id).disabled = false;
   } catch {
+    wait.hidden = true;
     said.textContent = t("ctl.shareFailed", "Could not make the card");
   }
 }

@@ -378,18 +378,42 @@ h1, h2, h3, .display, .lede, .hi { text-wrap: balance; }
 .dir-filter input:hover { border-color: var(--bone2); }
 .dir-filter input:focus-visible { outline: 2px solid var(--aq); outline-offset: -1px; border-color: var(--aq); }
 .dir-count { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
-.vplaces { display: grid; gap: 1px; background: var(--line); grid-template-columns: repeat(3, minmax(0, 1fr)); }
-/* Fills the rest of a short last row, so it is not a block of rule colour. */
-.vplaces::after { content: ""; background: var(--onyx); grid-column-end: -1; }
-.vplace { display: flex; flex-direction: column; gap: 10px; }
+/* The directory as a timetable: one place to a row, its name and count on the
+   left, its stations on the right in numbered columns, hairlines between. */
+.vplaces { display: block; border-top: 1px solid var(--line); background: var(--onyx); }
+.vplace {
+  display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 16px 32px;
+  padding: 24px var(--pad); border-bottom: 1px solid var(--line);
+}
 .vplace[hidden], .dir-none[hidden] { display: none; }
-.vplace a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--bone); }
-.vplace b { font: 900 22px/1.05 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; overflow-wrap: anywhere; transition: color .5s var(--ease); }
-.vplace a:hover b { color: var(--aq); }
-.vplace span { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aq); }
-.vst { color: var(--bone2); font-size: 14px; line-height: 21px; overflow-wrap: anywhere; }
-.vst li { display: inline; }
-.vst li + li::before { content: " · "; color: var(--aq); }
+.vp-head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-decoration: none; color: var(--bone); align-self: start; position: sticky; top: 76px; }
+.vp-head b { font: 900 clamp(24px, 2.6vw, 40px)/1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; overflow-wrap: anywhere; transition: color .5s var(--ease); }
+.vp-meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
+.vp-go { margin-top: 6px; font: 700 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aq); }
+@media (hover: hover) { .vp-head:hover b { color: var(--aq); } .vp-head:hover .vp-go { text-decoration: underline; text-underline-offset: 3px; } }
+.vst { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; counter-reset: st var(--from, 0); }
+.vst li {
+  counter-increment: st; break-inside: avoid; display: flex; gap: 12px; align-items: baseline;
+  padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--bone) 12%, transparent);
+  font-size: 15px; line-height: 22px; color: var(--bone);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vst li::before { content: counter(st, decimal-leading-zero); flex: none; width: 3ch; font: 400 12px/22px var(--mono); color: var(--aq); }
+.vp-more { margin-top: 0; }
+.vp-more[open] summary { margin-bottom: 0; }
+.vp-more summary {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none;
+  font: 700 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aq);
+}
+.vp-more summary::-webkit-details-marker { display: none; }
+.vp-more summary::before { content: "+"; font-size: 16px; }
+.vp-more[open] summary::before { content: "–"; }
+.vp-more .vst { --from: 8; }
+@media (max-width: 760px) {
+  .vplace { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 20px var(--pad); }
+  .vp-head { position: static; }
+  .vst { columns: 1; }
+}
 .dir-none { color: var(--bone2); }
 .vibe-others ul { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); grid-column: 1 / -1; }
 .vibe-others { grid-template-columns: minmax(0, 1fr); }
@@ -676,7 +700,6 @@ h1, h2, h3, .display, .lede, .hi { text-wrap: balance; }
   .vibe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aboutrow, .steps-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .vplaces { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* The departures table ran 40px off a 768 screen beside its heading. */
   .board { grid-template-columns: minmax(0, 1fr); }
   .features.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -687,7 +710,7 @@ h1, h2, h3, .display, .lede, .hi { text-wrap: balance; }
   .island .cell { padding: 0 14px; }
   .hero, .board, .why, .support-cta, .faq, .platforms, .features, .card-wide, .foot,
   .support-hero, .tiers, .costs, .shop, .free, .legal-hero,
-  .featured, .stories, .aboutrow, .beta, .vplaces, .features.three { grid-template-columns: minmax(0, 1fr); }
+  .featured, .stories, .aboutrow, .beta, .features.three { grid-template-columns: minmax(0, 1fr); }
   .globe { grid-row: auto; }
   /* One word, as big as a phone allows: "JOURNAL" ran past a 390pt screen. */
   .legal-hero h1 { font-size: 12.4vw; }
@@ -1024,3 +1047,32 @@ body::after {
 
 /* ── phones: long words that would outrun their cell ─────────────────────── */
 .manifesto .display { font-size: clamp(30px, 9.4cqi, 104px); }
+
+/* ── from the Journal: the featured story ────────────────────────────────────
+   One story on the front page, its cover standing on a mast-red block the way
+   the share card does, the title as big as a section heading, and the next
+   few as a ledger beside it. The cover is shown as made: no filter. */
+.journal-feature { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+.jf-cover { position: relative; display: block; padding: 40px 52px 52px 40px; }
+.jf-cover img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; box-shadow: 12px 12px 0 var(--mast); transition: translate .5s var(--ease), box-shadow .5s var(--ease); }
+@media (hover: hover) { .jf-cover:hover img { translate: -4px -4px; box-shadow: 16px 16px 0 var(--mast); } }
+.jf-cover .pin { left: 24px; top: 24px; rotate: -4deg; }
+.jf-cover.jf-none { min-height: 280px; background: var(--mast); }
+.jf-body { display: flex; flex-direction: column; justify-content: center; gap: 16px; container-type: inline-size; }
+.jf-body .display { font-size: clamp(30px, 8cqi, 84px); }
+.jf-body .display a { color: inherit; text-decoration: none; }
+@media (hover: hover) { .jf-body .display a:hover { color: var(--aq); } }
+.jf-body .lede { font-size: 18px; line-height: 28px; color: var(--bone2); max-width: 56ch; }
+.jf-go { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.jf-more { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 16px 32px; align-items: start; }
+.jf-more ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 32px; }
+.jf-more a { display: flex; flex-direction: column; gap: 6px; text-decoration: none; padding-top: 12px; border-top: 3px solid var(--bone); }
+.jf-when { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aq); }
+.jf-more b { font: 900 20px/1.1 var(--display); text-transform: uppercase; font-variation-settings: "wdth" 70; transition: color .5s var(--ease); }
+@media (hover: hover) { .jf-more a:hover b { color: var(--aq); } .jf-more a:hover { border-top-color: var(--aq); } }
+@media (max-width: 1080px) { .jf-more, .jf-more ol { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .journal-feature { grid-template-columns: minmax(0, 1fr); }
+  .jf-cover { padding: 24px 32px 32px 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .jf-cover img { transition: none; } }

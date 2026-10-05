@@ -58,10 +58,10 @@ async function initGlobe() {
 
   globe = Globe()(el)
     // Textures are vendored from three-globe, so the real Earth costs no network.
-    .globeImageUrl("vendor/earth-blue-marble.jpg")
+    .globeImageUrl(texUrl("earth-blue-marble.jpg"))
     // Sky is drawn from a real catalogue below; start on the vendored texture so
     // there is never a blank frame.
-    .backgroundImageUrl("vendor/night-sky.png")
+    .backgroundImageUrl(texUrl("night-sky.png"))
     .showGlobe(true)
     .showAtmosphere(true)
     .atmosphereColor(palette?.atmosphere || "#8ab4f8")

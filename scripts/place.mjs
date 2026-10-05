@@ -34,6 +34,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadGazetteer } from "./lib/gazetteer.mjs";
 import { writeBundles } from "./lib/match.mjs";
+import { byHand } from "./review.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const F = { full: path.join(ROOT, "data/stations.json"), min: path.join(ROOT, "data/stations.min.json") };
@@ -150,9 +151,43 @@ function placeIndex(c, hit) {
   return full.places.length - 1;
 }
 
+/**
+ * Placed by hand first (scripts/review.mjs, data/places-by-hand.csv): a person
+ * looked the station up, so their town wins over anything read from its name.
+ * The town is found in the gazetteer by its main name, in the station's own
+ * country, and in the named region when one is given; a row that matches no
+ * town is reported and left for the guesses below.
+ */
+const hand = byHand(), handMiss = [];
+let handPlaced = 0;
+function handTown(c, row) {
+  const code = cc(row.country || c.country) || cc(c.country);
+  if (!code) return null;
+  // A person typed it, so a town's other names count too ("Haliburton").
+  let list = G.mainTowns(code, key(row.town));
+  if (!list.length) list = G.towns(code, key(row.town));
+  if (row.region) {
+    const inRegion = list.filter((t) => key(G.regionName(code, t.a1) || "") === key(row.region));
+    if (inRegion.length) list = inRegion;
+  }
+  if (list[0]) return list[0];
+  // Too small for the gazetteer: the sheet's own coordinates make the place.
+  const lat = Number(row.lat), lon = Number(row.lon);
+  if (row.lat && row.lon && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+    return { id: `hand-${key(row.town).replace(/ /g, "-")}-${code.toLowerCase()}`, name: row.town, cc: code, a1: G.regionCode(code, row.region || "") || "", lat, lon, pop: 0 };
+  }
+  return null;
+}
+
 const how = { town: 0, region: 0, name: 0, tag: 0 }, sample = [];
 let moved = 0, looked = 0;
 for (const c of full.channels) {
+  const row = hand.get(c.id);
+  if (row) {
+    const town = handTown(c, row);
+    if (town) { c.p = placeIndex(c, { town }); handPlaced++; continue; }
+    handMiss.push(`${c.title} → "${row.town}"${row.region ? `, ${row.region}` : ""} (${c.country})`);
+  }
   if (!countryPlace[c.p]) continue;
   looked++;
   const here = full.places[c.p];
@@ -168,6 +203,8 @@ for (const c of full.channels) {
   how[hit.via] = (how[hit.via] || 0) + 1;
   if (sample.length < 60 && Math.random() < 0.05) sample.push(`${c.title} | ${from} → ${full.places[c.p].title} (${hit.via}${hit.town ? `, ${hit.town.pop.toLocaleString()} people` : ""})`);
 }
+if (hand.size) console.log(`place: ${handPlaced} placed by hand (data/places-by-hand.csv)${handMiss.length ? `; ${handMiss.length} not found in the gazetteer:` : ""}`);
+for (const m of handMiss.slice(0, 40)) console.log(`  ? ${m}`);
 console.log(`place: ${looked} stations had no town; placed ${moved} (${how.town} at a town, ${how.region} in a region)`);
 console.log(`  by name ${how.name || 0}   by tag ${how.tag || 0}   by region ${how.region}`);
 if (dry || process.argv.includes("--sample")) console.log(sample.join("\n"));

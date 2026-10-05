@@ -237,6 +237,30 @@ place.
 
 ---
 
+
+## 5.1 — 4 October 2026: the phone pass, the hand-placing sheet, the Journal on the front page
+
+- **Skills and standards.** `mobile-native` and `break-ui` (Emil Kowalski) are in `~/.claude/skills`;
+  A11Y.md v2.2.0 is at `docs/a11y/` with its checker in `scripts/a11y/`. `CLAUDE.md` has the standing rules.
+- **Phone performance.** Half-size globe pictures on phones (`vendor/lite/`, made by `build-web.mjs`, chosen
+  by `texUrl()` in explore-core.js via `window.AuralLite` from bridge.js). The player row, its drawer and the
+  tab bar are solid (no backdrop blur). `--drawer` / `--chrome` are written once per rest, not per frame.
+  Every `:hover` rule is inside `@media (hover:hover)`.
+- **Data.** `scripts/lib/entities.mjs` decodes character references (2,190 descriptions were codes);
+  stations named by a URL are left out of the bundle (`urlTitle`); a tag of "undefined" is dropped.
+- **Share sheet.** A loading state (`#sheetwait`) while the card listens for its wave. Copy and Save act
+  inside the tap (iOS). Card fields: Signal (FM/AM from the name), Sound (tags); City "Unknown" for a
+  station with no town; palette colours; stars.
+- **Hand-placing.** `npm run review` → `data/review/*.csv`; fill `town`; `npm run review:import <file>` →
+  `data/places-by-hand.csv` (tracked); `scripts/place.mjs` applies it first.
+- **Site.** Light/dark with a toggle (`auralfm.theme`, applied early by sync-sites.mjs); the featured Journal
+  story on the homepage (`<!-- journal:featured -->`, written by build-journal.mjs; mark a post
+  `featured: true`); vibe pages as a timetable; Instagram in every footer and the app's ticker.
+  A weekly "This week on the globe" template is in the vault's Journal folder (`_TEMPLATE …`).
+- **Legal.** DMCA agent registered 4 Oct 2026 (DMCA-1081921), in the Terms; renew by 4 Oct 2029.
+- **Not done / needs a phone.** VoiceOver and a real-device pass of the pull-up, Copy, Save; the card's
+  waveform on iOS (Safari does not hand live-stream audio to the analyser); AT Protocol, still to revisit.
+
 ## 6. Shipping routine
 
 1. `npm run audit`, then `node scripts/sync-sites.mjs` if any site file or `home/aural.*` changed.
