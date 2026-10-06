@@ -54,10 +54,11 @@
   let phase = "off", startedAt = 0, clock = 0;
 
   // ── the sound ────────────────────────────────────────────────────────────
-  // mic → micGain ─┐
-  //                ├→ mix → mixAn ─→ mixStream (what a transport will send)
-  // track → music ─┘          └────→ speakers, only when monitoring
-  let ctx = null, micStream = null, micSrc = null, micGain = null, micAn = null;
+  // mic → micGain ─┬→ mix → mixAn → mixStream (what a transport will send)
+  //                └→ micMon → speakers, only with "Hear yourself"
+  // track → music ─┬→ mix
+  //                └→ speakers, always: the host hears the music they play
+  let ctx = null, micStream = null, micSrc = null, micGain = null, micAn = null, micMon = null;
   let track = null, musicGain = null, musicAn = null, mix = null, mixAn = null, mixDest = null;
   let raf = 0, micError = "";
   const levelOf = (an, buf) => {
@@ -84,6 +85,16 @@
     musicGain = ctx.createGain(); musicGain.gain.value = show.musicVol;
     musicAn = ctx.createAnalyser(); musicAn.fftSize = 1024;
     musicGain.connect(musicAn); musicGain.connect(mix);
+    /**
+     * What the host hears. The music always: a track that played into the show
+     * and not into the room was a track that seemed never to load (Melton, 5
+     * Oct), because only "Hear yourself" sent anything to the speakers. Your own
+     * voice only when you ask for it (micMon), since a microphone played back
+     * through speakers howls.
+     */
+    musicGain.connect(ctx.destination);
+    micMon = ctx.createGain(); micMon.gain.value = show.monitor ? 1 : 0;
+    micGain.connect(micMon); micMon.connect(ctx.destination);
   }
   let asking = false;
   const getMic = (deviceId) => navigator.mediaDevices.getUserMedia({
@@ -165,15 +176,12 @@
   }
   function setMonitor(on) {
     show.monitor = on;
-    if (!mix || !ctx) return;
-    try { mix.disconnect(ctx.destination); } catch {}
-    if (on) mix.connect(ctx.destination);
+    if (micMon) micMon.gain.value = on ? 1 : 0;
   }
   // A track from this device, under the voice: the station's music bed.
   // Streamed from the file as it plays, never decoded whole (studio-deck.js).
   let trackLoading = false, trackNote = "";
   async function loadTrack(file) { return loadBlob(file.name, file); }
-  async function loadTrackData(name, data) { return loadBlob(name, new Blob([data])); }
   async function loadBlob(name, blob) {
     graph();
     stopTrack();
@@ -188,10 +196,15 @@
       trackNote = tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file.");
     }
     trackLoading = false;
+    // It plays as soon as it is in, so adding a track is hearing it. On air it
+    // waits for Play: a track that starts by itself in the middle of a show is
+    // not a favour.
+    if (track && phase !== "live") { await ctx.resume().catch(() => {}); playTrack(); meters(); setTimeout(paint, 60); }
     paint();
   }
   /**
-   * A track from a link (desktop: main fetches it, src/main/ipc-app.js). Melton,
+   * A track from a link (desktop: main opens it and passes it through as it
+   * arrives, src/main/ipc-app.js, so it plays from the first second). Melton,
    * 27 Sept, asked for "a link to stream from any platform". Mixcloud,
    * SoundCloud, YouTube and the rest do not give other apps their audio and
    * their terms forbid taking it, so a link to one of them is answered with how
@@ -210,9 +223,14 @@
       return paint();
     }
     linking = true; paint();
-    const r = await window.auralfm.studioFetchTrack(url);
+    const r = await window.auralfm.studioOpenTrack(url);
     linking = false;
-    if (r?.data) { linkNote = ""; await loadTrackData(r.name, r.data); return; }
+    if (r?.src) {
+      linkNote = "";
+      await loadBlob(r.name, r.src);
+      if (!track) { trackNote = ""; linkNote = tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again."); paint(); }
+      return;
+    }
     linkNote = {
       https: tt("studio.linkBad", "That is not a link. Paste one that starts with https://."),
       page: tt("studio.linkPage", "That link is a web page, not an audio file. Use the link to the file itself (it usually ends in .mp3, .m4a or .wav)."),
@@ -413,7 +431,7 @@
     // security rules forbid reaching an arbitrary address, so it is not offered).
     // `in`, not a truthy test: the web bridge answers any name it lacks with an
     // empty stand-in (web/bridge.js), so only `in` tells the desktop apart.
-    if ("studioFetchTrack" in window.auralfm) {
+    if ("studioOpenTrack" in window.auralfm) {
       const url = el("input", { type: "url", id: "stLink", inputmode: "url", spellcheck: "false", autocapitalize: "off",
         placeholder: "https://…/show.mp3", "aria-label": tt("studio.linkLabel", "Link to an audio file") });
       sound.append(el("form", { class: "srcrow linkrow", onsubmit: (e) => { e.preventDefault(); loadLink(url.value); } },

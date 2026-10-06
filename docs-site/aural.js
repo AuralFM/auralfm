@@ -613,7 +613,10 @@
         box.append(el("p", "sp-none", "Nothing more about this station yet."));
       }
       const links = el("p", "sp-links");
-      links.append(link(`${APP}?station=${encodeURIComponent(id)}`, "Play on the globe →", "sp-play"));
+      const play = link(`${APP}?station=${encodeURIComponent(id)}`, "Play on the globe ", "sp-play");
+      const arrow = el("span", "", "→"); arrow.setAttribute("aria-hidden", "true");   // drawn, not read out
+      play.append(arrow);
+      links.append(play);
       const site = safe(p?.website);
       if (site) links.append(link(site, "Website"));
       for (const [k, name] of SOCIAL) { const u = safe(p?.social?.[k]); if (u) links.append(link(u, name)); }

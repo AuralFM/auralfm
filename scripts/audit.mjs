@@ -1276,29 +1276,48 @@ console.log("\nlight theme agrees with itself");
   else pass("the waveform is measured from a private copy of the stream, never the playing element");
 }
 
-// ── the studio's music bed plays only its own copy of a local file ─────────
+// ── the studio's music bed plays only what its mixer can hear ──────────────
 // Tracks were decoded whole into memory, and an hour-long mix did not fit
 // (Melton, 28 Sept). studio-deck.js streams them through an <audio> element
 // instead, which is the one other place an element may be routed through Web
-// Audio: it must be an element that file made itself with `new Audio(`, fed
-// only from `URL.createObjectURL` — a file already on this device, never a
-// station's stream, which would play silence (the rule above).
+// Audio: it must be an element that file made itself with `new Audio(`, and it
+// may play two things only. A `blob:` URL of a file already on this device; or
+// (5 Oct, when a link took "hours" because it was downloaded whole first) the
+// desktop's own auralfm-track:// address, which passes a linked file through as
+// it arrives. Never a station's stream, which would play silence (the rule
+// above) — and the linked track would too unless all three hold: the deck
+// refuses any other address, asks with crossOrigin "anonymous", and the main
+// process answers that the file may be read.
 {
-  console.log("\nthe studio's music bed plays only its own copy of a local file");
+  console.log("\nthe studio's music bed plays only what its mixer can hear");
   const code = readSrc("src/renderer/studio-deck.js")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const made = new Set([...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*new Audio\(/g)].map((m) => m[1]));
   const routed = [...code.matchAll(/createMediaElementSource\s*\(\s*([^)]*?)\s*\)/g)].map((m) => m[1]);
   const srcs = [...code.matchAll(/(\w+)\.src\s*=\s*([^;]+);/g)];
-  const blobbed = new Set([...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*URL\.createObjectURL\(/g)].map((m) => m[1]));
+  // A source is a blob made here, or `linked ? source : URL.createObjectURL(…)`.
+  const sourced = new Set([...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*(?:linked \? source : )?URL\.createObjectURL\(/g)].map((m) => m[1]));
   const foreign = routed.filter((arg) => !made.has(arg));
-  const badSrc = srcs.filter(([, el, v]) => made.has(el) && !blobbed.has(v.trim()));
+  const badSrc = srcs.filter(([, el, v]) => made.has(el) && !sourced.has(v.trim()));
   const studio = readSrc(EXPLORE);
+  const main = readSrc("src/main/ipc-app.js");
+  const takesLinks = /linked \? source/.test(code);
+  const guarded = /if \(linked && !OWN\.test\(source\)\) return Promise\.reject/.test(code) && /const OWN = \/\^auralfm-track:/.test(code);
+  const asked = /if \(linked\) (\w+)\.crossOrigin = "anonymous";/.test(code);
+  const answered = /protocol\.handle\("auralfm-track"/.test(main) && /headers\.set\("Access-Control-Allow-Origin", "\*"\)/.test(main);
+  const whole = /arrayBuffer\(\)/.test(main.slice(main.indexOf("studio:openTrack")));
   if (!routed.length) fail("the studio's music bed", "studio-deck.js routes nothing — tracks are not playing through it");
   else if (foreign.length) fail("the studio's music bed plays its own element", `studio-deck.js routes ${foreign.join(", ")}, which it did not create`);
-  else if (badSrc.length || !srcs.length) fail("the studio's music bed plays a local file", `an element is fed ${badSrc.map((m) => m[2]).join(", ") || "nothing"}, not a blob: URL`);
+  else if (badSrc.length || !srcs.length) fail("the studio's music bed plays a file or its own link", `an element is fed ${badSrc.map((m) => m[2]).join(", ") || "nothing"}, not a blob: URL or the deck's own source`);
+  else if (takesLinks && !(guarded && asked && answered)) fail("a linked track can be heard by the mixer",
+    [!guarded && "the deck takes an address that is not auralfm-track://", !asked && "the element is not asked for with crossOrigin \"anonymous\"", !answered && "ipc-app.js does not answer that the track may be read"].filter(Boolean).join("; "));
+  else if (whole) fail("a linked track plays as it arrives", "ipc-app.js reads the whole file into memory before the studio gets any of it");
   else if (/decodeAudioData\s*\(/.test(studio)) fail("the studio streams its tracks", "explore-studio.js decodes a whole track into memory again");
-  else pass("tracks stream from a blob: URL through an element the deck made, never decoded whole");
+  else pass("tracks stream through an element the deck made: a file on this device, or a link passed through as it arrives");
+  // The host hears the music they play without switching anything on.
+  /musicGain\.connect\(ctx\.destination\)/.test(studio) && !/mix\.connect\(ctx\.destination\)/.test(studio)
+    ? pass("the host's music reaches their speakers always; their own voice only with \"Hear yourself\"")
+    : fail("the host hears the music they play", "explore-studio.js sends music to the speakers only through the monitor switch");
 }
 
 // ── the output button does not come and go ──────────────────────────────────

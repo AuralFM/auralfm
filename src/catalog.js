@@ -299,7 +299,7 @@ const VIBES = [
   { id: "house", name: "Deep & house", tags: ["deep house", "house"] },
   { id: "techno", name: "Techno", tags: ["techno"] },
   { id: "electronic", name: "Electronic & ambient", tags: ["electronic", "ambient", "experimental"] },
-  // Five more (Melton, 5 Oct 2026): the site had lanes for techno and old-time
+  // Seven more (Melton, 5 Oct 2026): the site had lanes for techno and old-time
   // radio and none for the biggest music there is. Tags are the spellings the
   // stations themselves use, counted in the catalogue; "urban" alone is left
   // out (it is hip-hop in one country and reggaeton in another), and so are
@@ -320,6 +320,13 @@ const VIBES = [
   { id: "afro", name: "Afrobeats & amapiano", tags: ["afrobeats", "afrobeat", "afro", "afropop", "afro-pop", "afro pop",
     "afrofusion", "amapiano", "highlife", "afro house", "afro-house", "afrohouse", "naija", "gqom", "bongo flava"] },
   { id: "tropical", name: "Cumbia & tropical", tags: ["cumbia", "tropical"] },
+  // Two more the same evening (Melton): Latin beyond cumbia, and classical.
+  // "latinoamérica" is where a station is, not what it plays, and stays out.
+  { id: "latin", name: "Salsa & Latin", tags: ["salsa", "latin", "latino", "latina", "reggaeton", "bachata", "merengue",
+    "latin pop", "pop latino", "latin music", "musica latina", "música latina", "salsa colombiana", "latin salsa",
+    "merengue bachata", "latino urbano", "latin urban", "urbano", "música urbana"] },
+  { id: "classical", name: "Classical", tags: ["classical", "classical music", "opera", "baroque", "classical piano",
+    "classical baroque", "modern classical", "contemporary classical", "classical guitar"] },
   { id: "faith", name: "Faith", tags: ["christian", "gospel", "catholic", "religious", "islamic", "quran"] },
   { id: "talk", name: "Talk", tags: ["talk"] },
   { id: "otr", name: "Old-time radio", tags: ["old time radio", "old-time radio", "otr", "drama", "detective"] },

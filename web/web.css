@@ -190,6 +190,12 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   /* dvh, not 100%: in standalone iOS the layout viewport is taller than the
      screen shows, which left a band of dead black under the tab bar. */
   html, body { height: 100dvh; }
+  /* The see-through status bar (the ?sky trial, web/bridge.js). The inset is 0
+     under the plain black bar, so this changes nothing for an icon added the
+     usual way. With the page under the clock, iOS has measured the window
+     short by the bar's height; a root taller by that much is the one remedy
+     that had not been tried here. */
+  @media (display-mode: standalone) { html { min-height: calc(100% + env(safe-area-inset-top)); } }
   .cols { flex-direction: column; }
   /* Every panel is the same card: half the screen, anchored above the player,
      with the globe still visible over it. A panel that covers the globe is a

@@ -82,7 +82,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   // Your show: the microphone as the system sees it, and its settings page.
   micAccess: () => ipcRenderer.invoke("mic:access"),
   micSettings: () => ipcRenderer.send("mic:settings"),
-  studioFetchTrack: (url) => ipcRenderer.invoke("studio:fetchTrack", url),
+  studioOpenTrack: (url) => ipcRenderer.invoke("studio:openTrack", url),
 
   // shortwave receivers
   sdrPoints: () => ipcRenderer.invoke("sdr:points"),

@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme, protocol } = require("electron");
 const path = require("node:path");
 
 /**
@@ -86,6 +86,19 @@ app.setName("AuralFM");
  * first session exists, which is why it is up here rather than in whenReady.
  */
 app.commandLine.appendSwitch("disk-cache-size", String(150 * 1024 * 1024));
+
+/**
+ * The studio's own address for a track from a link (src/main/ipc-app.js).
+ *
+ * A show's music from a link used to be downloaded whole before a note of it
+ * played, which for an hour-long mix is minutes of nothing (Melton, 5 Oct: "it
+ * takes hours to load"). Under this scheme the main process passes the file
+ * through as it arrives, so it plays from the first second and seeks like any
+ * other. It has to be declared before the app is ready; `stream` lets an
+ * <audio> element read it, and `corsEnabled` lets the studio's mixer hear it.
+ */
+protocol.registerSchemesAsPrivileged([{ scheme: "auralfm-track",
+  privileges: { standard: true, secure: true, stream: true, corsEnabled: true, supportFetchAPI: true } }]);
 
 /**
  * Carry data over from the GlobeFM name.
