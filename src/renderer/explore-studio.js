@@ -15,9 +15,10 @@
  * is the thing a transport takes: WebRTC to listeners over Nostr signalling, or
  * an Icecast mount from the desktop (the plan: vault YOUR-OWN-SHOW.md).
  *
- * Hidden unless this is a development or beta build of the desktop app, a web
- * preview on this machine, or a web page opened with ?studio — so publishing the web
- * app does not show anyone a studio that cannot yet reach them.
+ * Hidden unless this is a development or beta build of the desktop app, or a
+ * web preview on this machine — so publishing the web app does not show anyone
+ * a studio that cannot yet reach them. (A page opened with ?studio showed it
+ * until 5 Oct 2026.)
  */
 {
   const $s = (id) => document.getElementById(id);
@@ -28,9 +29,15 @@
   // ── who may see it ───────────────────────────────────────────────────────
   async function allowed() {
     try {
-      const q = new URLSearchParams(location.search);
-      if (q.has("studio")) { try { localStorage.setItem(`${KEY}.labs`, "1"); } catch {} return true; }
-      try { if (localStorage.getItem(`${KEY}.labs`) === "1") return true; } catch {}
+      /**
+       * The desktop beta only (Melton, 5 Oct 2026: the ?studio link on the web
+       * was too buggy to hand out; test on the desktop until the bugs and the
+       * experience are settled). A page opened with ?studio used to switch it
+       * on and remember that in this browser; the memory is cleared here so a
+       * browser that tried it once does not keep showing it.
+       */
+      try { localStorage.removeItem(`${KEY}.labs`); } catch {}
+      // A preview on this machine, for building it.
       if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return true;
       // The desktop: a development build, or a beta build (npm run dist:beta)
       // — the private beta is where the studio is tried first. A release has no
@@ -44,12 +51,12 @@
   const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } })();
   const show = {
     title: saved.title || "", about: saved.about || "", vibe: saved.vibe || "", explicit: !!saved.explicit,
-    deviceId: saved.deviceId || "", micVol: saved.micVol ?? 1, musicVol: saved.musicVol ?? 0.6,
+    deviceId: saved.deviceId || "", lineId: saved.lineId || "", micVol: saved.micVol ?? 1, musicVol: saved.musicVol ?? 0.6,
     duck: saved.duck ?? true, monitor: false, place: null, rights: false, adult: false,
   };
   const keep = () => {
-    const { title, about, vibe, explicit, deviceId, micVol, musicVol, duck } = show;
-    try { localStorage.setItem(KEY, JSON.stringify({ title, about, vibe, explicit, deviceId, micVol, musicVol, duck })); } catch {}
+    const { title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck } = show;
+    try { localStorage.setItem(KEY, JSON.stringify({ title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck })); } catch {}
   };
   let phase = "off", startedAt = 0, clock = 0;
 
@@ -58,7 +65,10 @@
   //                └→ micMon → speakers, only with "Hear yourself"
   // track → music ─┬→ mix
   //                └→ speakers, always: the host hears the music they play
+  // input → line ───→ mix   (an interface, a DJ program, this computer's sound:
+  //                          heard at its source, so never played back here)
   let ctx = null, micStream = null, micSrc = null, micGain = null, micAn = null, micMon = null;
+  let lineStream = null, lineSrc = null, lineGain = null, lineAn = null, lineName = "", lineKind = "";
   let track = null, musicGain = null, musicAn = null, mix = null, mixAn = null, mixDest = null;
   let raf = 0, micError = "";
   const levelOf = (an, buf) => {
@@ -95,6 +105,10 @@
     musicGain.connect(ctx.destination);
     micMon = ctx.createGain(); micMon.gain.value = show.monitor ? 1 : 0;
     micGain.connect(micMon); micMon.connect(ctx.destination);
+    // Music from an input (below). Into the show only: see openLine.
+    lineGain = ctx.createGain(); lineGain.gain.value = show.musicVol;
+    lineAn = ctx.createAnalyser(); lineAn.fftSize = 1024;
+    lineGain.connect(lineAn); lineGain.connect(mix);
   }
   let asking = false;
   const getMic = (deviceId) => navigator.mediaDevices.getUserMedia({
@@ -168,9 +182,110 @@
   }
   // Headphones plugged in or out while the studio is open: the list follows.
   navigator.mediaDevices?.addEventListener?.("devicechange", async () => { await listDevices(); paint(); });
+
+  // ── music from an input, or from this computer ─────────────────────────────
+  /**
+   * The lesson from Mixcloud (vault: MIXCLOUD-STUDY-AND-THE-SHOW.md): a DJ does
+   * not play music inside the broadcaster. They mix on decks or in a program
+   * they already own, and the broadcaster takes that one sound. So the show's
+   * music can be an input: an audio interface, a mixer or a DJ controller, or
+   * a loopback device that carries this computer's own sound; and, where the
+   * system allows it, this computer's sound taken directly (openComputer).
+   *
+   * Two things differ from the microphone, and both are the point:
+   *
+   *   - It is sent as it arrives, in stereo. The microphone's noise
+   *     suppression is built for a voice and chews music to pieces.
+   *   - It is never played back here. The host already hears it at its source
+   *     (their mixer, their headphones, this computer's speakers), and a
+   *     loopback device carries whatever this computer plays: play it back and
+   *     it comes round again as a howl.
+   */
+  const LOOPBACK = /blackhole|loopback|soundflower|vb-?cable|stereo mix|background music/i;
+  let lineNote = "", lineAsking = false;
+  function closeLine() {
+    lineStream?.getTracks().forEach((tr) => tr.stop());
+    try { lineSrc?.disconnect(); } catch {}
+    lineStream = null; lineSrc = null; lineName = ""; lineKind = "";
+  }
+  function useLine(stream, name, kind) {
+    closeLine();
+    lineStream = stream; lineName = name; lineKind = kind;
+    lineSrc = ctx.createMediaStreamSource(stream);
+    lineSrc.connect(lineGain);
+    const at = stream.getAudioTracks()[0];
+    if (at) at.onended = () => {
+      if (lineStream !== stream) return;
+      closeLine();
+      lineNote = tt("studio.lineEnded", "That input stopped. It may have been disconnected: choose it again, or pick another.");
+      listDevices().then(paint);
+    };
+    meters();
+  }
+  async function openLine(deviceId) {
+    lineNote = "";
+    if (!deviceId) { closeLine(); show.lineId = ""; keep(); return paint(); }
+    graph();
+    await ctx.resume();
+    try {
+      const access = "micAccess" in window.auralfm ? await window.auralfm.micAccess() : null;
+      if (access && access !== "granted") { const e = new Error(access); e.name = access; throw e; }
+      const s = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId },
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 2 } } });
+      await listDevices();
+      useLine(s, devices.find((d) => d.deviceId === deviceId)?.label || tt("studio.lineInput", "An input"), "input");
+      show.lineId = deviceId; keep();
+    } catch (e) {
+      closeLine();
+      lineNote = /^(NotAllowedError|SecurityError|denied|restricted)$/.test(e?.name)
+        ? tt("studio.micDenied", "The microphone is blocked. Allow it for AuralFM in your system's privacy settings, then try again.")
+        : tt("studio.lineFailed", "That input could not start. Check it is connected and not in use by another app, then choose it again.");
+    }
+    paint();
+  }
+  /**
+   * This computer's own sound: a DJ program, a browser tab, anything playing.
+   *
+   * Asked for the way a screen share is, because that is the only door the
+   * system has: the picture is taken as small and as slow as it will go and
+   * never looked at. Not every system gives sound through it (macOS asks for
+   * its Screen & System Audio Recording permission; Safari gives none), so a
+   * share that arrives silent, or does not arrive, says what to do instead.
+   */
+  const canComputer = () => !!navigator.mediaDevices?.getDisplayMedia && !matchMedia("(pointer: coarse)").matches;
+  async function openComputer() {
+    lineNote = "";
+    graph();
+    await ctx.resume();
+    lineAsking = true; paint();
+    let s = null;
+    try {
+      s = await Promise.race([
+        navigator.mediaDevices.getDisplayMedia({ video: { width: 16, height: 16, frameRate: 1 },
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }),
+        new Promise((_, no) => setTimeout(() => no(new Error("slow")), 60000)),
+      ]);
+    } catch { s = null; }
+    lineAsking = false;
+    const at = s?.getAudioTracks()[0];
+    if (!at) {
+      s?.getTracks().forEach((tr) => tr.stop());
+      lineNote = "micAccess" in window.auralfm
+        ? tt("studio.computerNoneApp", "This computer's sound did not come through. In System Settings, under Privacy & Security, allow AuralFM in Screen & System Audio Recording, then open AuralFM again. Or send it through a loopback device (BlackHole is a free one) and choose that as the input.")
+        : tt("studio.computerNoneWeb", "No sound came with that. In Chrome or Edge, choose a tab and switch on \"Also share tab audio\". Safari and Firefox do not share sound: use a loopback device, or the desktop app.");
+      return paint();
+    }
+    // The picture rides along unseen; stopping it can end the sound with it.
+    useLine(s, tt("studio.computer", "This computer's sound"), "computer");
+    // A microphone played back through the speakers would come round again.
+    if (show.monitor) setMonitor(false);
+    paint();
+  }
+
   function closeAudio() {
     cancelAnimationFrame(raf); raf = 0;
     micStream?.getTracks().forEach((tr) => tr.stop()); micStream = null;
+    closeLine();
     stopTrack();
     setMonitor(false);
   }
@@ -262,7 +377,9 @@
         talking = m > 0.12 ? 18 : Math.max(0, talking - 1);
         const want = talking ? show.musicVol * 0.25 : show.musicVol;
         musicGain.gain.setTargetAtTime(want, ctx.currentTime, talking ? 0.05 : 0.4);
-      }
+        lineGain.gain.setTargetAtTime(want, ctx.currentTime, talking ? 0.05 : 0.4);
+      } else if (lineGain) lineGain.gain.value = show.musicVol;
+      { const el = $s("meterLine"); if (el) { const v = lineStream ? levelOf(lineAn, buf) : 0; el.firstChild.style.width = `${Math.round(v * 100)}%`; el.classList.toggle("hot", v > 0.92); } }
       if (phase !== "off") {
         const s = Math.floor((Date.now() - startedAt) / 1000);
         const el = $s("airclock");
@@ -282,7 +399,7 @@
   // Rehearsing: only you. Live: in the prototype, still only you — but the
   // panel, the player's status and the globe show what listeners will see.
   // A voice, or a track: a set with no talking is a show too.
-  const hasSound = () => !!micStream || !!track;
+  const hasSound = () => !!micStream || !!track || !!lineStream;
   const ready = () => hasSound() && !!show.title.trim() && show.rights && show.adult && !!show.place;
   async function go(to) {
     if (to !== "off" && !hasSound()) await openMic();
@@ -394,7 +511,7 @@
     } else {
       if (micNote) sound.append(el("p", { class: "fine", role: "status", text: micNote }));
       if (devices.length > 1) {
-        const sel = el("select", { id: "stDevice", "aria-label": tt("studio.micPick", "Microphone"),
+        const sel = el("select", { id: "stDevice", "aria-label": tt("studio.micPick", "Microphone"), disabled: phase === "live",
           onchange: (e) => { show.deviceId = e.target.value; keep(); openMic(); } });
         for (const d of devices) sel.append(el("option", { value: d.deviceId, selected: d.deviceId === (show.deviceId || micStream.getAudioTracks()[0]?.getSettings().deviceId) }, d.label || tt("studio.micPick", "Microphone")));
         sound.append(el("label", { class: "field" }, el("span", { text: tt("studio.micPick", "Microphone") }), sel));
@@ -411,7 +528,7 @@
          * headphones dropped the station's sound to match.
          */
         const builtIn = devices.find((d) => d.deviceId !== "default" && /macbook|built-in|internal|imac|studio display/i.test(d.label));
-        if (builtIn) sound.append(el("button", { class: "linkbtn", type: "button", id: "stBuiltIn",
+        if (builtIn) sound.append(el("button", { class: "linkbtn", type: "button", id: "stBuiltIn", disabled: phase === "live",
           onclick: () => { show.deviceId = builtIn.deviceId; keep(); openMic(); } }, tt("studio.micUseBuiltIn", "Use the computer's microphone")));
       }
       sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.voice", "Voice") }),
@@ -449,8 +566,49 @@
         el("input", { type: "range", min: "0", max: "1", step: "0.01", value: String(show.musicVol), "aria-label": tt("studio.musicLevel", "Music level"),
           oninput: (e) => { show.musicVol = +e.target.value; keep(); } })), meter("meterMusic"));
     }
+    // Music from an input, or from this computer: what a DJ sends (openLine).
+    {
+      const live = phase === "live";
+      const inputs = devices.filter((d) => d.label && d.deviceId && d.deviceId !== "default" && d.deviceId !== "communications");
+      sound.append(el("span", { class: "layhead linehead", text: tt("studio.lineHead", "Music from an input") }));
+      if (lineStream) {
+        sound.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status", text: lineName }),
+          el("button", { class: "linkbtn", type: "button", id: "stLineStop", disabled: live, "aria-label": tt("studio.lineStopLabel", "Stop this input"),
+            onclick: () => { closeLine(); show.lineId = ""; keep(); paint(); } }, tt("studio.lineStop", "Stop"))));
+        if (!track) sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.music", "Music") }),
+          el("input", { type: "range", min: "0", max: "1", step: "0.01", value: String(show.musicVol), "aria-label": tt("studio.musicLevel", "Music level"),
+            oninput: (e) => { show.musicVol = +e.target.value; keep(); } })));
+        sound.append(meter("meterLine"));
+        sound.append(el("p", { class: "fine", text: tt("studio.lineHeard", "Sent as it arrives, in stereo. You hear it at its source, so it is not played back here.") }));
+      } else {
+        if (inputs.length) {
+          const sel = el("select", { id: "stLine", "aria-label": tt("studio.lineHead", "Music from an input"), disabled: live,
+            onchange: (e) => openLine(e.target.value) });
+          sel.append(el("option", { value: "" }, tt("studio.lineNone", "Choose an input…")));
+          for (const d of inputs) sel.append(el("option", { value: d.deviceId },
+            LOOPBACK.test(d.label) ? `${d.label} · ${tt("studio.computer", "This computer's sound").toLowerCase()}` : d.label));
+          sound.append(sel);
+        } else {
+          sound.append(el("button", { class: "linkbtn", type: "button", id: "stLineFind", disabled: live, onclick: async () => {
+            // Inputs have no names until the system has been asked once.
+            try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((tr) => tr.stop()); } catch {}
+            await listDevices();
+            if (!devices.some((d) => d.label)) lineNote = tt("studio.lineNoInputs", "No inputs were found. Connect an audio interface or a mixer, or allow the microphone for AuralFM, then try again.");
+            paint();
+          } }, tt("studio.lineFind", "Show my inputs")));
+        }
+        if (canComputer()) sound.append(el("button", { class: "linkbtn", type: "button", id: "stComputer", disabled: live || lineAsking, onclick: openComputer },
+          lineAsking ? tt("studio.computerAsking", "Waiting for your choice…") : tt("studio.computerUse", "Use this computer's sound")));
+        sound.append(el("p", { class: "fine", text: tt("studio.lineHint", "For a DJ: an audio interface, a mixer or a controller, or this computer's own sound from the program you mix in.") }));
+      }
+      if (lineNote) sound.append(el("p", { class: "fine", role: "alert", text: lineNote }));
+      if (live) sound.append(el("p", { class: "fine", text: tt("studio.locked", "Your microphone and input are locked while you are live.") }));
+    }
     sound.append(toggleRow(tt("studio.duck", "Music dips when you talk"), show.duck, () => { show.duck = !show.duck; keep(); if (!show.duck && musicGain) musicGain.gain.value = show.musicVol; paint(); }));
-    sound.append(toggleRow(tt("studio.monitor", "Hear yourself"), show.monitor, () => { setMonitor(!show.monitor); paint(); },
+    sound.append(toggleRow(tt("studio.monitor", "Hear yourself"), show.monitor, () => {
+      // With this computer's sound going out, your voice played back here would go out twice.
+      if (!show.monitor && lineKind === "computer") { lineNote = tt("studio.monitorLoop", "Hear yourself is off while this computer's sound is going out: your voice would go out twice."); return paint(); }
+      setMonitor(!show.monitor); paint(); },
       tt("studio.monitorHint", "Headphones only")));
     sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.out", "Going out") }), el("span", { class: "fine", text: "" })), meter("meterOut"));
     body.append(sound);

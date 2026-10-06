@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme, protocol } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme, protocol, desktopCapturer } = require("electron");
 const path = require("node:path");
 
 /**
@@ -97,6 +97,34 @@ app.commandLine.appendSwitch("disk-cache-size", String(150 * 1024 * 1024));
  * other. It has to be declared before the app is ready; `stream` lets an
  * <audio> element read it, and `corsEnabled` lets the studio's mixer hear it.
  */
+/**
+ * Your show: this computer's own sound as the music (explore-studio.js,
+ * openComputer), for a host who mixes in a DJ program.
+ *
+ * The only door the system has for it is the one a screen share uses, so the
+ * studio asks that way and this answers: the main screen, which the studio
+ * takes sixteen pixels of and never looks at, and the system's sound with it.
+ * Only for the app's own pages. macOS asks the listener for its Screen & System
+ * Audio Recording permission the first time; refused, or on a system that
+ * gives no sound this way, the studio says what to do instead.
+ *
+ * The switches are Chromium's for system sound on macOS (through
+ * ScreenCaptureKit on 13 and 14, through a Core Audio tap from 14.2). Where a
+ * version does not know one, it is ignored.
+ */
+app.commandLine.appendSwitch("enable-features", "MacLoopbackAudioForScreenShare,MacSckSystemAudioLoopbackOverride,MacCatapLoopbackAudioForScreenShare");
+app.whenReady().then(() => {
+  session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+    const deny = () => { try { callback({}); } catch { /* an empty answer is the refusal */ } };
+    if (!/^file:\/\//.test(request.securityOrigin || "")) return deny();
+    try {
+      const [main] = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } });
+      if (!main) return deny();
+      callback({ video: main, audio: "loopback" });
+    } catch { deny(); }
+  });
+});
+
 protocol.registerSchemesAsPrivileged([{ scheme: "auralfm-track",
   privileges: { standard: true, secure: true, stream: true, corsEnabled: true, supportFetchAPI: true } }]);
 

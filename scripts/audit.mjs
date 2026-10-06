@@ -3408,6 +3408,23 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the studio open: the globe sits between the panels, and the host is in their town's room with no label");
 }
 
+// ── the studio is not on the public web ─────────────────────────────────────
+// listen.auralfm.xyz/?studio opened the studio for anyone with the link, and a
+// flag kept in the browser kept it open afterwards. Melton, 5 Oct 2026: too
+// buggy to hand out; the desktop beta only until it is settled. A query string
+// or a stored flag that switches it on is that link coming back.
+{
+  console.log("\nthe studio is not on the public web");
+  const src = readSrc("src/renderer/explore-studio.js");
+  const fn = src.slice(src.indexOf("async function allowed()"), src.indexOf("// ── what the show is"));
+  const gaps = [];
+  if (/URLSearchParams|location\.search/.test(fn)) gaps.push("a query string can switch the studio on");
+  if (/localStorage\.(setItem|getItem)/.test(fn)) gaps.push("a flag kept in the browser can switch the studio on");
+  if (!/location\.protocol === "file:"/.test(fn) || !/v\?\.dev \|\| v\?\.channel/.test(fn)) gaps.push("the desktop's development and beta builds are no longer the way in");
+  gaps.length ? fail("the studio is not on the public web", gaps.join("; "))
+    : pass("the studio opens in the desktop's development and beta builds, and in a preview on this machine, and nowhere else");
+}
+
 // ── a tag says something ────────────────────────────────────────────────────
 // A place's commonest tags are its chips in the app, and they were "music",
 // "other", "tbd", "(null)" and "moi merino": a contributor's own name, on 923
