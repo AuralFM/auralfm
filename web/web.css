@@ -198,13 +198,14 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
    * at the top: everything ended that far above the bottom, with a blank strip
    * under the tab bar (Melton's screenshot, 6 Oct 2026; it is why the bar was
    * opaque black before). The strip is part of the page all the same: it took
-   * the page's colour. So the page is made taller by exactly that much
-   * (--tail, measured in web/bridge.js, and only set when the strip is there),
-   * and the body becomes what fixed things are measured from, so every sheet
-   * and panel pinned to "the bottom" means the bottom of the screen.
+   * the page's colour. So the page is told how tall the screen is, in points
+   * (--tall, from web/bridge.js, which says why it is not "100dvh plus the
+   * strip": that overshot), and the body becomes what fixed things are
+   * measured from, so every sheet and panel pinned to "the bottom" means the
+   * bottom of the screen.
    */
-  html.tail { min-height: calc(100dvh + var(--tail, 0px)); }
-  html.tail body { height: calc(100dvh + var(--tail, 0px)); contain: layout; }
+  html.tail { min-height: var(--tall); }
+  html.tail body { height: var(--tall); contain: layout; }
   .cols { flex-direction: column; }
   /* Every panel is the same card: half the screen, anchored above the player,
      with the globe still visible over it. A panel that covers the globe is a

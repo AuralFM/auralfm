@@ -3413,20 +3413,22 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // ── the installed phone app reaches the bottom of the screen ────────────────
 // With the sky behind the status bar, iOS lays the page out short by the status
 // bar's height and leaves a blank strip under the tab bar (Melton's screenshot,
-// 6 Oct 2026). The page is made taller by the strip, measured, and the body is
-// what fixed panels are measured from. Two ways to bring it back: stretch the
-// page under the opaque bar too (there the short page is correct, and the tab
-// bar would go off the screen), or drop the containment (the bars would reach
-// the bottom and every sheet would stop short of it).
+// 6 Oct 2026). Adding the strip to "100dvh" overshot by as much again on his
+// phone (the tab bar's labels went off the screen): that height is not a
+// steady number there. So the page is given the screen's own height. Ways to
+// bring either bug back: lean on dvh again; do it under the opaque bar (there
+// the page starts lower and the tab bar would leave the screen); hold the
+// height while the keyboard is up; or drop the containment, so the bars reach
+// the bottom and every sheet stops short of it.
 {
   console.log("\nthe installed phone app reaches the bottom of the screen");
   const css = readSrc("web/web.css"), bridge = readSrc("web/bridge.js");
   const gaps = [];
-  if (!/html\.tail body \{ height: calc\(100dvh \+ var\(--tail, 0px\)\); contain: layout; \}/.test(css)) gaps.push("the body is not stretched by the strip, or fixed panels are not measured from it");
-  if (!/if \(inset > 0 && short >= 12\) tail =/.test(bridge)) gaps.push("the strip is added without the page being under the status bar");
-  if (!/if \(short > 80\) return;/.test(bridge)) gaps.push("the keyboard coming up would be taken for the strip");
+  if (!/html\.tail body \{ height: var\(--tall\); contain: layout; \}/.test(css)) gaps.push("the body is not given the screen's height, or fixed panels are not measured from it");
+  if (/html\.tail[^}]*\{[^}]*dvh/.test(css)) gaps.push("the stretched page leans on dvh again");
+  if (!/if \(installed && upright && window\.AuralLite && inset > 0 && !typing\(\)\) tall = full;/.test(bridge)) gaps.push("the height is set outside an installed, upright phone under the see-through bar, or while typing");
   gaps.length ? fail("the installed phone app reaches the bottom of the screen", gaps.join("; "))
-    : pass("the strip is measured only under the see-through status bar, and the page and its panels are stretched by it");
+    : pass("under the see-through status bar the page is the screen's height, its panels with it, and the keyboard still gets its room");
 }
 
 // ── the carry-over code holds no key ────────────────────────────────────────

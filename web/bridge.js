@@ -28,45 +28,83 @@
   // same question the phone layout asks (web/web.css), asked once at load.
   window.AuralLite = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)").matches;
   /**
-   * The strip under the tab bar (web/web.css, html.tail).
+   * The installed app, down to the bottom of the screen (web/web.css, html.tail).
    *
-   * Installed on an iPhone with the see-through status bar, the page is laid
-   * out short of the screen by the status bar's height. That is measured here:
-   * the screen's height against the page's, and only when the page really is
-   * under the status bar (its top inset is more than nothing: under the old
-   * opaque bar the page is short too, and correctly so). The number goes to
-   * CSS as --tail. Anything bigger than a status bar is the keyboard, or a
-   * split screen, and is left alone.
+   * Installed on an iPhone with the see-through status bar, the page starts at
+   * the very top of the screen, and iOS then lays it out a status bar short of
+   * the bottom: a blank strip under the tab bar (Melton, 6 Oct 2026).
+   *
+   * The first fix added the strip's height to the page's own idea of its
+   * height, and overshot by about as much again: on his phone the labels under
+   * the tab icons went off the screen. The page's idea of its height is not a
+   * steady number in this mode, so it is no longer asked. What is steady: the
+   * page starts at the top of the screen, and the screen is `screen.height`
+   * tall. So the page is told to be exactly that tall, in points.
+   *
+   * Only when installed, on a phone, upright, and really under the status bar
+   * (a top inset above nothing: under the old opaque bar the page starts below
+   * it and is rightly shorter). And not while something is being typed into:
+   * the keyboard needs the page to shrink, and a fixed height would leave the
+   * field behind it.
    */
+  const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") || document.activeElement?.isContentEditable === true;
   const fitScreen = () => {
     const root = document.documentElement;
-    let tail = 0;
+    let tall = 0, seen = {};
     try {
       const installed = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
-      if (installed && window.AuralLite && document.body) {
+      const upright = matchMedia("(orientation: portrait)").matches;
+      if (document.body) {
         const probe = document.createElement("div");
         probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none";
         document.body.append(probe);
         const inset = probe.offsetHeight;
-        // How tall the page believes the window is, asked three ways: they have
-        // not always agreed on an iPhone, and the smallest is the one laid out.
         probe.style.height = "100dvh";
-        const laid = Math.min(window.innerHeight, root.clientHeight || window.innerHeight, probe.offsetHeight || window.innerHeight);
+        const dvh = probe.offsetHeight;
         probe.remove();
-        const full = matchMedia("(orientation: portrait)").matches ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-        const short = full - laid;
-        if (short > 80) return;                       // the keyboard is up: keep what was measured
-        if (inset > 0 && short >= 12) tail = Math.round(Math.min(short, inset + 4));
+        const full = upright ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+        seen = { installed, upright, lite: !!window.AuralLite, inset, full, inner: window.innerHeight, client: root.clientHeight, dvh,
+                 visual: Math.round(window.visualViewport?.height || 0), typing: typing() };
+        if (installed && upright && window.AuralLite && inset > 0 && !typing()) tall = full;
       }
-    } catch { tail = 0; }
-    root.style.setProperty("--tail", `${tail}px`);
-    root.classList.toggle("tail", tail > 0);
+    } catch { tall = 0; }
+    root.style.setProperty("--tall", `${tall}px`);
+    root.classList.toggle("tail", tall > 0);
+    window.AuralFitSeen = { ...seen, tall };
+    document.dispatchEvent(new Event("auralfm:fit"));
   };
   window.AuralFit = fitScreen;
   if (document.body) fitScreen(); else document.addEventListener("DOMContentLoaded", fitScreen);
   addEventListener("pageshow", fitScreen);
   addEventListener("orientationchange", () => setTimeout(fitScreen, 350));
-  addEventListener("resize", () => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "")) fitScreen(); });
+  addEventListener("resize", fitScreen);
+  // Typing starts and stops: the keyboard gets the page it needs, then it is given back.
+  addEventListener("focusin", fitScreen);
+  addEventListener("focusout", () => setTimeout(fitScreen, 250));
+  /**
+   * What the phone reports, on the screen, for when this is wrong again: the
+   * numbers above can only be read on the device itself. Shown after "fit" is
+   * typed into Settings > Move to a new install (a Home Screen app cannot be
+   * given a link), or with ?fit; "fitoff" takes it away.
+   */
+  const fitNote = () => {
+    let on = false;
+    try { const q = new URLSearchParams(location.search); if (q.has("fit")) localStorage.setItem("auralfm.fit", "1"); on = localStorage.getItem("auralfm.fit") === "1"; } catch { on = false; }
+    let box = document.getElementById("fitnote");
+    if (!on) { box?.remove(); return; }
+    if (!document.body) return;
+    if (!box) {
+      box = document.createElement("pre");
+      box.id = "fitnote";
+      box.style.cssText = "position:fixed;left:8px;top:calc(env(safe-area-inset-top) + 64px);z-index:2147483600;margin:0;padding:8px 10px;max-width:70vw;white-space:pre-wrap;font:12px/1.35 ui-monospace,Menlo,monospace;color:#fff;background:rgba(0,0,0,.78);border-radius:8px;pointer-events:none";
+      document.body.append(box);
+    }
+    const bar = document.querySelector(".tabbar")?.getBoundingClientRect();
+    const s = window.AuralFitSeen || {};
+    box.textContent = Object.entries({ ...s, tabBottom: bar ? Math.round(bar.bottom) : "none", body: Math.round(document.body.getBoundingClientRect().height) })
+      .map(([k, v]) => `${k} ${v}`).join("\n");
+  };
+  document.addEventListener("auralfm:fit", () => setTimeout(fitNote, 60));
   "use strict";
   // Settings opens as a popover over the app, in a frame. One bridge serves
   // both: a second would open its own relay connections, and a mute made in
@@ -739,6 +777,10 @@
       const text = String(code || "").replace(/[\s"'“”]/g, "");
       // The private listening switch (explore-shows.js) is set by a link, and a
       // Home Screen app cannot be given a link: typed here, the word does it.
+      if (/^fit(off)?$/i.test(text)) {
+        try { if (/off$/i.test(text)) localStorage.removeItem("auralfm.fit"); else localStorage.setItem("auralfm.fit", "1"); } catch { return { ok: false, error: "damaged" }; }
+        return { ok: true, favourites: 0, flag: true };
+      }
       if (/^ears(off)?$/i.test(text)) {
         try { if (/off$/i.test(text)) localStorage.removeItem("auralfm.shows.ears"); else localStorage.setItem("auralfm.shows.ears", "1"); } catch { return { ok: false, error: "damaged" }; }
         return { ok: true, favourites: 0, flag: true };
