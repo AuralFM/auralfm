@@ -3410,6 +3410,25 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the studio open: the globe sits between the panels, and the host's town carries the show's name only while live");
 }
 
+// ── the installed phone app reaches the bottom of the screen ────────────────
+// With the sky behind the status bar, iOS lays the page out short by the status
+// bar's height and leaves a blank strip under the tab bar (Melton's screenshot,
+// 6 Oct 2026). The page is made taller by the strip, measured, and the body is
+// what fixed panels are measured from. Two ways to bring it back: stretch the
+// page under the opaque bar too (there the short page is correct, and the tab
+// bar would go off the screen), or drop the containment (the bars would reach
+// the bottom and every sheet would stop short of it).
+{
+  console.log("\nthe installed phone app reaches the bottom of the screen");
+  const css = readSrc("web/web.css"), bridge = readSrc("web/bridge.js");
+  const gaps = [];
+  if (!/html\.tail body \{ height: calc\(100dvh \+ var\(--tail, 0px\)\); contain: layout; \}/.test(css)) gaps.push("the body is not stretched by the strip, or fixed panels are not measured from it");
+  if (!/if \(inset > 0 && short >= 12\) tail =/.test(bridge)) gaps.push("the strip is added without the page being under the status bar");
+  if (!/if \(short > 80\) return;/.test(bridge)) gaps.push("the keyboard coming up would be taken for the strip");
+  gaps.length ? fail("the installed phone app reaches the bottom of the screen", gaps.join("; "))
+    : pass("the strip is measured only under the see-through status bar, and the page and its panels are stretched by it");
+}
+
 // ── the carry-over code holds no key ────────────────────────────────────────
 // The web app can write what it holds as a line of text, for moving to a new
 // install (6 Oct 2026). It goes through a clipboard and often a notes app or a

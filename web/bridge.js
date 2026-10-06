@@ -27,6 +27,46 @@
   // A phone gets the half-size globe pictures (explore-core.js, texUrl). The
   // same question the phone layout asks (web/web.css), asked once at load.
   window.AuralLite = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)").matches;
+  /**
+   * The strip under the tab bar (web/web.css, html.tail).
+   *
+   * Installed on an iPhone with the see-through status bar, the page is laid
+   * out short of the screen by the status bar's height. That is measured here:
+   * the screen's height against the page's, and only when the page really is
+   * under the status bar (its top inset is more than nothing: under the old
+   * opaque bar the page is short too, and correctly so). The number goes to
+   * CSS as --tail. Anything bigger than a status bar is the keyboard, or a
+   * split screen, and is left alone.
+   */
+  const fitScreen = () => {
+    const root = document.documentElement;
+    let tail = 0;
+    try {
+      const installed = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+      if (installed && window.AuralLite && document.body) {
+        const probe = document.createElement("div");
+        probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none";
+        document.body.append(probe);
+        const inset = probe.offsetHeight;
+        // How tall the page believes the window is, asked three ways: they have
+        // not always agreed on an iPhone, and the smallest is the one laid out.
+        probe.style.height = "100dvh";
+        const laid = Math.min(window.innerHeight, root.clientHeight || window.innerHeight, probe.offsetHeight || window.innerHeight);
+        probe.remove();
+        const full = matchMedia("(orientation: portrait)").matches ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+        const short = full - laid;
+        if (short > 80) return;                       // the keyboard is up: keep what was measured
+        if (inset > 0 && short >= 12) tail = Math.round(Math.min(short, inset + 4));
+      }
+    } catch { tail = 0; }
+    root.style.setProperty("--tail", `${tail}px`);
+    root.classList.toggle("tail", tail > 0);
+  };
+  window.AuralFit = fitScreen;
+  if (document.body) fitScreen(); else document.addEventListener("DOMContentLoaded", fitScreen);
+  addEventListener("pageshow", fitScreen);
+  addEventListener("orientationchange", () => setTimeout(fitScreen, 350));
+  addEventListener("resize", () => { if (!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "")) fitScreen(); });
   "use strict";
   // Settings opens as a popover over the app, in a frame. One bridge serves
   // both: a second would open its own relay connections, and a mute made in

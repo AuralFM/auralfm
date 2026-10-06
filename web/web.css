@@ -190,12 +190,21 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   /* dvh, not 100%: in standalone iOS the layout viewport is taller than the
      screen shows, which left a band of dead black under the tab bar. */
   html, body { height: 100dvh; }
-  /* The see-through status bar (scripts/build-web.mjs): with the page under
-     the clock, iOS measures the installed window short by the bar's height,
-     and a root taller by that much closes the band it left under the tab bar.
-     The inset is 0 for an icon added before 5 Oct 2026 (the plain black bar),
-     so this changes nothing there. */
-  @media (display-mode: standalone) { html { min-height: calc(100% + env(safe-area-inset-top)); } }
+  /**
+   * The see-through status bar (scripts/build-web.mjs), and the strip it left.
+   *
+   * Installed with the page under the clock, iOS lays the page out as if the
+   * window were shorter than the screen by the status bar's height, starting
+   * at the top: everything ended that far above the bottom, with a blank strip
+   * under the tab bar (Melton's screenshot, 6 Oct 2026; it is why the bar was
+   * opaque black before). The strip is part of the page all the same: it took
+   * the page's colour. So the page is made taller by exactly that much
+   * (--tail, measured in web/bridge.js, and only set when the strip is there),
+   * and the body becomes what fixed things are measured from, so every sheet
+   * and panel pinned to "the bottom" means the bottom of the screen.
+   */
+  html.tail { min-height: calc(100dvh + var(--tail, 0px)); }
+  html.tail body { height: calc(100dvh + var(--tail, 0px)); contain: layout; }
   .cols { flex-direction: column; }
   /* Every panel is the same card: half the screen, anchored above the player,
      with the globe still visible over it. A panel that covers the globe is a
