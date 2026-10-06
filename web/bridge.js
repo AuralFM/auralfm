@@ -83,8 +83,8 @@
   // Typing starts and stops: the keyboard gets the page it needs, then it is given back.
   addEventListener("focusin", fitScreen);
   addEventListener("focusout", () => setTimeout(fitScreen, 250));
-  // Belt and braces for the pinned page (web/web.css): if anything scrolls the
-  // window all the same, it is put back, so the app cannot be left slid up.
+  // The stretched page must not move (web/web.css says why it can): if
+  // anything scrolls the window, it is put back, so the app is never left slid up.
   const unscroll = () => {
     if (!document.documentElement.classList.contains("tail")) return;
     if (window.scrollY || document.documentElement.scrollTop || document.body?.scrollTop) {
@@ -93,6 +93,9 @@
   };
   addEventListener("scroll", unscroll, { passive: true });
   document.addEventListener("scroll", unscroll, { passive: true, capture: true });
+  window.visualViewport?.addEventListener("scroll", unscroll, { passive: true });
+  // A change of focus is what scrolls it: checked again once the phone has had its say.
+  addEventListener("focusin", () => { unscroll(); setTimeout(unscroll, 60); setTimeout(unscroll, 320); });
   /**
    * What the phone reports, on the screen, for when this is wrong again: the
    * numbers above can only be read on the device itself. Shown after "fit" is

@@ -3419,16 +3419,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // bring either bug back: lean on dvh again; do it under the opaque bar (there
 // the page starts lower and the tab bar would leave the screen); hold the
 // height while the keyboard is up; drop the containment, so the bars reach
-// the bottom and every sheet stops short of it; or make the page taller
-// without pinning it, which lets a change of focus scroll the whole app.
+// the bottom and every sheet stops short of it; pin the page with position:
+// fixed (iOS clips that at the short window: the tab labels vanished); or
+// leave the taller page free to scroll, which let a change of focus slide the
+// whole app up.
 {
   console.log("\nthe installed phone app reaches the bottom of the screen");
   const css = readSrc("web/web.css"), bridge = readSrc("web/bridge.js");
   const gaps = [];
-  if (!/html\.tail body \{ position: fixed; top: 0; left: 0; right: 0; height: var\(--tall\); contain: layout; overflow: clip; \}/.test(css)) gaps.push("the body is not pinned at the screen's height, clipped, with fixed panels measured from it");
-  // A page merely made taller scrolls when Settings takes the focus, and the
-  // whole app slides up with the tab bar in the middle of the screen.
-  if (/html\.tail \{[^}]*min-height/.test(css)) gaps.push("the page is made taller than its window, which lets it be scrolled");
+  if (!/html\.tail body \{ height: var\(--tall\); contain: layout; overflow: clip; \}/.test(css)) gaps.push("the body is not the screen's height, clipped, with fixed panels measured from it");
+  // Pinned with position: fixed, iOS cuts the page off at the short window it
+  // believes in, and the tab bar's labels vanish into the strip.
+  if (/html\.tail body \{[^}]*position: fixed/.test(css)) gaps.push("the page is pinned with position: fixed, which iOS clips at the short window");
+  // Taller and free to scroll, a change of focus slides the whole app up.
+  if (!/const unscroll = \(\) => \{[\s\S]{0,400}?window\.scrollTo\(0, 0\)/.test(bridge) || !/addEventListener\("scroll", unscroll/.test(bridge)) gaps.push("nothing puts the stretched page back when it is scrolled");
+  if (!/focus\(\{ preventScroll: true \}\)/.test(readSrc("web/sheet.js"))) gaps.push("the Settings sheet takes the focus with a scroll");
   if (!/const installed = !framed && /.test(bridge)) gaps.push("the Settings frame is treated as the screen");
   if (/html\.tail[^}]*\{[^}]*dvh/.test(css)) gaps.push("the stretched page leans on dvh again");
   if (!/if \(installed && upright && window\.AuralLite && inset > 0 && !typing\(\)\) tall = full;/.test(bridge)) gaps.push("the height is set outside an installed, upright phone under the see-through bar, or while typing");

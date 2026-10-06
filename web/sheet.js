@@ -114,8 +114,10 @@
     // Done where there is one; on a phone it is hidden and cannot take focus,
     // so the dialog's own title does, and VoiceOver starts at "Settings".
     const done = root.querySelector(".setsheet-done");
-    if (done.offsetParent) done.focus();
-    else root.querySelector("#setsheet-title").focus();
+    // Without a scroll: a phone brings whatever takes the focus "into view",
+    // and on an installed iPhone that slid the whole app up (web/web.css, html.tail).
+    if (done.offsetParent) done.focus({ preventScroll: true });
+    else root.querySelector("#setsheet-title").focus({ preventScroll: true });
   }
 
   function finish() {

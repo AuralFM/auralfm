@@ -204,13 +204,18 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
    * measured from, so every sheet and panel pinned to "the bottom" means the
    * bottom of the screen.
    */
-  /* Pinned, not just taller. A page taller than its window can be scrolled,
-     whatever "overflow: hidden" says: opening Settings moved the focus into
-     its sheet, the phone scrolled it "into view", and the whole app slid half
-     a screen up with the tab bar in the middle (Melton, 6 Oct). A pinned box
-     adds nothing that can be scrolled to, and clips what hangs out of it (the
-     stations sheet runs on below the screen by design). */
-  html.tail body { position: fixed; top: 0; left: 0; right: 0; height: var(--tall); contain: layout; overflow: clip; }
+  /* Taller, and held still. Three things were learned on Melton's phone:
+       - a page merely made taller can be scrolled, whatever "overflow:
+         hidden" says: opening Settings moved the focus into its sheet, the
+         phone scrolled it into view, and the whole app slid half a screen up;
+       - a page pinned with position: fixed cannot be scrolled, but iOS cuts a
+         fixed box off at the short window it believes in: the tab bar's
+         labels fell in the strip and vanished;
+       - so the page stays in the flow (which iOS does paint in the strip) and
+         is stopped from scrolling: `clip` on the body ends its own scrolling
+         outright, and web/bridge.js puts the window back if it moves. */
+  html.tail { min-height: var(--tall); overflow: clip; }
+  html.tail body { height: var(--tall); contain: layout; overflow: clip; }
   .cols { flex-direction: column; }
   /* Every panel is the same card: half the screen, anchored above the player,
      with the globe still visible over it. A panel that covers the globe is a
