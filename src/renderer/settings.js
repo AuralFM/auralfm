@@ -299,23 +299,83 @@ $("#durableIdentity").addEventListener("click", async () => {
   paintFingerprint();
 });
 
+// A code, copied. Asked for and written inside the tap: an iPhone lets go of
+// the clipboard the moment a tap handler waits on anything else.
+async function copyOf(get) {
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      const text = get().then((c) => new Blob([c], { type: "text/plain" }));
+      await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
+    } else await navigator.clipboard.writeText(await get());
+    return true;
+  } catch { return false; }
+}
+
+// Favorites sync (src/favsync.js): the desktop and the web build answer the
+// same call. Off, it shows "Turn on" and a field for a code made elsewhere; on,
+// the code to copy, when it last synced, and "Turn off".
+if ("favSync" in window.auralfm) {
+  $("#syncsec").hidden = false;
+  const call = (op, arg) => guard("favSync", () => window.auralfm.favSync(op, arg), { on: false, at: null, error: "offline", count: 0 });
+  const said = (text) => { $("#syncsaid").textContent = text; $("#syncsaidrow").hidden = !text; };
+  const why = (e) => (e === "toobig" ? (T["set.syncTooBig"] || "Too many favorites to sync.")
+    : e === "refused" ? (T["set.syncRefused"] || "The relays refused the list. It will try again.")
+    : (T["set.syncOffline"] || "No relay answered. It will try again."));
+  const paint = (st) => {
+    const on = !!st?.on;
+    $("#syncon").hidden = on; $("#synccopy").hidden = !on;
+    $("#syncjoinrow").hidden = on; $("#syncoffrow").hidden = !on;
+    if (!on) return;
+    const at = st.at ? new Date(st.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+    $("#syncwhen").textContent = st.error ? why(st.error)
+      : at ? `${T["set.syncAt"] || "Synced"} ${at} · ${st.count} ${T["set.moveFavs"] || "favorites"}`
+      : (T["set.syncNever"] || "Not synced yet.");
+  };
+  // One round at a time from here: the buttons wait for the answer.
+  const run = async (op, arg) => {
+    for (const b of ["#syncon", "#syncjoin", "#syncoff"]) $(b).disabled = true;
+    said(T["set.syncing"] || "Syncing…");
+    const st = await call(op, arg);
+    for (const b of ["#syncon", "#syncjoin", "#syncoff"]) $(b).disabled = false;
+    said("");
+    return st;
+  };
+  $("#syncon").addEventListener("click", async () => paint(await run("start")));
+  $("#syncjoin").addEventListener("click", async () => {
+    const st = await run("join", $("#synccode").value);
+    if (st.ok === false) return said(st.error === "notours" ? (T["set.syncNotOurs"] || "That is not a sync code.") : (T["set.moveDamaged"] || "The code is not complete. Copy it again."));
+    $("#synccode").value = "";
+    paint(st);
+  });
+  $("#synccopy").addEventListener("click", async () => {
+    // The desktop copies in its main process. The web build has no such call
+    // (it is the one with the carry-over code), and copies inside the tap.
+    const ok = "backupCode" in window.auralfm ? await copyOf(() => call("code")) : (await call("copy")) === true;
+    if (ok) return said(T["set.syncCopied"] || "Copied. Paste it on the other device.");
+    // The clipboard was refused: show the code in the field, selected, to copy by hand.
+    const field = $("#synccode");
+    $("#syncjoinrow").hidden = false; $("#syncjoin").hidden = true;
+    field.value = await call("code");
+    field.focus(); field.select();
+    said(T["set.moveSelect"] || "Copy the code from the field.");
+  });
+  $("#syncoff").addEventListener("click", async () => {
+    const st = await call("stop");
+    $("#synccode").value = ""; $("#syncjoin").hidden = false;
+    paint(st);
+    said(T["set.syncStopped"] || "Off. Your favorites stay on this device.");
+  });
+  window.auralfm.onFavSync?.((st) => paint(st));
+  call("status").then(paint);
+}
+
 // Moving to a new install: the web app's carry-over code (web/bridge.js). `in`,
 // not a truthy test: the desktop keeps its data in files and has no such call.
 if ("backupCode" in window.auralfm) {
   $("#movesec").hidden = false;
   const said = (text) => { $("#movesaid").textContent = text; $("#movesaidrow").hidden = !text; };
   $("#movecopy").addEventListener("click", async () => {
-    // Asked for and written inside the tap: an iPhone lets go of the clipboard
-    // the moment a tap handler waits on anything else.
-    let ok = false;
-    try {
-      if (navigator.clipboard && window.ClipboardItem) {
-        const text = window.auralfm.backupCode().then((c) => new Blob([c], { type: "text/plain" }));
-        await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
-        ok = true;
-      } else { await navigator.clipboard.writeText(await window.auralfm.backupCode()); ok = true; }
-    } catch { ok = false; }
-    if (ok) return said(T["set.moveCopied"] || "Copied. Paste it in the new install.");
+    if (await copyOf(() => window.auralfm.backupCode())) return said(T["set.moveCopied"] || "Copied. Paste it in the new install.");
     // The clipboard was refused: put the code in the field, selected, to copy by hand.
     const field = $("#movecode");
     field.value = await window.auralfm.backupCode();

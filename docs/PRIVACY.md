@@ -25,13 +25,15 @@ depends on which version you are using.
 | `streams.json` | Last known working stream URL per station |
 | `failures.json` | Stations that recently failed, so they sort lower |
 | `sky-*.jpg` / `.png` | Cached satellite imagery |
+| `favsync.json` | Only if you turn on favorites sync: its secret, and when each station was starred |
 
 You can delete any of it at any time. Removing the app removes it all.
 
 **The web version** has no files of its own. Favourites, settings, the last
 station and your chat identity live in your browser's local storage for this
 site, and nowhere else. They do not follow you to another browser or another
-device, because there is no account to carry them. Clearing this site's data in
+device, because there is no account to carry them, unless you turn on favorites
+sync (below), which carries the favorites and nothing else. Clearing this site's data in
 your browser is a complete reset, and removing it from your home screen takes
 the same data with it.
 
@@ -185,9 +187,9 @@ someone's antenna, and it is the same bargain the receiver's own web page offers
 
 ## Optional features that are off by default
 
-**Listener presence** is off until you turn it on in Settings. It is the only
-thing in the app that sends anything, which is why it is off and why this section
-is the longest one here.
+**Listener presence** is off until you turn it on in Settings. It and favorites
+sync (further down) are the only things in the app that send anything, which is
+why both are off and why this section is the longest one here.
 
 With it on, and only while you are playing something, AuralFM announces:
 
@@ -214,6 +216,31 @@ are listening to, from a public directory plus a few well-known ones, and you ca
 add your own in Settings — yours are tried first. A relay is asked only for
 messages in the cell you are listening to or looking at. No relay is told where
 you are.
+
+**Favorites sync** is off until you turn it on in Settings. It keeps your
+favorites the same on each device you give its code to. There is still no
+account.
+
+- **What is sent:** your list of favorites (each station's name, town, country
+  and position, and when you starred or un-starred it). Nothing else: no
+  listening history, no settings, no chat.
+- **Where it goes:** to three public relays (nos.lol, relay.primal.net and
+  relay.damus.io), as one note that replaces itself each time. A relay keeps
+  the newest copy, not a history.
+- **What a relay can see:** your network address (IP address) when a device
+  syncs, the time, the size of the note, and a key made only for this. It
+  cannot read the list: the list is sealed on your device before it leaves,
+  with a key that comes from the code. The key that signs the note is not your
+  chat identity and cannot be linked to it.
+- **The code is the access.** Anyone who has it can read your favorites and
+  change them. It is kept on each device you add it to (on a Mac, in a file
+  only your user account can read). AuralFM never sees it, and cannot recover
+  it or reset it for you.
+- **Turning it off** removes the code from that device. Your favorites stay on
+  the device. The sealed note stays on the relays until they drop it; without
+  the code nobody can read it. AuralFM cannot delete it for you, because it
+  does not run those relays.
+- **Erase everything** turns sync off on that device first.
 
 ## Live shows (beta)
 

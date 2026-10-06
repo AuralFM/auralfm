@@ -35,6 +35,7 @@ const tips = require("./tips");
 const muted = require("./muted");
 const social = require("./social");
 const durable = require("./identity");
+const favsync = require("./favsync");
 const safety = require("./safety");
 
 /**
@@ -1034,6 +1035,22 @@ if (!app.requestSingleInstanceLock()) {
     social.init(app.getPath("userData"));
     safety.init(app.getPath("userData"));
     durable.init(app.getPath("userData"));
+    // Favorites sync reads and writes the one list in the state file, and tells
+    // every window when a round changed it. Nothing runs unless it was turned on.
+    favsync.init(app.getPath("userData"), {
+      // No list is not an empty list. load() answers {} for a file it could not
+      // read, and a round that took that for "no favorites" would say so to
+      // every other device. Only a missing file is a new install.
+      get: () => {
+        const st = load();
+        if (Array.isArray(st.favorites)) return st.favorites;
+        return Object.keys(st).length || !fs.existsSync(path.join(app.getPath("userData"), "state.json")) ? [] : null;
+      },
+      set: (favorites) => { const st = load(); st.favorites = favorites; if (save(st)) broadcast("state:changed", st); },
+      changed: (status) => broadcast("favsync:status", status),
+    });
+    setTimeout(() => favsync.wake(), 4000);
+    app.on("browser-window-focus", () => favsync.wake());
     /**
      * The preference being on *is* the request, so honour it even if the file is
      * missing.

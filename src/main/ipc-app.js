@@ -6,13 +6,14 @@
  * — getters, because the windows are created and destroyed after registration.
  */
 
-const { app, ipcMain, net, protocol, shell, systemPreferences } = require("electron");
+const { app, clipboard, ipcMain, net, protocol, shell, systemPreferences } = require("electron");
 const crypto = require("node:crypto");
 const docs = require("../docs");
 const geo = require("../geo");
 const i18n = require("../i18n");
 const palettes = require("../palettes");
 const tips = require("../tips");
+const favsync = require("../favsync");
 
 module.exports = function register(ctx) {
   const { broadcast, getPrefs, getStrings, load, openExplore, openOutside, openSettings, save, setPrefs } = ctx;
@@ -72,7 +73,27 @@ module.exports = function register(ctx) {
     const ok = save(merged);
     // Tell every window what the truth is now, so the next patch is built on it.
     if (ok && touched.length) broadcast("state:changed", merged);
+    if (ok && touched.includes("favorites")) favsync.touch();
     return ok;
+  });
+
+  /**
+   * Favorites sync (src/favsync.js): on, off, the code, and "now".
+   *
+   * One channel, because Settings is the only caller and the web build answers
+   * the same call (web/bridge.js). The code is the whole of the access to the
+   * list, so it is handed over only when asked for, never in a status.
+   */
+  ipcMain.handle("favsync", (_e, op, arg) => {
+    if (op === "start") return favsync.start();
+    if (op === "join") return favsync.join(String(arg || "").slice(0, 400));
+    if (op === "stop") return favsync.stop();
+    if (op === "code") return favsync.code();
+    // Copied here, not in the page: a window may only write the clipboard while
+    // it has the focus, and the code is too long to ask anyone to select.
+    if (op === "copy") { const c = favsync.code(); if (c) clipboard.writeText(c); return !!c; }
+    if (op === "now") return favsync.sync();
+    return favsync.status();
   });
 
   /**

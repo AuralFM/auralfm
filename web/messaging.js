@@ -25,6 +25,10 @@ social.init(HOME);
 safety.init(HOME);
 // identity.init() is deliberately never called: without it there is no durable key.
 
+// Favorites sync is the desktop's file as well. The page gives it the list
+// (web/bridge.js); nothing runs until the listener turns it on.
+window.AuralFavSync = require("../src/favsync.js");
+
 window.AuralChat = function create({ getPrefs, emit }) {
   const visible = (list) => {
     const p = getPrefs();

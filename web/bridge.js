@@ -163,6 +163,10 @@
     if (e.key === KEY + "prefs") { emit("prefs", getPrefs()); applyOutput(); }
     else if (e.key === KEY + "layers") emit("layers", layerState());
     else if (e.key === KEY + "state") emit("state", getState());
+    // Favorites sync ran, or was turned on or off, in the other page. Off has
+    // to be said twice: this page's file shim still holds the secret in memory
+    // (web/shims/fs.js), and its next round would write it back.
+    else if (e.key === FS + "favsync.json") { if (e.newValue === null) favsync?.stop(); else emit("favsync", favsync?.status()); }
   });
 
   // ── the catalogue ───────────────────────────────────────────────────────────
@@ -223,7 +227,23 @@
     for (const k of STATE_KEYS) if (k in patch) merged[k] = patch[k];
     write("state", merged);
     emit("state", merged);
+    if ("favorites" in patch) favsync?.touch();
     return true;
+  }
+
+  // Favorites sync (src/favsync.js, bundled with the messaging). It reads and
+  // writes the one list above. The main page looks for the other devices'
+  // changes when it opens and when it comes back to the front; Settings only
+  // runs a round when asked, so two pages never do the same work at once.
+  const favsync = window.AuralFavSync || null;
+  favsync?.init("/auralfm-web", {
+    get: () => { const f = getState().favorites; return Array.isArray(f) ? f : []; },
+    set: (favorites) => { const st = { ...getState(), favorites }; write("state", st); emit("state", st); },
+    changed: (s) => emit("favsync", s),
+  });
+  if (favsync && !/settings\.html/.test(location.pathname)) {
+    setTimeout(() => favsync.wake(), 4000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) favsync.wake(); });
   }
 
   // The layers this version can draw, with the desktop's defaults. Shortwave is
@@ -712,6 +732,16 @@
     // preferences, state, strings, palettes, layers
     getPrefs: async () => getPrefs(), setPrefs: async (p) => setPrefs(p), onPrefs: on("prefs"),
     getState: async () => getState(), setState: async (p) => setState(p), onStateChanged: on("state"),
+    favSync: async (op, arg) => {
+      if (!favsync) return { on: false, at: null, error: "offline", count: 0 };
+      if (op === "start") return favsync.start();
+      if (op === "join") return favsync.join(String(arg || "").slice(0, 400));
+      if (op === "stop") return favsync.stop();
+      if (op === "code") return favsync.code();
+      if (op === "now") return favsync.sync();
+      return favsync.status();
+    },
+    onFavSync: on("favsync"),
     strings: async () => {
       const t = M.i18n.strings(getPrefs().language, locale);
       const lang = M.i18n.resolve(getPrefs().language, locale);
@@ -836,6 +866,8 @@
     panicWipe: async () => {
       const done = chat ? chat.wipe() : [];
       const keep = getPrefs();
+      // Sync off first, or its next round would fill the emptied list again.
+      try { favsync?.stop(); done.push("favorites sync"); } catch { /* was not on */ }
       write("state", {});
       write("prefs", { ...keep, presence: false });
       done.push("favourites and history");

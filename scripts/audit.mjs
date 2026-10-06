@@ -3571,6 +3571,62 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("no station in the bundle carries a placeholder, a filler word or a contributor's name as a tag");
 }
 
+// ── favorites sync keeps its promises ───────────────────────────────────────
+// Favorites can be the same on a phone and a desktop (6 Oct 2026): a secret
+// made on one device and carried to the other, and one sealed note on public
+// relays (src/favsync.js). It is the first thing in this app that can take a
+// star away on a device nobody is holding, so what it may not do is run here
+// rather than read:
+//   - an empty list never un-stars a full one (a lost file is not an instruction);
+//   - a device joining with stars of its own keeps them;
+//   - an un-star reaches the other device, and a later star wins it back;
+//   - what goes to a relay cannot be read without the secret, and the key that
+//     signs it is not the chat's or the lasting identity;
+//   - a list that could not be read is not a list, on either platform;
+//   - "Erase everything" turns it off first, or the erased list comes back.
+{
+  console.log("\nfavorites sync keeps its promises");
+  const { createRequire } = await import("node:module");
+  const sync = createRequire(import.meta.url)(R("src/favsync.js"));
+  const src = readSrc("src/favsync.js"), bridge = readSrc("web/bridge.js"), mainSrc = readSrc("src/main.js");
+  const F = (id) => ({ id, title: "Radio " + id, place: "Town", country: "Land", lat: 1, lon: 2, secure: true });
+  const now = 1.7e12, gaps = [];
+  const ids = (m) => m.favorites.map((f) => f.id).join(",");
+
+  const first = sync.merge([F("a"), F("b"), F("c"), F("d")], {}, null, now);
+  const lost = sync.merge([], first, first.items, now + 1000);
+  if (ids(lost) !== "a,b,c,d" || Object.values(lost.items).some((a) => a.length === 1)) gaps.push("an emptied list un-stars the stations on every other device");
+  const joined = sync.merge([F("z")], {}, first.items, now + 2000);
+  if (!joined.favorites.some((f) => f.id === "z") || joined.favorites.length !== 5 || joined.removed) gaps.push("a device that joins loses the stars it had");
+  const unstar = sync.merge([F("a"), F("b"), F("c")], first, first.items, now + 3000);
+  const heard = sync.merge([F("a"), F("b"), F("c"), F("d")], first, unstar.items, now + 4000);
+  if (ids(heard) !== "a,b,c" || heard.removed !== 1) gaps.push("an un-star does not reach the other device");
+  const again = sync.merge([F("a"), F("b"), F("c"), F("d")], { seen: unstar.seen, gone: unstar.gone }, unstar.items, now + 5000);
+  if (!again.favorites.some((f) => f.id === "d")) gaps.push("a station starred again after an un-star does not stay");
+  const same = sync.merge([F("a"), F("b"), F("c"), F("d")], first, first.items, now + 6000);
+  if (same.changedRemote || same.added || same.removed) gaps.push("a round with nothing new still writes to the relays");
+  const junk = sync.merge([F("a")], {}, { x: "no", y: [NaN, "t"], ok: [now, "Good", "", "", null, null, 0] }, now);
+  if (ids(junk) !== "a,ok") gaps.push("a malformed entry from a relay gets into the list");
+
+  const k = sync.keys("11".repeat(32)), other = sync.keys("22".repeat(32));
+  const sealed = await sync.seal({ v: 1, items: first.items }, k.key);
+  if (JSON.stringify(await sync.open(sealed, k.key)) !== JSON.stringify(first.items)) gaps.push("a sealed list does not open with its own secret");
+  if (await sync.open(sealed, other.key)) gaps.push("a sealed list opens with another secret");
+  if (/Radio|Town/.test(sealed) || /Radio|Town/.test(Buffer.from(sealed, "base64").toString("latin1"))) gaps.push("station names are readable in what goes to the relay");
+  if (/require\("\.\/(identity|presence-nostr|nostr-private)/.test(src)) gaps.push("the sync reaches for the chat's keys");
+  if (!/openSync\(FILE, "w", 0o600\)/.test(src)) gaps.push("the secret's file is not private before it is written");
+  if (/secret|code/.test((src.match(/const status = \(\) => \{[\s\S]*?\n\};/) || [""])[0].replace(/j\?\.|read\(\)/g, ""))) gaps.push("the status hands out the secret");
+  if (!/if \(!Array\.isArray\(local\)\) return status\(\);/.test(src)) gaps.push("a round goes ahead with no list");
+  if (!/favsync\.init\([\s\S]{0,700}?existsSync\([\s\S]{0,80}?"state\.json"\)\) \? \[\] : null/.test(mainSrc)) gaps.push("the desktop takes an unreadable state file for an empty list");
+  if (!/if \(e\.newValue === null\) favsync\?\.stop\(\)/.test(bridge)) gaps.push("turning sync off in Settings does not reach the web app's main page");
+  if (!/favsync\.stop\(\);[\s\S]{0,900}?save\(\{ prefs:/.test(readSrc("src/main/ipc-chat.js"))) gaps.push("the desktop's Erase leaves sync on");
+  if (!/favsync\?\.stop\(\);[\s\S]{0,200}?write\("state", \{\}\)/.test(bridge)) gaps.push("the web app's Erase leaves sync on");
+  if (!/onStateChanged\?\.\(\(s\) => \{[\s\S]{0,400}?favorites = next;/.test(readSrc("src/renderer/explore.js"))) gaps.push("the globe window does not take a list changed from elsewhere");
+  gaps.length ? fail("favorites sync keeps its promises", gaps.join("; "))
+    : pass("an empty list fills and never erases, a joining device keeps its stars, an un-star travels, the relay's copy is unreadable, and Erase turns it off");
+}
+
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

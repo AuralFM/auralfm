@@ -34,6 +34,18 @@ document.addEventListener("keydown", (e) => {
   await applyPalette();                  // before the globe, so the first build is themed
   await applyStrings();
   setLocked(!!state.locked);
+  // The list can change from outside this window: another device, through
+  // favorites sync (src/favsync.js), or the menu-bar popover. Take it and
+  // repaint what shows it. Same stations, same order: nothing to do.
+  window.auralfm.onStateChanged?.((s) => {
+    const next = Array.isArray(s?.favorites) ? s.favorites : [];
+    if (next.map((f) => f.id).join("|") === favorites.map((f) => f.id).join("|")) return;
+    favorites = next;
+    // Only a list that is on screen: a search or a headline panel is not redrawn under the listener.
+    if (showingFavorites) showFavorites();
+    else if (selection?.place && !stationListEl.hidden) renderStations();
+    paintNowStar();
+  });
   renderMarkets();
   clearInterval(marketTimer);
   // 1 Hz: the socket is faster than that, but a ticker that changes more often

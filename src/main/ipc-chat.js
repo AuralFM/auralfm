@@ -8,6 +8,7 @@
 
 const { app, ipcMain, shell } = require("electron");
 const durable = require("../identity");
+const favsync = require("../favsync");
 const fs = require("node:fs");
 const muted = require("../muted");
 const nostr = require("../presence-nostr");
@@ -54,6 +55,10 @@ module.exports = function register(ctx) {
     // is personal even though the shipped list is not. "Erase everything" has to
     // mean it.
     try { safety.reset(); done.push("word list changes"); } catch {}
+
+    // Before the favorites go: with the secret still here, the next round would
+    // take an emptied list for a lost one and fill it again from the relays.
+    try { favsync.stop(); done.push("favorites sync"); } catch {}
 
     const userData = app.getPath("userData");
     for (const f of ["tips.json", "muted.json", "contacts.json", "identity.json",

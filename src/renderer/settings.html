@@ -52,7 +52,7 @@
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
       --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
-      --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+      --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.60); --label3:rgba(23,21,20,.26);
       --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
       --line:rgba(23,21,20,.10);
       --bg:#FFFFFF; --card:rgba(23,21,20,.035);
@@ -62,7 +62,7 @@
   }
   /* Explicit override beats the system in both directions. */
   :root[data-theme="light"]{
-    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.60); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10);
     --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
@@ -163,7 +163,7 @@
   .pal .tag{display:block;font-size:10px;color:var(--label2);margin-top:1px}
 
   .row .name b{display:block;font-weight:530}
-  .row .name .sub{display:block;font-size:11px;color:var(--label2);margin-top:1px}
+  .row .name .sub{display:block;font-size:12px;color:var(--label2);margin-top:1px}
   .row .rm{
     appearance:none;border:0;border-radius:var(--r-md);background:var(--fill);color:var(--label2);
     font:inherit;font-size:11px;padding:4px 9px;cursor:default;flex:none;
@@ -272,8 +272,8 @@
   .link.danger{color:var(--err)}
   #nickname,#filterterm{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
   #filterterm{text-align:left;width:180px}
-  #movecode{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:6px 9px;border-radius:var(--r-md);outline:none;flex:1;min-width:0}
-  #movecode:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  #movecode,#synccode{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:6px 9px;border-radius:var(--r-md);outline:none;flex:1;min-width:0}
+  #movecode:focus-visible,#synccode:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   #filterterm:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   /* The list is long enough to need a ceiling, and a card that grows past the
      window is worse than one that scrolls. */
@@ -284,7 +284,7 @@
   #fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.04em}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.03em}
   .hint{
-    font-size:11px;line-height:1.4;color:var(--label2);
+    font-size:12px;line-height:1.4;color:var(--label2);
     padding:4px 2px 9px;margin:0;
   }
 
@@ -333,13 +333,14 @@
   }
   @media (hover:hover){.link:hover{text-decoration:underline}}
   .link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+  .link:disabled{opacity:.45}
 
   .promise{
     font-size:11px;line-height:1.45;color:var(--label2);
     margin:10px 2px 0;max-width:38em;
   }
   .ver{font-size:11px;color:var(--label3);margin:6px 2px 0}
-  .row .name.sub{font-size:11px;color:var(--label2)}
+  .row .name.sub{font-size:12px;color:var(--label2)}
 </style>
 </head>
 <body>
@@ -570,6 +571,27 @@
     <!-- Moving to a new install (web/bridge.js, backupCode): the web app only,
          where everything lives in this browser and goes when its icon does.
          Shown by settings.js when the bridge offers it. -->
+    <div id="syncsec" hidden>
+      <div class="card spaced">
+        <div class="row">
+          <span class="name" id="syncname" data-i18n="set.sync">Sync favorites</span>
+          <button class="link" id="syncon" aria-labelledby="syncon syncname" data-i18n="set.syncOn">Turn on</button>
+          <button class="link" id="synccopy" hidden data-i18n="set.syncCopy">Copy sync code</button>
+        </div>
+        <div class="row moverow" id="syncjoinrow">
+          <input id="synccode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Paste a sync code"
+                 placeholder="Paste a sync code" data-i18n-ph="set.syncPaste">
+          <button class="link" id="syncjoin" aria-labelledby="syncjoin syncname" data-i18n="set.syncJoin">Join</button>
+        </div>
+        <div class="row" id="syncoffrow" hidden>
+          <span class="name sub" id="syncwhen"></span>
+          <button class="link" id="syncoff" aria-labelledby="syncoff syncname" data-i18n="set.syncOff">Turn off</button>
+        </div>
+        <div class="row" id="syncsaidrow" hidden><span class="name sub" id="syncsaid" role="status" aria-live="polite"></span></div>
+      </div>
+      <p class="hint" data-i18n="set.syncHint">Keeps your favorites the same on each device that has the code. The list is sealed before it leaves. Anyone with the code can read and change it. No account.</p>
+    </div>
+
     <div id="movesec" hidden>
       <div class="card spaced">
         <div class="row">

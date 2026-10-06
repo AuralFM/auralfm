@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld("auralfm", {
    */
   setState: (patch) => ipcRenderer.invoke("state:set", patch),
   onStateChanged: (fn) => ipcRenderer.on("state:changed", (_e, s) => fn(s)),
+  favSync: (op, arg) => ipcRenderer.invoke("favsync", op, arg),
+  onFavSync: (fn) => ipcRenderer.on("favsync:status", (_e, s) => fn(s)),
 
   // catalog
   search: (q, limit, filter) => ipcRenderer.invoke("catalog:search", q, limit, filter),
