@@ -33,7 +33,6 @@
     const url = linked ? source : URL.createObjectURL(source);
     if (linked) el.crossOrigin = "anonymous";
     el.preload = "auto";
-    el.loop = true;
     el.src = url;
     const done = () => { if (!linked) URL.revokeObjectURL(url); };
     return new Promise((resolve, reject) => {
@@ -53,5 +52,24 @@
       }, { once: true });
     });
   }
-  window.StudioDeck = { load };
+  /**
+   * How long a file on this device is, for the queue's list, without playing or
+   * routing it: its header is read and the element is let go. Resolves with
+   * seconds, or null when it cannot be told (a link is not asked: it would be
+   * fetched twice).
+   */
+  function probe(source) {
+    if (typeof source === "string") return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const el = new Audio();
+      const url = URL.createObjectURL(source);
+      const done = (v) => { clearTimeout(slow); el.removeAttribute("src"); el.load(); URL.revokeObjectURL(url); resolve(v); };
+      const slow = setTimeout(() => done(null), 8000);
+      el.preload = "metadata";
+      el.addEventListener("loadedmetadata", () => done(Number.isFinite(el.duration) ? el.duration : null), { once: true });
+      el.addEventListener("error", () => done(null), { once: true });
+      el.src = url;
+    });
+  }
+  window.StudioDeck = { load, probe };
 })();

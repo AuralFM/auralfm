@@ -52,11 +52,12 @@
   const show = {
     title: saved.title || "", about: saved.about || "", vibe: saved.vibe || "", explicit: !!saved.explicit,
     deviceId: saved.deviceId || "", lineId: saved.lineId || "", micVol: saved.micVol ?? 1, musicVol: saved.musicVol ?? 0.6,
+    xfade: saved.xfade ?? 4, repeat: saved.repeat ?? true,
     duck: saved.duck ?? true, monitor: false, place: null, rights: false, adult: false,
   };
   const keep = () => {
-    const { title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck } = show;
-    try { localStorage.setItem(KEY, JSON.stringify({ title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck })); } catch {}
+    const { title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck, xfade, repeat } = show;
+    try { localStorage.setItem(KEY, JSON.stringify({ title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck, xfade, repeat })); } catch {}
   };
   let phase = "off", startedAt = 0, clock = 0;
 
@@ -69,7 +70,7 @@
   //                          heard at its source, so never played back here)
   let ctx = null, micStream = null, micSrc = null, micGain = null, micAn = null, micMon = null;
   let lineStream = null, lineSrc = null, lineGain = null, lineAn = null, lineName = "", lineKind = "";
-  let track = null, musicGain = null, musicAn = null, mix = null, mixAn = null, mixDest = null;
+  let musicGain = null, musicAn = null, mix = null, mixAn = null, mixDest = null;
   let raf = 0, micError = "";
   const levelOf = (an, buf) => {
     an.getFloatTimeDomainData(buf);
@@ -287,36 +288,195 @@
     micStream?.getTracks().forEach((tr) => tr.stop()); micStream = null;
     closeLine();
     stopTrack();
+    // The names stay in the queue; the open files do not.
+    dropPre(); { const old = deck; deck = null; closeDeck(old); }
     setMonitor(false);
   }
   function setMonitor(on) {
     show.monitor = on;
     if (micMon) micMon.gain.value = on ? 1 : 0;
   }
-  // A track from this device, under the voice: the station's music bed.
-  // Streamed from the file as it plays, never decoded whole (studio-deck.js).
+  // ── the queue ─────────────────────────────────────────────────────────────
+  /**
+   * The show's music, when it is played here: several tracks in order, each
+   * fading into the next (Melton, 5 Oct 2026: one track under a microphone made
+   * playing music "difficult and strenuous"; the Mixcloud study's second step).
+   *
+   * Each track is streamed through its own element (studio-deck.js) and its own
+   * gain, so two can sound at once for the length of a crossfade. Only the one
+   * playing and, near its end, the one after it are open: a queue of forty
+   * mixes is forty names, not forty files in memory.
+   *
+   * The fades are scheduled on the audio clock and the hand-over is driven by
+   * the element's own timeupdate, not by animation frames: a show goes on with
+   * the window behind another, and frames stop there.
+   */
+  let queue = [];            // [{ id, name, source, duration }], source a File/Blob or the desktop's own link address
+  let deck = null;           // the track playing: { item, t, gain }
+  let pre = null;            // the one after it, opened a few seconds early: { id, ready }
+  let switching = false, queueSeq = 0;
   let trackLoading = false, trackNote = "";
-  async function loadTrack(file) { return loadBlob(file.name, file); }
-  async function loadBlob(name, blob) {
-    graph();
-    stopTrack();
-    track?.release();
-    track = null;
-    trackNote = "";
-    trackLoading = true;
-    paint();
+  const curIndex = () => (deck ? queue.findIndex((q) => q.id === deck.item.id) : -1);
+  const nextIndex = () => {
+    const i = curIndex();
+    if (i + 1 < queue.length) return i + 1;
+    return show.repeat && queue.length ? 0 : -1;
+  };
+  const mmss = (sec) => (Number.isFinite(sec) && sec >= 0 ? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}` : "–:––");
+  // Equal power, so the two together stay as loud through the middle of a fade.
+  const CURVE_IN = Float32Array.from({ length: 33 }, (_, k) => Math.sin((k / 32) * Math.PI / 2));
+  const CURVE_OUT = Float32Array.from({ length: 33 }, (_, k) => Math.cos((k / 32) * Math.PI / 2));
+
+  async function openDeck(item) {
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(musicGain);
     try {
-      track = await window.StudioDeck.load(ctx, musicGain, blob, name);
+      const t = await window.StudioDeck.load(ctx, gain, item.source, item.name);
+      if (Number.isFinite(t.duration)) item.duration = t.duration;
+      return { item, t, gain };
+    } catch (e) { try { gain.disconnect(); } catch {} throw e; }
+  }
+  function closeDeck(d, after = 0) {
+    if (!d) return;
+    const end = () => { d.t.el.ontimeupdate = d.t.el.onended = null; d.t.release(); try { d.gain.disconnect(); } catch {} };
+    after ? setTimeout(end, after * 1000 + 300) : end();
+  }
+  function dropPre() { const p = pre; pre = null; p?.ready.then((d) => closeDeck(d)).catch(() => {}); }
+  /** The track's own clock: the time on the panel, the next one opened early, the hand-over. */
+  function watch(d) {
+    d.t.el.ontimeupdate = () => {
+      if (deck !== d) return;
+      const el = d.t.el, now = $s("stTime");
+      if (now) now.textContent = `${mmss(el.currentTime)} / ${mmss(el.duration)}`;
+      const left = el.duration - el.currentTime;
+      if (!Number.isFinite(left) || switching) return;
+      const n = nextIndex();
+      if (n < 0) return;
+      const fade = fadeFor(d);
+      if (left <= fade + 6 && (!pre || pre.id !== queue[n].id)) { dropPre(); const item = queue[n]; pre = { id: item.id, ready: openDeck(item) }; pre.ready.catch(() => {}); }
+      if (left <= fade + 0.2) playAt(n, fade);
+    };
+    d.t.el.onended = () => {
+      if (deck !== d || switching) return;
+      const n = nextIndex();
+      if (n >= 0) return playAt(n, 0);
+      // The end of the queue: the deck is let go, so Play starts from the top.
+      deck = null; closeDeck(d); paint();
+    };
+  }
+  // Never longer than a third of the track: a twelve-second fade on a jingle would be all of it.
+  const fadeFor = (d) => Math.max(0, Math.min(show.xfade, (Number.isFinite(d?.t.duration) ? d.t.duration : 600) / 3));
+  /**
+   * Take a gain from wherever it is to `to`, along an equal-power curve.
+   *
+   * A gain may be in the middle of another fade when this is asked (Next,
+   * pressed twice): the fade under way is held where it has got to and the new
+   * one starts from there. Scheduling a curve over one still running throws,
+   * and a throw here once left the queue refusing every press after it.
+   */
+  function fadeTo(gain, to, at, dur) {
+    const g = gain.gain;
+    try { g.cancelAndHoldAtTime(at); } catch { try { g.cancelScheduledValues(at); } catch {} }
+    const from = g.value;
+    try {
+      g.setValueCurveAtTime(to ? CURVE_IN.map((v) => from + (1 - from) * v) : CURVE_OUT.map((v) => from * v), at, dur);
     } catch {
-      trackNote = tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file.");
+      try { g.cancelScheduledValues(at); g.setValueAtTime(from, at); g.linearRampToValueAtTime(to, at + dur); } catch { g.value = to; }
     }
-    trackLoading = false;
+  }
+  /** Go to track i, fading the one playing into it over `fade` seconds. */
+  async function playAt(i, fade = fadeFor(deck)) {
+    const item = queue[i];
+    if (!item || switching) return;
+    switching = true;
+    try {
+      graph();
+      await ctx.resume().catch(() => {});
+      const old = deck;
+      let next = null;
+      try {
+        next = pre && pre.id === item.id ? await pre.ready : await openDeck(item);
+      } catch {
+        // Left out of the queue rather than left to fail again at the next turn.
+        queue = queue.filter((q) => q.id !== item.id);
+        trackNote = `${item.name}: ${tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file.")}`;
+      }
+      if (pre && pre.id === item.id) pre = null; else dropPre();
+      if (!next) return;
+      const audible = !!old && !old.t.el.paused;
+      const dur = audible ? Math.max(0.03, fade) : 0.03;
+      try { next.t.el.currentTime = 0; } catch {}
+      await next.t.el.play().catch(() => {});
+      // Both fades start from the same moment, and only once the new track is
+      // really sounding: started before it, the new one arrived already up.
+      const at = ctx.currentTime;
+      fadeTo(next.gain, 1, at, dur);
+      if (old) { fadeTo(old.gain, 0, at, dur); closeDeck(old, dur); }
+      deck = next;
+      watch(next);
+    } finally {
+      switching = false; trackLoading = false;
+      meters();
+      paint();
+    }
+  }
+  const playing = () => !!deck && !deck.t.el.paused;
+  function playTrack() {
+    if (deck) deck.t.el.play().catch(() => {});
+    else if (queue.length) playAt(0, 0);
+  }
+  function stopTrack() { deck?.t.el.pause(); }
+  function nextTrack() { const n = nextIndex(); if (n >= 0) playAt(n, Math.min(fadeFor(deck), 3)); }
+  function prevTrack() {
+    // Three seconds in, "previous" means the start of this one, as on any player.
+    if (deck && deck.t.el.currentTime > 3) { deck.t.el.currentTime = 0; return; }
+    const i = curIndex();
+    if (i > 0) playAt(i - 1, Math.min(fadeFor(deck), 3));
+    else if (deck) deck.t.el.currentTime = 0;
+  }
+  function removeTrack(id) {
+    const i = queue.findIndex((q) => q.id === id);
+    if (i < 0) return;
+    const was = deck?.item.id === id;
+    const wasPlaying = playing();
+    const after = queue[i + 1] || null;
+    queue = queue.filter((q) => q.id !== id);
+    if (pre?.id === id) dropPre();
+    if (was) {
+      const old = deck; deck = null; closeDeck(old);
+      if (after && wasPlaying) return playAt(queue.indexOf(after), 0);
+    }
+    paint();
+  }
+  function moveTrack(id, by) {
+    const i = queue.findIndex((q) => q.id === id), j = i + by;
+    if (i < 0 || j < 0 || j >= queue.length) return;
+    [queue[i], queue[j]] = [queue[j], queue[i]];
+    dropPre();                      // what comes next may have changed
+    paint();
+    $s(`stMove${by < 0 ? "Up" : "Down"}-${id}`)?.focus?.();
+  }
+  /** Add tracks to the end. The first one plays as soon as it is in, unless a show is live. */
+  async function addTracks(list) {
+    graph();
+    trackNote = "";
+    // A file's name without its ending: ".wav" tells a host nothing and costs the row five letters.
+    const bare = (n) => String(n || "").replace(/\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|webm|aiff?|wma|mp2)$/i, "") || String(n || "");
+    const added = [...list].map((src) => ({ id: `q${++queueSeq}`, name: bare(src.name), source: src.source, duration: null }));
+    if (!added.length) return;
+    const idle = !deck && !switching;
+    queue.push(...added);
+    for (const item of added) window.StudioDeck.probe(item.source).then((d) => { if (d) { item.duration = d; const cell = $s(`stDur-${item.id}`); if (cell) cell.textContent = mmss(d); } });
     // It plays as soon as it is in, so adding a track is hearing it. On air it
     // waits for Play: a track that starts by itself in the middle of a show is
     // not a favour.
-    if (track && phase !== "live") { await ctx.resume().catch(() => {}); playTrack(); meters(); setTimeout(paint, 60); }
-    paint();
+    if (idle && phase !== "live") { trackLoading = true; paint(); await playAt(queue.indexOf(added[0]), 0); }
+    else paint();
   }
+  const loadFiles = (files) => addTracks([...files].map((f) => ({ name: f.name, source: f })));
+  async function loadBlob(name, source) { const before = queue.length; await addTracks([{ name, source }]); return queue.length > before; }
+  function clearQueue() { dropPre(); const old = deck; deck = null; closeDeck(old); queue = []; trackNote = ""; }
   /**
    * A track from a link (desktop: main opens it and passes it through as it
    * arrives, src/main/ipc-app.js, so it plays from the first second). Melton,
@@ -342,8 +502,9 @@
     linking = false;
     if (r?.src) {
       linkNote = "";
+      const n = queue.length;
       await loadBlob(r.name, r.src);
-      if (!track) { trackNote = ""; linkNote = tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again."); paint(); }
+      if (queue.length <= n && trackNote) { trackNote = ""; linkNote = tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again."); paint(); }
       return;
     }
     linkNote = {
@@ -355,9 +516,6 @@
     }[r?.error] || tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again.");
     paint();
   }
-  const playing = () => !!track && !track.el.paused;
-  function playTrack() { track?.el.play().catch(() => { trackNote = tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file."); paint(); }); }
-  function stopTrack() { track?.el.pause(); }
   // Every frame: the meters, and the music dipping under the voice.
   function meters() {
     if (raf || !ctx) return;
@@ -399,7 +557,7 @@
   // Rehearsing: only you. Live: in the prototype, still only you — but the
   // panel, the player's status and the globe show what listeners will see.
   // A voice, or a track: a set with no talking is a show too.
-  const hasSound = () => !!micStream || !!track || !!lineStream;
+  const hasSound = () => !!micStream || queue.length > 0 || !!lineStream;
   const ready = () => hasSound() && !!show.title.trim() && show.rights && show.adult && !!show.place;
   async function go(to) {
     if (to !== "off" && !hasSound()) await openMic();
@@ -535,13 +693,37 @@
         el("input", { type: "range", min: "0", max: "2", step: "0.01", value: String(show.micVol), "aria-label": tt("studio.voiceLevel", "Voice level"),
           oninput: (e) => { show.micVol = +e.target.value; micGain.gain.value = show.micVol; keep(); } })), meter("meterMic"));
     }
-    const pick = el("input", { type: "file", accept: "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm", id: "stFile", hidden: true,
-      onchange: (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) loadTrack(f); } });
+    // The queue: the show's music, when it is played here.
+    const pick = el("input", { type: "file", multiple: true, accept: "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm", id: "stFile", hidden: true,
+      onchange: (e) => { const fs = [...(e.target.files || [])]; e.target.value = ""; if (fs.length) loadFiles(fs); } });
     sound.append(pick);
-    if (!track) {
+    if (!queue.length) {
       sound.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status",
         text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.noTrack", "No music under you yet") }),
-        el("button", { class: "linkbtn", type: "button", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addTrack", "Add a track"))));
+        el("button", { class: "linkbtn", type: "button", id: "stAdd", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addTracks", "Add tracks"))));
+    } else {
+      const on = deck?.item.id, at = curIndex();
+      sound.append(el("div", { class: "deck transport" },
+        el("button", { class: "sheetbtn", type: "button", id: "stPlay", onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); setTimeout(paint, 60); } },
+          playing() ? tt("studio.pause", "Pause") : tt("studio.play", "Play")),
+        el("button", { class: "linkbtn", type: "button", id: "stPrev", disabled: !deck, onclick: prevTrack }, tt("studio.prev", "Previous")),
+        el("button", { class: "linkbtn", type: "button", id: "stNext", disabled: nextIndex() < 0 || switching, onclick: nextTrack }, tt("studio.next", "Next")),
+        el("span", { class: "time", id: "stTime", text: deck ? `${mmss(deck.t.el.currentTime)} / ${mmss(deck.t.el.duration)}` : "" })));
+      const list = el("ol", { class: "queue", "aria-label": tt("studio.queue", "Queue") });
+      queue.forEach((q, k) => list.append(el("li", { class: q.id === on ? "on" : "", "aria-current": q.id === on ? "true" : false },
+        el("button", { class: "qname", type: "button", title: q.name, onclick: () => { if (q.id !== on) playAt(queue.indexOf(q), Math.min(fadeFor(deck), 3)); },
+          "aria-label": `${tt("studio.playTrack", "Play")} ${q.name}` }, el("span", { text: q.name, dir: "auto" })),
+        el("span", { class: "qdur", id: `stDur-${q.id}`, text: mmss(q.duration) }),
+        el("button", { class: "qbtn", type: "button", id: `stMoveUp-${q.id}`, disabled: k === 0, onclick: () => moveTrack(q.id, -1),
+          "aria-label": `${tt("studio.moveUp", "Move up")}: ${q.name}`, title: tt("studio.moveUp", "Move up") }, "↑"),
+        el("button", { class: "qbtn", type: "button", id: `stMoveDown-${q.id}`, disabled: k === queue.length - 1, onclick: () => moveTrack(q.id, 1),
+          "aria-label": `${tt("studio.moveDown", "Move down")}: ${q.name}`, title: tt("studio.moveDown", "Move down") }, "↓"),
+        el("button", { class: "qbtn", type: "button", onclick: () => removeTrack(q.id),
+          "aria-label": `${tt("studio.remove", "Remove")}: ${q.name}`, title: tt("studio.remove", "Remove") }, "×"))));
+      sound.append(list);
+      sound.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status",
+        text: at >= 0 && nextIndex() >= 0 ? `${tt("studio.upNext", "Next")}: ${queue[nextIndex()].name}` : (at >= 0 ? tt("studio.lastTrack", "Last track in the queue") : "") }),
+        el("button", { class: "linkbtn", type: "button", id: "stAdd", onclick: () => pick.click() }, tt("studio.addTracks", "Add tracks"))));
     }
     if (trackNote) sound.append(el("p", { class: "fine", role: "alert", text: trackNote }));
     // From a link: the desktop only, which can fetch it (on the web the page's
@@ -556,15 +738,15 @@
           linking ? tt("studio.linkFetching", "Fetching…") : tt("studio.linkAdd", "Add from a link"))));
       if (linkNote) sound.append(el("p", { class: "fine", role: "alert", text: linkNote }));
     }
-    if (track) {
-      sound.append(el("div", { class: "deck" },
-        el("button", { class: "sheetbtn", type: "button", id: "stPlay", onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); setTimeout(paint, 50); } },
-          playing() ? tt("studio.pause", "Pause") : tt("studio.play", "Play")),
-        el("span", { class: "name", text: track.name }),
-        el("button", { class: "linkbtn", type: "button", onclick: () => pick.click() }, tt("studio.change", "Change"))));
+    if (queue.length) {
       sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.music", "Music") }),
         el("input", { type: "range", min: "0", max: "1", step: "0.01", value: String(show.musicVol), "aria-label": tt("studio.musicLevel", "Music level"),
           oninput: (e) => { show.musicVol = +e.target.value; keep(); } })), meter("meterMusic"));
+      const secs = el("span", { class: "time", id: "stFadeSay", text: `${show.xfade} s` });
+      sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.crossfade", "Crossfade") }),
+        el("input", { type: "range", min: "0", max: "12", step: "1", value: String(show.xfade), "aria-label": tt("studio.crossfadeLabel", "Crossfade between tracks, in seconds"),
+          oninput: (e) => { show.xfade = +e.target.value; secs.textContent = `${show.xfade} s`; dropPre(); keep(); } }), secs));
+      sound.append(toggleRow(tt("studio.repeat", "Repeat the queue"), show.repeat, () => { show.repeat = !show.repeat; dropPre(); keep(); paint(); }));
     }
     // Music from an input, or from this computer: what a DJ sends (openLine).
     {
@@ -575,7 +757,7 @@
         sound.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status", text: lineName }),
           el("button", { class: "linkbtn", type: "button", id: "stLineStop", disabled: live, "aria-label": tt("studio.lineStopLabel", "Stop this input"),
             onclick: () => { closeLine(); show.lineId = ""; keep(); paint(); } }, tt("studio.lineStop", "Stop"))));
-        if (!track) sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.music", "Music") }),
+        if (!queue.length) sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.music", "Music") }),
           el("input", { type: "range", min: "0", max: "1", step: "0.01", value: String(show.musicVol), "aria-label": tt("studio.musicLevel", "Music level"),
             oninput: (e) => { show.musicVol = +e.target.value; keep(); } })));
         sound.append(meter("meterLine"));

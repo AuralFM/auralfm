@@ -3408,6 +3408,31 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the studio open: the globe sits between the panels, and the host is in their town's room with no label");
 }
 
+// ── the queue hands over on its own clock ───────────────────────────────────
+// The studio plays several tracks in order, each fading into the next (5 Oct
+// 2026). Three things it rests on, each a way it broke or would have:
+//   - the hand-over is driven by the track's own timeupdate. Animation frames
+//     stop when the window is behind another, and a show goes on there;
+//   - a fade asked for while another is under way holds that one where it is
+//     (cancelAndHoldAtTime). A curve scheduled over a running curve throws,
+//     and the queue's "switching" flag is cleared in a finally, because a throw
+//     that left it set refused every press afterwards;
+//   - the deck does not loop a track by itself, or the queue never moves on.
+{
+  console.log("\nthe queue hands over on its own clock");
+  const studio = readSrc("src/renderer/explore-studio.js");
+  const q = studio.slice(studio.indexOf("// ── the queue ──"), studio.indexOf("* A track from a link (desktop"));
+  const deckSrc = readSrc("src/renderer/studio-deck.js").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const gaps = [];
+  if (!/ontimeupdate = \(\) => \{[\s\S]*?playAt\(n, fade\)/.test(q)) gaps.push("the next track is not started from the playing track's timeupdate");
+  if (/requestAnimationFrame/.test(q)) gaps.push("the queue leans on animation frames");
+  if (!/cancelAndHoldAtTime\(at\)/.test(q)) gaps.push("a fade does not hold the one already under way");
+  if (!/\} finally \{\s*switching = false;/.test(q)) gaps.push("a failed hand-over can leave the queue locked");
+  if (/\.loop\s*=\s*true/.test(deckSrc)) gaps.push("the deck loops a track by itself");
+  gaps.length ? fail("the queue hands over on its own clock", gaps.join("; "))
+    : pass("tracks hand over from timeupdate, fades hold and never lock the queue, and no track loops by itself");
+}
+
 // ── the studio is not on the public web ─────────────────────────────────────
 // listen.auralfm.xyz/?studio opened the studio for anyone with the link, and a
 // flag kept in the browser kept it open afterwards. Melton, 5 Oct 2026: too
