@@ -204,8 +204,13 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
    * measured from, so every sheet and panel pinned to "the bottom" means the
    * bottom of the screen.
    */
-  html.tail { min-height: var(--tall); }
-  html.tail body { height: var(--tall); contain: layout; }
+  /* Pinned, not just taller. A page taller than its window can be scrolled,
+     whatever "overflow: hidden" says: opening Settings moved the focus into
+     its sheet, the phone scrolled it "into view", and the whole app slid half
+     a screen up with the tab bar in the middle (Melton, 6 Oct). A pinned box
+     adds nothing that can be scrolled to, and clips what hangs out of it (the
+     stations sheet runs on below the screen by design). */
+  html.tail body { position: fixed; top: 0; left: 0; right: 0; height: var(--tall); contain: layout; overflow: clip; }
   .cols { flex-direction: column; }
   /* Every panel is the same card: half the screen, anchored above the player,
      with the globe still visible over it. A panel that covers the globe is a

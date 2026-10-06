@@ -3418,13 +3418,18 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // steady number there. So the page is given the screen's own height. Ways to
 // bring either bug back: lean on dvh again; do it under the opaque bar (there
 // the page starts lower and the tab bar would leave the screen); hold the
-// height while the keyboard is up; or drop the containment, so the bars reach
-// the bottom and every sheet stops short of it.
+// height while the keyboard is up; drop the containment, so the bars reach
+// the bottom and every sheet stops short of it; or make the page taller
+// without pinning it, which lets a change of focus scroll the whole app.
 {
   console.log("\nthe installed phone app reaches the bottom of the screen");
   const css = readSrc("web/web.css"), bridge = readSrc("web/bridge.js");
   const gaps = [];
-  if (!/html\.tail body \{ height: var\(--tall\); contain: layout; \}/.test(css)) gaps.push("the body is not given the screen's height, or fixed panels are not measured from it");
+  if (!/html\.tail body \{ position: fixed; top: 0; left: 0; right: 0; height: var\(--tall\); contain: layout; overflow: clip; \}/.test(css)) gaps.push("the body is not pinned at the screen's height, clipped, with fixed panels measured from it");
+  // A page merely made taller scrolls when Settings takes the focus, and the
+  // whole app slides up with the tab bar in the middle of the screen.
+  if (/html\.tail \{[^}]*min-height/.test(css)) gaps.push("the page is made taller than its window, which lets it be scrolled");
+  if (!/const installed = !framed && /.test(bridge)) gaps.push("the Settings frame is treated as the screen");
   if (/html\.tail[^}]*\{[^}]*dvh/.test(css)) gaps.push("the stretched page leans on dvh again");
   if (!/if \(installed && upright && window\.AuralLite && inset > 0 && !typing\(\)\) tall = full;/.test(bridge)) gaps.push("the height is set outside an installed, upright phone under the see-through bar, or while typing");
   gaps.length ? fail("the installed phone app reaches the bottom of the screen", gaps.join("; "))

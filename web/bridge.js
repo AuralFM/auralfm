@@ -48,11 +48,13 @@
    * field behind it.
    */
   const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") || document.activeElement?.isContentEditable === true;
+  // Settings is this same page in a frame (below): the frame is not the screen.
+  const framed = (() => { try { return window.parent !== window; } catch { return true; } })();
   const fitScreen = () => {
     const root = document.documentElement;
     let tall = 0, seen = {};
     try {
-      const installed = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+      const installed = !framed && (navigator.standalone === true || matchMedia("(display-mode: standalone)").matches);
       const upright = matchMedia("(orientation: portrait)").matches;
       if (document.body) {
         const probe = document.createElement("div");
@@ -81,6 +83,16 @@
   // Typing starts and stops: the keyboard gets the page it needs, then it is given back.
   addEventListener("focusin", fitScreen);
   addEventListener("focusout", () => setTimeout(fitScreen, 250));
+  // Belt and braces for the pinned page (web/web.css): if anything scrolls the
+  // window all the same, it is put back, so the app cannot be left slid up.
+  const unscroll = () => {
+    if (!document.documentElement.classList.contains("tail")) return;
+    if (window.scrollY || document.documentElement.scrollTop || document.body?.scrollTop) {
+      window.scrollTo(0, 0); document.documentElement.scrollTop = 0; if (document.body) document.body.scrollTop = 0;
+    }
+  };
+  addEventListener("scroll", unscroll, { passive: true });
+  document.addEventListener("scroll", unscroll, { passive: true, capture: true });
   /**
    * What the phone reports, on the screen, for when this is wrong again: the
    * numbers above can only be read on the device itself. Shown after "fit" is
