@@ -27,16 +27,6 @@
   // A phone gets the half-size globe pictures (explore-core.js, texUrl). The
   // same question the phone layout asks (web/web.css), asked once at load.
   window.AuralLite = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)").matches;
-  // The sky behind the status bar, as a trial (Melton, 5 Oct 2026). iOS takes
-  // the status bar's style from this tag when the icon is added to the Home
-  // Screen, and "black-translucent" lets the page run under the clock, the way
-  // a full-screen video does. It was "black" for a reason (scripts/build-web.mjs:
-  // the see-through mode once left a dead band under the tab bar), so the
-  // default stays, and only an icon added from listen.auralfm.xyz/?sky gets the
-  // new one. If it holds on a real phone, it becomes the default.
-  if (new URLSearchParams(location.search).has("sky")) {
-    document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.setAttribute("content", "black-translucent");
-  }
   "use strict";
   // Settings opens as a popover over the app, in a frame. One bridge serves
   // both: a second would open its own relay connections, and a mute made in

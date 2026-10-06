@@ -3387,6 +3387,28 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("character references are decoded (decimal, hex, named, twice-escaped) and no station is named by a URL");
 }
 
+// ── a tag says something ────────────────────────────────────────────────────
+// A place's commonest tags are its chips in the app, and they were "music",
+// "other", "tbd", "(null)" and "moi merino": a contributor's own name, on 923
+// stations. scripts/lib/match.mjs leaves those out of the bundle (junkTag), by
+// exact word, so a real tag that contains one keeps it.
+{
+  console.log("\na tag says something");
+  const { junkTag } = await import("./lib/match.mjs");
+  const gaps = [];
+  for (const t of ["(null)", "TBD", "music", "Música", "moi merino", "#", "@fm te conecta", "--", ""]) if (!junkTag(t)) gaps.push(`"${t}" is kept`);
+  for (const t of ["world music", "radio drama", "jazz", "r&b", "80s", "fm", "música regional"]) if (junkTag(t)) gaps.push(`"${t}" is dropped`);
+  const min = R("data/stations.min.json");
+  if (!fs.existsSync(min)) skip("a tag says something: the catalogue", "data/ is not built");
+  else {
+    let junk = 0;
+    for (const c of JSON.parse(fs.readFileSync(min, "utf8")).c) if (c[4] && c[4].split(",").some(junkTag)) junk++;
+    if (junk) gaps.push(`${junk.toLocaleString("en-US")} station(s) in the bundle carry a tag that says nothing`);
+  }
+  gaps.length ? fail("a tag says something", gaps.join("; "))
+    : pass("no station in the bundle carries a placeholder, a filler word or a contributor's name as a tag");
+}
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

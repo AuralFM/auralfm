@@ -307,13 +307,15 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
 <meta name="theme-color" content="#0C0B0B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<!-- "black", not "black-translucent": that mode sizes the installed window to
-     the screen minus the top inset but still anchors it at the top, stranding a
-     strip at the bottom that the page can never paint — the band under the tab
-     bar. It is not reachable from CSS, which is why dvh, fixed insets and
-     measured heights all failed to close it. Baked in when the icon is added,
-     so an existing icon has to be removed and re-added to pick this up. -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<!-- "black-translucent": the page runs under the clock and the battery, so
+     the sky reaches the top of the phone the way a full-screen video does
+     (Melton, 5 Oct 2026). It was "black" because the see-through mode once
+     sized the installed window short and stranded a dead band under the tab
+     bar; web/web.css now makes the root taller by the bar's height when it is
+     installed, and an icon added that way was tried on a real iPhone before
+     this became the default. Baked in when the icon is added: an existing icon
+     keeps the black bar until it is removed and added again. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AuralFM">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icons/icon-180.png">

@@ -134,6 +134,21 @@ export const shown = (title) => title === "Online only" ? "Online, no country" :
  *  list and on the share card. Kept in stations.json, left out of the app. */
 export const urlTitle = (title) => /^\s*(https?:\/\/|www\.)\S+\s*$/i.test(String(title || ""));
 
+/**
+ * A tag that says nothing about a station. The app shows a place's commonest
+ * tags as chips, and the chips were "music", "other", "tbd", "(null)" and one
+ * contributor's own name, which he had put on 923 stations (Melton, 5 Oct: get
+ * the catalogue right). Exact words only, so "world music" and "radio drama"
+ * keep theirs: a form's empty value, a template nobody filled in, the two
+ * words every station is, "various" in four languages, and anything that is
+ * only a hashtag, a handle or punctuation. Kept in stations.json, left out of
+ * the app, like a station named by a web address.
+ */
+const JUNK = new Set(["undefined", "null", "(null)", "none", "n/a", "tbd", "unknown", "genre", "default genre",
+  "su_genero", "su_genero_musical", "other", "others", "misc", "various", "varied", "variado", "varios", "general",
+  "music", "música", "musica", "radio", "estación", "estacion", "moi merino"]);
+export const junkTag = (t) => { const k = String(t || "").trim().toLowerCase(); return !k || JUNK.has(k) || /^[#@]/.test(k) || !/[\p{L}\p{N}]/u.test(k); };
+
 export function writeBundles(full, F) {
   fs.writeFileSync(F.full, JSON.stringify(full));
   const min = {
@@ -144,8 +159,7 @@ export function writeBundles(full, F) {
     // working the moment anything follows them.
     c: full.channels.filter((c) => !urlTitle(c.title)).map((c) => [
       c.id, c.title, c.p, c.secure ? 1 : 0,
-      // "undefined" and "null" are a form's empty value, sent as a tag.
-      c.tags?.length ? c.tags.filter((t) => t && !/^(undefined|null|none|n\/a)$/i.test(t)).join(",") : "",
+      c.tags?.length ? c.tags.filter((t) => !junkTag(t)).join(",") : "",
       c.rbuuid || "",
       c.ok === 0 ? 0 : c.ok === 1 ? 1 : "",
       c.explicit ? 1 : "",
