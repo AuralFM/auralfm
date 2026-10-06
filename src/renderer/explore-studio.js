@@ -568,6 +568,8 @@
     // your voice through the microphone.
     if (to !== "off" && document.body.classList.contains("playing")) window.auralfm.transport?.({ action: "toggle" });
     if (to !== "off" && phase === "off") startedAt = Date.now();
+    // Leaving the air: the people listening are told, and let go.
+    if (phase === "live" && to !== "live") closeListeners();
     phase = to;
     window.AuralStudio.live = phase === "live" && show.place ? { lat: show.place.lat, lon: show.place.lon, title: show.title } : null;
     if (typeof paintRings === "function") paintRings();
@@ -608,7 +610,8 @@
     const air = el("div", { class: "sec" }, head(tt("studio.onAir", "On air")));
     const label = phase === "live" ? tt("studio.live", "Live") : phase === "rehearsal" ? tt("studio.rehearsing", "Rehearsing") : phase === "planned" ? tt("studio.planned", "Planned") : tt("studio.off", "Off air");
     air.append(el("div", { class: "air" },
-      el("span", { class: "airpill", role: "status" }, el("i"), el("span", { text: label }), (phase === "live" || phase === "rehearsal") ? el("span", { id: "airclock", text: "00:00:00" }) : null)));
+      el("span", { class: "airpill", role: "status" }, el("i"), el("span", { text: label }), (phase === "live" || phase === "rehearsal") ? el("span", { id: "airclock", text: "00:00:00" }) : null),
+      phase === "live" ? el("span", { class: "time", id: "stHeard", role: "status", text: `${heardNow()} ${tt("studio.listening", "listening")}` }) : null));
     const why = !hasSound() ? tt("studio.needMic", "Turn on your microphone, or add a track, below.")
       : !show.title.trim() ? tt("studio.needTitle", "Give your show a name.")
       : !show.place ? tt("studio.needPlace", "Choose the town you go out from.")
@@ -626,7 +629,7 @@
     }
     air.append(btns);
     air.append(el("p", { class: "airnote", id: "stWhy", text:
-      phase === "live" ? tt("studio.livePrototype", "This is a prototype: your town is marked live on the globe, but nobody can hear you yet. Sending the sound to listeners is the next step.")
+      phase === "live" ? tt("studio.liveNote", "You are live. People on AuralFM's beta can find your show and hear it, straight from this computer: twelve at a time, with Show other listeners on. Each connection shows the other's network address, as a station's stream does.")
       : phase === "planned" ? tt("studio.plannedPrototype", "This is a prototype: your town is marked on the globe as planned.")
       : phase === "rehearsal" ? tt("studio.rehearsalNote", "Only you can hear this. Put on headphones and turn on “Hear yourself” to check your mix.")
       : why || tt("studio.readyNote", "Ready. Rehearse first: only you will hear it.") }));
@@ -829,10 +832,11 @@
   function syncHost() {
     const p = show.place;
     const on = (!panel.hidden || phase !== "off") && p && typeof p.lat === "number" && typeof p.lon === "number";
-    const next = on ? { lat: p.lat, lon: p.lon, title: p.title } : null;
+    // Live, the show's name goes out with the town: that is how it is found.
+    const next = on ? { lat: p.lat, lon: p.lon, title: p.title, live: phase === "live", show: phase === "live" ? show.title.trim() : "" } : null;
     if (JSON.stringify(next) !== JSON.stringify(window.AuralStudio.hosting || null)) {
       window.AuralStudio.hosting = next;
-      window.auralfm.studioHost?.(next ? next.lat : null, next ? next.lon : null);
+      window.auralfm.studioHost?.(next ? next.lat : null, next ? next.lon : null, !!next?.live, next?.show || "");
       if (typeof syncChat === "function" && typeof prefs !== "undefined") syncChat(prefs);
     }
     room();
@@ -863,6 +867,58 @@
   }
   let studioVibes = [];
 
+  // ── the people listening ──────────────────────────────────────────────────
+  /**
+   * Live, the show goes to whoever asks for it: each listener's device and
+   * this one connect directly, and the mix (`mixDest`, the same sound the
+   * "Going out" meter shows) is sent down each connection. explore-shows.js is
+   * the other end and says how the two find each other.
+   *
+   * Twelve at most. Every listener is another copy of the sound leaving this
+   * computer's connection at 128 kbps; past a dozen, a home upload starts to
+   * break up for everybody. The thirteenth is told the show is full.
+   */
+  const MAX_LISTENERS = 12;
+  const heard = new Map();         // the handshake's id → { pc, from }
+  const heardNow = () => [...heard.values()].filter((l) => l.pc.connectionState === "connected").length;
+  function paintHeard() {
+    const n = $s("stHeard");
+    if (n) n.textContent = `${heardNow()} ${tt("studio.listening", "listening")}`;
+  }
+  function dropListener(sid) {
+    const l = heard.get(sid);
+    if (!l) return;
+    heard.delete(sid);
+    try { l.pc.onconnectionstatechange = null; l.pc.close(); } catch {}
+    paintHeard();
+  }
+  function closeListeners() {
+    for (const [sid, l] of [...heard]) { window.AuralRtc?.send(l.from, { t: "bye", sid }); dropListener(sid); }
+  }
+  window.AuralRtc?.onSignal(async (from, msg) => {
+    if (msg.t === "bye") { if (heard.get(msg.sid)?.from === from) dropListener(msg.sid); return; }
+    if (msg.t !== "offer" || typeof msg.sdp !== "string" || heard.has(msg.sid)) return;
+    if (phase !== "live" || !mixDest) return;
+    if (heard.size >= MAX_LISTENERS) return void window.AuralRtc.send(from, { t: "full", sid: msg.sid });
+    const pc = new RTCPeerConnection({ iceServers: window.AuralRtc.ICE });
+    heard.set(msg.sid, { pc, from });
+    try {
+      for (const tr of mixDest.stream.getAudioTracks()) pc.addTrack(tr, mixDest.stream);
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "failed" || pc.connectionState === "closed") dropListener(msg.sid);
+        else paintHeard();
+      };
+      await pc.setRemoteDescription({ type: "offer", sdp: msg.sdp });
+      await pc.setLocalDescription(await pc.createAnswer());
+      await window.AuralRtc.gathered(pc);
+      if (phase !== "live" || !heard.has(msg.sid)) return dropListener(msg.sid);
+      const sent = await window.AuralRtc.send(from, { t: "answer", sid: msg.sid, sdp: window.AuralRtc.music(pc.localDescription.sdp) });
+      if (!sent) dropListener(msg.sid);
+      // A listener who never completes the connection does not hold a place.
+      setTimeout(() => { if (heard.get(msg.sid)?.pc === pc && pc.connectionState !== "connected") dropListener(msg.sid); }, 45000);
+    } catch { dropListener(msg.sid); }
+  });
+
   // ── open and close ───────────────────────────────────────────────────────
   function setOpen(on) {
     panel.hidden = !on;
@@ -884,6 +940,9 @@
   allowed().then(async (ok) => {
     if (!ok || !btn || !panel) return;
     btn.hidden = false;
+    // The listener's side (explore-shows.js) is on wherever the studio is.
+    window.AuralStudio.on = true;
+    window.AuralShows?.peers(typeof peers !== "undefined" ? peers : []);
     Icons.set(btn, "mic");
     btn.onclick = () => setOpen(panel.hidden);
     $s("studioClose").onclick = () => setOpen(false);

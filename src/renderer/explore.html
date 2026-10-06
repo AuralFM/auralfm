@@ -1100,6 +1100,25 @@
    * between the two (explore-trackers.js). Not on a phone, where the studio is
    * a sheet over the globe and the room is a tab.
    */
+  /* Shows on air (explore-shows.js): a small card above the stations, of the
+     same material, with the show's name, Listen, and what is happening. */
+  .livenow{flex:none;max-height:38%;overflow-y:auto;padding:12px 17px 12px;border-radius:var(--r-xl);
+    background:color-mix(in srgb, var(--bg) 94%, transparent);
+    -webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 18px 48px rgba(0,0,0,.38)}
+  .livenow[hidden]{display:none}
+  .livenow .secthead{padding:0 0 6px}
+  .liverow{display:flex;align-items:center;gap:10px;min-height:32px}
+  .liverow::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--err)}
+  .livename{flex:1;min-width:0;border:0;background:none;padding:4px 0;font:inherit;font-size:13px;font-weight:590;color:var(--label);
+    text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+  .liverow.on .livename{color:var(--accent)}
+  .livenow .linkbtn{flex:none;border:0;background:none;padding:6px 0;font:inherit;font-size:12px;color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:default}
+  .livename:focus-visible,.livenow .linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .livesay{margin:2px 0 6px;font-size:12px;line-height:1.45;color:var(--label2)}
+  @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
+    .livenow{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
+  }
   .roomwait{display:none}
   @media (min-width:701px) and (min-height:501px){
     body.studio-open .stations{display:none}
@@ -1845,6 +1864,12 @@
   <!-- The right-hand column: stations, and chat under them, as two cards of
        the same material floating on the globe. -->
   <div class="railcol">
+  <!-- Shows on air that can be heard (explore-shows.js). Only where the studio
+       is: the desktop's development and beta builds. -->
+  <div class="livenow" id="livenow" hidden aria-labelledby="livehead">
+    <div class="secthead" id="livehead" data-i18n="shows.live">Live now</div>
+    <div id="livelist"></div>
+  </div>
   <div class="stations">
     <div class="placehead" id="head" hidden><h2></h2><p></p><div class="hop" id="hop" hidden></div><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
@@ -2060,6 +2085,7 @@
 <script src="explore-core.js"></script>
 <script src="explore-stations.js"></script>
 <script src="explore-profile.js"></script>
+<script src="explore-shows.js"></script>
 <script src="studio-deck.js"></script>
 <script src="explore-studio.js"></script>
 <script src="explore-playback.js"></script>

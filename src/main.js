@@ -767,7 +767,7 @@ function syncNostrPresence() {
     nostr.leave();
     return;
   }
-  nostr.join(ch.lat, ch.lon, hosting ? "" : ch.title || "");
+  nostr.join(ch.lat, ch.lon, hosting ? (hosting.live ? hosting.title : "") : ch.title || "", !!hosting?.live);
 }
 
 /**
@@ -781,12 +781,18 @@ function syncNostrPresence() {
  * announce as playing.
  */
 let hosting = null;
-ipcMain.on("studio:host", (_e, lat, lon) => {
-  const next = typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+ipcMain.on("studio:host", (_e, lat, lon, live, title) => {
+  // Live, the show's name goes out as the label and is marked as a show, which
+  // is how a listener finds it; off air, or only listening to someone else's
+  // show from that town, nothing but the place does.
+  const next = typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
+    ? { lat, lon, live: live === true, title: live === true ? String(title || "").slice(0, 60) : "" } : null;
   if (JSON.stringify(next) === JSON.stringify(hosting)) return;
   hosting = next;
   syncNostrPresence();
 });
+// A show's handshake, between a listener's device and a host's (explore-shows.js).
+ipcMain.handle("rtc:signal", (_e, to, payload) => nostr.signal(String(to || ""), payload));
 
 // ── tray ──────────────────────────────────────────────────────────────────────
 /**
@@ -1078,6 +1084,8 @@ if (!app.requestSingleInstanceLock()) {
      * presence-nostr's takeDm — so this is a fact about a keyholder rather than
      * a claim by a relay.
      */
+    // A muted person's handshake goes nowhere: they cannot ask to be connected.
+    nostr.onSignal((from, payload, at) => { if (!muted.has(from)) explore?.webContents.send("rtc:signal", from, payload, at); });
     nostr.onFavorited((pubkey, on) => {
       if (muted.has(pubkey)) return;      // a blocked person cannot become a contact
       social.noteMutual(pubkey, on);

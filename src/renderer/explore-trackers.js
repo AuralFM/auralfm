@@ -97,7 +97,8 @@ function paintRings() {
   // who turned all the layers off still had rings pulsing at them with nothing
   // in the panel to explain what they were.
   if (layers.listeners) {
-    for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
+    // A show on air where the studio is on: its town rings as a show does.
+    for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: p.live && window.AuralStudio?.on ? "live" : "peer", label: p.label });
   }
   // Your show, live (explore-studio.js): your town, in the accent, and always —
   // it is you, not a layer.

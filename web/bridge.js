@@ -654,6 +654,7 @@
 
     // messaging: the desktop's own, see web/messaging.js
     onPeers: on("peers"), onChat: on("chat"), onNotes: on("notes"), onDms: on("dms"),
+    onRtcSignal: (fn) => on("rtc")(([from, payload, at]) => fn(from, payload, at)),
     onHubMessages: on("hub"), onSocial: on("social"), onPanicWiped: on("wiped"),
     ...(chat ? chat.api : {
       presenceStats: none, presenceView: noop, chatHistory: empty, notesHistory: empty,

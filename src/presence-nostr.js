@@ -337,6 +337,10 @@ function coverageRelays(near = []) {
 }
 
 const BEAT_MS = 60_000;
+// A show on air says so three times as often. Somebody who arrives in the town
+// after it went live sees nothing until the next beat, and a minute of an
+// empty "Live now" is a minute in which they leave (measured: 58 seconds).
+const LIVE_BEAT_MS = 20_000;
 const STALE_MS = 4 * 60_000;      // drop a peer we have not heard from
 /**
  * ~20 km. Enough for "near here", too coarse to find anyone.
@@ -587,6 +591,24 @@ let onDms = () => {};
 let onHub = () => {};
 /** Set by main so an authenticated favorite signal can be recorded. */
 let onFavorited = () => {};
+/**
+ * A show's handshake (explore-shows.js, explore-studio.js): how a listener and
+ * a host agree to connect their two devices directly.
+ *
+ * It rides the private envelope, as a tag with no body, the way the favorite
+ * signal does: sealed to the other side's key, so no relay can read it. That
+ * matters more here than anywhere, because what is inside is a description of
+ * each device's network addresses. It goes to this callback and never near the
+ * conversation.
+ */
+let onSignal = () => {};
+const MAX_SIGNAL = 24000;
+function signal(to, payload) {
+  let body = "";
+  try { body = JSON.stringify(payload); } catch { return false; }
+  if (!body || body.length > MAX_SIGNAL) return false;
+  return dm(to, "", [["rtc", body]]);
+}
 
 /**
  * Every key that may appear in a `p` tag addressed to us, and its secret.
@@ -681,7 +703,7 @@ function peerList() {
     // is not a leak — this key was announced to every relay we are connected
     // to, by them, which is how we know they are here at all.
     if (c) list.push({ id: pubkey.slice(0, 8), pubkey, lat: c.lat, lon: c.lon,
-                       label: v.label, geohash: v.geohash });
+                       label: v.label, geohash: v.geohash, live: !!v.live });
   }
   return list;
 }
@@ -828,10 +850,10 @@ function announce(only) {
    * so one pair is mined and handed to each socket as it arrives.
    */
   const stale = !beacon || beacon.cell !== here.geohash || beacon.label !== here.label
-    || at - beacon.at >= BEAT_MS / 1000;
+    || beacon.live !== !!here.live || at - beacon.at >= (here.live ? LIVE_BEAT_MS : BEAT_MS) / 1000;
   if (stale) {
     beacon = {
-      cell: here.geohash, label: here.label, at,
+      cell: here.geohash, label: here.label, live: !!here.live, at,
       // The shared heartbeat. Empty content and a `g` tag, nothing else — the
       // convention says so and other clients read it.
       events: [
@@ -840,7 +862,9 @@ function announce(only) {
         sign({
           kind: LABEL_KIND, created_at: at,
           tags: [["g", here.geohash]],
-          content: JSON.stringify({ l: here.label }),
+          // `s: 1` is a show going out live from this key, and `l` its name
+          // (explore-studio.js). Ours alone, like the rest of this event.
+          content: JSON.stringify(here.live ? { l: here.label, s: 1 } : { l: here.label }),
         }),
       ],
     };
@@ -1083,6 +1107,15 @@ function takeDm(evt) {
    * bystander. It sets `mutual` only — never `favorite`. Somebody adding you is
    * not you adding them.
    */
+  const rtc = got.tags.find((t) => t[0] === "rtc")?.[1];
+  if (typeof rtc === "string") {
+    // Verified like any envelope: `got.pubkey` signed the seal, so this is the
+    // listener or the host it says it is. `got.at` is the real time it was
+    // written (the outer envelope's is fuzzed), which is how a stale one, kept
+    // by a relay and handed back on reconnecting, is told from a live one.
+    if (rtc.length <= MAX_SIGNAL) { try { onSignal(got.pubkey, JSON.parse(rtc), got.at); } catch { /* not ours to parse */ } }
+    return;
+  }
   const fav = got.tags.find((t) => t[0] === "fav")?.[1];
   if (fav === "1" || fav === "0") {
     onFavorited(got.pubkey, fav === "1");
@@ -1200,14 +1233,17 @@ function connect() {
 
       // Presence, either flavour. The label only exists in ours; a bitchat peer
       // is simply present, which is the whole claim being made.
-      let label = null;
+      let label = null, live = null;
       if (e.kind === LABEL_KIND) {
-        try { label = JSON.parse(e.content)?.l ?? null; } catch { /* optional */ }
+        try { const j = JSON.parse(e.content); label = j?.l ?? null; live = j?.s === 1; } catch { /* optional */ }
       }
       const prev = peers.get(e.pubkey);
       peers.set(e.pubkey, {
         geohash: g,
         label: String(label ?? prev?.label ?? "").slice(0, 60),
+        // Only our own label event says whether a show is live; the shared
+        // heartbeat that arrives beside it must not unsay it.
+        live: live ?? !!prev?.live,
         at: Date.now(),
       });
       emit();
@@ -1277,7 +1313,7 @@ function view(lat, lon) {
   if (sockets.length) subscribe();
 }
 
-function join(lat, lon, label) {
+function join(lat, lon, label, live = false) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
   const cell = geohash(lat, lon);
   // Tuning across the world changes which room you are in. The old room's
@@ -1296,7 +1332,7 @@ function join(lat, lon, label) {
     emitNow("messages");
     emitNow("notes");
   }
-  here = { geohash: cell, label: String(label || "").slice(0, 60) };
+  here = { geohash: cell, label: String(label || "").slice(0, 60), live: !!live };
 
   // Tuning from Rio to Tokyo changes which relays are near, and staying on the
   // old set would mean announcing into Tokyo's channel on South America's
@@ -1311,7 +1347,7 @@ function join(lat, lon, label) {
   if (moved && sockets.length) subscribe();
   announce();
   clearInterval(beat);
-  beat = setInterval(() => { announce(); prune(); }, BEAT_MS);
+  beat = setInterval(() => { announce(); prune(); }, here.live ? LIVE_BEAT_MS : BEAT_MS);
 }
 
 function leave() {
@@ -1519,7 +1555,8 @@ function forgetDms() {
   emitNow("dms");
 }
 
-module.exports = { join, leave, view, say, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
+module.exports = { join, leave, view, say, signal, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
+                   onSignal: (fn) => { onSignal = fn; },
                    drop, dm, thread, markRead, forgetDms,
                    joinHub, leaveHub, sayHub, lookupProfile, knownProfiles,
                    hubState: () => (hub ? { name: hub.name, tag: hub.tag } : null),

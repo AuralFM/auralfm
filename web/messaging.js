@@ -45,6 +45,7 @@ window.AuralChat = function create({ getPrefs, emit }) {
   nostr.onNotes((list) => emit("notes", visible(list)));
   nostr.onHub((list) => emit("hub", visible(list)));
   nostr.onDms((list) => emit("dms", visible(list)));
+  nostr.onSignal((from, payload, at) => { if (!muted.has(from)) emit("rtc", [from, payload, at]); });
   nostr.onFavorited((pubkey, on) => {
     if (muted.has(pubkey)) return;
     social.noteMutual(pubkey, on);
@@ -65,10 +66,11 @@ window.AuralChat = function create({ getPrefs, emit }) {
       nostr.leave();
       return;
     }
-    nostr.join(ch.lat, ch.lon, hosting ? "" : ch.title || "");
+    nostr.join(ch.lat, ch.lon, hosting ? (hosting.live ? hosting.title : "") : ch.title || "", !!hosting?.live);
   }
-  function host(lat, lon) {
-    const next = typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+  function host(lat, lon, live, title) {
+    const next = typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
+      ? { lat, lon, live: live === true, title: live === true ? String(title || "").slice(0, 60) : "" } : null;
     if (JSON.stringify(next) === JSON.stringify(hosting)) return;
     hosting = next;
     sync(lastPlayer);
@@ -108,7 +110,8 @@ window.AuralChat = function create({ getPrefs, emit }) {
     sync, refresh, wipe,
     api: {
       presenceStats: async () => nostr.stats(),
-      studioHost: (lat, lon) => host(lat, lon),
+      studioHost: (lat, lon, live, title) => host(lat, lon, live, title),
+      rtcSignal: async (to, payload) => nostr.signal(String(to || ""), payload),
       presenceView: (lat, lon) => { if (getPrefs().presence === true) nostr.view(lat, lon); },
       chatHistory: async () => visible(nostr.history()),
       chatSay: async (text, nick) => nostr.say(text, nick ?? getPrefs().nickname),

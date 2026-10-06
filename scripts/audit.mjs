@@ -3392,8 +3392,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // rail (5 Oct 2026). Two things it rests on. The globe is centred between the
 // panels by measuring them, and the studio was not one of the panels measured:
 // opened, it sat on top of half the planet. And a host stands in the town they
-// chose with no label: a station's name goes out as "what is playing", and a
-// show nobody can hear yet must not be announced as playing.
+// chose with no label until the show is live: a name goes out as "what is
+// playing", and a show that is not on air must not be announced as one.
 {
   console.log("\nthe broadcast desk");
   const gaps = [];
@@ -3401,11 +3401,41 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   for (const f of ["src/main.js", "web/messaging.js"]) {
     const src = readSrc(f);
     if (!/const ch = hosting \|\| \(/.test(src)) gaps.push(`${f}: a host's town does not stand in for a station's`);
-    if (!/nostr\.join\(ch\.lat, ch\.lon, hosting \? "" : ch\.title \|\| ""\)/.test(src)) gaps.push(`${f}: a show's town is joined with a label`);
+    // Off air (the studio open, or listening to someone else's show) the town is
+    // joined with no label; only a show that is live goes out with its name.
+    if (!/nostr\.join\(ch\.lat, ch\.lon, hosting \? \(hosting\.live \? hosting\.title : ""\) : ch\.title \|\| "", !!hosting\?\.live\)/.test(src)) gaps.push(`${f}: a show's town is joined with a label when the show is not live`);
   }
   if (!/body\.studio-open \.stations\{display:none\}/.test(readSrc("src/renderer/explore.html"))) gaps.push("the stations card does not fold away with the studio open");
   gaps.length ? fail("the broadcast desk", gaps.join("; "))
-    : pass("the studio open: the globe sits between the panels, and the host is in their town's room with no label");
+    : pass("the studio open: the globe sits between the panels, and the host's town carries the show's name only while live");
+}
+
+// ── a show is heard directly, and found honestly ────────────────────────────
+// Live, a show goes from the host's device to each listener's (6 Oct 2026).
+// What that rests on:
+//   - the handshake carries each device's network addresses, so it travels in
+//     the sealed private envelope and never reaches the conversation or a
+//     relay in the clear;
+//   - a handshake a relay kept and handed back later is not a live one;
+//   - the host answers only while live, and only so many (a home connection
+//     carries about a dozen copies of the sound);
+//   - going off air tells the listeners and lets them go;
+//   - the listener's side is on only where the studio is, and it says, before
+//     anyone presses Listen, that each side can see the other's address.
+{
+  console.log("\na show is heard directly, and found honestly");
+  const nostrSrc = readSrc("src/presence-nostr.js"), shows = readSrc("src/renderer/explore-shows.js"), studio = readSrc("src/renderer/explore-studio.js");
+  const gaps = [];
+  if (!/return dm\(to, "", \[\["rtc", body\]\]\)/.test(nostrSrc)) gaps.push("the handshake is not sent in the private envelope");
+  if (!/if \(typeof rtc === "string"\) \{[\s\S]{0,700}?return;\s*\}\s*const fav/.test(nostrSrc)) gaps.push("a handshake can fall through into the conversation");
+  if (!/Math\.abs\(Date\.now\(\) - Number\(at\)\) > MAX_AGE_MS\) return;/.test(shows)) gaps.push("a stale handshake is acted on");
+  if (!/if \(phase !== "live" \|\| !mixDest\) return;/.test(studio)) gaps.push("the host answers when not live");
+  if (!/if \(heard\.size >= MAX_LISTENERS\)/.test(studio) || !/const MAX_LISTENERS = (\d+);/.test(studio) || +studio.match(/const MAX_LISTENERS = (\d+);/)[1] > 25) gaps.push("nothing limits how many listeners one computer carries");
+  if (!/if \(phase === "live" && to !== "live"\) closeListeners\(\);/.test(studio)) gaps.push("going off air leaves the listeners connected");
+  if (!/card\.hidden = !\(window\.AuralStudio\?\.on && rows\.length\)/.test(shows)) gaps.push("the Live now list shows where the studio is off");
+  if (!/"shows\.note"/.test(shows) || !/network address/.test(shows)) gaps.push("a listener is not told the host can see their address");
+  gaps.length ? fail("a show is heard directly, and found honestly", gaps.join("; "))
+    : pass("the handshake is sealed and fresh, the host answers only live and to a dozen, and a listener is told what a direct connection shows");
 }
 
 // ── the queue hands over on its own clock ───────────────────────────────────

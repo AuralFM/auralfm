@@ -61,6 +61,8 @@ function paintChatHead() {
     ? `${t("chat.near", "Near")} ${browsedPlace}`
     : window.AuralStudio?.hosting?.title
       ? `${t("chat.near", "Near")} ${window.AuralStudio.hosting.title}`
+    : window.AuralShow
+      ? `${t("shows.room", "The show's town")}`
     : playing?.place
       ? `${t("chat.near", "Near")} ${playing.place}`
       : t("chat.here", "Around here");
@@ -317,7 +319,7 @@ let viewingCell = null;      // set while browsing a cell we are not listening t
 let chatHost = false;        // the room on screen is a show's town, not a station's
 async function syncChat(prefs) {
   // A host is in their show's town (explore-studio.js), whatever was playing.
-  const host = window.AuralStudio?.hosting || null;
+  const host = window.AuralStudio?.hosting || window.AuralShow || null;
   const at = host || playing;
   const want = !!(prefs?.presence === true && at
                   && typeof at.lat === "number" && typeof at.lon === "number");
@@ -421,6 +423,7 @@ function paintComposer() {
 function wireChat() {
   window.auralfm.onPeers((list) => {
     peers = Array.isArray(list) ? list : [];
+    window.AuralShows?.peers(peers);
     paintRings();
     paintChatHead();
   });
