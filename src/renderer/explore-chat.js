@@ -59,6 +59,8 @@ function paintChatHead() {
   const browsedPlace = viewingCell && selection.place ? selection.place.title : null;
   where.textContent = browsedPlace
     ? `${t("chat.near", "Near")} ${browsedPlace}`
+    : window.AuralStudio?.hosting?.title
+      ? `${t("chat.near", "Near")} ${window.AuralStudio.hosting.title}`
     : playing?.place
       ? `${t("chat.near", "Near")} ${playing.place}`
       : t("chat.here", "Around here");
@@ -312,12 +314,20 @@ function badge(glyph, label) {
  */
 let viewingCell = null;      // set while browsing a cell we are not listening to
 
+let chatHost = false;        // the room on screen is a show's town, not a station's
 async function syncChat(prefs) {
-  const want = !!(prefs?.presence === true && playing
-                  && typeof playing.lat === "number" && typeof playing.lon === "number");
+  // A host is in their show's town (explore-studio.js), whatever was playing.
+  const host = window.AuralStudio?.hosting || null;
+  const at = host || playing;
+  const want = !!(prefs?.presence === true && at
+                  && typeof at.lat === "number" && typeof at.lon === "number");
   $("chat").hidden = !want;
-  if (want === chatOn) return;
+  window.AuralStudio?.room?.();
+  // Moving between a station's room and the show's is a new room even though
+  // the card stays up: its log, its head and its composer all change.
+  if (want === chatOn && !!host === chatHost) return;
   chatOn = want;
+  chatHost = !!host;
   if (want) {
     try {
       // Contacts first, so the very first repaint already knows who is verified.

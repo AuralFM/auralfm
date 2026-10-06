@@ -3387,6 +3387,27 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("character references are decoded (decimal, hex, named, twice-escaped) and no station is named by a URL");
 }
 
+// ── the broadcast desk ───────────────────────────────────────────────────────
+// With the studio open the stations fold away and the town's messages take the
+// rail (5 Oct 2026). Two things it rests on. The globe is centred between the
+// panels by measuring them, and the studio was not one of the panels measured:
+// opened, it sat on top of half the planet. And a host stands in the town they
+// chose with no label: a station's name goes out as "what is playing", and a
+// show nobody can hear yet must not be announced as playing.
+{
+  console.log("\nthe broadcast desk");
+  const gaps = [];
+  if (!/getElementById\("studiopanel"\)\]/.test(readSrc("src/renderer/explore-trackers.js"))) gaps.push("centreGlobe does not measure the studio panel");
+  for (const f of ["src/main.js", "web/messaging.js"]) {
+    const src = readSrc(f);
+    if (!/const ch = hosting \|\| \(/.test(src)) gaps.push(`${f}: a host's town does not stand in for a station's`);
+    if (!/nostr\.join\(ch\.lat, ch\.lon, hosting \? "" : ch\.title \|\| ""\)/.test(src)) gaps.push(`${f}: a show's town is joined with a label`);
+  }
+  if (!/body\.studio-open \.stations\{display:none\}/.test(readSrc("src/renderer/explore.html"))) gaps.push("the stations card does not fold away with the studio open");
+  gaps.length ? fail("the broadcast desk", gaps.join("; "))
+    : pass("the studio open: the globe sits between the panels, and the host is in their town's room with no label");
+}
+
 // ── a tag says something ────────────────────────────────────────────────────
 // A place's commonest tags are its chips in the app, and they were "music",
 // "other", "tbd", "(null)" and "moi merino": a contributor's own name, on 923

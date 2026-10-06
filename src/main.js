@@ -733,13 +733,32 @@ function syncNostrPresence() {
   const on = getPrefs().presence === true;
   nostr.setExtraRelays(getPrefs().relays || []);
   nostr.setPowFloor(getPrefs().powFloor || 0);
-  const ch = playerState.playing ? playerState.channel : null;
+  // A host is in their show's town (below), whatever was playing before.
+  const ch = hosting || (playerState.playing ? playerState.channel : null);
   if (!on || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
     nostr.leave();
     return;
   }
-  nostr.join(ch.lat, ch.lon, ch.title || "");
+  nostr.join(ch.lat, ch.lon, hosting ? "" : ch.title || "");
 }
+
+/**
+ * Your show: the host stands in the town the show goes out from.
+ *
+ * The studio's panel puts that town's room beside the globe so a host can read
+ * and answer the people there (Melton, 5 Oct 2026). It is the same rule as a
+ * station, with the same two conditions: presence is on, and the place is one
+ * the host chose on the globe, never where they are. No label goes out with it
+ * (a station's name would): a show nobody can hear yet is not something to
+ * announce as playing.
+ */
+let hosting = null;
+ipcMain.on("studio:host", (_e, lat, lon) => {
+  const next = typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+  if (JSON.stringify(next) === JSON.stringify(hosting)) return;
+  hosting = next;
+  syncNostrPresence();
+});
 
 // ── tray ──────────────────────────────────────────────────────────────────────
 /**

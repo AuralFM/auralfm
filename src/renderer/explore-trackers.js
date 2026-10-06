@@ -293,9 +293,11 @@ function centreGlobe(w) {
     if (!r || acrossG(r) <= g.width * 0.9) return 0;
     return Math.max(0, g.bottom - Math.max(r.top, g.top));
   };
-  const panels = [document.querySelector(".railcol"), document.getElementById("newspanel")];
-  // The rail covers the right, headlines the left; centre between them.
-  const shiftX = Math.round((side(panels[0]) - side(panels[1])) / 2);
+  const panels = [document.querySelector(".railcol"), document.getElementById("newspanel"), document.getElementById("studiopanel")];
+  // The rail covers the right; headlines, or the studio, the left (one at a
+  // time). Centre between them: with the studio open and wide, that is the
+  // planet moving right to stay in view.
+  const shiftX = Math.round((side(panels[0]) - Math.max(side(panels[1]), side(panels[2]))) / 2);
   /**
    * The planet holds still while panels come and go.
    *

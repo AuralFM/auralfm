@@ -52,16 +52,26 @@ window.AuralChat = function create({ getPrefs, emit }) {
   });
 
   /** Where the station is, blurred to a ~20 km cell — never where the listener is. */
+  // Your show: a host stands in the town the show goes out from, as on the
+  // desktop (src/main.js, "studio:host"): the place they chose, and no label.
+  let hosting = null, lastPlayer = null;
   function sync(player) {
+    lastPlayer = player;
     const p = getPrefs();
     nostr.setExtraRelays(p.relays || []);
     nostr.setPowFloor(p.powFloor || 0);
-    const ch = player?.playing ? player.channel : null;
+    const ch = hosting || (player?.playing ? player.channel : null);
     if (p.presence !== true || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
       nostr.leave();
       return;
     }
-    nostr.join(ch.lat, ch.lon, ch.title || "");
+    nostr.join(ch.lat, ch.lon, hosting ? "" : ch.title || "");
+  }
+  function host(lat, lon) {
+    const next = typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+    if (JSON.stringify(next) === JSON.stringify(hosting)) return;
+    hosting = next;
+    sync(lastPlayer);
   }
 
   function report(payload) {
@@ -98,6 +108,7 @@ window.AuralChat = function create({ getPrefs, emit }) {
     sync, refresh, wipe,
     api: {
       presenceStats: async () => nostr.stats(),
+      studioHost: (lat, lon) => host(lat, lon),
       presenceView: (lat, lon) => { if (getPrefs().presence === true) nostr.view(lat, lon); },
       chatHistory: async () => visible(nostr.history()),
       chatSay: async (text, nick) => nostr.say(text, nick ?? getPrefs().nickname),

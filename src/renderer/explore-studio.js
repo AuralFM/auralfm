@@ -470,6 +470,48 @@
     body.append(rights);
 
     if (wasFocus && $s(wasFocus)) $s(wasFocus).focus({ preventScroll: true });
+    syncHost();
+  }
+
+  // ── the show's room ──────────────────────────────────────────────────────
+  /**
+   * With the studio open, the app is a broadcast desk (Melton, 5 Oct 2026): the
+   * stations card folds away, the town's messages take the whole column on the
+   * right, the studio widens on the left and the globe sits between them
+   * (explore.html, body.studio-open; explore-trackers.js, centreGlobe).
+   *
+   * The room is the town the show goes out from. While the studio is open, or
+   * a show is rehearsing, announced or live, the host stands in that town the
+   * way a listener stands in a station's (src/main.js, "studio:host"): the
+   * place they picked on the globe, never where they are, and only with
+   * "Show other listeners" on.
+   */
+  function syncHost() {
+    const p = show.place;
+    const on = (!panel.hidden || phase !== "off") && p && typeof p.lat === "number" && typeof p.lon === "number";
+    const next = on ? { lat: p.lat, lon: p.lon, title: p.title } : null;
+    if (JSON.stringify(next) !== JSON.stringify(window.AuralStudio.hosting || null)) {
+      window.AuralStudio.hosting = next;
+      window.auralfm.studioHost?.(next ? next.lat : null, next ? next.lon : null);
+      if (typeof syncChat === "function" && typeof prefs !== "undefined") syncChat(prefs);
+    }
+    room();
+  }
+  /** The card that stands where the messages will be, when there are none to show. */
+  function room() {
+    const card = $s("roomwait");
+    if (!card) return;
+    const waiting = !panel.hidden && !!$s("chat")?.hidden;
+    card.hidden = !waiting;
+    if (!waiting) return;
+    const off = typeof prefs !== "undefined" && prefs?.presence !== true;
+    $s("roomwaitsay").textContent = off
+      ? tt("studio.roomOff", "Messages from people in your town's room appear here, and you can answer them. The room is public and nobody moderates it. It opens when Show other listeners is on.")
+      : tt("studio.roomTown", "Choose the town you go out from, and its room opens here.");
+    const go = $s("roomwaitgo");
+    go.hidden = !off;
+    go.textContent = tt("studio.roomOn", "Show other listeners");
+    go.onclick = () => window.auralfm.setPrefs({ presence: true });
   }
   // The Go live button follows the name without repainting the field being typed in.
   const syncGo = () => { const b = $s("stLive"); if (b) b.disabled = !ready(); };
@@ -486,6 +528,8 @@
     panel.hidden = !on;
     btn.setAttribute("aria-pressed", String(on));
     document.body.classList.toggle("studio-open", on);
+    syncHost();
+    if (typeof sizeGlobe === "function") sizeGlobe();   // the planet, between the studio and the rail
     if (on) {
       // One panel on that side at a time: the headlines share it.
       if (typeof newsOpen !== "undefined" && newsOpen) $s("newsClose")?.click();
@@ -496,7 +540,7 @@
     } else if (phase === "off") closeAudio();
   }
 
-  window.AuralStudio = { live: null, open: () => setOpen(true) };
+  window.AuralStudio = { live: null, hosting: null, room, open: () => setOpen(true) };
   allowed().then(async (ok) => {
     if (!ok || !btn || !panel) return;
     btn.hidden = false;

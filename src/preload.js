@@ -83,6 +83,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   micAccess: () => ipcRenderer.invoke("mic:access"),
   micSettings: () => ipcRenderer.send("mic:settings"),
   studioOpenTrack: (url) => ipcRenderer.invoke("studio:openTrack", url),
+  studioHost: (lat, lon) => ipcRenderer.send("studio:host", lat, lon),
 
   // shortwave receivers
   sdrPoints: () => ipcRenderer.invoke("sdr:points"),
