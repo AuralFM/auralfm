@@ -3432,11 +3432,11 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/Math\.abs\(Date\.now\(\) - Number\(at\)\) > MAX_AGE_MS\) return;/.test(shows)) gaps.push("a stale handshake is acted on");
   if (!/if \(phase !== "live" \|\| !mixDest\) return;/.test(studio)) gaps.push("the host answers when not live");
   if (!/if \(heard\.size >= MAX_LISTENERS\)/.test(studio) || !/const MAX_LISTENERS = (\d+);/.test(studio) || +studio.match(/const MAX_LISTENERS = (\d+);/)[1] > 25) gaps.push("nothing limits how many listeners one computer carries");
-  if (!/if \(phase === "live" && to !== "live"\) closeListeners\(\);/.test(studio)) gaps.push("going off air leaves the listeners connected");
+  if (!/if \(phase === "live" && to !== "live"\) \{ closeListeners\(\);/.test(studio)) gaps.push("going off air leaves the listeners connected");
   // Listening is on where the studio is, or where the private ?ears link has
   // been opened; and that link must never be a way into the studio itself
   // (the check after this one holds the studio's own door).
-  if (!shows.includes("const on = () => !!window.AuralStudio?.on || ears;") || !shows.includes("card.hidden = !(on() && rows.length);")) gaps.push("the Live now list shows where neither the studio nor the private link has switched it on");
+  if (!shows.includes("const on = () => !!window.AuralStudio?.on || ears;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && rows.length);")) gaps.push("the Live now list shows where neither the studio nor the private link has switched it on");
   if (/shows\.ears|has\("ears"\)/.test(studio)) gaps.push("the private listening link reaches into the studio");
   if (!/"shows\.note"/.test(shows) || !/network address/.test(shows)) gaps.push("a listener is not told the host can see their address");
   gaps.length ? fail("a show is heard directly, and found honestly", gaps.join("; "))

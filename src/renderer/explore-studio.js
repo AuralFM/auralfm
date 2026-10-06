@@ -125,12 +125,12 @@
    */
   const micTrouble = (name) =>
     name === "NotAllowedError" || name === "SecurityError" || name === "denied" || name === "restricted"
-      ? tt("studio.micDenied", "The microphone is blocked. Allow it for AuralFM in your system's privacy settings, then try again.")
+      ? tt("studio.micDenied", "The microphone is blocked. Allow AuralFM in your system's privacy settings.")
     : name === "NotFoundError" || name === "OverconstrainedError"
-      ? tt("studio.micMissing", "No microphone was found. Plug one in, or connect headphones that have one, then try again.")
+      ? tt("studio.micMissing", "No microphone found. Connect one, then try again.")
     : name === "NotReadableError" || name === "AbortError" || name === "TrackStartError"
-      ? tt("studio.micBusy", "The microphone could not start. Another app may be using it (a call, a recorder): close it, or pick another microphone, then try again.")
-    : tt("studio.micFailed", "The microphone could not start. Try again, or pick another one.");
+      ? tt("studio.micBusy", "The microphone did not start. Close other apps that use it, or choose another.")
+    : tt("studio.micFailed", "The microphone did not start. Try again, or choose another.");
   let micBlocked = false, micNote = "";
   async function openMic() {
     graph();
@@ -141,7 +141,7 @@
     // The system may take its time, or wait on a prompt the listener has not
     // seen: say so rather than sitting on a button that seems to do nothing.
     asking = true;
-    const slow = setTimeout(() => { if (asking) { micError = tt("studio.micWaiting", "Waiting for permission to use the microphone. Look for your system's prompt."); paint(); } }, 2500);
+    const slow = setTimeout(() => { if (asking) { micError = tt("studio.micWaiting", "Waiting for permission. Look for your system's prompt."); paint(); } }, 2500);
     try {
       // The desktop asks macOS first (src/main/ipc-app.js): a microphone the
       // system has blocked otherwise opens as silence.
@@ -155,7 +155,7 @@
         if (!show.deviceId || !/^(OverconstrainedError|NotFoundError)$/.test(e?.name)) throw e;
         show.deviceId = ""; keep();
         micStream = await getMic("");
-        micNote = tt("studio.micFellBack", "The microphone you used last time is not connected, so this is your system's default. Pick another below.");
+        micNote = tt("studio.micFellBack", "Your last microphone is not connected. This is the system default.");
       }
       micSrc = ctx.createMediaStreamSource(micStream);
       micSrc.connect(micGain);
@@ -169,7 +169,7 @@
         if (micStream?.getAudioTracks()[0] !== mt) return;
         micStream = null;
         try { micSrc?.disconnect(); } catch {}
-        micError = tt("studio.micEnded", "The microphone stopped. It may have been disconnected: turn it on again, or pick another.");
+        micError = tt("studio.micEnded", "The microphone stopped. Turn it on again, or choose another.");
         listDevices().then(paint);
       };
     } catch (e) {
@@ -218,7 +218,7 @@
     if (at) at.onended = () => {
       if (lineStream !== stream) return;
       closeLine();
-      lineNote = tt("studio.lineEnded", "That input stopped. It may have been disconnected: choose it again, or pick another.");
+      lineNote = tt("studio.lineEnded", "The input stopped. Choose it again.");
       listDevices().then(paint);
     };
     meters();
@@ -239,8 +239,8 @@
     } catch (e) {
       closeLine();
       lineNote = /^(NotAllowedError|SecurityError|denied|restricted)$/.test(e?.name)
-        ? tt("studio.micDenied", "The microphone is blocked. Allow it for AuralFM in your system's privacy settings, then try again.")
-        : tt("studio.lineFailed", "That input could not start. Check it is connected and not in use by another app, then choose it again.");
+        ? tt("studio.micDenied", "The microphone is blocked. Allow AuralFM in your system's privacy settings.")
+        : tt("studio.lineFailed", "The input did not start. Check the connection, then choose it again.");
     }
     paint();
   }
@@ -272,8 +272,8 @@
     if (!at) {
       s?.getTracks().forEach((tr) => tr.stop());
       lineNote = "micAccess" in window.auralfm
-        ? tt("studio.computerNoneApp", "This computer's sound did not come through. In System Settings, under Privacy & Security, allow AuralFM in Screen & System Audio Recording, then open AuralFM again. Or send it through a loopback device (BlackHole is a free one) and choose that as the input.")
-        : tt("studio.computerNoneWeb", "No sound came with that. In Chrome or Edge, choose a tab and switch on \"Also share tab audio\". Safari and Firefox do not share sound: use a loopback device, or the desktop app.");
+        ? tt("studio.computerNoneApp", "No sound came through. Allow AuralFM in System Settings > Privacy & Security > Screen & System Audio Recording, then open AuralFM again. Or use a loopback device, such as BlackHole.")
+        : tt("studio.computerNoneWeb", "No sound came with that. In Chrome or Edge, share a tab with its audio.");
       return paint();
     }
     // The picture rides along unseen; stopping it can end the sound with it.
@@ -400,7 +400,7 @@
       } catch {
         // Left out of the queue rather than left to fail again at the next turn.
         queue = queue.filter((q) => q.id !== item.id);
-        trackNote = `${item.name}: ${tt("studio.trackBad", "That file could not be played. Try an MP3, M4A, WAV, FLAC or OGG file.")}`;
+        trackNote = `${item.name}: ${tt("studio.trackBad", "That file did not play. Use MP3, M4A, WAV, FLAC or OGG.")}`;
       }
       if (pre && pre.id === item.id) pre = null; else dropPre();
       if (!next) return;
@@ -492,9 +492,9 @@
     url = String(url || "").trim();
     linkNote = "";
     let host = "";
-    try { host = new URL(url).hostname; } catch { linkNote = tt("studio.linkBad", "That is not a link. Paste one that starts with https://."); return paint(); }
+    try { host = new URL(url).hostname; } catch { linkNote = tt("studio.linkBad", "That is not a link. It must start with https://."); return paint(); }
     if (PLATFORM.test(host)) {
-      linkNote = tt("studio.linkPlatform", "Mixcloud, SoundCloud, YouTube and services like them don't let other apps play their audio, and their terms don't allow it. If the show is yours, download it from there and add the file, or use a direct link to the audio file.");
+      linkNote = tt("studio.linkPlatform", "Mixcloud, SoundCloud and YouTube do not let other apps play their audio. Add the file, or use a direct link to it.");
       return paint();
     }
     linking = true; paint();
@@ -504,16 +504,16 @@
       linkNote = "";
       const n = queue.length;
       await loadBlob(r.name, r.src);
-      if (queue.length <= n && trackNote) { trackNote = ""; linkNote = tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again."); paint(); }
+      if (queue.length <= n && trackNote) { trackNote = ""; linkNote = tt("studio.linkFailed", "The link did not open. Check it in a browser, then try again."); paint(); }
       return;
     }
     linkNote = {
-      https: tt("studio.linkBad", "That is not a link. Paste one that starts with https://."),
-      page: tt("studio.linkPage", "That link is a web page, not an audio file. Use the link to the file itself (it usually ends in .mp3, .m4a or .wav)."),
-      stream: tt("studio.linkStream", "That is a live stream. A track has to be a file with an end: use a link to a recording."),
-      big: tt("studio.linkBig", "That file is over 300 MB. Use a shorter or smaller file."),
-      slow: tt("studio.linkSlow", "That took too long to download. Try again, or download it and add the file."),
-    }[r?.error] || tt("studio.linkFailed", "That link could not be fetched. Check it opens in a browser, then try again.");
+      https: tt("studio.linkBad", "That is not a link. It must start with https://."),
+      page: tt("studio.linkPage", "That link is a web page. Use the link to the audio file (.mp3, .m4a, .wav)."),
+      stream: tt("studio.linkStream", "That is a live stream. Use a link to a recording."),
+      big: tt("studio.linkBig", "That file is over 300 MB."),
+      slow: tt("studio.linkSlow", "The link took too long. Try again, or add the file."),
+    }[r?.error] || tt("studio.linkFailed", "The link did not open. Check it in a browser, then try again.");
     paint();
   }
   // Every frame: the meters, and the music dipping under the voice.
@@ -569,7 +569,7 @@
     if (to !== "off" && document.body.classList.contains("playing")) window.auralfm.transport?.({ action: "toggle" });
     if (to !== "off" && phase === "off") startedAt = Date.now();
     // Leaving the air: the people listening are told, and let go.
-    if (phase === "live" && to !== "live") closeListeners();
+    if (phase === "live" && to !== "live") { closeListeners(); heardNote = ""; }
     phase = to;
     window.AuralStudio.live = phase === "live" && show.place ? { lat: show.place.lat, lon: show.place.lon, title: show.title } : null;
     if (typeof paintRings === "function") paintRings();
@@ -612,10 +612,10 @@
     air.append(el("div", { class: "air" },
       el("span", { class: "airpill", role: "status" }, el("i"), el("span", { text: label }), (phase === "live" || phase === "rehearsal") ? el("span", { id: "airclock", text: "00:00:00" }) : null),
       phase === "live" ? el("span", { class: "time", id: "stHeard", role: "status", text: `${heardNow()} ${tt("studio.listening", "listening")}` }) : null));
-    const why = !hasSound() ? tt("studio.needMic", "Turn on your microphone, or add a track, below.")
-      : !show.title.trim() ? tt("studio.needTitle", "Give your show a name.")
-      : !show.place ? tt("studio.needPlace", "Choose the town you go out from.")
-      : (!show.rights || !show.adult) ? tt("studio.needRights", "Confirm what you will play is yours to play and you are 18 or older.") : "";
+    const why = !hasSound() ? tt("studio.needMic", "Turn on the microphone, or add a track.")
+      : !show.title.trim() ? tt("studio.needTitle", "Name your show.")
+      : !show.place ? tt("studio.needPlace", "Choose a town.")
+      : (!show.rights || !show.adult) ? tt("studio.needRights", "Confirm the two lines under “Before you go live”.") : "";
     const btns = el("div", { class: "btns" });
     if (phase === "off") {
       btns.append(
@@ -628,11 +628,12 @@
         phase === "live" ? tt("studio.end", "End the show") : phase === "planned" ? tt("studio.cancel", "Cancel announcement") : tt("studio.stop", "Stop rehearsing")));
     }
     air.append(btns);
+    if (phase === "live" && heardNote) air.append(el("p", { class: "fine", role: "status", text: heardNote }));
     air.append(el("p", { class: "airnote", id: "stWhy", text:
-      phase === "live" ? tt("studio.liveNote", "You are live. People on AuralFM's beta can find your show and hear it, straight from this computer: twelve at a time, with Show other listeners on. Each connection shows the other's network address, as a station's stream does.")
-      : phase === "planned" ? tt("studio.plannedPrototype", "This is a prototype: your town is marked on the globe as planned.")
-      : phase === "rehearsal" ? tt("studio.rehearsalNote", "Only you can hear this. Put on headphones and turn on “Hear yourself” to check your mix.")
-      : why || tt("studio.readyNote", "Ready. Rehearse first: only you will hear it.") }));
+      phase === "live" ? tt("studio.liveNote", "You are live. Up to 12 listeners connect direct to this computer.")
+      : phase === "planned" ? tt("studio.plannedPrototype", "Your town shows as coming up. Nobody is told yet.")
+      : phase === "rehearsal" ? tt("studio.rehearsalNote", "Only you hear this. Use headphones and turn on Hear yourself.")
+      : why || tt("studio.readyNote", "Ready. Rehearse first: only you hear it.") }));
     body.append(air);
 
     // The show.
@@ -658,7 +659,7 @@
       el("span", { text: show.place ? `${show.place.title}, ${show.place.country}` : tt("studio.noPlace", "No town yet") }),
       // Not mid-show: a station does not move while it is on the air.
       phase === "live" ? null : el("button", { class: "linkbtn", type: "button", id: "stPlace", onclick: usePlace }, selection?.place && !selection.place.nowhere ? `${tt("studio.use", "Use")} ${selection.place.title}` : tt("studio.pickPlace", "Pick a town on the globe"))));
-    where.append(el("p", { class: "fine", text: tt("studio.whereNote", "Listeners see your town, the way they see every station's. Never where you are within it.") }));
+    where.append(el("p", { class: "fine", text: tt("studio.whereNote", "Listeners see your town. Not your location.") }));
     body.append(where);
 
     // Sound.
@@ -681,7 +682,7 @@
       const using = devices.find((d) => d.deviceId === micStream.getAudioTracks()[0]?.getSettings().deviceId)?.label || micStream.getAudioTracks()[0]?.label || "";
       if (/airpods|bluetooth|headset|buds|beats|hands-free/i.test(using)) {
         sound.append(el("p", { class: "fine", text:
-          tt("studio.micHeadset", "Wireless headphones play at call quality while their microphone is on. For a better sound, use the computer's microphone or a wired one, and keep the headphones to listen.") }));
+          tt("studio.micHeadset", "Wireless headphones drop to call quality when their microphone is on. Use the computer's microphone.") }));
         /**
          * One tap to do what that says. With AirPods Max the headset's own
          * microphone is the system default once they connect, so every show
@@ -702,7 +703,7 @@
     sound.append(pick);
     if (!queue.length) {
       sound.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status",
-        text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.noTrack", "No music under you yet") }),
+        text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.noTrack", "No music yet") }),
         el("button", { class: "linkbtn", type: "button", id: "stAdd", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addTracks", "Add tracks"))));
     } else {
       const on = deck?.item.id, at = curIndex();
@@ -764,7 +765,7 @@
           el("input", { type: "range", min: "0", max: "1", step: "0.01", value: String(show.musicVol), "aria-label": tt("studio.musicLevel", "Music level"),
             oninput: (e) => { show.musicVol = +e.target.value; keep(); } })));
         sound.append(meter("meterLine"));
-        sound.append(el("p", { class: "fine", text: tt("studio.lineHeard", "Sent as it arrives, in stereo. You hear it at its source, so it is not played back here.") }));
+        sound.append(el("p", { class: "fine", text: tt("studio.lineHeard", "Sent in stereo. Not played back here: you hear it at its source.") }));
       } else {
         if (inputs.length) {
           const sel = el("select", { id: "stLine", "aria-label": tt("studio.lineHead", "Music from an input"), disabled: live,
@@ -778,21 +779,21 @@
             // Inputs have no names until the system has been asked once.
             try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((tr) => tr.stop()); } catch {}
             await listDevices();
-            if (!devices.some((d) => d.label)) lineNote = tt("studio.lineNoInputs", "No inputs were found. Connect an audio interface or a mixer, or allow the microphone for AuralFM, then try again.");
+            if (!devices.some((d) => d.label)) lineNote = tt("studio.lineNoInputs", "No inputs found. Connect one, or allow the microphone for AuralFM.");
             paint();
           } }, tt("studio.lineFind", "Show my inputs")));
         }
         if (canComputer()) sound.append(el("button", { class: "linkbtn", type: "button", id: "stComputer", disabled: live || lineAsking, onclick: openComputer },
           lineAsking ? tt("studio.computerAsking", "Waiting for your choice…") : tt("studio.computerUse", "Use this computer's sound")));
-        sound.append(el("p", { class: "fine", text: tt("studio.lineHint", "For a DJ: an audio interface, a mixer or a controller, or this computer's own sound from the program you mix in.") }));
+        sound.append(el("p", { class: "fine", text: tt("studio.lineHint", "An audio interface, a mixer, a controller, or this computer's sound.") }));
       }
       if (lineNote) sound.append(el("p", { class: "fine", role: "alert", text: lineNote }));
-      if (live) sound.append(el("p", { class: "fine", text: tt("studio.locked", "Your microphone and input are locked while you are live.") }));
+      if (live) sound.append(el("p", { class: "fine", text: tt("studio.locked", "The microphone and the input are locked while you are live.") }));
     }
     sound.append(toggleRow(tt("studio.duck", "Music dips when you talk"), show.duck, () => { show.duck = !show.duck; keep(); if (!show.duck && musicGain) musicGain.gain.value = show.musicVol; paint(); }));
     sound.append(toggleRow(tt("studio.monitor", "Hear yourself"), show.monitor, () => {
       // With this computer's sound going out, your voice played back here would go out twice.
-      if (!show.monitor && lineKind === "computer") { lineNote = tt("studio.monitorLoop", "Hear yourself is off while this computer's sound is going out: your voice would go out twice."); return paint(); }
+      if (!show.monitor && lineKind === "computer") { lineNote = tt("studio.monitorLoop", "Hear yourself is off with this computer's sound. Your voice would go out twice."); return paint(); }
       setMonitor(!show.monitor); paint(); },
       tt("studio.monitorHint", "Headphones only")));
     sound.append(el("div", { class: "srcrow" }, el("span", { text: tt("studio.out", "Going out") }), el("span", { class: "fine", text: "" })), meter("meterOut"));
@@ -808,7 +809,7 @@
     rights.append(conduct);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (isIOS) {
-      rights.append(el("p", { class: "fine", text: tt("studio.iosWarning", "On an iPhone, your show lasts as long as the app stays open and the screen stays on. If you switch to another app, the broadcast will pause.") }));
+      rights.append(el("p", { class: "fine", text: tt("studio.iosWarning", "On an iPhone, the show stops when you leave the app or the screen turns off.") }));
     }
     body.append(rights);
 
@@ -850,8 +851,8 @@
     if (!waiting) return;
     const off = typeof prefs !== "undefined" && prefs?.presence !== true;
     $s("roomwaitsay").textContent = off
-      ? tt("studio.roomOff", "Messages from people in your town's room appear here, and you can answer them. The room is public and nobody moderates it. It opens when Show other listeners is on.")
-      : tt("studio.roomTown", "Choose the town you go out from, and its room opens here.");
+      ? tt("studio.roomOff", "Your town's messages show here. The room is public and unmoderated. Turn on Show other listeners to open it.")
+      : tt("studio.roomTown", "Choose a town to open its room.");
     const go = $s("roomwaitgo");
     go.hidden = !off;
     go.textContent = tt("studio.roomOn", "Show other listeners");
@@ -880,15 +881,22 @@
    */
   const MAX_LISTENERS = 12;
   const heard = new Map();         // the handshake's id → { pc, from }
+  let heardNote = "";              // said when a listener asked and could not connect
   const heardNow = () => [...heard.values()].filter((l) => l.pc.connectionState === "connected").length;
   function paintHeard() {
     const n = $s("stHeard");
     if (n) n.textContent = `${heardNow()} ${tt("studio.listening", "listening")}`;
   }
-  function dropListener(sid) {
+  function dropListener(sid, missed = false) {
     const l = heard.get(sid);
     if (!l) return;
     heard.delete(sid);
+    // They asked, this computer answered, and the two never met. On one Wi-Fi
+    // that is nearly always macOS keeping AuralFM off the local network.
+    if (missed && l.pc.connectionState !== "connected" && !heardNote) {
+      heardNote = tt("studio.heardFail", "A listener could not connect. Same Wi-Fi? Allow AuralFM in System Settings > Privacy & Security > Local Network.");
+      paint();
+    }
     try { l.pc.onconnectionstatechange = null; l.pc.close(); } catch {}
     paintHeard();
   }
@@ -901,12 +909,14 @@
     if (phase !== "live" || !mixDest) return;
     if (heard.size >= MAX_LISTENERS) return void window.AuralRtc.send(from, { t: "full", sid: msg.sid });
     const pc = new RTCPeerConnection({ iceServers: window.AuralRtc.ICE });
-    heard.set(msg.sid, { pc, from });
+    const l0 = { pc, from, met: false };
+    heard.set(msg.sid, l0);
     try {
       for (const tr of mixDest.stream.getAudioTracks()) pc.addTrack(tr, mixDest.stream);
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "failed" || pc.connectionState === "closed") dropListener(msg.sid);
-        else paintHeard();
+        if (pc.connectionState === "failed") dropListener(msg.sid, !l0.met);
+        else if (pc.connectionState === "closed") dropListener(msg.sid);
+        else { if (pc.connectionState === "connected") { l0.met = true; if (heardNote) { heardNote = ""; paint(); } } paintHeard(); }
       };
       await pc.setRemoteDescription({ type: "offer", sdp: msg.sdp });
       await pc.setLocalDescription(await pc.createAnswer());
@@ -915,7 +925,7 @@
       const sent = await window.AuralRtc.send(from, { t: "answer", sid: msg.sid, sdp: window.AuralRtc.music(pc.localDescription.sdp) });
       if (!sent) dropListener(msg.sid);
       // A listener who never completes the connection does not hold a place.
-      setTimeout(() => { if (heard.get(msg.sid)?.pc === pc && pc.connectionState !== "connected") dropListener(msg.sid); }, 45000);
+      setTimeout(() => { if (heard.get(msg.sid)?.pc === pc && pc.connectionState !== "connected") dropListener(msg.sid, true); }, 45000);
     } catch { dropListener(msg.sid); }
   });
 

@@ -283,24 +283,6 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
    * Favourites are the sheet, so they leave it up.
    */
   body.panel-open .railcol { display: none; }
-  /**
-   * Shows on air (explore-shows.js): on the globe, top left, where the rail's
-   * card cannot be (the rail is the sheet here). Solid, like every bar on a
-   * phone; clear of the status bar and of the three controls on the right;
-   * and its two buttons are a thumb's size.
-   */
-  .livenow.float {
-    position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 10px; right: 64px; z-index: 5;
-    max-height: 36dvh; padding: 10px 14px;
-    background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
-    box-shadow: inset 0 0 0 .5px var(--edge-hi), 0 6px 20px rgba(0, 0, 0, .35);
-    transition: transform var(--dur-panel) var(--ease-out);
-  }
-  body.searching .livenow.float { transform: translateY(58px); }
-  .livenow.float .livename, .livenow.float .linkbtn { min-height: 44px; }
-  .livenow.float .linkbtn { padding: 0 6px; font-size: 14px; }
-  .livenow.float .livename { font-size: 15px; }
-  .livenow.float .livesay { font-size: 12.5px; }
   .sheetgrab, .placehead { touch-action: none; }
   .scroll, .newslist, #chatlog, .convos, .chips { overscroll-behavior: contain; }
   .railcol.sliding { transition: none; }

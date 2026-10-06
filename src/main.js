@@ -524,6 +524,10 @@ const LAYERS = [
   // all, which meant the rings were the one thing on the globe you could not
   // switch off: turning every layer off left them pulsing.
   { id: "listeners",      key: "layer.listeners",      default: true },
+  // Shows on air (explore-shows.js): their beacons on the globe and the list
+  // that goes with them. Its own layer (Melton, 6 Oct 2026), not part of the
+  // listeners' rings, and on at every launch: a show is something to listen to.
+  { id: "onAir",          key: "layer.onAir",          default: true },
   { id: "statusBar",      key: "layer.statusBar",      default: true },
 ];
 
@@ -536,7 +540,7 @@ const LAYERS = [
  * one on lasts until the app quits; closing and reopening the window keeps it.
  * Favourites, the last station and the preferences are untouched.
  */
-const ON_AT_LAUNCH = new Set(["stations", "shortwave"]);
+const ON_AT_LAUNCH = new Set(["stations", "shortwave", "onAir"]);
 function startQuiet() {
   const st = load();
   st.layers = Object.fromEntries(LAYERS.map((l) => [l.id, ON_AT_LAUNCH.has(l.id)]));
@@ -651,7 +655,9 @@ function buildMenu() {
         // people no obvious way back out of full screen.
         { role: "togglefullscreen" },
         { type: "separator" },
-        ...LAYERS.map((l) => ({
+        // "On Air" is in the globe's own layer panel, where shows can be heard;
+        // not in this menu, which every build has.
+        ...LAYERS.filter((l) => l.id !== "onAir").map((l) => ({
           label: t[l.key],
           type: "checkbox",
           checked: layers[l.id],

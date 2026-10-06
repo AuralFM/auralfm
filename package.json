@@ -103,6 +103,7 @@
       ],
       "extendInfo": {
         "NSMicrophoneUsageDescription": "AuralFM uses the microphone only when you turn it on in Your show, to go live.",
+        "NSLocalNetworkUsageDescription": "AuralFM connects to a listener on your own network only when you are live in Your show and they press Listen.",
         "NSAudioCaptureUsageDescription": "AuralFM takes this computer's sound only when you choose it as your show's music in Your show.",
         "CFBundleURLTypes": [
           {

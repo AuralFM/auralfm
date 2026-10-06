@@ -491,7 +491,7 @@ let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
                // Off: the globe opens still, looking at the listener's own city
                // (homeView). A turning planet is one you have to chase before
                // you can aim at a dot, and aiming is the whole interaction.
-               drift: false, listeners: true, statusBar: false };
+               drift: false, listeners: true, statusBar: false, onAir: true };
 
 /**
  * Show and hide the dots without rebuilding them.
@@ -585,6 +585,8 @@ function applyLayers(next) {
    * `tickSatellites` every 30s), so nothing here needs to drive it.
    */
   if (layers.listeners !== prev.listeners) paintRings();
+  // Shows on air: their beacons, their rings and their list go together.
+  if (layers.onAir !== prev.onAir) { paintRings(); window.AuralShows?.layer(); }
   if (layers.iss !== prev.iss) {
     if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
     else paintOrbits();

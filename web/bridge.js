@@ -136,9 +136,11 @@
     // Off, as on the desktop: the read-out is a line of figures about the sun
     // and the ISS, and it is not what somebody opening a radio wants first.
     ["listeners", true], ["statusBar", false],
+    // Shows on air, as on the desktop: their own layer, on at every launch.
+    ["onAir", true],
   ];
   
-  const ON_AT_LAUNCH = new Set(["stations", "shortwave"]);
+  const ON_AT_LAUNCH = new Set(["stations", "shortwave", "onAir"]);
   function startQuiet() {
     const st = {};
     for (const [id] of LAYERS) st[id] = ON_AT_LAUNCH.has(id);

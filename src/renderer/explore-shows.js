@@ -99,11 +99,12 @@
   }
 
   const WHY = () => ({
-    unsent: tl("shows.unsent", "Could not reach the show's town. Check your connection and try again."),
-    noanswer: tl("shows.noAnswer", "The host did not answer. They may have gone off air, or one of your two networks does not allow a direct connection."),
-    full: tl("shows.full", "This show has all the listeners it can carry. Try again in a while."),
-    ended: tl("shows.ended", "The show has ended."),
-    lost: tl("shows.lost", "The connection to the show was lost."),
+    unsent: tl("shows.unsent", "No connection. Try again."),
+    noanswer: tl("shows.noAnswer", "No answer from the host."),
+    full: tl("shows.full", "The show is full."),
+    blocked: tl("shows.blocked", "The host answered. The two devices could not connect."),
+    ended: tl("shows.ended", "The show ended."),
+    lost: tl("shows.lost", "Connection lost."),
   });
 
   /** Stand in the show's town (its room, and the relays the handshake travels on), or leave it. */
@@ -119,7 +120,10 @@
     clearTimeout(s.timer);
     try { if (s.pc) { s.pc.ontrack = s.pc.onconnectionstatechange = null; s.pc.close(); } } catch {}
     audio.pause(); audio.srcObject = null;
-    show = why ? { peer: s.peer, sid: null, pc: null, state: "failed", why } : null;
+    // A failure stays on the beacon for a few seconds: on a phone the list is
+    // in the sheet, and the beacon is the only thing in view.
+    show = why ? { peer: s.peer, sid: null, pc: null, state: "failed", why, until: Date.now() + 7000 } : null;
+    if (why) setTimeout(paint, 7100);
     stand(null);
     paint();
   }
@@ -150,7 +154,10 @@
     pc.onconnectionstatechange = () => {
       if (show?.pc !== pc) return;
       if (pc.connectionState === "connected") { show.state = "on"; clearTimeout(show.timer); paint(); }
-      else if (pc.connectionState === "failed" || pc.connectionState === "closed") end(show.state === "on" ? "lost" : "noanswer");
+      // Three different failures, and a host with a tester needs to know which:
+      // it was playing and dropped; the host replied but the two devices could
+      // not reach each other; or nothing came back at all.
+      else if (pc.connectionState === "failed" || pc.connectionState === "closed") end(show.state === "on" ? "lost" : show.answered ? "blocked" : "noanswer");
     };
     try {
       await pc.setLocalDescription(await pc.createOffer());
@@ -160,7 +167,7 @@
     const sent = await window.AuralRtc.send(peer.pubkey, { t: "offer", sid, sdp: music(pc.localDescription.sdp) });
     if (show?.sid !== sid) return;
     if (!sent) return end("unsent");
-    show.timer = setTimeout(() => { if (show?.sid === sid && show.state === "connecting") end("noanswer"); }, 30000);
+    show.timer = setTimeout(() => { if (show?.sid === sid && show.state === "connecting") end(show.answered ? "blocked" : "noanswer"); }, 30000);
   }
   // The host's reply. Matched by the id only the two of us know: it travelled
   // sealed, and a host with a lasting identity answers from a different key
@@ -168,7 +175,8 @@
   window.AuralRtc.onSignal(async (_from, msg) => {
     if (!show?.pc || msg.sid !== show.sid) return;
     if (msg.t === "answer" && typeof msg.sdp === "string" && show.pc.signalingState === "have-local-offer") {
-      try { await show.pc.setRemoteDescription({ type: "answer", sdp: msg.sdp }); } catch { end("noanswer"); }
+      show.answered = true;
+      try { await show.pc.setRemoteDescription({ type: "answer", sdp: msg.sdp }); } catch { end("blocked"); }
     } else if (msg.t === "full") end("full");
     else if (msg.t === "bye") end("ended");
   });
@@ -176,36 +184,38 @@
   new MutationObserver(() => { if (show?.state === "on" && document.body.classList.contains("playing")) stop(); })
     .observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
-  // On a phone the rail is a sheet that slides, and a card riding on it would
-  // slide with it. There the list sits on the globe, top left, clear of the
-  // controls down the right (web/web.css).
-  if (window.AuralLite) { const c = $l("livenow"); if (c) { c.classList.add("float"); document.querySelector(".globecol")?.append(c); } }
-
-  // ── the list ─────────────────────────────────────────────────────────────
+  // ── the list, and the beacons ────────────────────────────────────────────
+  const shown = () => on() && (typeof layers === "undefined" || layers.onAir !== false);
+  const WORDS = () => ({
+    connecting: tl("shows.connecting", "Connecting…"),
+    on: tl("shows.on", "Listening."),
+  });
   function paint() {
+    pins();
     const card = $l("livenow"), list = $l("livelist");
     if (!card || !list) return;
     const rows = live.slice();
     // The show being heard stays listed while its ring is between heartbeats.
     if (show && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.unshift(show.peer);
-    card.hidden = !(on() && rows.length);
+    card.hidden = !(shown() && rows.length);
     list.textContent = "";
     if (card.hidden) return;
     for (const p of rows) {
       const mine = show?.peer.pubkey === p.pubkey ? show : null;
+      const busy = !!mine && (mine.state === "connecting" || mine.state === "on");
+      const title = p.label || tl("shows.aShow", "A show");
       const row = document.createElement("div");
-      row.className = `liverow${mine?.state === "on" ? " on" : ""}`;
+      row.className = `liverow${busy ? " on" : ""}`;
       const name = document.createElement("button");
       name.type = "button"; name.className = "livename";
-      name.textContent = p.label || tl("shows.aShow", "A show");
-      name.title = tl("shows.find", "Show it on the globe");
-      name.setAttribute("aria-label", `${name.textContent}: ${name.title}`);
+      name.textContent = title;
+      name.title = tl("shows.find", "Show on the globe");
+      name.setAttribute("aria-label", `${title}: ${name.title}`);
       name.onclick = () => { if (typeof flyTo === "function") flyTo(p.lat, p.lon); };
       const act = document.createElement("button");
       act.type = "button"; act.className = "linkbtn";
-      const busy = mine && (mine.state === "connecting" || mine.state === "on");
       act.textContent = busy ? tl("shows.stop", "Stop") : tl("shows.listen", "Listen");
-      act.setAttribute("aria-label", `${act.textContent}: ${name.textContent}`);
+      act.setAttribute("aria-label", `${act.textContent}: ${title}`);
       act.onclick = () => { if (busy) return stop(); prime(); listen(p); };
       row.append(name, act);
       list.append(row);
@@ -213,16 +223,66 @@
         const say = document.createElement("p");
         say.className = "livesay";
         say.setAttribute("role", mine.state === "failed" ? "alert" : "status");
-        say.textContent = mine.state === "connecting" ? tl("shows.connecting", "Connecting to the host…")
-          : mine.state === "on" ? tl("shows.on", "Listening, straight from the host's device.")
-          : WHY()[mine.why] || WHY().noanswer;
+        say.textContent = WORDS()[mine.state] || WHY()[mine.why] || WHY().noanswer;
         list.append(say);
       }
     }
     const note = document.createElement("p");
-    note.className = "livesay";
-    note.textContent = tl("shows.note", "A show comes straight from the host's device to yours, so each can see the other's network address, as a station's server does when you play it.");
+    note.className = "livesay fine";
+    note.textContent = tl("shows.note", "Direct from the host. Each side sees the other's network address.");
     list.append(note);
+  }
+  /**
+   * A show's beacon on the globe: a pill at its town with the show's name and a
+   * halo that breathes, and a button (press it to listen). Melton, 6 Oct 2026:
+   * the ring alone was easy to miss. One element per show, kept between paints
+   * so the halo does not restart every time a heartbeat arrives.
+   */
+  const pinOf = new Map();
+  function pins() {
+    if (typeof globe === "undefined" || !globe || !globe.htmlElementsData) return;
+    const rows = shown() ? live.slice() : [];
+    const told = (s) => s?.state === "failed" && Date.now() < s.until;
+    if (shown() && show && (show.state === "connecting" || show.state === "on" || told(show)) && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.push(show.peer);
+    for (const k of [...pinOf.keys()]) if (!rows.some((p) => p.pubkey === k)) pinOf.delete(k);
+    for (const p of rows) {
+      let b = pinOf.get(p.pubkey);
+      if (!b) {
+        b = document.createElement("button");
+        b.type = "button"; b.className = "onair-pin";
+        b.append(document.createElement("i"), document.createElement("span"));
+        // Read at press time: the peer under this pin is replaced by each heartbeat.
+        b.onclick = (e) => {
+          e.stopPropagation();
+          const now = live.find((x) => x.pubkey === p.pubkey) || p;
+          if (show?.peer.pubkey === p.pubkey && (show.state === "connecting" || show.state === "on")) return stop();
+          prime(); listen(now);
+        };
+        // The globe centres whatever it is given on the town. A holder of no
+        // size goes there, and the pill hangs from it by its dot, so the dot
+        // and its halo sit on the town and the name runs off to the right.
+        const at = document.createElement("div");
+        at.className = "onair-at";
+        at.append(b);
+        b.holder = at;
+        pinOf.set(p.pubkey, b);
+      }
+      const title = p.label || tl("shows.aShow", "A show");
+      const own = show?.peer.pubkey === p.pubkey ? show : null;
+      const mine = !!own && (own.state === "connecting" || own.state === "on");
+      // The beacon says what is happening to it: connecting, playing (its dot
+      // becomes a stop square), or, for a few seconds, why it did not connect.
+      b.lastChild.textContent = own?.state === "connecting" ? WORDS().connecting : told(own) ? (WHY()[own.why] || WHY().noanswer) : title;
+      b.classList.toggle("on", mine);
+      b.classList.toggle("playing", own?.state === "on");
+      b.classList.toggle("say", told(own));
+      b.setAttribute("aria-label", `${mine ? tl("shows.stop", "Stop") : tl("shows.listenTo", "Listen to")} ${title}`);
+    }
+    globe.htmlElementsData(rows.map((p) => ({ lat: p.lat, lng: p.lon, key: p.pubkey })))
+      .htmlLat("lat").htmlLng("lng").htmlAltitude(0.07)
+      .htmlElement((d) => pinOf.get(d.key).holder);
+    // Behind the planet a beacon is not a thing to press.
+    globe.htmlElementVisibilityModifier?.((el, visible) => { el.style.opacity = visible ? "1" : "0"; if (el.firstChild) el.firstChild.style.pointerEvents = visible ? "auto" : "none"; });
   }
   /** Called with the peers each time they change (explore-chat.js). */
   window.AuralShows = {
@@ -232,6 +292,8 @@
       paint();
     },
     listen, stop,
+    /** The On Air layer was switched (explore-view.js). */
+    layer() { paint(); },
     get on() { return on(); },
     get state() { return show ? { state: show.state, why: show.why || null, title: show.peer.label } : null; },
     /** What has arrived, for telling a connection that carries sound from one that only says it is up. */

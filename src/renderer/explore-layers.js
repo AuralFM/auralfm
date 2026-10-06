@@ -48,7 +48,7 @@ let layersOpen = false;
 
 const LAYER_ORDER = [
   "stations", "shortwave", "dayNight", "clouds",
-  "constellations", "iss", "wspr", "listeners", "drift", "statusBar",
+  "constellations", "iss", "wspr", "listeners", "onAir", "drift", "statusBar",
 ];
 
 function paintLayers() {
@@ -60,7 +60,10 @@ function paintLayers() {
 
   // Known order first so the list does not reshuffle, then anything new.
   const ids = [...LAYER_ORDER.filter((k) => k in layers),
-               ...Object.keys(layers).filter((k) => !LAYER_ORDER.includes(k))];
+               ...Object.keys(layers).filter((k) => !LAYER_ORDER.includes(k))]
+    // "On Air" is listed only where shows can be heard (explore-shows.js): a
+    // switch for something this build cannot show is a switch that does nothing.
+    .filter((k) => k !== "onAir" || window.AuralShows?.on);
   list.innerHTML = "";
   for (const id of ids) {
     const b = document.createElement("button");

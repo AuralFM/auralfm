@@ -96,9 +96,13 @@ function paintRings() {
   // Gated like every other thing drawn on this globe. It was not, so somebody
   // who turned all the layers off still had rings pulsing at them with nothing
   // in the panel to explain what they were.
-  if (layers.listeners) {
-    // A show on air where the studio is on: its town rings as a show does.
-    for (const p of peers) data.push({ lat: p.lat, lng: p.lon, kind: p.live && window.AuralShows?.on ? "live" : "peer", label: p.label });
+  // A show on air is its own layer (On Air), drawn by explore-shows.js as a
+  // beacon with a ring under it. With that layer off, its host is one more
+  // listener in that town.
+  const shows = !!layers.onAir && !!window.AuralShows?.on;
+  for (const p of peers) {
+    if (p.live && shows) data.push({ lat: p.lat, lng: p.lon, kind: "live", label: p.label });
+    else if (layers.listeners) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
   }
   // Your show, live (explore-studio.js): your town, in the accent, and always —
   // it is you, not a layer.
