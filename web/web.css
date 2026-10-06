@@ -461,11 +461,14 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   }
   .tabbar[hidden] { display: none; }
   .tab {
-    flex: 1; min-height: 46px; display: grid; gap: 2px; place-items: center;
-    appearance: none; border: 0; background: none; padding: 4px 2px; cursor: default;
+    flex: 1; min-height: 48px; display: grid; gap: 1px; place-items: center;
+    appearance: none; border: 0; background: none; padding: 3px 2px; cursor: default;
     color: var(--label2); font: inherit;
   }
-  .tabicon { display: grid; place-items: center; font-size: 17px; line-height: 1; }
+  /* 24pt, about what an iPhone's own tab bar draws: at 17 they read as small
+     beside the system's (Melton, 6 Oct 2026). The padding and gap give back
+     most of the height, so the bar is 2pt taller, not 7. */
+  .tabicon { display: grid; place-items: center; font-size: 24px; line-height: 1; }
   /* 12px is the floor for text meant to be read; five words at that size fit a
      375pt screen with Headlines, the longest, still clear of its neighbours. */
   .tablabel { font-size: 12px; letter-spacing: -.004em; white-space: nowrap; }
