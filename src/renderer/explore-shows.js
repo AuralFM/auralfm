@@ -31,7 +31,11 @@
  * ## Where it is on
  *
  * Where the studio is: the desktop's development and beta builds, and a
- * preview on this machine. Nowhere else yet.
+ * preview on this machine. And, for listening only, in a browser that has
+ * opened the app once with ?ears (Melton, 6 Oct 2026: a private link, so a
+ * host with one computer can hear their own show on their phone). ?ears=off
+ * takes it away again. The studio itself has no such link
+ * (explore-studio.js, and the audit holds that).
  */
 {
   const $l = (id) => document.getElementById(id);
@@ -68,11 +72,31 @@
     send: async (to, payload) => { try { return !!(await window.auralfm.rtcSignal?.(to, payload)); } catch { return false; } },
   };
 
+  // ── where it is on ───────────────────────────────────────────────────────
+  const EARS = "auralfm.shows.ears";
+  let ears = false;
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.has("ears")) { if (q.get("ears") === "off") localStorage.removeItem(EARS); else localStorage.setItem(EARS, "1"); }
+    ears = localStorage.getItem(EARS) === "1";
+  } catch { /* no storage: the link works for this visit only */ ears = new URLSearchParams(location.search).has("ears"); }
+  const on = () => !!window.AuralStudio?.on || ears;
+
   // ── listening ────────────────────────────────────────────────────────────
   let show = null;                 // { peer, sid, pc, state, why, timer }
   let live = [];                   // the shows on air, from the peers the relays have shown us
   const audio = new Audio();
   audio.autoplay = true;
+  audio.setAttribute("playsinline", "");
+  /**
+   * A phone plays sound only from a tap, and the show's sound arrives seconds
+   * after the tap, at the end of the handshake. So the player is started on
+   * the tap itself, on an empty stream; the phone then lets it carry on when
+   * the real one is put in its place.
+   */
+  function prime() {
+    try { if (!audio.srcObject) audio.srcObject = new MediaStream(); audio.play().catch(() => {}); } catch { /* an older browser: it will ask, or stay silent */ }
+  }
 
   const WHY = () => ({
     unsent: tl("shows.unsent", "Could not reach the show's town. Check your connection and try again."),
@@ -152,6 +176,11 @@
   new MutationObserver(() => { if (show?.state === "on" && document.body.classList.contains("playing")) stop(); })
     .observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
+  // On a phone the rail is a sheet that slides, and a card riding on it would
+  // slide with it. There the list sits on the globe, top left, clear of the
+  // controls down the right (web/web.css).
+  if (window.AuralLite) { const c = $l("livenow"); if (c) { c.classList.add("float"); document.querySelector(".globecol")?.append(c); } }
+
   // ── the list ─────────────────────────────────────────────────────────────
   function paint() {
     const card = $l("livenow"), list = $l("livelist");
@@ -159,7 +188,7 @@
     const rows = live.slice();
     // The show being heard stays listed while its ring is between heartbeats.
     if (show && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.unshift(show.peer);
-    card.hidden = !(window.AuralStudio?.on && rows.length);
+    card.hidden = !(on() && rows.length);
     list.textContent = "";
     if (card.hidden) return;
     for (const p of rows) {
@@ -177,7 +206,7 @@
       const busy = mine && (mine.state === "connecting" || mine.state === "on");
       act.textContent = busy ? tl("shows.stop", "Stop") : tl("shows.listen", "Listen");
       act.setAttribute("aria-label", `${act.textContent}: ${name.textContent}`);
-      act.onclick = () => (busy ? stop() : listen(p));
+      act.onclick = () => { if (busy) return stop(); prime(); listen(p); };
       row.append(name, act);
       list.append(row);
       if (mine) {
@@ -203,6 +232,7 @@
       paint();
     },
     listen, stop,
+    get on() { return on(); },
     get state() { return show ? { state: show.state, why: show.why || null, title: show.peer.label } : null; },
     /** What has arrived, for telling a connection that carries sound from one that only says it is up. */
     async heard() {

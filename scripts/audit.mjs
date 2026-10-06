@@ -3420,8 +3420,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 //   - the host answers only while live, and only so many (a home connection
 //     carries about a dozen copies of the sound);
 //   - going off air tells the listeners and lets them go;
-//   - the listener's side is on only where the studio is, and it says, before
-//     anyone presses Listen, that each side can see the other's address.
+//   - the listener's side is on only where the studio is, or in a browser that
+//     opened the private ?ears link, and it says, before anyone presses
+//     Listen, that each side can see the other's address.
 {
   console.log("\na show is heard directly, and found honestly");
   const nostrSrc = readSrc("src/presence-nostr.js"), shows = readSrc("src/renderer/explore-shows.js"), studio = readSrc("src/renderer/explore-studio.js");
@@ -3432,7 +3433,11 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/if \(phase !== "live" \|\| !mixDest\) return;/.test(studio)) gaps.push("the host answers when not live");
   if (!/if \(heard\.size >= MAX_LISTENERS\)/.test(studio) || !/const MAX_LISTENERS = (\d+);/.test(studio) || +studio.match(/const MAX_LISTENERS = (\d+);/)[1] > 25) gaps.push("nothing limits how many listeners one computer carries");
   if (!/if \(phase === "live" && to !== "live"\) closeListeners\(\);/.test(studio)) gaps.push("going off air leaves the listeners connected");
-  if (!/card\.hidden = !\(window\.AuralStudio\?\.on && rows\.length\)/.test(shows)) gaps.push("the Live now list shows where the studio is off");
+  // Listening is on where the studio is, or where the private ?ears link has
+  // been opened; and that link must never be a way into the studio itself
+  // (the check after this one holds the studio's own door).
+  if (!shows.includes("const on = () => !!window.AuralStudio?.on || ears;") || !shows.includes("card.hidden = !(on() && rows.length);")) gaps.push("the Live now list shows where neither the studio nor the private link has switched it on");
+  if (/shows\.ears|has\("ears"\)/.test(studio)) gaps.push("the private listening link reaches into the studio");
   if (!/"shows\.note"/.test(shows) || !/network address/.test(shows)) gaps.push("a listener is not told the host can see their address");
   gaps.length ? fail("a show is heard directly, and found honestly", gaps.join("; "))
     : pass("the handshake is sealed and fresh, the host answers only live and to a dozen, and a listener is told what a direct connection shows");
