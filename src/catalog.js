@@ -299,12 +299,30 @@ const VIBES = [
   { id: "house", name: "Deep & house", tags: ["deep house", "house"] },
   { id: "techno", name: "Techno", tags: ["techno"] },
   { id: "electronic", name: "Electronic & ambient", tags: ["electronic", "ambient", "experimental"] },
+  // Five more (Melton, 5 Oct 2026): the site had lanes for techno and old-time
+  // radio and none for the biggest music there is. Tags are the spellings the
+  // stations themselves use, counted in the catalogue; "urban" alone is left
+  // out (it is hip-hop in one country and reggaeton in another), and so are
+  // "pop rock" and "soft rock", which are pop stations.
+  { id: "hiphop", name: "Hip-hop & rap", tags: ["hip hop", "hip-hop", "hiphop", "rap", "trap", "classic hip hop",
+    "old school hip hop", "old school hip-hop", "old school rap", "gangsta rap", "rap hiphop rnb",
+    "hip-hop and rap oldies", "lofi hip hop", "hiplife"] },
+  { id: "rnb", name: "R&B", tags: ["r&b", "rnb", "rhythm and blues", "rhythm & blues", "contemporary r&b", "classic r&b",
+    "r&b/urban", "r&b and urban", "urban contemporary", "urban adult contemporary", "urban ac", "r&b soul",
+    "rap hiphop rnb"] },
+  { id: "soul", name: "Soul & funk", tags: ["soul", "funk", "motown", "classic soul", "neo soul", "neo-soul",
+    "northern soul", "soul music", "r&b soul", "disco funk", "p-funk"] },
+  { id: "jazz", name: "Jazz", tags: ["jazz"] },
+  { id: "rock", name: "Rock", tags: ["rock", "classic rock", "alternative rock", "hard rock", "indie rock",
+    "progressive rock", "punk rock", "blues rock", "modern rock", "active rock", "rock en español",
+    "rock'n'roll", "rock n roll", "rock 'n' roll", "rock & roll", "rock and roll"] },
+  { id: "reggae", name: "Reggae & dub", tags: ["reggae", "dub"] },
+  { id: "afro", name: "Afrobeats & amapiano", tags: ["afrobeats", "afrobeat", "afro", "afropop", "afro-pop", "afro pop",
+    "afrofusion", "amapiano", "highlife", "afro house", "afro-house", "afrohouse", "naija", "gqom", "bongo flava"] },
+  { id: "tropical", name: "Cumbia & tropical", tags: ["cumbia", "tropical"] },
+  { id: "faith", name: "Faith", tags: ["christian", "gospel", "catholic", "religious", "islamic", "quran"] },
   { id: "talk", name: "Talk", tags: ["talk"] },
   { id: "otr", name: "Old-time radio", tags: ["old time radio", "old-time radio", "otr", "drama", "detective"] },
-  { id: "faith", name: "Faith", tags: ["christian", "gospel", "catholic", "religious", "islamic", "quran"] },
-  { id: "jazz", name: "Jazz", tags: ["jazz"] },
-  { id: "tropical", name: "Cumbia & tropical", tags: ["cumbia", "tropical"] },
-  { id: "reggae", name: "Reggae & dub", tags: ["reggae", "dub"] },
   { id: "community", name: "Community", tags: ["community radio", "community", "college"] },
 ];
 
@@ -322,7 +340,9 @@ function vibePlaces(id) {
     if (!c[4] || !c[4].split(",").some((t) => want.has(t.toLowerCase()))) continue;
     n.set(c[2], (n.get(c[2]) || 0) + 1);
   }
-  return [...n].sort((a, b) => b[1] - a[1]).map(([i, k]) => ({ ...hydratePlace(i), n: k }));
+  // The real towns first, most of the vibe first; "Across Germany" and its kin
+  // after every one of them, as wherever else places are listed.
+  return [...n].sort((a, b) => nowhere[a[0]] - nowhere[b[0]] || b[1] - a[1]).map(([i, k]) => ({ ...hydratePlace(i), n: k }));
 }
 
 /** How many AM / FM stations a place has, so empty chips can be hidden. */

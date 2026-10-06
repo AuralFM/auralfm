@@ -3068,6 +3068,28 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : fail("the vibe icons share one line", (r.stdout + r.stderr).trim() || "build-vibe-icons --check failed");
 }
 
+// ── every vibe has its drawing, and its stations open ──────────────────────
+// Five vibes were added on 5 Oct 2026. A vibe with no file in art/vibes/ still
+// builds: its card on the homepage is a name over an empty square, which is how
+// a sixth would arrive. And the vibe pages' station names are links to the
+// station in the app, which home/aural.js opens in place; a row written without
+// its link is a name that does nothing.
+{
+  console.log("\nevery vibe has its drawing, and its stations open");
+  const vibes = [...fs.readFileSync(R("src/catalog.js"), "utf8").matchAll(/\{ id: "([a-z]+)", name: "[^"]+", tags: \[/g)].map((m) => m[1]);
+  const bare = vibes.filter((id) => !fs.existsSync(R(`art/vibes/${id}.svg`)));
+  vibes.length >= 15 && !bare.length
+    ? pass(`all ${vibes.length} vibes have an icon in art/vibes/`)
+    : fail("every vibe has its drawing", bare.length ? `no art/vibes/${bare.join(".svg, ")}.svg` : `only ${vibes.length} vibes found in src/catalog.js`);
+  const page = fs.existsSync(R("home/vibes/rock/index.html")) ? fs.readFileSync(R("home/vibes/rock/index.html"), "utf8") : "";
+  const rows = (page.match(/<ol class="vst"[^>]*>[\s\S]*?<\/ol>/g) || []).join("");
+  const items = (rows.match(/<li>/g) || []).length;
+  const linked = (rows.match(/<li><a href="https:\/\/listen\.auralfm\.xyz\/\?station=af-[0-9a-z]+"><span>/g) || []).length;
+  items > 1000 && items === linked && /searchParams\.get\("station"\)/.test(fs.readFileSync(R("home/aural.js"), "utf8"))
+    ? pass(`a vibe page's ${items.toLocaleString("en-US")} stations each link to the station, and the page opens them in place`)
+    : fail("a vibe page's stations open", `${items} rows, ${linked} of them a link to the station`);
+}
+
 // ── one design across the three sites ───────────────────────────────────────
 // auralfm.xyz, the Journal and the docs are separate here.now sites, so each
 // carries its own copy of the stylesheet, script and fonts, copied from home/

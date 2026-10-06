@@ -391,14 +391,48 @@ h1, h2, h3, .display, .lede, .hi { text-wrap: balance; }
 .vp-meta { font: 400 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bone2); }
 .vp-go { margin-top: 6px; font: 700 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--aq); }
 @media (hover: hover) { .vp-head:hover b { color: var(--aq); } .vp-head:hover .vp-go { text-decoration: underline; text-underline-offset: 3px; } }
-.vst { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; counter-reset: st var(--from, 0); }
-.vst li {
-  counter-increment: st; break-inside: avoid; display: flex; gap: 12px; align-items: baseline;
-  padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--bone) 12%, transparent);
-  font-size: 15px; line-height: 22px; color: var(--bone);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* Two columns as a grid, not CSS columns: a station that opens in place grows
+   its own row, and nothing jumps from one column to the other. */
+.vst { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; align-items: start; counter-reset: st var(--from, 0); }
+.vst li { counter-increment: st; min-width: 0; border-bottom: 1px solid color-mix(in srgb, var(--bone) 12%, transparent); }
+/* A station's name: a link to it in the app, and (with script) the button that
+   opens what it says about itself, as its row does in the app. */
+.vst > li > a {
+  display: flex; gap: 12px; align-items: baseline; width: 100%; min-height: 44px; padding: 10px 0;
+  font-size: 15px; line-height: 22px; color: var(--bone); text-decoration: none; cursor: pointer;
+  transition: color .3s var(--ease);
 }
-.vst li::before { content: counter(st, decimal-leading-zero); flex: none; width: 3ch; font: 400 12px/22px var(--mono); color: var(--aq); }
+.vst > li > a::before { content: counter(st, decimal-leading-zero); flex: none; width: 3ch; font: 400 12px/22px var(--mono); color: var(--aq); }
+.vst > li > a > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.js .vst > li > a::after { content: "+"; flex: none; width: 2ch; text-align: right; font: 400 16px/22px var(--mono); color: var(--bone2); }
+.vst > li > a[aria-expanded="true"] { color: var(--aq); }
+.vst > li > a[aria-expanded="true"] > span { white-space: normal; overflow-wrap: anywhere; }
+.js .vst > li > a[aria-expanded="true"]::after { content: "–"; color: var(--aq); }
+.vst > li > a:focus-visible { outline-offset: -2px; }
+@media (hover: hover) { .vst > li > a:hover { color: var(--aq); } }
+/* What the station says about itself. Indented to the names' own column. */
+.sp { padding: 2px 0 18px calc(3ch + 12px); display: grid; gap: 10px; animation: sp-in .3s var(--ease) both; }
+@keyframes sp-in { from { opacity: 0; transform: translateY(-4px); } }
+.sp-where, .sp-none, .sp-claim { font: 400 12px/18px var(--mono); letter-spacing: .04em; color: var(--bone2); }
+.sp-where { text-transform: uppercase; }
+.sp-head { display: flex; gap: 12px; align-items: center; }
+.sp-logo { flex: none; width: 44px; height: 44px; object-fit: cover; background: color-mix(in srgb, var(--bone) 8%, transparent); }
+.sp-desc { font-size: 15px; line-height: 23px; color: var(--bone); overflow-wrap: anywhere; }
+.sp-chips, .sp-links { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.sp-chips span { padding: 3px 8px; border: 1px solid var(--line); font: 400 12px/16px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--bone2); }
+.sp-links a {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 1px solid var(--line);
+  font: 700 12px/16px var(--mono); letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--bone);
+  transition: background-color .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease);
+}
+.sp-links a.sp-play { background: var(--bone); color: var(--onyx); border-color: var(--bone); }
+@media (hover: hover) {
+  .sp-links a:hover { background: var(--bone); color: var(--onyx); border-color: var(--bone); }
+  .sp-links a.sp-play:hover { background: var(--aqua); border-color: var(--aqua); color: var(--ink); }
+}
+.sp-claim a { color: var(--aq); }
+@media (pointer: coarse) { .sp-links a { min-height: 44px; padding: 0 14px; } .sp-claim a { display: inline-block; padding: 12px 0; } }
+@media (prefers-reduced-motion: reduce) { .sp { animation: none; } .vst > li > a { transition: none; } }
 .vp-more { margin-top: 0; }
 .vp-more[open] summary { margin-bottom: 0; }
 .vp-more summary {
@@ -412,7 +446,7 @@ h1, h2, h3, .display, .lede, .hi { text-wrap: balance; }
 @media (max-width: 760px) {
   .vplace { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 20px var(--pad); }
   .vp-head { position: static; }
-  .vst { columns: 1; }
+  .vst { grid-template-columns: minmax(0, 1fr); }
 }
 .dir-none { color: var(--bone2); }
 .vibe-others ul { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); grid-column: 1 / -1; }

@@ -1,5 +1,5 @@
 /**
- * The ten vibe icons, inlined so CSS can colour them.
+ * The vibe icons, inlined so CSS can colour them.
  *
  * Melton's icons (art/vibes/originals/), brought to one line weight and one
  * square frame by scripts/build-vibe-icons.mjs; Deep & house is drawn by hand

@@ -29,6 +29,8 @@
  * and rounded ends, in the same square frame, and not generated here: community,
  * after Melton's drawing (kept in originals/ for reference), because its line
  * was too heavy to match. (House was one too until Melton's turntable came.)
+ * The five vibes added on 5 Oct 2026 (hiphop, rnb, soul, rock, afro) are drawn
+ * the same way and have no original: they stand in until Melton draws his own.
  */
 import fs from "node:fs";
 import path from "node:path";

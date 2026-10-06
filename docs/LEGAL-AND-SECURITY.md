@@ -384,6 +384,8 @@ duties. None of this is legal advice; items marked **lawyer** want one.
       ESP registration), so a report can be filed the day one is needed. The duty
       in 18 U.S.C. § 2258A applies to providers with actual knowledge; AuralFM
       hosts no chat messages today, but profiles and broadcasts will change that.
+      **Applied 5 Oct 2026** (contact hello@auralfm.xyz); waiting on NCMEC to
+      approve the account. Tick this when the approval arrives.
 
 **Before station profiles and tips ship** — **lawyer**
 - Tips go wallet to wallet (Lightning), to an address the station published

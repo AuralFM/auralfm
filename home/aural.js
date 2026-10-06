@@ -551,6 +551,112 @@
     });
   }
 
+  // ── a station, opened in place ─────────────────────────────────────────────
+  // On a vibe page every station's name is a link to it in the app. Here it
+  // becomes the button the app's own rows are: press it and what the station
+  // says about itself opens under its name, with its links, a way to play it
+  // on the globe, and "Claim this station". The profile is the app's own file
+  // (listen.auralfm.xyz/data/profiles/<xx>.json, 256 of them by a hash of the
+  // station's id; src/profiles.js has the same hash), fetched once per file and
+  // only when somebody opens a station in it.
+  if (document.querySelector(".vst > li > a")) {
+    const APP = "https://listen.auralfm.xyz/";
+    const SOCIAL = [["instagram", "Instagram"], ["facebook", "Facebook"], ["x", "X"], ["youtube", "YouTube"],
+      ["tiktok", "TikTok"], ["soundcloud", "SoundCloud"], ["mixcloud", "Mixcloud"], ["spotify", "Spotify"],
+      ["bluesky", "Bluesky"], ["mastodon", "Mastodon"], ["telegram", "Telegram"], ["whatsapp", "WhatsApp"]];
+    const NOWHERE = /^(Across |Somewhere in |Online, no country$|Online only$)/;
+    const safe = (u) => (typeof u === "string" && /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : null);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+    const link = (href, text, cls) => { const a = el("a", cls, text); a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer"; return a; };
+    const shardOf = (id) => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+      return ((h >>> 0) & 0xff).toString(16).padStart(2, "0");
+    };
+    const shards = new Map();
+    const profile = async (id) => {
+      const s = shardOf(id);
+      if (!shards.has(s)) shards.set(s, fetch(`${APP}data/profiles/${s}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+      return (await shards.get(s))[id] || null;
+    };
+
+    function paint(box, p, id, title) {
+      box.textContent = "";
+      if (p) {
+        const town = NOWHERE.test(p.place || "") ? null : p.place;
+        const lang = p.lang && /^[a-z]{2}([-_][a-z]{2})?$/i.test(p.lang)
+          ? (() => { try { return new Intl.DisplayNames([navigator.language || "en"], { type: "language" }).of(p.lang.toLowerCase().split(/[-_]/)[0]); } catch { return null; } })()
+          : null;
+        const facts = [town, p.region && p.region !== town ? p.region : null, p.country, lang, p.bitrate ? `${p.bitrate} kbps` : null].filter(Boolean).join(" · ");
+        const head = el("div", "sp-head");
+        // https only: a picture over http is refused on an https page anyway.
+        if (/^https:\/\//.test(p.image || "") && safe(p.image)) {
+          const img = el("img", "sp-logo");
+          img.alt = ""; img.decoding = "async"; img.referrerPolicy = "no-referrer";
+          img.width = img.height = 44;
+          // Shown once it has arrived: a logo that never loads leaves no grey box.
+          img.onload = () => { if (box.isConnected) head.prepend(img); };
+          img.src = p.image;
+        }
+        if (facts) head.append(el("p", "sp-where", facts));
+        box.append(head);
+        // Thirty words at most, as in the app: a taste of the station, not its page.
+        if (p.description) {
+          const words = p.description.trim().split(/\s+/);
+          const d = el("p", "sp-desc", words.length > 30 ? `${words.slice(0, 30).join(" ").replace(/[,;:.\-–—]+$/, "")}…` : p.description);
+          d.dir = "auto";
+          box.append(d);
+        }
+        const chips = [...(p.genres || []).slice(0, 4), ...(p.moods || []).slice(0, 3)];
+        if (chips.length) { const row = el("p", "sp-chips"); for (const c of chips) row.append(el("span", "", c)); box.append(row); }
+      } else {
+        box.append(el("p", "sp-none", "Nothing more about this station yet."));
+      }
+      const links = el("p", "sp-links");
+      links.append(link(`${APP}?station=${encodeURIComponent(id)}`, "Play on the globe →", "sp-play"));
+      const site = safe(p?.website);
+      if (site) links.append(link(site, "Website"));
+      for (const [k, name] of SOCIAL) { const u = safe(p?.social?.[k]); if (u) links.append(link(u, name)); }
+      // The station's own donation page, when it has published one: opened on
+      // the station's site, never through us, and not where tips cannot be sent.
+      if (p && !p.noTips && /^https:\/\//.test(p.donate || "") && safe(p.donate)) links.append(link(p.donate, "Donate"));
+      box.append(links);
+      const claim = el("p", "sp-claim", "Run this station? ");
+      claim.append(link(`https://docs.auralfm.xyz/claim/?station=${encodeURIComponent(title)}&id=${encodeURIComponent(id)}`, "Claim this station"));
+      box.append(claim);
+    }
+
+    async function toggle(b) {
+      const li = b.parentElement, open = b.getAttribute("aria-expanded") === "true";
+      if (open) { li.querySelector(".sp")?.remove(); b.setAttribute("aria-expanded", "false"); return; }
+      const id = new URL(b.href).searchParams.get("station") || "", title = b.textContent.trim(), box = el("div", "sp");
+      box.id = `sp-${id}`;
+      box.setAttribute("role", "region");
+      box.setAttribute("aria-label", title);
+      box.append(el("p", "sp-none", "Looking…"));
+      li.append(box);
+      b.setAttribute("aria-controls", box.id);
+      b.setAttribute("aria-expanded", "true");
+      const p = await profile(id);
+      if (box.isConnected) paint(box, p, id, title);
+    }
+
+    for (const b of document.querySelectorAll(".vst > li > a")) { b.setAttribute("role", "button"); b.setAttribute("aria-expanded", "false"); }
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest?.(".vst > li > a");
+      // A new tab or window was asked for: let the link be a link.
+      if (!b || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+      e.preventDefault();
+      toggle(b);
+    });
+    // A button answers to Space as well as Enter.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== " " || !e.target.matches?.(".vst > li > a")) return;
+      e.preventDefault();
+      toggle(e.target);
+    });
+  }
+
   // ── line drawings that draw themselves in ──────────────────────────────────
   // CSS draws a stroke in by animating its dash offset from its full length to
   // zero. Each shape's real length is measured here and handed to CSS as --len.
