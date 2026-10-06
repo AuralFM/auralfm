@@ -164,13 +164,13 @@ module.exports = function register(ctx) {
     refreshChat();
 
     const lines = [
-      "Reporting a message seen in AuralFM's place chat.",
+      p.show ? "Reporting a live show heard in AuralFM." : "Reporting a message seen in AuralFM's place chat.",
       "",
       `Sender key: ${key || "(unknown)"}`,
       `Place cell: ${String(p.geohash || "(unknown)")}`,
       `Seen at:    ${new Date(Number(p.at) || Date.now()).toISOString()}`,
       "",
-      "Message:",
+      p.show ? "Show:" : "Message:",
       String(p.text || "").slice(0, 1000),
       "",
       "--",
@@ -180,7 +180,7 @@ module.exports = function register(ctx) {
       "Mac.",
     ];
     const url = "mailto:hello@auralfm.xyz"
-      + "?subject=" + encodeURIComponent("AuralFM — reported chat message")
+      + "?subject=" + encodeURIComponent(p.show ? "AuralFM — reported live show" : "AuralFM — reported chat message")
       + "&body=" + encodeURIComponent(lines.join("\n"));
     // mailto has practical length limits in some clients; the quote is already
     // capped, and this is the belt to that braces.

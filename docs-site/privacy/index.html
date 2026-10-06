@@ -23,7 +23,7 @@
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/ScienceGothic-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../aural.css?v=17c66dba41">
+<link rel="stylesheet" href="../aural.css?v=3bb22ff7ef">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -66,7 +66,7 @@
     <h1 class="cell display stretch">Privacy</h1>
     <div class="cell intro">
       <p class="label">[ AuralFM — Privacy Policy ]</p>
-      <p class="lede">Last updated 27 September 2026.</p>
+      <p class="lede">Last updated 6 October 2026.</p>
       <!-- The document's own "Last updated" line is dropped below, said here once. -->
       <p class="proof">The same text the app shows under Settings. When one changes, so does the other.</p>
     </div>
@@ -160,6 +160,17 @@
 <p><strong>There is no account, and no identifier that survives the app.</strong> A signing key is generated when AuralFM opens and thrown away when it closes. Nothing links one session to the next, which means nothing can accumulate into a profile — not here, and not at any relay.</p>
 <p><strong>The messages ask not to be stored.</strong> They are published as a type that relays are asked to forward and discard rather than retain. Most relays honour that. Nobody can guarantee that every relay does, which is the honest position, and it is why nothing in these messages is worth keeping in the first place.</p>
 <p><strong>Relays are chosen, not owned.</strong> AuralFM picks public relays near the place you are listening to, from a public directory plus a few well-known ones, and you can add your own in Settings — yours are tried first. A relay is asked only for messages in the cell you are listening to or looking at. No relay is told where you are.</p>
+<h2>Live shows (beta)</h2>
+<p>A show goes from the host's device straight to yours. AuralFM has no server in between, and keeps nothing about who listened.</p>
+<ul>
+<li><strong>Each side sees the other's network address</strong> (IP address), as a station's server does when you play its stream. A host can see the addresses of the people connected; a listener can see the host's.</li>
+<li><strong>How the two devices find each other:</strong> your device writes how it can be reached and sends it to the host in a sealed message. The relays that carry it can see that a sealed message went to the host's key. They cannot read it.</li>
+<li><strong>To find its own public address,</strong> each device asks a STUN server (Cloudflare's or Google's). That server sees the device's address and nothing about the show.</li>
+<li><strong>A show is listed</strong> while its host is live: its name and its town, on the same public relays the chat uses. It needs &quot;Show other listeners&quot; on.</li>
+<li><strong>Reporting a show</strong> hides its host on your device and opens an email draft to hello@auralfm.xyz. Nothing is sent unless you send it.</li>
+<li><strong>Nothing is recorded</strong> by AuralFM. A host may record their own show.</li>
+</ul>
+<p>Shows are in testing and not yet in the public apps.</p>
 <h2>Children</h2>
 <p>AuralFM is not directed at children, and it is for people aged 13 and over (18 and over to go live, or to claim a station). The app collects no information from anyone. The waitlists are the one place anyone gives us a name or an email, and each asks you to confirm you are 13 or older before it sends; if we learn that someone under 13 has joined one anyway, we delete what they gave us.</p>
 <h2>Changes</h2>
@@ -197,6 +208,6 @@
   </symbol>
 </svg>
 
-<script src="../aural.js?v=17c66dba41" defer></script>
+<script src="../aural.js?v=3bb22ff7ef" defer></script>
 </body>
 </html>

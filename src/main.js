@@ -771,6 +771,8 @@ function syncNostrPresence() {
   const ch = hosting || (playerState.playing ? playerState.channel : null);
   if (!on || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
     nostr.leave();
+    // Nothing playing, but the page is looking for shows on air: read only.
+    if (on && watching) nostr.watch();
     return;
   }
   nostr.join(ch.lat, ch.lon, hosting ? (hosting.live ? hosting.title : "") : ch.title || "", !!hosting?.live);
@@ -787,6 +789,10 @@ function syncNostrPresence() {
  * announce as playing.
  */
 let hosting = null;
+// Whether the page wants to see shows on air with nothing playing
+// (explore-shows.js): on only where shows are, and with the On Air layer.
+let watching = false;
+ipcMain.on("shows:watch", (_e, on) => { if (watching === (on === true)) return; watching = on === true; syncNostrPresence(); });
 ipcMain.on("studio:host", (_e, lat, lon, live, title) => {
   // Live, the show's name goes out as the label and is marked as a show, which
   // is how a listener finds it; off air, or only listening to someone else's

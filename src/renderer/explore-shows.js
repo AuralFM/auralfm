@@ -85,6 +85,9 @@
   // ── listening ────────────────────────────────────────────────────────────
   let show = null;                 // { peer, sid, pc, state, why, timer }
   let live = [];                   // the shows on air, from the peers the relays have shown us
+  const gone = new Set();          // hosts reported or muted: their shows are not listed here again
+  let said = "";                   // one line under the list, for a few seconds
+  Promise.resolve(window.auralfm.muteList?.()).then((list) => { for (const k of list || []) gone.add(typeof k === "string" ? k : k?.pubkey); paint(); }).catch(() => {});
   const audio = new Audio();
   audio.autoplay = true;
   audio.setAttribute("playsinline", "");
@@ -130,6 +133,21 @@
   async function stop() {
     if (show?.pc && show.sid) window.AuralRtc.send(show.peer.pubkey, { t: "bye", sid: show.sid });
     end();
+  }
+  /**
+   * Report a show. As in the chat (src/main/ipc-chat.js): the host is muted on
+   * this device at once, which is the part that takes effect, and a draft of
+   * an email to AuralFM opens with the show's name and the host's key in it,
+   * which nothing sends but the person. There is no server to take a report.
+   */
+  async function report(peer) {
+    gone.add(peer.pubkey);
+    if (show?.peer.pubkey === peer.pubkey) await stop();
+    live = live.filter((p) => p.pubkey !== peer.pubkey);
+    said = tl("shows.reported", "Hidden. A report draft opened in your mail app.");
+    setTimeout(() => { said = ""; paint(); }, 8000);
+    paint();
+    try { await window.auralfm.chatReport?.({ show: true, pubkey: peer.pubkey, geohash: peer.geohash || "", at: Date.now(), text: peer.label || "" }); } catch { /* muted all the same */ }
   }
   async function listen(peer) {
     if (window.AuralStudio?.live) return;             // on air yourself: one sound at a time
@@ -184,20 +202,74 @@
   new MutationObserver(() => { if (show?.state === "on" && document.body.classList.contains("playing")) stop(); })
     .observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
+  // ── the player row ───────────────────────────────────────────────────────
+  /**
+   * While a show is being heard, the row at the bottom is the show's: its
+   * name, "On air", and a button that stops it. It went on naming the last
+   * station (and offering to play it) with a show in your ears. The station's
+   * own controls (lock, favourite, share, its card) step back: they act on a
+   * station, and this is not one.
+   */
+  let rowWas = null;               // what the row said before the show took it
+  function now() {
+    const bar = $l("now"), name = $l("nowName"), status = $l("nowStatus");
+    if (!bar || !name || !status) return;
+    const mine = show && (show.state === "connecting" || show.state === "on");
+    document.body.classList.toggle("onshow", !!mine);
+    if (mine) {
+      if (!rowWas) rowWas = { hidden: bar.hidden };
+      bar.hidden = false;
+      name.textContent = show.peer.label || tl("shows.aShow", "A show");
+      status.textContent = show.state === "on" ? tl("shows.onAir", "On air") : tl("shows.connecting", "Connecting…");
+      status.classList.remove("err");
+      const spoken = `${name.textContent}, ${status.textContent}`;
+      if ($l("nowSpoken") && $l("nowSpoken").textContent !== spoken) $l("nowSpoken").textContent = spoken;
+      if (typeof Icons !== "undefined") Icons.set($l("play"), "pause");
+      const label = tl("shows.stop", "Stop");
+      $l("play")?.setAttribute("aria-label", `${label}: ${name.textContent}`);
+      if ($l("play")) $l("play").title = label;
+    } else if (rowWas) {
+      const was = rowWas; rowWas = null;
+      // Back to the station: its name and state as the player last gave them.
+      const s = window.AuralPlayerSeen;
+      if (s?.channel) {
+        name.textContent = s.channel.title;
+        status.textContent = s.status || "";
+        status.classList.toggle("err", !!s.error);
+        if (typeof setPlayName === "function") setPlayName(!!s.playing);
+      } else bar.hidden = was.hidden;
+    }
+  }
+  // The row's button stops the show, before the player hears the press.
+  document.addEventListener("click", (e) => {
+    if (!document.body.classList.contains("onshow") || !e.target.closest?.("#play")) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    stop();
+  }, true);
+
   // ── the list, and the beacons ────────────────────────────────────────────
   const shown = () => on() && (typeof layers === "undefined" || layers.onAir !== false);
   const WORDS = () => ({
     connecting: tl("shows.connecting", "Connecting…"),
     on: tl("shows.on", "Listening."),
   });
+  // Looking for shows with nothing playing (src/presence-nostr.js, watch): only
+  // where shows are on, with the On Air layer, and with "Show other listeners".
+  let watching = null;
+  function sync() {
+    const want = shown() && typeof prefs !== "undefined" && prefs?.presence === true;
+    if (want !== watching) { watching = want; window.auralfm.showsWatch?.(want); }
+  }
   function paint() {
+    sync();
+    now();
     pins();
     const card = $l("livenow"), list = $l("livelist");
     if (!card || !list) return;
-    const rows = live.slice();
+    const rows = live.filter((p) => !gone.has(p.pubkey));
     // The show being heard stays listed while its ring is between heartbeats.
     if (show && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.unshift(show.peer);
-    card.hidden = !(shown() && rows.length);
+    card.hidden = !(shown() && (rows.length || said));
     list.textContent = "";
     if (card.hidden) return;
     for (const p of rows) {
@@ -224,9 +296,17 @@
         say.className = "livesay";
         say.setAttribute("role", mine.state === "failed" ? "alert" : "status");
         say.textContent = WORDS()[mine.state] || WHY()[mine.why] || WHY().noanswer;
+        // Report sits with the show it is about, once it has been tried.
+        const rep = document.createElement("button");
+        rep.type = "button"; rep.className = "livereport";
+        rep.textContent = tl("shows.report", "Report");
+        rep.setAttribute("aria-label", `${rep.textContent}: ${title}`);
+        rep.onclick = () => report(p);
+        say.append(" ", rep);
         list.append(say);
       }
     }
+    if (said) { const p = document.createElement("p"); p.className = "livesay"; p.setAttribute("role", "status"); p.textContent = said; list.append(p); }
     const note = document.createElement("p");
     note.className = "livesay fine";
     note.textContent = tl("shows.note", "Direct from the host. Each side sees the other's network address.");
@@ -241,7 +321,7 @@
   const pinOf = new Map();
   function pins() {
     if (typeof globe === "undefined" || !globe || !globe.htmlElementsData) return;
-    const rows = shown() ? live.slice() : [];
+    const rows = shown() ? live.filter((p) => !gone.has(p.pubkey)) : [];
     const told = (s) => s?.state === "failed" && Date.now() < s.until;
     if (shown() && show && (show.state === "connecting" || show.state === "on" || told(show)) && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.push(show.peer);
     for (const k of [...pinOf.keys()]) if (!rows.some((p) => p.pubkey === k)) pinOf.delete(k);
@@ -291,9 +371,11 @@
       // The host has stopped saying the show is on.
       paint();
     },
-    listen, stop,
-    /** The On Air layer was switched (explore-view.js). */
+    listen, stop, report,
+    /** The On Air layer was switched (explore-view.js), or a preference (explore-chat.js). */
     layer() { paint(); },
+    /** The player painted its row (explore-playback.js): a show being heard takes it back. */
+    now,
     get on() { return on(); },
     get state() { return show ? { state: show.state, why: show.why || null, title: show.peer.label } : null; },
     /** What has arrived, for telling a connection that carries sound from one that only says it is up. */

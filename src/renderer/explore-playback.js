@@ -423,6 +423,8 @@ function setLocked(on) {
 
 function wirePlayback() {
   window.auralfm.onPlayerState((s) => {
+    // Kept for the row to be given back after a show (explore-shows.js).
+    window.AuralPlayerSeen = s;
     paintSignal(s?.rssi);
     /**
      * When the dial goes away.
@@ -494,6 +496,7 @@ function wirePlayback() {
       el.setAttribute("aria-current", playing?.id === el.dataset.id);
     }
     paintNowStar();
+    window.AuralShows?.now();   // a show being heard keeps the row (explore-shows.js)
     syncChat(prefs);          // presence follows what is playing
     // Tuning across the world moves us to a different cell; re-read it rather than
     // keep counting against the last one.

@@ -325,6 +325,7 @@ async function syncChat(prefs) {
                   && typeof at.lat === "number" && typeof at.lon === "number");
   $("chat").hidden = !want;
   window.AuralStudio?.room?.();
+  window.AuralShows?.layer();   // "Show other listeners" decides whether shows are looked for
   // Moving between a station's room and the show's is a new room even though
   // the card stays up: its log, its head and its composer all change.
   if (want === chatOn && !!host === chatHost) return;

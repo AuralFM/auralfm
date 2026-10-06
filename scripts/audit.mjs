@@ -3100,7 +3100,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   vibes.length >= 15 && !bare.length
     ? pass(`all ${vibes.length} vibes have an icon in art/vibes/`)
     : fail("every vibe has its drawing", bare.length ? `no art/vibes/${bare.join(".svg, ")}.svg` : `only ${vibes.length} vibes found in src/catalog.js`);
-  const page = fs.existsSync(R("home/vibes/rock/index.html")) ? fs.readFileSync(R("home/vibes/rock/index.html"), "utf8") : "";
+  // Talk, not Rock: Rock is in parts now (scripts/build-vibes.mjs), and its own
+  // page lists only its busiest places.
+  const page = fs.existsSync(R("home/vibes/talk/index.html")) ? fs.readFileSync(R("home/vibes/talk/index.html"), "utf8") : "";
   const rows = (page.match(/<ol class="vst"[^>]*>[\s\S]*?<\/ol>/g) || []).join("");
   const items = (rows.match(/<li>/g) || []).length;
   const linked = (rows.match(/<li><a href="https:\/\/listen\.auralfm\.xyz\/\?station=af-[0-9a-z]+"><span>/g) || []).length;
@@ -3488,9 +3490,19 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   // Listening is on where the studio is, or where the private ?ears link has
   // been opened; and that link must never be a way into the studio itself
   // (the check after this one holds the studio's own door).
-  if (!shows.includes("const on = () => !!window.AuralStudio?.on || ears;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && rows.length);")) gaps.push("the Live now list shows where neither the studio nor the private link has switched it on");
+  if (!shows.includes("const on = () => !!window.AuralStudio?.on || ears;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && (rows.length || said));")) gaps.push("the Live now list shows where neither the studio nor the private link has switched it on");
   if (/shows\.ears|has\("ears"\)/.test(studio)) gaps.push("the private listening link reaches into the studio");
   if (!/"shows\.note"/.test(shows) || !/network address/.test(shows)) gaps.push("a listener is not told the host can see their address");
+  // Looking for shows with nothing playing reads and never announces, and only
+  // with "Show other listeners" on: presence that goes out unasked is the one
+  // promise this app could not take back.
+  if (!/function watch\(\) \{\s*if \(here\) return;\s*connect\(\);/.test(nostrSrc)) gaps.push("watching for shows is no longer a connection with no place joined");
+  for (const f of ["src/main.js", "web/messaging.js"]) {
+    if (!/if \((on|p\.presence === true) && watching\) nostr\.watch\(\);/.test(readSrc(f))) gaps.push(`${f}: shows are looked for with presence switched off`);
+  }
+  // A report hides the host first (the part that takes effect) and then drafts the email.
+  const rep = shows.slice(shows.indexOf("async function report(peer)"), shows.indexOf("async function listen(peer)"));
+  if (!(rep.indexOf("gone.add(peer.pubkey)") >= 0 && rep.indexOf("gone.add(peer.pubkey)") < rep.indexOf("chatReport"))) gaps.push("reporting a show does not hide its host before anything else");
   gaps.length ? fail("a show is heard directly, and found honestly", gaps.join("; "))
     : pass("the handshake is sealed and fresh, the host answers only live and to a dozen, and a listener is told what a direct connection shows");
 }

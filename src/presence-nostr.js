@@ -1319,6 +1319,7 @@ function join(lat, lon, label, live = false) {
   // Tuning across the world changes which room you are in. The old room's
   // conversation is not yours any more, and showing it against a new place
   // would be a lie about where those people are.
+  const was = here;
   const moved = here && here.geohash !== cell;
   if (moved) {
     messages.length = 0;
@@ -1337,7 +1338,9 @@ function join(lat, lon, label, live = false) {
   // Tuning from Rio to Tokyo changes which relays are near, and staying on the
   // old set would mean announcing into Tokyo's channel on South America's
   // servers — technically valid, and nobody there would ever see it.
-  if (moved && dialled.join() !== relaysFor(cell).join()) {
+  // The same when arriving from only looking (watch): those sockets were
+  // dialled for nowhere in particular, and this room has relays of its own.
+  if ((moved || !was) && sockets.length && dialled.join() !== relaysFor(cell).join()) {
     for (const w of sockets) { try { w.close(); } catch {} }
     sockets = [];
   }
@@ -1348,6 +1351,23 @@ function join(lat, lon, label, live = false) {
   announce();
   clearInterval(beat);
   beat = setInterval(() => { announce(); prune(); }, here.live ? LIVE_BEAT_MS : BEAT_MS);
+}
+
+/**
+ * Look, without being anywhere.
+ *
+ * A show on air is found from its host's presence, and presence was only read
+ * while something was playing: somebody who opened the app to see what was on
+ * saw an empty globe (Melton's tester would have). This connects and listens
+ * with no place joined. Nothing is announced (there is no `here` to announce),
+ * nothing can be said or sent (both need a place), and it stops like any other
+ * connection, with leave().
+ */
+function watch() {
+  if (here) return;
+  connect();
+  clearInterval(beat);
+  beat = setInterval(prune, BEAT_MS);
 }
 
 function leave() {
@@ -1555,7 +1575,7 @@ function forgetDms() {
   emitNow("dms");
 }
 
-module.exports = { join, leave, view, say, signal, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
+module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
                    onSignal: (fn) => { onSignal = fn; },
                    drop, dm, thread, markRead, forgetDms,
                    joinHub, leaveHub, sayHub, lookupProfile, knownProfiles,

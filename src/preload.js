@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   micSettings: () => ipcRenderer.send("mic:settings"),
   studioOpenTrack: (url) => ipcRenderer.invoke("studio:openTrack", url),
   studioHost: (lat, lon, live, title) => ipcRenderer.send("studio:host", lat, lon, live, title),
+  showsWatch: (on) => ipcRenderer.send("shows:watch", on === true),
   rtcSignal: (to, payload) => ipcRenderer.invoke("rtc:signal", to, payload),
   onRtcSignal: (fn) => ipcRenderer.on("rtc:signal", (_e, from, payload, at) => fn(from, payload, at)),
 

@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 27 September 2026**
+**Last updated: 6 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -214,6 +214,28 @@ are listening to, from a public directory plus a few well-known ones, and you ca
 add your own in Settings — yours are tried first. A relay is asked only for
 messages in the cell you are listening to or looking at. No relay is told where
 you are.
+
+## Live shows (beta)
+
+A show goes from the host's device straight to yours. AuralFM has no server in
+between, and keeps nothing about who listened.
+
+- **Each side sees the other's network address** (IP address), as a station's
+  server does when you play its stream. A host can see the addresses of the
+  people connected; a listener can see the host's.
+- **How the two devices find each other:** your device writes how it can be
+  reached and sends it to the host in a sealed message. The relays that carry
+  it can see that a sealed message went to the host's key. They cannot read it.
+- **To find its own public address,** each device asks a STUN server
+  (Cloudflare's or Google's). That server sees the device's address and
+  nothing about the show.
+- **A show is listed** while its host is live: its name and its town, on the
+  same public relays the chat uses. It needs "Show other listeners" on.
+- **Reporting a show** hides its host on your device and opens an email draft
+  to hello@auralfm.xyz. Nothing is sent unless you send it.
+- **Nothing is recorded** by AuralFM. A host may record their own show.
+
+Shows are in testing and not yet in the public apps.
 
 ## Children
 

@@ -234,7 +234,9 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   .globeside button {
     /* 44pt, like every other target here: these three sit over a moving globe,
        which is the last place to ask for a precise tap. */
-    width: 44px; height: 44px; display: grid; place-items: center; font-size: 15px;
+    /* 22pt glyphs, beside the tab bar's 24: at 15 these three read as a
+       smaller set than the icons under them (Melton, 6 Oct 2026). */
+    width: 44px; height: 44px; display: grid; place-items: center; font-size: 22px;
     border: 0; border-radius: var(--r-lg); cursor: default; color: var(--label);
     background: color-mix(in srgb, var(--bg) 62%, transparent);
     -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);

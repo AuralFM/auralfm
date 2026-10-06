@@ -55,7 +55,7 @@ window.AuralChat = function create({ getPrefs, emit }) {
   /** Where the station is, blurred to a ~20 km cell — never where the listener is. */
   // Your show: a host stands in the town the show goes out from, as on the
   // desktop (src/main.js, "studio:host"): the place they chose, and no label.
-  let hosting = null, lastPlayer = null;
+  let hosting = null, lastPlayer = null, watching = false;
   function sync(player) {
     lastPlayer = player;
     const p = getPrefs();
@@ -64,6 +64,8 @@ window.AuralChat = function create({ getPrefs, emit }) {
     const ch = hosting || (player?.playing ? player.channel : null);
     if (p.presence !== true || !ch || typeof ch.lat !== "number" || typeof ch.lon !== "number") {
       nostr.leave();
+      // Nothing playing, but the page is looking for shows on air: read only.
+      if (p.presence === true && watching) nostr.watch();
       return;
     }
     nostr.join(ch.lat, ch.lon, hosting ? (hosting.live ? hosting.title : "") : ch.title || "", !!hosting?.live);
@@ -82,16 +84,16 @@ window.AuralChat = function create({ getPrefs, emit }) {
     if (muted.isKey(key)) muted.add(key);
     refresh();
     const lines = [
-      "Reporting a message seen in AuralFM's place chat (web version).", "",
+      p.show ? "Reporting a live show heard in AuralFM (web version)." : "Reporting a message seen in AuralFM's place chat (web version).", "",
       `Sender key: ${key || "(unknown)"}`,
       `Place cell: ${String(p.geohash || "(unknown)")}`,
       `Seen at:    ${new Date(Number(p.at) || Date.now()).toISOString()}`, "",
-      "Message:", String(p.text || "").slice(0, 1000), "", "--",
+      p.show ? "Show:" : "Message:", String(p.text || "").slice(0, 1000), "", "--",
       "Composed in the browser and sent by hand. AuralFM has no server and cannot",
       "delete this message from the relays that carry it; the sender is now muted",
       "in this browser.",
     ];
-    location.href = ("mailto:hello@auralfm.xyz?subject=" + encodeURIComponent("AuralFM — reported chat message")
+    location.href = ("mailto:hello@auralfm.xyz?subject=" + encodeURIComponent(p.show ? "AuralFM — reported live show" : "AuralFM — reported chat message")
       + "&body=" + encodeURIComponent(lines.join("\n"))).slice(0, 8000);
     return true;
   }
@@ -111,6 +113,7 @@ window.AuralChat = function create({ getPrefs, emit }) {
     api: {
       presenceStats: async () => nostr.stats(),
       studioHost: (lat, lon, live, title) => host(lat, lon, live, title),
+      showsWatch: (on) => { if (watching === (on === true)) return; watching = on === true; sync(lastPlayer); },
       rtcSignal: async (to, payload) => nostr.signal(String(to || ""), payload),
       presenceView: (lat, lon) => { if (getPrefs().presence === true) nostr.view(lat, lon); },
       chatHistory: async () => visible(nostr.history()),
