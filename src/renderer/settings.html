@@ -272,6 +272,8 @@
   .link.danger{color:var(--err)}
   #nickname,#filterterm{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
   #filterterm{text-align:left;width:180px}
+  #movecode{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:6px 9px;border-radius:var(--r-md);outline:none;flex:1;min-width:0}
+  #movecode:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   #filterterm:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   /* The list is long enough to need a ceiling, and a card that grows past the
      window is worse than one that scrolls. */
@@ -564,6 +566,25 @@
       <div id="contactlist"></div>
     </div>
     <p class="hint" data-i18n="set.contactsHint">A tick means you compared fingerprints with this person yourself and they matched. Only you can set that, and only you should — read the sixteen characters aloud on a call or in person. A fingerprint somebody typed into the chat proves nothing.</p>
+
+    <!-- Moving to a new install (web/bridge.js, backupCode): the web app only,
+         where everything lives in this browser and goes when its icon does.
+         Shown by settings.js when the bridge offers it. -->
+    <div id="movesec" hidden>
+      <div class="card spaced">
+        <div class="row">
+          <span class="name" data-i18n="set.move">Move to a new install</span>
+          <button class="link" id="movecopy" data-i18n="set.moveCopy">Copy my code</button>
+        </div>
+        <div class="row moverow">
+          <input id="movecode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Paste a code"
+                 placeholder="Paste a code" data-i18n-ph="set.movePaste">
+          <button class="link" id="moverestore" data-i18n="set.moveRestore">Restore</button>
+        </div>
+        <div class="row" id="movesaidrow" hidden><span class="name sub" id="movesaid" role="status" aria-live="polite"></span></div>
+      </div>
+      <p class="hint" data-i18n="set.moveHint">The code holds your favorites, settings, mutes and contacts. Copy it here, then paste it in the new install. No account.</p>
+    </div>
 
     <div class="card spaced">
       <div class="row">

@@ -299,6 +299,38 @@ $("#durableIdentity").addEventListener("click", async () => {
   paintFingerprint();
 });
 
+// Moving to a new install: the web app's carry-over code (web/bridge.js). `in`,
+// not a truthy test: the desktop keeps its data in files and has no such call.
+if ("backupCode" in window.auralfm) {
+  $("#movesec").hidden = false;
+  const said = (text) => { $("#movesaid").textContent = text; $("#movesaidrow").hidden = !text; };
+  $("#movecopy").addEventListener("click", async () => {
+    // Asked for and written inside the tap: an iPhone lets go of the clipboard
+    // the moment a tap handler waits on anything else.
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const text = window.auralfm.backupCode().then((c) => new Blob([c], { type: "text/plain" }));
+        await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
+        ok = true;
+      } else { await navigator.clipboard.writeText(await window.auralfm.backupCode()); ok = true; }
+    } catch { ok = false; }
+    if (ok) return said(T["set.moveCopied"] || "Copied. Paste it in the new install.");
+    // The clipboard was refused: put the code in the field, selected, to copy by hand.
+    const field = $("#movecode");
+    field.value = await window.auralfm.backupCode();
+    field.focus(); field.select();
+    said(T["set.moveSelect"] || "Copy the code from the field.");
+  });
+  $("#moverestore").addEventListener("click", async () => {
+    const r = await guard("backupRestore", () => window.auralfm.backupRestore($("#movecode").value), { ok: false, error: "damaged" });
+    if (!r.ok) return said(r.error === "notours" ? (T["set.moveNotOurs"] || "That is not an AuralFM code.") : (T["set.moveDamaged"] || "The code is not complete. Copy it again."));
+    said(r.flag ? (T["set.moveDone"] || "Restored.") : `${T["set.moveDone"] || "Restored."} ${r.favourites} ${T["set.moveFavs"] || "favorites"}.`);
+    // Everything reads its settings at start: start again with the new ones.
+    setTimeout(() => { try { (window.top || window).location.reload(); } catch { location.reload(); } }, 1200);
+  });
+}
+
 $("#panic").addEventListener("click", async () => {
   if (!confirm(T["set.panicAsk"] ||
     "Erase favourites, listening history, the mute list and every key this session used? This cannot be undone.")) return;

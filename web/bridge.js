@@ -47,6 +47,11 @@
   // Every read and write is guarded: a private window or blocked site data makes
   // localStorage throw, and the app must still run, just without memory.
   const KEY = "auralfm.web.";
+  // The carry-over code (backupCode, below): its mark, and the small files of
+  // the messaging modules that go with it (web/shims/fs.js keeps them here).
+  const BACKUP_TAG = "auralfm1:";
+  const FS = "auralfm.web.fs:";
+  const BACKUP_FILES = ["muted.json", "contacts.json", "filter.json"];
   const read = (k, d) => {
     try { const v = localStorage.getItem(KEY + k); return v ? JSON.parse(v) : d; }
     catch { return d; }
@@ -663,6 +668,71 @@
       dmHistory: empty, hubHistory: empty, socialList: empty, muteList: empty,
       profilesKnown: async () => ({}), filterList: async () => ({ terms: [], shipped: [] }),
     }),
+    /**
+     * Moving to a new install (Melton, 6 Oct 2026).
+     *
+     * An iPhone fixes some things when the icon is added to the Home Screen
+     * (the status bar's style is one), so getting them means removing the icon
+     * and adding it again, and that deletes everything the old one held: a
+     * Home Screen app has storage of its own, which Safari cannot reach and
+     * which does not survive its icon. There is no account to bring it back.
+     *
+     * So the old install writes what it holds as one line of text, the person
+     * carries it (the clipboard, Notes, a message to themselves), and the new
+     * install reads it back. What it holds: favourites and where you left
+     * off, settings, the mute list, kept contacts and the word list. What it
+     * never holds: a key. There is none to hold: identities here are made per
+     * launch and never stored.
+     */
+    backupCode: async () => {
+      const files = {};
+      for (const f of BACKUP_FILES) { try { const v = localStorage.getItem(FS + f); if (v) files[f] = v; } catch { /* not stored */ } }
+      const pack = { v: 1, app: "auralfm", at: new Date().toISOString().slice(0, 10),
+        state: Object.fromEntries(STATE_KEYS.filter((k) => k in getState()).map((k) => [k, getState()[k]])),
+        prefs: M.prefs.pick(read("prefs", {})), layers: read("layers", null), files };
+      const bytes = new TextEncoder().encode(JSON.stringify(pack));
+      let bin = ""; for (const b of bytes) bin += String.fromCharCode(b);
+      return BACKUP_TAG + btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    },
+    backupRestore: async (code) => {
+      // Whatever came with it from the clipboard: spaces, line breaks, quotes.
+      const text = String(code || "").replace(/[\s"'“”]/g, "");
+      // The private listening switch (explore-shows.js) is set by a link, and a
+      // Home Screen app cannot be given a link: typed here, the word does it.
+      if (/^ears(off)?$/i.test(text)) {
+        try { if (/off$/i.test(text)) localStorage.removeItem("auralfm.shows.ears"); else localStorage.setItem("auralfm.shows.ears", "1"); } catch { return { ok: false, error: "damaged" }; }
+        return { ok: true, favourites: 0, flag: true };
+      }
+      const at = text.indexOf(BACKUP_TAG);
+      if (at < 0) return { ok: false, error: "notours" };
+      let pack = null;
+      try {
+        const b64 = text.slice(at + BACKUP_TAG.length).replace(/-/g, "+").replace(/_/g, "/");
+        const bin = atob(b64 + "=".repeat((4 - b64.length % 4) % 4));
+        pack = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
+      } catch { return { ok: false, error: "damaged" }; }
+      if (!pack || pack.app !== "auralfm" || pack.v !== 1 || typeof pack.state !== "object") return { ok: false, error: "damaged" };
+      // Favourites join the ones already here (the new install may have a few);
+      // the rest of where-you-left-off comes from the code.
+      const here = getState(), mine = Array.isArray(here.favorites) ? here.favorites : [];
+      const theirs = (Array.isArray(pack.state.favorites) ? pack.state.favorites : [])
+        .filter((f) => f && typeof f.id === "string" && typeof f.title === "string").slice(0, 2000);
+      const favorites = [...theirs, ...mine.filter((f) => !theirs.some((x) => x.id === f.id))];
+      const state = { ...here };
+      for (const k of STATE_KEYS) if (k in pack.state) state[k] = pack.state[k];
+      state.favorites = favorites;
+      write("state", state);
+      if (pack.prefs && typeof pack.prefs === "object") write("prefs", { ...read("prefs", {}), ...M.prefs.pick(pack.prefs), durableIdentity: false });
+      if (pack.layers && typeof pack.layers === "object") write("layers", pack.layers);
+      // A file only where this install has none of its own: a mute made here
+      // since is not undone by an older list.
+      for (const f of BACKUP_FILES) {
+        const v = pack.files?.[f];
+        if (typeof v !== "string" || v.length > 400000) continue;
+        try { JSON.parse(v); if (!localStorage.getItem(FS + f)) localStorage.setItem(FS + f, v); } catch { /* not a file of ours */ }
+      }
+      return { ok: true, favourites: theirs.length };
+    },
     // Everything this browser holds, as the desktop's Erase does: identities,
     // mutes, contacts, messages and word-list changes, then favourites and
     // history. Appearance settings stay.

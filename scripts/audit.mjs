@@ -3410,6 +3410,27 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the studio open: the globe sits between the panels, and the host's town carries the show's name only while live");
 }
 
+// ── the carry-over code holds no key ────────────────────────────────────────
+// The web app can write what it holds as a line of text, for moving to a new
+// install (6 Oct 2026). It goes through a clipboard and often a notes app or a
+// message, so it must never hold anything that is a secret: only the named
+// files of the messaging modules, never an identity. And a pasted file is
+// taken only where this install has none of its own.
+{
+  console.log("\nthe carry-over code holds no key");
+  const bridge = readSrc("web/bridge.js");
+  const files = (bridge.match(/const BACKUP_FILES = \[([^\]]*)\];/) || [])[1] || "";
+  const names = [...files.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  const body = bridge.slice(bridge.indexOf("backupCode: async"), bridge.indexOf("panicWipe: async"));
+  const gaps = [];
+  if (!names.length) gaps.push("no list of files to carry was found");
+  for (const n of names) if (!["muted.json", "contacts.json", "filter.json"].includes(n)) gaps.push(`${n} is carried`);
+  if (/identity\.json|\.sk\b|nsec|secret/i.test(body.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""))) gaps.push("the code's builder reads something named like a key");
+  if (!/if \(!localStorage\.getItem\(FS \+ f\)\) localStorage\.setItem\(FS \+ f, v\)/.test(body)) gaps.push("a pasted file can replace one this install already has");
+  gaps.length ? fail("the carry-over code holds no key", gaps.join("; "))
+    : pass("the code carries favourites, settings and three named lists, no identity, and never overwrites a list already here");
+}
+
 // ── a show is heard directly, and found honestly ────────────────────────────
 // Live, a show goes from the host's device to each listener's (6 Oct 2026).
 // What that rests on:
