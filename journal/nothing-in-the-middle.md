@@ -3,8 +3,8 @@ title: Nothing in the middle
 date: 2026-09-20 18:00
 topic: The network
 author: Melton Bell
-image: globe.jpg
-alt: The globe, with a city selected and a station playing
+image: earth-001.jpg
+alt: Abstract art of The globe
 summary: 38,337 stations, and not one of them had to pay, pitch or perform for a ranking to be on the globe. Nobody sits between you and the place you are listening to — and that is the point, not an accident.
 ---
 Every station on AuralFM belongs to somebody else. A community station in the Andes, a gospel hour in Lagos, a techno stream in Tbilisi, a college station in Ohio. None of them signed a deal with us. None of them are ranked.

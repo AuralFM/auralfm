@@ -108,13 +108,21 @@ function bringIn(dir) {
     if (!src) fail(`${note} uses ${name}, which is not in ${dir}`);
     const ext = path.extname(name).toLowerCase();
     if (![".jpg", ".jpeg", ".png", ".webp"].includes(ext)) fail(`${note}: ${name} is not a jpg, png or webp`);
-    const out = slugify(path.basename(name, path.extname(name))) + (ext === ".jpeg" ? ".jpg" : ext);
+    let out = slugify(path.basename(name, path.extname(name))) + (ext === ".jpeg" ? ".jpg" : ext);
     fs.mkdirSync(IMAGES, { recursive: true });
     fs.copyFileSync(src, path.join(IMAGES, out));
     // A phone photo is 4000px and several megabytes; a page needs 1600.
     const s = size(path.join(IMAGES, out));
     if (s && s[0] > 1600 && process.platform === "darwin")
       spawnSync("sips", ["-Z", "1600", path.join(IMAGES, out)], { stdio: "ignore" });
+    // A PNG still over a megabyte at that size is a picture, not a diagram: a
+    // grainy cover came through at 5.4 MB, on the front page and as the post's
+    // link preview (X refuses one over 5 MB). It goes in as a JPEG: 1.6 MB.
+    if (ext === ".png" && process.platform === "darwin" && fs.statSync(path.join(IMAGES, out)).size > 1e6) {
+      const jpg = out.replace(/\.png$/, ".jpg");
+      spawnSync("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "70", path.join(IMAGES, out), "--out", path.join(IMAGES, jpg)], { stdio: "ignore" });
+      if (fs.existsSync(path.join(IMAGES, jpg))) { fs.rmSync(path.join(IMAGES, out)); out = jpg; }
+    }
     return out;
   };
 
