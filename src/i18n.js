@@ -474,6 +474,7 @@ const en = {
   "set.syncAt": "Synced",
   "set.syncCopied": "Copied. Paste it on the other device.",
   "set.syncCopy": "Copy sync code",
+  "set.syncFailed": "Sync did not turn on. Try again.",
   "set.syncHint": "Keeps your favorites the same on each device that has the code. The list is sealed before it leaves. Anyone with the code can read and change it. No account.",
   "set.syncJoin": "Join",
   "set.syncNever": "Not synced yet.",

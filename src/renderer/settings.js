@@ -321,10 +321,15 @@ if ("favSync" in window.auralfm) {
   const why = (e) => (e === "toobig" ? (T["set.syncTooBig"] || "Too many favorites to sync.")
     : e === "refused" ? (T["set.syncRefused"] || "The relays refused the list. It will try again.")
     : (T["set.syncOffline"] || "No relay answered. It will try again."));
-  const paint = (st) => {
+  // `pressed`: the button that asked has just been replaced by another, and
+  // focus goes to that one. Left alone it fell to the top of the page, which
+  // is where a keyboard or VoiceOver then started from. Not on a change that
+  // arrived from another device.
+  const paint = (st, pressed) => {
     const on = !!st?.on;
     $("#syncon").hidden = on; $("#synccopy").hidden = !on;
     $("#syncjoinrow").hidden = on; $("#syncoffrow").hidden = !on;
+    if (pressed) (on ? $("#synccopy") : $("#syncon")).focus();
     if (!on) return;
     const at = st.at ? new Date(st.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
     $("#syncwhen").textContent = st.error ? why(st.error)
@@ -340,12 +345,21 @@ if ("favSync" in window.auralfm) {
     said("");
     return st;
   };
-  $("#syncon").addEventListener("click", async () => paint(await run("start")));
+  // Asked for and still off (the sync code did not load, or the call failed):
+  // said, where "Syncing…" was a moment ago. It used to go back to "Turn on"
+  // with nothing.
+  const failed = () => said(T["set.syncFailed"] || "Sync did not turn on. Try again.");
+  $("#syncon").addEventListener("click", async () => {
+    const st = await run("start");
+    paint(st, true);
+    if (!st?.on) failed();
+  });
   $("#syncjoin").addEventListener("click", async () => {
     const st = await run("join", $("#synccode").value);
     if (st.ok === false) return said(st.error === "notours" ? (T["set.syncNotOurs"] || "That is not a sync code.") : (T["set.moveDamaged"] || "The code is not complete. Copy it again."));
+    if (!st.on) return failed();          // the code stays in the field
     $("#synccode").value = "";
-    paint(st);
+    paint(st, true);
   });
   $("#synccopy").addEventListener("click", async () => {
     // The desktop copies in its main process. The web build has no such call
@@ -362,7 +376,7 @@ if ("favSync" in window.auralfm) {
   $("#syncoff").addEventListener("click", async () => {
     const st = await call("stop");
     $("#synccode").value = ""; $("#syncjoin").hidden = false;
-    paint(st);
+    paint(st, true);
     said(T["set.syncStopped"] || "Off. Your favorites stay on this device.");
   });
   window.auralfm.onFavSync?.((st) => paint(st));

@@ -59,6 +59,9 @@
        failed stream mean the same thing whatever palette is chosen, so these
        must not follow the accent. They were systemGreen and systemRed. */
     --up:#35C46A; --down:#E0574A; --err:#E0574A;
+    /* What is legible on --err, as in settings.html: white is 3.7:1 on the
+       dark theme's red and near-black is 5.1:1; on the light theme's it flips. */
+    --on-err:#12100F;
     /* Depth comes from these two, not from more blur. A machined edge catches
        light along its top and goes dark where it meets what is behind it —
        which is also the cheapest way to sit a panel over a live globe on an
@@ -68,18 +71,18 @@
   /* System appearance, unless Settings has forced the other one. */
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-    --up:#1F7A4C; --down:#C4362B; --err:#C4362B;
+    --up:#1F7A4C; --down:#C4362B; --err:#C4362B; --on-err:#F7F4EE;
       --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
-      --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+      --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.60); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10); --pane:rgba(255,255,255,.72); --bg:#FFFFFF;
     --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
     }
   }
   :root[data-theme="light"]{
-    --up:#1F7A4C; --down:#C4362B; --err:#C4362B;
+    --up:#1F7A4C; --down:#C4362B; --err:#C4362B; --on-err:#F7F4EE;
     --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
-    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.60); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10); --pane:rgba(255,255,255,.72); --bg:#FFFFFF;
     --accent:#2A2622; --star:#8A6D1F; --on-accent:#F7F4EE;
@@ -1114,7 +1117,7 @@
   .liverow.on .livename{color:var(--accent)}
   .livenow .linkbtn{flex:none;border:0;border-radius:var(--r-pill);background:var(--fill);padding:6px 12px;font:inherit;font-size:12px;font-weight:590;color:var(--label);cursor:default}
   .livenow .linkbtn:active{transform:scale(.96)}
-  .liverow.on .linkbtn{background:var(--err);color:#fff}
+  .liverow.on .linkbtn{background:var(--err);color:var(--on-err)}
   .livename:focus-visible,.livenow .linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .livesay{margin:0 0 4px 18px;font-size:12px;line-height:1.4;color:var(--label2)}
   .livesay.fine{margin:4px 0 0}
@@ -1129,14 +1132,14 @@
   .onair-at{position:relative;width:0;height:0;pointer-events:none;transition:opacity .2s linear}
   .onair-pin{
     position:absolute;left:-12.5px;top:0;translate:0 -50%;display:inline-flex;align-items:center;gap:7px;max-width:190px;padding:5px 11px 5px 9px;
-    border:0;border-radius:var(--r-pill);background:var(--err);color:#fff;
+    border:0;border-radius:var(--r-pill);background:var(--err);color:var(--on-err);
     font:590 12px/1.2 -apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;letter-spacing:.01em;
     white-space:nowrap;cursor:default;pointer-events:auto;
     box-shadow:0 0 0 .5px rgba(255,255,255,.35), 0 4px 14px rgba(0,0,0,.5);
     transition:transform .16s var(--ease-out);
   }
   .onair-pin span{overflow:hidden;text-overflow:ellipsis}
-  .onair-pin i{flex:none;width:7px;height:7px;border-radius:50%;background:#fff}
+  .onair-pin i{flex:none;width:7px;height:7px;border-radius:50%;background:currentColor}
   .onair-pin::before{
     content:"";position:absolute;left:12.5px;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;z-index:-1;
     background:radial-gradient(circle, color-mix(in srgb, var(--err) 85%, transparent) 0, color-mix(in srgb, var(--err) 30%, transparent) 55%, transparent 72%);
@@ -1145,7 +1148,6 @@
   @keyframes onairhalo{from{transform:scale(.8);opacity:.95}to{transform:scale(6.5);opacity:0}}
   .onair-pin:active{transform:scale(.95)}
   .onair-pin.on{background:var(--accent);color:var(--on-accent, #fff)}
-  .onair-pin.on i{background:currentColor}
   .onair-pin.playing i{border-radius:1.5px}          /* a stop square: press to stop */
   .onair-pin.on::before{background:radial-gradient(circle, color-mix(in srgb, var(--accent) 80%, transparent) 0, color-mix(in srgb, var(--accent) 28%, transparent) 55%, transparent 72%)}
   /* Why it did not connect: a sentence, so it may take two lines. */
@@ -1205,7 +1207,7 @@
   .studio .airnote{margin:9px 0 0;font-size:11.5px;line-height:1.45;color:var(--label2)}
   .studio .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
   .studio .sheetbtn[disabled]{opacity:.45}
-  .studio .sheetbtn.onair{background:var(--err);color:#fff;font-weight:590}
+  .studio .sheetbtn.onair{background:var(--err);color:var(--on-err);font-weight:590}
   .studio .sheetbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .studio label.field{display:block;margin:0 0 9px}
   .studio label.field span{display:block;margin-bottom:4px;font-size:11.5px;color:var(--label2)}
@@ -1649,7 +1651,9 @@
     color:var(--label);font:inherit;font-size:12px;padding:7px 9px;cursor:default;
     transition:background var(--dur-hover) var(--ease-out);
   }
-  .outmenu button:focus-visible{background:var(--fill);outline:none}
+  /* A ring as well as the fill: the fill alone is the hover's, and at 7% it
+     is not a thing a keyboard user can find. */
+  .outmenu button:focus-visible{background:var(--fill);outline:2px solid var(--accent);outline-offset:-2px}
   @media (hover:hover){.outmenu button:hover{background:var(--fill);outline:none}}
   .outmenu button[aria-selected="true"]{color:var(--accent)}
   /* A tick, in a fixed column, so the names all start on the same line whether

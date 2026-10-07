@@ -124,7 +124,7 @@
   /* The icon is already a squircle; this only stops the PNG corners showing
      through at the very edge. --r-xl is the panel radius and reads right at 46px. */
   .ico img{width:46px;height:46px;display:block;border-radius:var(--r-xl)}
-  .ico .nm{font-size:11px;color:var(--label2)}
+  .ico .nm{font-size:12px;color:var(--label2)}
   .ico[aria-checked="true"]{background:var(--fill-hi)}
   .ico[aria-checked="true"] .nm{color:var(--label);font-weight:590}
   .ico:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -142,7 +142,7 @@
      white circle over the first colour of every palette. */
   .pal .swatch{display:flex;gap:3px;margin-bottom:6px}
   .pal .swatch i{flex:1;height:14px;border-radius:var(--r-sm)}
-  .pal .nm{display:block;font-size:11px;font-weight:530;letter-spacing:-.002em}
+  .pal .nm{display:block;font-size:12px;font-weight:530;letter-spacing:-.002em}
   #relay-add{
     flex:1;min-width:0;appearance:none;border:0;border-radius:var(--r-md);
     background:var(--fill);color:var(--label);font:inherit;font-size:12px;padding:5px 8px;
@@ -154,19 +154,19 @@
     font:inherit;font-size:12px;padding:5px 10px;cursor:default;
   }
   @media (hover:hover){#relay-btn:hover{background:var(--label);color:var(--bg)}}
-  #relaylist .row .tag{margin-left:auto;font-size:10px;color:var(--label3)}
+  #relaylist .row .tag{margin-left:auto;font-size:12px;color:var(--label2)}
   #relaylist .row button{
-    flex:none;border:0;background:none;color:var(--label3);cursor:default;
+    flex:none;border:0;background:none;color:var(--label2);cursor:default;
     font-size:14px;line-height:1;padding:0 2px;margin-left:6px;
   }
   @media (hover:hover){#relaylist .row button:hover{color:var(--label)}}
-  .pal .tag{display:block;font-size:10px;color:var(--label2);margin-top:1px}
+  .pal .tag{display:block;font-size:12px;color:var(--label2);margin-top:1px}
 
   .row .name b{display:block;font-weight:530}
   .row .name .sub{display:block;font-size:12px;color:var(--label2);margin-top:1px}
   .row .rm{
     appearance:none;border:0;border-radius:var(--r-md);background:var(--fill);color:var(--label2);
-    font:inherit;font-size:11px;padding:4px 9px;cursor:default;flex:none;
+    font:inherit;font-size:12px;padding:4px 9px;cursor:default;flex:none;
   }
   /* --err, not Apple's #FF453A. This was the last system red left in the app
      and it is the one colour a user is guaranteed to see up close. */
@@ -207,7 +207,7 @@
     background:var(--pane,rgba(30,27,25,.96));
     color:var(--label);border:1px solid var(--line);
     box-shadow:0 6px 20px rgba(0,0,0,.34);
-    font-size:11.5px;line-height:1.35;letter-spacing:.002em;
+    font-size:12px;line-height:1.35;letter-spacing:.002em;
     -webkit-backdrop-filter:saturate(180%) blur(20px);
     backdrop-filter:saturate(180%) blur(20px);
     opacity:0;transform:translateY(-2px);
@@ -231,7 +231,7 @@
   .docbody li{font-size:13px;line-height:1.55;margin:0 0 5px;color:var(--label)}
   .docbody ul,.docbody ol{margin:0 0 12px;padding-left:20px}
   .docbody a{color:var(--accent)}
-  .docbody code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  .docbody code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
                 background:var(--fill);padding:1px 4px;border-radius:var(--r-sm)}
   .docbody pre{background:var(--fill);padding:10px 12px;border-radius:var(--r-md);
                overflow-x:auto;margin:0 0 12px}
@@ -252,7 +252,7 @@
     font-size:19px;font-weight:700;letter-spacing:-.017em;margin:0 0 16px;
   }
   h2{
-    font-size:11px;font-weight:590;letter-spacing:.05em;text-transform:uppercase;
+    font-size:12px;font-weight:590;letter-spacing:.05em;text-transform:uppercase;
     color:var(--label2);margin:0 0 6px;padding-left:2px;
   }
   section{margin-bottom:20px}
@@ -275,14 +275,17 @@
   #movecode,#synccode{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:6px 9px;border-radius:var(--r-md);outline:none;flex:1;min-width:0}
   #movecode:focus-visible,#synccode:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   #filterterm:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  /* The browser's own placeholder grey is 4.3:1 on the dark theme, and for
+     the code fields the placeholder is the only words in sight. */
+  ::placeholder{color:var(--label2);opacity:1}
   /* The list is long enough to need a ceiling, and a card that grows past the
      window is worse than one that scrolls. */
   #filterlist{max-height:150px;overflow-y:auto}
   #filterlist .row{padding-top:2px;padding-bottom:2px}
-  #filterlist .name{font-size:11.5px}
+  #filterlist .name{font-size:12px}
   #nickname:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  #fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.04em}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.03em}
+  #fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:.04em}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:.03em}
   .hint{
     font-size:12px;line-height:1.4;color:var(--label2);
     padding:4px 2px 9px;margin:0;
@@ -335,11 +338,23 @@
   .link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
   .link:disabled{opacity:.45}
 
+  /* Targets. A control stays the size it is drawn at and answers across a
+     larger area around it: 24px under a pointer, 44px under a finger, where
+     "Join" was 26 by 18. The rows grow to 44px there too, so no two areas
+     in neighbouring rows overlap. Fields and menus keep their own height. */
+  :root{--hit:24px}
+  @media (pointer:coarse){ :root{--hit:44px} .row{min-height:44px} }
+  .link,.sw,.seg button,.docback,#relay-btn,.row .rm,#relaylist .row button{position:relative}
+  :is(.link,.sw,.seg button,.docback,#relay-btn,.row .rm,#relaylist .row button)::before{
+    content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:max(100%,var(--hit));height:max(100%,var(--hit));
+  }
+
   .promise{
-    font-size:11px;line-height:1.45;color:var(--label2);
+    font-size:12px;line-height:1.45;color:var(--label2);
     margin:10px 2px 0;max-width:38em;
   }
-  .ver{font-size:11px;color:var(--label3);margin:6px 2px 0}
+  .ver{font-size:12px;color:var(--label2);margin:6px 2px 0}
   .row .name.sub{font-size:12px;color:var(--label2)}
 </style>
 </head>

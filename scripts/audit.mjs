@@ -3627,6 +3627,48 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the reds and the small print can be read, and Settings pressed ──────────
+// The design review of 6 Oct 2026, measured in the running app. White on the
+// dark theme's red was 3.7:1 on a show's beacon, its Stop button and the
+// studio's On air. The light theme's secondary text was still 3.7:1 on the
+// globe page and the menu-bar panel after Settings had been raised. On a phone
+// Settings' buttons were 18px tall ("Join" was 26 by 18) beside text at 10px,
+// and turning sync on or off dropped the keyboard's place to the top of the page.
+{
+  console.log("\nthe reds and the small print can be read, and Settings pressed");
+  const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+  const css = (f) => readSrc(f).replace(/\/\*[\s\S]*?\*\//g, "");
+  const gaps = [];
+  for (const f of ["src/renderer/explore.html", "src/renderer/settings.html"]) {
+    const pairs = [...css(f).matchAll(/--err:(#[0-9A-Fa-f]{6});\s*--on-err:(#[0-9A-Fa-f]{6})/g)];
+    if (!pairs.length || pairs.length !== (css(f).match(/--err:#/g) || []).length) gaps.push(`${f}: an --err with no --on-err beside it`);
+    for (const [, err, on] of pairs) if (ratio(err, on) < 4.5) gaps.push(`${f}: ${on} on ${err} is ${ratio(err, on).toFixed(2)}:1`);
+    if (/background:var\(--err\);\s*color:(?!var\(--on-err\))/.test(css(f))) gaps.push(`${f}: something is written on --err in a colour of its own`);
+  }
+  for (const f of ["src/renderer/explore.html", "src/renderer/popover.html", "src/renderer/settings.html"]) {
+    const seen = [...css(f).matchAll(/--label2:rgba\(23,21,20,(\.\d+)\)/g)];
+    if (!seen.length) gaps.push(`${f}: no light-theme --label2 found, so this check is blind`);
+    for (const [, a] of seen) {
+      const on = "#" + [23, 21, 20].map((n) => Math.round(255 - (255 - n) * a).toString(16).padStart(2, "0")).join("");
+      if (ratio(on, "#FFFFFF") < 4.5) gaps.push(`${f}: light secondary text at ${a} is ${ratio(on, "#FFFFFF").toFixed(2)}:1 on white`);
+    }
+  }
+  const set = css("src/renderer/settings.html");
+  const under = set.match(/font-size:(?:\d|1[01])(?:\.\d+)?px/g);
+  if (under) gaps.push(`Settings has text under 12px (${[...new Set(under)].join(", ")})`);
+  const hit = (set.match(/:is\(([^)]*)\)::before\{[^}]*width:max\(100%,var\(--hit\)\);height:max\(100%,var\(--hit\)\)/) || [])[1] || "";
+  if (![".link", ".sw", ".seg button"].every((c) => hit.split(",").includes(c))) gaps.push("Settings' links, switches and segments have no larger area to press");
+  if (!/@media \(pointer:coarse\)\{\s*:root\{--hit:44px\}\s*\.row\{min-height:44px\}/.test(set)) gaps.push("under a finger Settings' controls are not 44px, or its rows are shorter than that");
+  if (/color:var\(--label3\)/.test(set)) gaps.push("Settings writes words in --label3, which is 2.5:1");
+  const js = readSrc("src/renderer/settings.js");
+  if (!/if \(pressed\) \(on \? \$\("#synccopy"\) : \$\("#syncon"\)\)\.focus\(\)/.test(js)) gaps.push("turning sync on or off drops focus");
+  if (!/if \(!st\?\.on\) failed\(\)/.test(js)) gaps.push("a sync that did not turn on says nothing");
+  gaps.length ? fail("the reds and the small print can be read, and Settings pressed", gaps.join("; "))
+    : pass("what is written on --err clears 4.5:1 in both themes, light secondary text does on all three pages, and Settings is 12px and 44px under a finger");
+}
+
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

@@ -67,7 +67,7 @@
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
     --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
-    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.60); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10);
     --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
@@ -81,7 +81,7 @@
   }
   :root[data-theme="light"]{
     --edge-hi:rgba(255,255,255,.75); --edge-lo:rgba(23,21,20,.16);
-    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.52); --label3:rgba(23,21,20,.26);
+    --label:rgba(23,21,20,.88); --label2:rgba(23,21,20,.60); --label3:rgba(23,21,20,.26);
     --fill:rgba(23,21,20,.05); --fill-hi:rgba(23,21,20,.09);
     --line:rgba(23,21,20,.10);
     --accent:#2A2622;        /* onyx: the brand's light-mode accent */
@@ -348,6 +348,7 @@
     transition:background var(--dur-hover) var(--ease-out);
   }
   .outmenu button:hover,.outmenu button:focus-visible{background:var(--fill);outline:none}
+  .outmenu button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .outmenu button[aria-selected="true"]{color:var(--accent)}
   .outmenu .tick{flex:none;width:12px;opacity:0}
   .outmenu button[aria-selected="true"] .tick{opacity:1}
