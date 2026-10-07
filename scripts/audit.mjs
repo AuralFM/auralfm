@@ -3669,6 +3669,32 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── the front page can be found ──────────────────────────────────────────────
+// auralfm.xyz went public with its draft's "Disallow: /" and a noindex on all
+// 32 pages, and no site had a sitemap: in a month search sent the player one
+// visitor, and crawlers asked it for /sitemap.xml 225 times (7 Oct 2026).
+{
+  console.log("\nthe front page can be found");
+  const gaps = [];
+  const rules = (f) => readSrc(f).replace(/^#.*$/gm, "");
+  for (const [f, map] of [["home/robots.txt", "https://auralfm.xyz/sitemap.xml"], ["web/robots.txt", "https://listen.auralfm.xyz/sitemap.xml"]]) {
+    if (/User-agent: \*\s*\n\s*Disallow: \/\s*(\n|$)/.test(rules(f))) gaps.push(`${f} turns every crawler away`);
+    if (!rules(f).includes(`Sitemap: ${map}`)) gaps.push(`${f} does not say where the sitemap is`);
+    if (!/User-agent: GPTBot[\s\S]*?Disallow: \/\s*\n/.test(rules(f))) gaps.push(`${f} no longer turns the training crawlers away`);
+  }
+  const noindex = (f) => /<meta name="robots" content="[^"]*noindex/.test(readSrc(f));
+  for (const f of ["home/index.html", "home/support/index.html", "home/vibes/index.html", "home/vibes/house/index.html", "home/stations/index.html"]) {
+    if (noindex(f)) gaps.push(`${f} asks not to be indexed`);
+  }
+  for (const f of ["home/404.html", "home/lab/index.html"]) if (!noindex(f)) gaps.push(`${f} is offered to search`);
+  const made = spawnSync(process.execPath, [R("scripts/build-sitemap.mjs"), "--check"], { encoding: "utf8" });
+  if (made.status !== 0) gaps.push("home/sitemap.xml is missing a page or lists one that is gone (node scripts/build-sitemap.mjs)");
+  if (!/copyFileSync\(R\("web", "sitemap\.xml"\)/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the player's sitemap is not in its build");
+  gaps.length ? fail("the front page can be found", gaps.join("; "))
+    : pass("auralfm.xyz and the player let search engines in, keep training crawlers out, and each says where its sitemap is");
+}
+
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

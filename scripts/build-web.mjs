@@ -429,6 +429,7 @@ copy("src/renderer/vendor", "vendor");
 }
 copy("src/renderer/fonts", "fonts");        // the share card's type (card.js), nothing else
 fs.copyFileSync(R("web", "robots.txt"), path.join(OUT, "robots.txt"));   // who may crawl what (web/robots.txt)
+fs.copyFileSync(R("web", "sitemap.xml"), path.join(OUT, "sitemap.xml")); // one address: crawlers asked for it 225 times in a month and got a 404
 for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
