@@ -241,7 +241,8 @@ const SHARE_TAGS = `
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="The AuralFM globe on a field of stars">
-<meta name="twitter:card" content="summary_large_image">`;
+<meta name="twitter:card" content="summary_large_image">
+<meta name="google-site-verification" content="2IcCGX_pbV5DlqsjmujbqdVQev_B_AsVGf9U-ksmU3Q">`;
 
 /**
  * The launch screen (web/launch.js explains why). Written into the page itself,
@@ -430,6 +431,8 @@ copy("src/renderer/vendor", "vendor");
 copy("src/renderer/fonts", "fonts");        // the share card's type (card.js), nothing else
 fs.copyFileSync(R("web", "robots.txt"), path.join(OUT, "robots.txt"));   // who may crawl what (web/robots.txt)
 fs.copyFileSync(R("web", "sitemap.xml"), path.join(OUT, "sitemap.xml")); // one address: crawlers asked for it 225 times in a month and got a 404
+// Google Search Console proves the site is ours by finding this file at its root. Take it away and the property is unverified.
+fs.copyFileSync(R("web", "googleaa59b3d86e7043d0.html"), path.join(OUT, "googleaa59b3d86e7043d0.html"));
 for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-bar.js", "after.js", "install.js", "ticker.js", "web.css", "settings-web.js"]) copy(`web/${f}`, `web/${f}`);
 
 // ── proxy routes ─────────────────────────────────────────────────────────────
