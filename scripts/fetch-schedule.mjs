@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 const R = (p) => path.join(path.dirname(fileURLToPath(import.meta.url)), "..", p);
 
 // Contactable, per the etiquette we owe every volunteer service.
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell/globefm; meltonbell@icloud.com)";
+const UA = "AuralFM/0.1 (+https://auralfm.xyz; hello@auralfm.xyz)";
 
 /**
  * Seasons follow the broadcasters' own clock change: A (summer) from the last

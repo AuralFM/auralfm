@@ -57,6 +57,18 @@ let receivers = [];       // { host, name, loc, lat, lng, slots, asl }
 let generated = null;
 let cacheFile = null;
 let lastRefresh = 0;
+/**
+ * The hosts in the list this build shipped with. A refresh may update them and
+ * drop the ones that have gone, but never adds a host that was not shipped.
+ *
+ * Why: an operator who asks to be left out is dropped when the list is built
+ * (scripts/crawl-sdr.mjs, data/sdr-exclude.json), and the public promise is
+ * that the app then never learns they existed. The refresh used to take every
+ * receiver on the public list, so it would have put them straight back, twice
+ * a day. It cannot now. New receivers arrive with a new build, where the
+ * leaving-out is applied.
+ */
+let listed = null;
 
 const cool = cooldown({ min: 30 * 60_000, max: 12 * 60 * 60_000, label: "sdr" });
 
@@ -96,6 +108,9 @@ function init(userDataPath) {
   let shipped = null, cached = null;
   try { shipped = JSON.parse(fs.readFileSync(BUNDLE, "utf8")); } catch {}
   try { cached = JSON.parse(fs.readFileSync(cacheFile, "utf8")); } catch {}
+  if (shipped?.r?.length) listed = new Set(shipped.r.map((row) => row[0]));
+  // A cache written before this build may hold hosts it does not list.
+  if (cached?.r && listed) cached.r = cached.r.filter((row) => listed.has(row[0]));
   const pick = (cached && shipped && Date.parse(cached.g) > Date.parse(shipped.g)) ? cached
              : (shipped || cached);
   if (!adopt(pick)) {
@@ -131,6 +146,7 @@ async function refresh() {
       if (!onEarth(lat, lng)) continue;
       const host = hostFrom(r.url);
       if (!host || !validHost(host) || seen.has(host)) continue;
+      if (listed && !listed.has(host)) continue;       // not in this build's list: see `listed`
       seen.add(host);
       const clean = (s) => String(s || "").replace(/[█▀▄░▒▓■□◆●★☆]/g, " ")
         .replace(/\s+/g, " ").trim().slice(0, 80);

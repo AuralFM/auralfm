@@ -40,7 +40,7 @@ const TMP = path.join(ROOT, "node_modules", ".cache", "blackmarble.tif");
 
 const SRC = "https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144897/" +
             "BlackMarble_2016_3km_gray_geo.tif";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell/globefm; meltonbell@icloud.com)";
+const UA = "AuralFM/0.1 (+https://auralfm.xyz; hello@auralfm.xyz)";
 
 const WIDTH = 4096;
 

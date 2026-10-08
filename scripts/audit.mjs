@@ -3659,6 +3659,49 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── a receiver that asked to be left out stays out ───────────────────────────
+// The public promise to the people who run shortwave receivers: ask, and you
+// are out, and the app never learns you existed. The crawl leaves them out of
+// the shipped list. But the app also refreshed that list from the public one
+// twice a day and took every receiver on it, so the first operator to opt out
+// would have been back within hours (found 9 Oct 2026, before anyone had).
+// Run for real, with the network and the cache faked.
+{
+  console.log("\na receiver that asked to be left out stays out");
+  const gaps = [];
+  if (!fs.existsSync(R("data/sdr.min.json"))) skip("a receiver that asked to be left out stays out", "no receiver list here");
+  else {
+    const { createRequire } = await import("node:module");
+    const os = await import("node:os");
+    const req = createRequire(import.meta.url);
+    const shipped = JSON.parse(readSrc("data/sdr.min.json"));
+    const mine = shipped.r.slice(0, 400).map((row) => row[0]);
+    const OUT = "left-out.example:8073";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "auralfm-sdr-"));
+    // A cache from an older build, newer than the shipped list, naming the host.
+    fs.writeFileSync(path.join(tmp, "sdr.json"), JSON.stringify({ g: "2099-01-01T00:00:00.000Z", src: null, r: [...shipped.r.slice(0, 400), [OUT, "x", "y", 10, 10, 4, 0]] }));
+    delete req.cache[req.resolve(R("src/sdr.js"))];
+    const sdr = req(R("src/sdr.js"));
+    const log = console.log, warn = console.warn; console.log = console.warn = () => {};
+    const realFetch = globalThis.fetch;
+    try {
+      sdr.init(tmp);
+      const has = () => sdr.points().some((p) => p.host === OUT);
+      if (has()) gaps.push("a cached list brings a host this build does not list back at launch");
+      const page = "var kiwisdr_com = " + JSON.stringify([...mine, OUT].map((h) => ({ status: "active", offline: "no", gps: "(10.5, 20.5)", url: `http://${h}`, name: "n", loc: "l", users_max: "4", asl: "0" }))) + ";";
+      globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => page });
+      await sdr.refresh();
+      if (has()) gaps.push("a refresh from the public list adds a host this build does not list");
+      // The refresh stamps the list with the time it was taken.
+      if (sdr.stats().generated === "2099-01-01T00:00:00.000Z") gaps.push("the refresh was not taken at all, so this check proved nothing");
+    } catch (e) { gaps.push(`could not run the receiver list: ${e.message}`); }
+    finally { globalThis.fetch = realFetch; console.log = log; console.warn = warn; fs.rmSync(tmp, { recursive: true, force: true }); delete req.cache[req.resolve(R("src/sdr.js"))]; }
+    gaps.length ? fail("a receiver that asked to be left out stays out", gaps.join("; "))
+      : pass("neither a refresh nor an old cache can add a receiver this build was not shipped with");
+  }
+}
+
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

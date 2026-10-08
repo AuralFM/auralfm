@@ -71,7 +71,7 @@ import { createRequire } from "node:module";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "data", "relays.json");
 const SRC = "https://raw.githubusercontent.com/permissionlesstech/georelays/main/nostr_relays.csv";
-const UA = "AuralFM/0.1 (+https://github.com/meltonbell/globefm; meltonbell@icloud.com)";
+const UA = "AuralFM/0.1 (+https://auralfm.xyz; hello@auralfm.xyz)";
 
 /** Only reached with --nip66, so the plain build stays a one-second fetch. */
 const WITH_NIP66 = process.argv.includes("--nip66");
