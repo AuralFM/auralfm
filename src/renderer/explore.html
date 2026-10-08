@@ -1174,19 +1174,28 @@
     /* Two columns as a grid, not CSS columns: the body has a fixed height and
        scrolls, and columns in a fixed height spill sideways into a third the
        moment the sound section grows (it did, with a music input chosen).
-       On air across the top; the show on the left; where, sound and the
-       confirmations down the right. */
+       On air across the top; the show on the left; where and sound on the
+       right; the two confirmations across the bottom, side by side. They were
+       third down the right column, which made it half as tall again as the
+       left and pushed them off the bottom of a 700px window (Melton, 8 Oct).
+       Named, not counted: nth-child put a new section in the wrong column. */
     @container (min-width:500px){
       .studio .studiobody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;align-content:start}
-      .studio .sec:first-child{grid-column:1 / -1}
-      .studio .sec:nth-child(2){grid-column:1;grid-row:2 / span 3}
-      .studio .sec:nth-child(n+3){grid-column:2}
+      .studio .sec-air{grid-column:1 / -1}
+      .studio .sec-show{grid-column:1;grid-row:2 / span 2}
+      .studio .sec-where{grid-column:2;grid-row:2}
+      .studio .sec-sound{grid-column:2;grid-row:3}
+      .studio .sec-rights{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;align-items:start}
+      .studio .sec-rights > :is(.layhead,.fine){grid-column:1 / -1}
     }
   }
   @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
     .roomwait{background:var(--bg) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
   }
   .studio .sec{padding:12px 5px 10px;box-shadow:inset 0 .5px 0 var(--line)}
+  /* The title takes focus when the panel opens, so a screen reader starts
+     there. It is not a control: a ring made it look like a text field. */
+  #studiotitle:focus{outline:none}
   .studio .sec:first-child{box-shadow:none;padding-top:2px}
   .studio .layhead{padding:0 0 8px}
   .studio .linehead{display:block;margin-top:14px}

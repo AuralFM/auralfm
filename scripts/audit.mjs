@@ -111,6 +111,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
@@ -949,6 +950,10 @@ console.log("\nlight theme agrees with itself");
 {
   console.log("\nevery event we publish is identified and mined");
   const problems = [];
+  const slow = [];
+  // 20,000 hashes take about 40 ms here on a quiet day. Ten times that, and the
+  // processor is somebody else's for now.
+  const starved = () => { const t = performance.now(); for (let i = 0; i < 20000; i++) createHash("sha256").update(`audit ${i} ${"x".repeat(180)}`).digest(); return performance.now() - t > 400; };
   try {
     const nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href)
       .then((m) => m.default ?? m);
@@ -979,7 +984,15 @@ console.log("\nlight theme agrees with itself");
     for (const [kind, e] of kinds) {
       const client = (e.tags.find((t) => t[0] === "client") || [])[1];
       if (client !== "auralfm") problems.push(`kind ${kind} does not say who sent it`);
-      if (nostr.powBits(e.id) < 12) problems.push(`kind ${kind} mined to only ${nostr.powBits(e.id)} bits`);
+      // Mining is capped at 1.5 s; past it the event goes out with no nonce tag.
+      // That is the design, and on a starved machine it is what happens (this
+      // check failed three times in three days at a load average over 200,
+      // with nothing wrong). So an unmined event is a fault only if it claims
+      // a difficulty it does not have, or if this machine is quick enough
+      // that the cap should never have been reached.
+      const bits = nostr.powBits(e.id), claims = e.tags.some((t) => t[0] === "nonce");
+      if (bits < 12 && (claims || !starved())) problems.push(`kind ${kind} mined to only ${bits} bits${claims ? ", and says otherwise" : ""}`);
+      else if (bits < 12) slow.push(kind);
       // The id must match the tags actually sent. Mining rewrites tags, and an
       // id computed before that rewrite is an event every relay drops.
       const serial = JSON.stringify([0, e.pubkey, e.created_at, e.kind, e.tags, e.content]);
@@ -993,8 +1006,8 @@ console.log("\nlight theme agrees with itself");
   } catch (err) {
     problems.push(`could not exercise the signer: ${err.message}`);
   }
-  problems.length
-    ? fail("client tag and proof of work", problems.join("; "))
+  problems.length ? fail("client tag and proof of work", problems.join("; "))
+    : slow.length ? skip("proof of work", `this machine is too busy to mine inside the 1.5 s cap (kind ${slow.join(", ")} went out unmined and untagged, as designed)`)
     : pass("every published kind names auralfm, mines to 12 bits, and still verifies");
 }
 

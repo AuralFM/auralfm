@@ -607,7 +607,7 @@
     body.textContent = "";
 
     // On air, first: it is what the panel is for.
-    const air = el("div", { class: "sec" }, head(tt("studio.onAir", "On air")));
+    const air = el("div", { class: "sec sec-air" }, head(tt("studio.onAir", "On air")));
     const label = phase === "live" ? tt("studio.live", "Live") : phase === "rehearsal" ? tt("studio.rehearsing", "Rehearsing") : phase === "planned" ? tt("studio.planned", "Planned") : tt("studio.off", "Off air");
     air.append(el("div", { class: "air" },
       el("span", { class: "airpill", role: "status" }, el("i"), el("span", { text: label }), (phase === "live" || phase === "rehearsal") ? el("span", { id: "airclock", text: "00:00:00" }) : null),
@@ -637,7 +637,7 @@
     body.append(air);
 
     // The show.
-    const about = el("div", { class: "sec" }, head(tt("studio.theShow", "The show")));
+    const about = el("div", { class: "sec sec-show" }, head(tt("studio.theShow", "The show")));
     about.append(
       el("label", { class: "field" }, el("span", { text: tt("studio.name", "Name") }),
         el("input", { type: "text", id: "stTitle", maxlength: "60", value: show.title, placeholder: tt("studio.namePh", "Late night in Oakland"),
@@ -654,7 +654,7 @@
     body.append(about);
 
     // Where it goes out from: a town, never a position.
-    const where = el("div", { class: "sec" }, head(tt("studio.where", "Where")));
+    const where = el("div", { class: "sec sec-where" }, head(tt("studio.where", "Where")));
     where.append(el("div", { class: "where" },
       el("span", { text: show.place ? `${show.place.title}, ${show.place.country}` : tt("studio.noPlace", "No town yet") }),
       // Not mid-show: a station does not move while it is on the air.
@@ -663,7 +663,7 @@
     body.append(where);
 
     // Sound.
-    const sound = el("div", { class: "sec" }, head(tt("studio.sound", "Sound")));
+    const sound = el("div", { class: "sec sec-sound" }, head(tt("studio.sound", "Sound")));
     if (!micStream) {
       sound.append(el("button", { class: "sheetbtn", type: "button", id: "stMic", disabled: asking, onclick: openMic },
         asking ? tt("studio.micAsking", "Asking for the microphone…") : tt("studio.micOn", "Turn on the microphone")));
@@ -800,7 +800,7 @@
     body.append(sound);
 
     // Before it goes out.
-    const rights = el("div", { class: "sec" }, head(tt("studio.before", "Before you go live")));
+    const rights = el("div", { class: "sec sec-rights" }, head(tt("studio.before", "Before you go live")));
     rights.append(toggleRow(tt("studio.rights", "Everything I play is mine, or I have the rights to play it"), show.rights, () => { show.rights = !show.rights; paint(); }));
     rights.append(toggleRow(tt("studio.adult", "I am 18 or older"), show.adult, () => { show.adult = !show.adult; paint(); }));
     const conduct = el("p", { class: "fine" });
