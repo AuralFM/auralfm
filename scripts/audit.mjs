@@ -2716,53 +2716,6 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${feeds.length} newsrooms' stories read through their own routes; Google links open out`);
 }
 
-// ── the website says what the app says: privacy and terms ──────────────────
-// The policy and the terms lived only in the app, under Settings. They are now
-// on auralfm.xyz and docs.auralfm.xyz too (the docs site is public while the
-// homepage is not), generated from the same files by scripts/build-legal.mjs.
-// A document edited without rebuilding would leave the website promising
-// something the app no longer does — so the audit rebuilds in memory and fails
-// on any difference.
-{
-  console.log("\nthe website says what the app says: privacy and terms");
-  const r = spawnSync(process.execPath, [R("scripts/build-legal.mjs"), "--check"], { encoding: "utf8" });
-  r.status === 0
-    ? pass("privacy/ and terms/ on auralfm.xyz and the docs match docs/PRIVACY.md and docs/TERMS.md")
-    : fail("the website says what the app says: privacy and terms",
-        (r.stdout + r.stderr).trim() || "build-legal --check failed");
-}
-
-// ── the Journal is what journal/ says ──────────────────────────────────────
-// Posts are Markdown in journal/ (brought in from the Obsidian vault) and
-// scripts/build-journal.mjs writes the Stories list and a page per post. A post
-// added, changed or taken out without a rebuild would leave the published
-// Journal saying something the record does not — including a post that was
-// withdrawn but whose page is still up.
-{
-  console.log("\nthe Journal is what journal/ says");
-  const r = spawnSync(process.execPath, [R("scripts/build-journal.mjs"), "--check"], { encoding: "utf8" });
-  r.status === 0
-    ? pass("blog.auralfm.xyz's stories and post pages match journal/")
-    : fail("the Journal is what journal/ says", (r.stdout + r.stderr).trim() || "build-journal --check failed");
-}
-
-// ── the vibe directory is the catalogue ───────────────────────────────────
-// auralfm.xyz/vibes/ lists every station in every vibe, written out of the
-// catalogue by scripts/build-vibes.mjs, and the homepage's vibe cards carry the
-// counts. A crawl or a change to VIBES without a rebuild would leave the site
-// listing stations the app no longer has, or numbers that are no longer true.
-{
-  console.log("\nthe vibe directory is the catalogue");
-  if (!fs.existsSync(R("data/stations.min.json"))) {
-    skip("the vibe directory is the catalogue", "data/stations.min.json is gitignored — runs locally");
-  } else {
-    const r = spawnSync(process.execPath, [R("scripts/build-vibes.mjs"), "--check"], { encoding: "utf8" });
-    r.status === 0
-      ? pass("home/vibes/ and the homepage's vibe counts match the catalogue")
-      : fail("the vibe directory is the catalogue", (r.stdout + r.stderr).replace(/^catalog:.*\n/m, "").trim() || "build-vibes --check failed");
-  }
-}
-
 // ── the taxonomy reads a station the way a listener would ──────────────────
 // src/taxonomy.js sorts stations into genres, scenes, formats and moods from
 // their tags, names and countries. Each case below is a way it went wrong while
@@ -2925,8 +2878,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // ── nothing secret is ever in a published folder ───────────────────────────
 // Scanners ask every site for /.env, /.env.production, /.git/config (here.now's
 // analytics, 27 Sept: dozens a day). here.now refuses hidden files, but the only
-// sure defence is that no such file is ever in home/, site/, docs-site/ or
-// dist-web/. Keys live in ~/.herenow and ~/.resend, outside the repo.
+// sure defence is that no such file is ever in dist-web/ (the sites hold the
+// same check in AuralFM/site). Keys live in ~/.herenow and ~/.resend, outside
+// the repo.
 {
   const name = "nothing secret is ever in a published folder";
   console.log(`\n${name}`);
@@ -2936,8 +2890,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (SECRET.test(e.name)) bad.push(`${dir}/${e.name}`);
     else if (e.isDirectory() && e.name !== "node_modules") walk(`${dir}/${e.name}`);
   } };
-  for (const d of ["home", "site", "docs-site", "dist-web"]) if (fs.existsSync(R(d))) walk(d);
-  bad.length ? fail(name, bad.join(", ")) : pass("no .env, .git, keys or credentials in the four published folders");
+  if (fs.existsSync(R("dist-web"))) walk("dist-web");
+  bad.length ? fail(name, bad.join(", ")) : pass("no .env, .git, keys or credentials in the published folder");
 }
 
 // ── a station plays from its own server, and no other directory is asked ──
@@ -3075,67 +3029,6 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (!/M\.catalog\.held\(ch\)\) return setStatus/.test(bridge)) bad.push("the web bridge tunes without asking catalog.held");
     bad.length ? fail(name, bad.join("; ")) : pass(`"${us[1]}" is held in London and plays in Los Angeles; "${uk[1]}" and "${talk[1]}" play in both`);
   }
-}
-
-// ── the vibe icons share one line ──────────────────────────────────────────
-// The vibe icons came from different sets at different line weights, and
-// scripts/build-vibe-icons.mjs brings them to one weight and one frame. An icon
-// swapped in art/vibes/ by hand, or a new original without a rebuild, puts a
-// heavier or lighter drawing back among the others.
-{
-  console.log("\nthe vibe icons share one line");
-  const r = spawnSync(process.execPath, [R("scripts/build-vibe-icons.mjs"), "--check"], { encoding: "utf8" });
-  r.status === 0
-    ? pass("art/vibes/ is the originals at one line weight and one frame")
-    : fail("the vibe icons share one line", (r.stdout + r.stderr).trim() || "build-vibe-icons --check failed");
-}
-
-// ── every vibe has its drawing, and its stations open ──────────────────────
-// Five vibes were added on 5 Oct 2026. A vibe with no file in art/vibes/ still
-// builds: its card on the homepage is a name over an empty square, which is how
-// a sixth would arrive. And the vibe pages' station names are links to the
-// station in the app, which home/aural.js opens in place; a row written without
-// its link is a name that does nothing.
-{
-  console.log("\nevery vibe has its drawing, and its stations open");
-  const vibes = [...fs.readFileSync(R("src/catalog.js"), "utf8").matchAll(/\{ id: "([a-z]+)", name: "[^"]+", tags: \[/g)].map((m) => m[1]);
-  const bare = vibes.filter((id) => !fs.existsSync(R(`art/vibes/${id}.svg`)));
-  vibes.length >= 15 && !bare.length
-    ? pass(`all ${vibes.length} vibes have an icon in art/vibes/`)
-    : fail("every vibe has its drawing", bare.length ? `no art/vibes/${bare.join(".svg, ")}.svg` : `only ${vibes.length} vibes found in src/catalog.js`);
-  // Talk, not Rock: Rock is in parts now (scripts/build-vibes.mjs), and its own
-  // page lists only its busiest places.
-  const page = fs.existsSync(R("home/vibes/talk/index.html")) ? fs.readFileSync(R("home/vibes/talk/index.html"), "utf8") : "";
-  const rows = (page.match(/<ol class="vst"[^>]*>[\s\S]*?<\/ol>/g) || []).join("");
-  const items = (rows.match(/<li>/g) || []).length;
-  const linked = (rows.match(/<li><a href="https:\/\/listen\.auralfm\.xyz\/\?station=af-[0-9a-z]+"><span>/g) || []).length;
-  items > 1000 && items === linked && /searchParams\.get\("station"\)/.test(fs.readFileSync(R("home/aural.js"), "utf8"))
-    ? pass(`a vibe page's ${items.toLocaleString("en-US")} stations each link to the station, and the page opens them in place`)
-    : fail("a vibe page's stations open", `${items} rows, ${linked} of them a link to the station`);
-}
-
-// ── one design across the three sites ───────────────────────────────────────
-// auralfm.xyz, the Journal and the docs are separate here.now sites, so each
-// carries its own copy of the stylesheet, script and fonts, copied from home/
-// by scripts/sync-sites.mjs. A copy edited by hand, or left behind after a
-// change to home/, is two sites quietly drifting apart.
-{
-  console.log("\none design across the three sites");
-  const r = spawnSync(process.execPath, [R("scripts/sync-sites.mjs"), "--check"], { encoding: "utf8" });
-  r.status === 0
-    ? pass("site/ and docs-site/ carry home/'s stylesheet, script, fonts and icons unchanged")
-    : fail("one design across the three sites", (r.stdout + r.stderr).trim() || "sync-sites --check failed");
-}
-
-// ── the sites' script parses ───────────────────────────────────────────────
-// home/aural.js runs every page on all three sites. A comment dropped into a
-// one-line function once swallowed its closing brackets: the file stopped
-// parsing, and with it went the live bar, the departures board, the menu and
-// the live globe — with nothing on the page to say so.
-{
-  console.log("\nthe sites' script parses");
-  try { new vm.Script(readSrc("home/aural.js"), { filename: "home/aural.js" }); pass("home/aural.js parses"); }
-  catch (e) { fail("the sites' script parses", `home/aural.js: ${e.message}`); }
 }
 
 // ── headphones: a pause from outside is heard, and headphones off is sound off ─
@@ -3672,31 +3565,22 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
-// ── the front page can be found ──────────────────────────────────────────────
-// auralfm.xyz went public with its draft's "Disallow: /" and a noindex on all
-// 32 pages, and no site had a sitemap: in a month search sent the player one
-// visitor, and crawlers asked it for /sitemap.xml 225 times (7 Oct 2026).
+// ── the player can be found ──────────────────────────────────────────────────
+// No site had a sitemap: crawlers asked the player for /sitemap.xml 225 times
+// in a month and got a 404 (7 Oct 2026). The front page's half of this check
+// went with the sites to AuralFM/site.
 {
-  console.log("\nthe front page can be found");
+  console.log("\nthe player can be found");
   const gaps = [];
-  const rules = (f) => readSrc(f).replace(/^#.*$/gm, "");
-  for (const [f, map] of [["home/robots.txt", "https://auralfm.xyz/sitemap.xml"], ["web/robots.txt", "https://listen.auralfm.xyz/sitemap.xml"]]) {
-    if (/User-agent: \*\s*\n\s*Disallow: \/\s*(\n|$)/.test(rules(f))) gaps.push(`${f} turns every crawler away`);
-    if (!rules(f).includes(`Sitemap: ${map}`)) gaps.push(`${f} does not say where the sitemap is`);
-    if (!/User-agent: GPTBot[\s\S]*?Disallow: \/\s*\n/.test(rules(f))) gaps.push(`${f} no longer turns the training crawlers away`);
-  }
-  const noindex = (f) => /<meta name="robots" content="[^"]*noindex/.test(readSrc(f));
-  for (const f of ["home/index.html", "home/support/index.html", "home/vibes/index.html", "home/vibes/house/index.html", "home/stations/index.html"]) {
-    if (noindex(f)) gaps.push(`${f} asks not to be indexed`);
-  }
-  for (const f of ["home/404.html", "home/lab/index.html"]) if (!noindex(f)) gaps.push(`${f} is offered to search`);
-  const made = spawnSync(process.execPath, [R("scripts/build-sitemap.mjs"), "--check"], { encoding: "utf8" });
-  if (made.status !== 0) gaps.push("home/sitemap.xml is missing a page or lists one that is gone (node scripts/build-sitemap.mjs)");
+  const rules = readSrc("web/robots.txt").replace(/^#.*$/gm, "");
+  if (/User-agent: \*\s*\n\s*Disallow: \/\s*(\n|$)/.test(rules)) gaps.push("web/robots.txt turns every crawler away");
+  if (!rules.includes("Sitemap: https://listen.auralfm.xyz/sitemap.xml")) gaps.push("web/robots.txt does not say where the sitemap is");
+  if (!/User-agent: GPTBot[\s\S]*?Disallow: \/\s*\n/.test(rules)) gaps.push("web/robots.txt no longer turns the training crawlers away");
   if (!/copyFileSync\(R\("web", "sitemap\.xml"\)/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the player's sitemap is not in its build");
-  gaps.length ? fail("the front page can be found", gaps.join("; "))
-    : pass("auralfm.xyz and the player let search engines in, keep training crawlers out, and each says where its sitemap is");
+  if (!/google-site-verification/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the player lost its Search Console tag, and the property goes unverified");
+  gaps.length ? fail("the player can be found", gaps.join("; "))
+    : pass("the player lets search engines in, keeps training crawlers out, and says where its sitemap is");
 }
-
 
 // ── the Mac app carries the catalogue once, packed ───────────────────────────
 // 38 MB of the app was the catalogue as plain JSON. `npm run dist` gzips it

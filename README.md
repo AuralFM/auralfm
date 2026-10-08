@@ -50,7 +50,6 @@ npm start
 | `web/` | What the web player adds on top of the app's pages |
 | `data/` | The catalogue, the shortwave schedule and the relay list |
 | `scripts/` | Builds, the catalogue pipeline and the audit |
-| `home/`, `site/`, `docs-site/` | auralfm.xyz, the Journal and the docs |
 | `docs/` | Privacy, Terms, Code of Conduct, and notes for stations |
 
 ## Project resources

@@ -11,46 +11,6 @@
       "port": 8765
     },
     {
-      "name": "auralfm-home",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
-      "runtimeArgs": [
-        "scripts/serve-web.mjs",
-        "8766",
-        "home"
-      ],
-      "port": 8766
-    },
-    {
-      "name": "auralfm-blog",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
-      "runtimeArgs": [
-        "scripts/serve-web.mjs",
-        "8767",
-        "site"
-      ],
-      "port": 8767
-    },
-    {
-      "name": "auralfm-docs",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
-      "runtimeArgs": [
-        "scripts/serve-web.mjs",
-        "8768",
-        "docs-site"
-      ],
-      "port": 8768
-    },
-    {
-      "name": "auralfm-home-v2",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
-      "runtimeArgs": [
-        "scripts/serve-web.mjs",
-        "8769",
-        "home-v2"
-      ],
-      "port": 8769
-    },
-    {
       "name": "auralfm-halftone",
       "runtimeExecutable": "/usr/bin/env",
       "runtimeArgs": [

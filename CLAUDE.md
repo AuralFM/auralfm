@@ -29,7 +29,7 @@ been seen to go red has not been tested — it has been written.
 ## Accessibility
 
 When developing any interface here (the app's pages in `src/renderer/`, the web
-layer in `web/`, the three sites under `home/`, `site/`, `docs-site/`), follow
+layer in `web/`), follow
 the accessibility rules in [`docs/a11y/A11Y.md`](docs/a11y/A11Y.md): A11Y.md
 v2.2.0 by Fernando Carriço (MIT), kept in the repo so it is read offline and
 does not move under us. The profile is **Standard (WCAG 2.2 AA)**: text 4.5:1,
@@ -42,7 +42,6 @@ Its static check runs on source, before any build:
 
     python3 scripts/a11y/verify-a11y.py . --src src/renderer --warn-only
     python3 scripts/a11y/verify-a11y.py . --src web --warn-only
-    python3 scripts/a11y/verify-a11y.py . --src home --warn-only
 
 It asks for a `REPORT.md` this project does not keep (that line is expected);
 the source findings under it are what to read. As with Rams: verify a finding
@@ -64,3 +63,12 @@ by `npm run audit`: every `:hover` inside `@media (hover:hover)`, globe
 pictures through `texUrl()`, descriptions decoded, no station named by a URL.
 Chrome's device emulation does not reproduce sticky hover, tap delay, safe
 areas or the keyboard: say what was verified from code and what needs the phone.
+
+## The sites are in another repo
+
+auralfm.xyz, the Journal and the docs moved to **AuralFM/site** (private) on
+8 Oct 2026, checked out beside this repo as `../auralfm-site`. It reads this
+repo for the catalogue (`data/`, `src/catalog.js`, `src/taxonomy.js`), the legal
+text (`docs/*.md`) and the Markdown renderer (`src/docs.js`). After changing any
+of those, run `npm run build && npm run check` there. This repo's README and
+issues carry code and how to run it; strategy and plans go to the vault.
