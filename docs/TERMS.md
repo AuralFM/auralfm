@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 4 October 2026**
+**Last updated: 9 October 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -124,9 +124,9 @@ Email is the fastest way to reach the agent.
 
 ## Your show
 
-AuralFM is building a way to go live from inside the app ("Your show"). It is a
-prototype today: while it is, nothing you say or play reaches anyone else. These
-terms apply to it now and when it carries sound.
+AuralFM has a way to go live from inside the app ("Your show"). It is in beta,
+in test builds of the Mac app. A show goes from the host's device straight to
+the people listening, a small number at a time. These terms apply to it.
 
 - **You must be 18 or over to go live or to announce a show.** Listening stays
   open to everyone 13 and over.
@@ -139,10 +139,14 @@ terms apply to it now and when it carries sound.
   it does to the chat.
 - **If someone pays you to play something, say so on the air.** AuralFM sells no
   placement, and a show cannot pay its way up the globe or a list.
-- AuralFM does not record or keep your show. It can hide a show from the apps,
-  for a report or a breach of these terms, and it removes what a valid copyright
-  notice identifies (see Copyright, above), including a show from someone who
-  keeps infringing.
+- **AuralFM does not record, keep or carry your show.** The sound goes from your
+  device to your listeners.
+- **AuralFM can stop listing a show.** For a report, a breach of these terms or
+  a valid copyright notice (see Copyright, above), we take the host off the
+  globe and out of the lists in our apps, and our apps stop playing the show.
+  In appropriate circumstances we stop listing hosts who infringe repeatedly.
+  We list a show again after a valid counter-notice. Stopping a listing does not
+  reach the host's own device: what is sent from it is the host's to answer for.
 
 The app asks you to confirm that you are 18 or over and that what you play is
 yours to play **every time** before you go live or announce a show, and will not

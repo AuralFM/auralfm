@@ -229,7 +229,7 @@ function toolbarLogo() {
  * site is public — until then every link previews as here.now's sign-in page.
  */
 const SITE = "https://listen.auralfm.xyz/";
-const TAGLINE = "A window onto the world you can listen to.";
+const TAGLINE = "Radio chosen by people. Found by place.";
 const SHARE_TAGS = `
 <meta name="description" content="${TAGLINE}">
 <meta property="og:type" content="website">

@@ -285,7 +285,6 @@ const en = {
   "studio.explicitHint": "Labelled for listeners",
   "studio.goLive": "Go live",
   "studio.live": "Live",
-  "studio.livePrototype": "This is a prototype: your town is marked live on the globe, but nobody can hear you yet. Sending the sound to listeners is the next step.",
   "studio.micAsking": "Asking for the microphone…",
   "studio.micDenied": "The microphone is blocked. Allow AuralFM in your system's privacy settings.",
   "studio.micMissing": "No microphone found. Connect one, then try again.",
