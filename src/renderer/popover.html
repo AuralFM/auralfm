@@ -178,13 +178,14 @@
      pointer, fire its own pointerout on the control beneath, and flicker. */
   .helptag{
     position:fixed;z-index:9000;pointer-events:none;
-    max-width:230px;padding:5px 9px;border-radius:var(--r-md);
-    background:var(--pane,rgba(30,27,25,.96));
-    color:var(--label);border:1px solid var(--line);
+    max-width:230px;padding:5px 9px;
+    /* Square and solid, as on the globe page and the site (explore.html, "the
+       introduction, and the tips"). It was dark glass with the page's own text
+       colour, which in the light theme is dark on dark. */
+    background:var(--bg);
+    color:var(--label);border:1px solid color-mix(in srgb,var(--label) 34%,transparent);
     box-shadow:0 6px 20px rgba(0,0,0,.34);
-    font-size:11.5px;line-height:1.35;letter-spacing:.002em;
-    -webkit-backdrop-filter:saturate(180%) blur(20px);
-    backdrop-filter:saturate(180%) blur(20px);
+    font-size:12px;line-height:1.35;letter-spacing:.002em;
     opacity:0;transform:translateY(-2px);
     transition:opacity var(--dur-hover,.12s) var(--ease-out),
                transform var(--dur-hover,.12s) var(--ease-out);

@@ -48,9 +48,10 @@
   const STEPS = window.AuralTourSteps || [
     {
       welcome: true,
-      title: "Welcome to AuralFM",
-      body: "A globe you listen to. Spin it — whatever sits under the middle "
-          + "becomes the selection. Click a dot to hear that place.",
+      // The line the front page leads with (Melton, 9 Oct 2026).
+      title: "Radio chosen by people. Found by place.",
+      body: "Spin the globe. Whatever sits under the middle is selected. "
+          + "Click a dot to hear that place, live.",
     },
     {
       anchor: "#layersBtn",
@@ -72,10 +73,10 @@
       // Was "Nothing is collected … no server of ours": true of AuralFM, but a
       // station you play still sees your IP address, and the privacy policy
       // says so. The card says what is true without the absolute.
-      title: "No account. No algorithm.",
-      body: "Nothing to sign up for, and nothing learning you. The station list "
-          + "is already on this device, so the globe and search work offline. "
-          + "Settings has the privacy policy, in plain words.",
+      title: "No algorithm. Nobody in the middle.",
+      body: "Nothing is ranked or recommended. Each station plays straight from "
+          + "its own server, and there is no account to listen. "
+          + "Settings has the privacy policy.",
     },
   ];
 
@@ -155,6 +156,9 @@
 
     const h = document.createElement("div");
     h.className = "tourh";
+    // A heading to a screen reader, as it is to the eye.
+    h.setAttribute("role", "heading");
+    h.setAttribute("aria-level", "2");
     h.textContent = step.title;
     const p = document.createElement("p");
     p.textContent = step.body;
@@ -179,6 +183,9 @@
       if (n === i) d.className = "on";
       dots.append(d);
     }
+    // role="img": a label on a bare span is not read out, and this is where the
+    // step is said ("[ 02 / 05 ]" above is hidden from assistive technology).
+    dots.setAttribute("role", "img");
     dots.setAttribute("aria-label", `Step ${i + 1} of ${STEPS.length}`);
 
     const skip = document.createElement("button");

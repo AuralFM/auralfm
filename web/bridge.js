@@ -587,18 +587,19 @@
   // The desktop tour talks about this Mac, the menu bar and receivers. These are
   // the same steps, true of a browser tab.
   window.AuralTourSteps = [
-    { welcome: true, title: "Welcome to AuralFM",
-      body: "A globe you listen to. Spin it — whatever sits under the middle "
-          + "becomes the selection. Click a dot to hear that place." },
+    { welcome: true, title: "Radio chosen by people. Found by place.",
+      body: "Spin the globe. Whatever sits under the middle is selected. "
+          + "Click a dot to hear that place, live." },
     { anchor: "#layersBtn", title: "Globe layers",
       body: "Live clouds, day and night, the ISS, radio propagation, the stars." },
     { anchor: "#newsBtn", title: "Headlines",
       body: "What is being reported where your station broadcasts from." },
     { anchor: "#favBtn", title: "Favorites",
       body: "The star beside a station keeps it here, in this browser." },
-    { welcome: true, title: "What you play stays yours",
-      body: "No account, and nothing reports what you played. Favorites and "
-          + "settings stay in this browser — clear its site data and they are gone." },
+    { welcome: true, title: "No algorithm. Nobody in the middle.",
+      body: "Nothing is ranked or recommended. Each station plays straight from "
+          + "its own server, and there is no account to listen. "
+          + "Favorites and settings stay in this browser." },
   ];
 
   // The few desktop sentences that are about the Mac, said about a browser. Only
@@ -622,21 +623,23 @@
    * named a Mac.
    */
   const WEB_PROMISE = {
-    en: "No accounts, and nothing about what you play is reported. Like any website, the host counts "
-      + "page views: which page, when, and the country. Favorites, settings and your chat identity "
-      + "stay in this browser. The desktop app has no analytics at all.",
-    es: "Sin cuentas, y nada de lo que escuchas se comunica. Como cualquier sitio web, el servidor cuenta "
-      + "las visitas: qué página, cuándo y el país. Favoritos, ajustes y tu identidad del chat se quedan "
-      + "en este navegador. La app de escritorio no tiene analíticas.",
-    fr: "Aucun compte, et rien de ce que vous écoutez n'est transmis. Comme tout site web, l'hébergeur "
-      + "compte les pages vues : quelle page, quand et le pays. Favoris, réglages et votre identité de "
-      + "chat restent dans ce navigateur. L'application de bureau n'a aucune analyse.",
-    de: "Keine Konten, und nichts darüber, was du hörst, wird gemeldet. Wie bei jeder Website zählt der "
-      + "Host Seitenaufrufe: welche Seite, wann und das Land. Favoriten, Einstellungen und deine "
-      + "Chat-Identität bleiben in diesem Browser. Die Desktop-App hat keinerlei Analyse.",
-    pt: "Sem contas, e nada do que você ouve é informado. Como qualquer site, o servidor conta as "
-      + "visualizações: qual página, quando e o país. Favoritos, ajustes e sua identidade no chat "
-      + "ficam neste navegador. O app para desktop não tem análise.",
+    en: "Radio chosen by people. Found by place. No algorithm, and no account to listen. Nothing about "
+      + "what you play is reported. Like any website, the host counts page views: which page, when, and "
+      + "the country. Favorites, settings and your chat identity stay in this browser.",
+    es: "Radio elegida por personas. Encontrada por lugar. Sin algoritmo y sin cuenta para escuchar. Nada "
+      + "de lo que escuchas se comunica. Como cualquier sitio web, el servidor cuenta las visitas: qué "
+      + "página, cuándo y el país. Favoritos, ajustes y tu identidad del chat se quedan en este navegador.",
+    fr: "Une radio choisie par des gens, trouvée par lieu. Aucun algorithme, aucun compte pour écouter. "
+      + "Rien de ce que vous écoutez n'est transmis. Comme tout site web, l'hébergeur compte les pages "
+      + "vues : quelle page, quand et le pays. Favoris, réglages et votre identité de chat restent dans "
+      + "ce navigateur.",
+    de: "Radio, von Menschen ausgewählt. Nach Ort gefunden. Kein Algorithmus, kein Konto zum Hören. "
+      + "Nichts darüber, was du hörst, wird gemeldet. Wie bei jeder Website zählt der Host "
+      + "Seitenaufrufe: welche Seite, wann und das Land. Favoriten, Einstellungen und deine "
+      + "Chat-Identität bleiben in diesem Browser.",
+    pt: "Rádio escolhida por pessoas. Encontrada pelo lugar. Sem algoritmo e sem conta para ouvir. Nada "
+      + "do que você ouve é informado. Como qualquer site, o servidor conta as visualizações: qual "
+      + "página, quando e o país. Favoritos, ajustes e sua identidade no chat ficam neste navegador.",
   };
 
   // ── proxied sources ─────────────────────────────────────────────────────────

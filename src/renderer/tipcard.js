@@ -84,6 +84,8 @@
 
     const h = document.createElement("div");
     h.className = "tourh";
+    h.setAttribute("role", "heading");   // as in tour.js: a heading to a screen reader too
+    h.setAttribute("aria-level", "2");
     h.textContent = tip.title;
     const p = document.createElement("p");
     p.textContent = tip.body;

@@ -870,106 +870,87 @@
   }
   .helptag.on{opacity:1;transform:none}
   @media (prefers-reduced-motion: reduce){ .helptag{transition:none} }
-  /* The introduction.
-     A ring on the control, an arrow between, and the card clear of both — a card
+  /* The introduction, and the tips.
+     A ring on the control, an arrow between, and the card clear of both: a card
      covering the thing it explains is the commonest way this pattern fails. No
-     dimming backdrop: it is not modal and the globe keeps turning behind it. */
+     dimming backdrop: it is not modal and the globe keeps turning behind it.
+
+     Drawn in the site's language, because this is where somebody arriving from
+     auralfm.xyz meets the app first: square cells on the page colour with a
+     hairline rule, a bracketed label in the accent, uppercase headings. In the
+     app's own typeface, which never changes. The glass stays on the working
+     panels. (These rules were two sets, the second overriding the first, with
+     the label and buttons at 10.5px. One set now, nothing under 12px, and
+     every button at least 24px, 44 under a finger.) */
+  .tourring,.tourarrow,.tourcard,.helptag{--rule:color-mix(in srgb,var(--label) 34%,transparent)}
   .tourring{
-    position:fixed;z-index:8990;pointer-events:none;border-radius:var(--r-lg);
-    border:1.5px solid var(--accent);
-    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent);
+    position:fixed;z-index:8990;pointer-events:none;border:2px solid var(--accent);
     transition:left var(--dur-panel) var(--ease-drawer),top var(--dur-panel) var(--ease-drawer),
                width var(--dur-panel) var(--ease-drawer),height var(--dur-panel) var(--ease-drawer);
   }
-  /* A rotated square borrowing the card's own fill and border, so only the two
-     outward edges show and it reads as part of the card rather than a decoration
-     stuck to it. */
+  /* A rotated square in the card's own fill and rule, so only the two outward
+     edges show and it reads as part of the card. */
   .tourarrow{
     position:fixed;z-index:9002;pointer-events:none;width:10px;height:10px;
-    background:var(--pane);transform:rotate(45deg);
+    background:var(--bg);transform:rotate(45deg);
     transition:left var(--dur-panel) var(--ease-drawer),top var(--dur-panel) var(--ease-drawer);
   }
-  .tourarrow.up{border-left:1px solid var(--line);border-top:1px solid var(--line)}
-  .tourarrow.down{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .tourarrow.up{border-left:1px solid var(--rule);border-top:1px solid var(--rule)}
+  .tourarrow.down{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
   .tourcard{
-    position:fixed;z-index:9001;width:252px;padding:13px 14px 10px;
-    border-radius:var(--r-xl);background:var(--pane);border:1px solid var(--line);
+    position:fixed;z-index:9001;width:264px;padding:13px 14px 10px;
+    background:var(--bg);border:1px solid var(--rule);
     box-shadow:0 14px 44px rgba(0,0,0,.42);
-    -webkit-backdrop-filter:saturate(180%) blur(24px);
-    backdrop-filter:saturate(180%) blur(24px);
     transition:left var(--dur-panel) var(--ease-drawer),
                top var(--dur-panel) var(--ease-drawer);
   }
-  .tourcard.welcome{width:288px;text-align:center}
-  .tourcard .tourh{font-size:13.5px;font-weight:590;letter-spacing:-.01em;margin-bottom:4px}
-  .tourcard.welcome .tourh{font-size:16px;margin-bottom:6px}
+  .helptag{border-radius:0;background:var(--bg);border:1px solid var(--rule);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .tourcard.welcome{width:300px;text-align:center}
+  .tourlabel{
+    font-size:12px;letter-spacing:.1em;color:var(--accent);
+    font-variant-numeric:tabular-nums;margin-bottom:7px;
+  }
+  .tourcard .tourh{font-size:13.5px;font-weight:760;letter-spacing:.03em;text-transform:uppercase;margin-bottom:4px}
+  .tourcard.welcome .tourh{font-size:17px;line-height:1.2;margin-bottom:8px;text-wrap:balance}
   .tourcard p{font-size:12px;line-height:1.45;color:var(--label2);margin:0 0 11px}
   .tourrow{display:flex;align-items:center;gap:7px}
   .tourcard.welcome .tourrow{justify-content:center}
-  .tourback{
+  .tourback,.tipx{
     appearance:none;background:none;border:0;color:var(--label2);font:inherit;
     font-size:15px;line-height:1;cursor:default;padding:2px 6px;
-    border-radius:var(--r-sm);flex:none;
+    min-width:24px;min-height:24px;flex:none;
   }
-  @media (hover:hover){.tourback:hover:not(:disabled){background:var(--fill);color:var(--label)}}
+  @media (hover:hover){.tourback:hover:not(:disabled),.tipx:hover{background:var(--fill);color:var(--label)}}
   .tourback:disabled{opacity:0;pointer-events:none}   /* holds its space */
   .tourdots{display:flex;align-items:center;gap:4px;flex:1}
   .tourcard.welcome .tourdots{flex:none}
   .tourdots i{
-    width:4px;height:4px;border-radius:50%;background:var(--label3);
+    width:6px;height:2px;background:var(--label3);
     transition:background var(--dur-hover) var(--ease-out);
   }
   .tourdots i.on{background:var(--accent)}
   .tourskip,.tourgo{
-    appearance:none;border:0;font:inherit;font-size:12px;cursor:default;
-    padding:4px 11px;border-radius:var(--r-pill);flex:none;
+    appearance:none;border:0;font:inherit;cursor:default;flex:none;
+    font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    padding:6px 11px;min-height:24px;
   }
   .tourskip{background:none;color:var(--label2)}
   @media (hover:hover){.tourskip:hover{color:var(--label)}}
-  .tourgo{background:var(--accent);color:var(--on-accent);font-weight:590}
+  .tourgo{background:var(--accent);color:var(--on-accent)}
   @media (hover:hover){.tourgo:hover{filter:brightness(1.08)}}
-  .tourgo:focus-visible,.tourskip:focus-visible,.tourback:focus-visible{
+  .tourgo:focus-visible,.tourskip:focus-visible,.tourback:focus-visible,.tipx:focus-visible{
     outline:2px solid var(--accent);outline-offset:2px;
   }
-  /* A tip is the same object as a tour step — a sentence beside a control — so it
-     wears the same card. The only difference is that it can be closed and has
-     nowhere to go next, which is what the × and the single button say. */
-  .tourcard.tip{padding-right:26px}
+  @media (pointer:coarse){ .tourback,.tipx,.tourskip,.tourgo{min-width:44px;min-height:44px} }
+  /* A tip is the same object as a tour step, a sentence beside a control, so it
+     wears the same card. It can be closed and has nowhere to go next, which is
+     what the × and the single button say. */
+  .tourcard.tip{padding-right:30px}
   .tourcard.tip .tourrow{justify-content:flex-end}
-  .tipx{
-    position:absolute;top:7px;right:7px;
-    appearance:none;background:none;border:0;color:var(--label3);
-    font:inherit;font-size:15px;line-height:1;cursor:default;
-    padding:2px 5px;border-radius:var(--r-sm);
-  }
-  @media (hover:hover){.tipx:hover{background:var(--fill);color:var(--label)}}
-  .tipx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .tipx{position:absolute;top:5px;right:5px}
   @media (prefers-reduced-motion: reduce){
-    .tourring,.tourarrow,.tourcard{transition:none}
+    .tourring,.tourarrow,.tourcard,.tourdots i{transition:none}
   }
-  /* ── the site's language on the first-run cards ─────────────────────────
-     auralfm.xyz draws in square cells on onyx with hairline rules, bracketed
-     labels in its accent and uppercase headings. The introduction and the help
-     tags are where somebody arriving from the site meets the app first, so
-     they wear that — square, solid, uppercase — in the app's own typeface,
-     which never changes. The glass stays on the app's working panels. */
-  .tourring{border-radius:0;border-width:2px;box-shadow:none}
-  .tourcard,.helptag{
-    border-radius:0;background:var(--bg);
-    border:1px solid color-mix(in srgb,var(--label) 34%,transparent);
-    -webkit-backdrop-filter:none;backdrop-filter:none;
-  }
-  .tourarrow{background:var(--bg)}
-  .tourarrow.up,.tourarrow.down{border-color:color-mix(in srgb,var(--label) 34%,transparent)}
-  .tourlabel{
-    font-size:10.5px;letter-spacing:.1em;color:var(--accent);
-    font-variant-numeric:tabular-nums;margin-bottom:7px;
-  }
-  .tourcard .tourh{text-transform:uppercase;letter-spacing:.03em;font-weight:760}
-  .tourcard.welcome .tourh{font-size:17px}
-  .tourdots i{border-radius:0;width:6px;height:2px}
-  .tourskip,.tourgo{border-radius:0;text-transform:uppercase;letter-spacing:.07em;font-size:10.5px;font-weight:700;padding:6px 11px}
-  .tourback,.tipx{border-radius:0}
   /* A sender's name, when it belongs to somebody else. Underlined on hover only
      — a chat log full of permanently underlined names reads as a page of links. */
   .msg .mutable{cursor:default}
