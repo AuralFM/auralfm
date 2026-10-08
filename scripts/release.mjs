@@ -143,7 +143,7 @@ const ASAR = path.join(APP, "Contents", "Resources", "app.asar");
     // The reason this script exists rather than a CI workflow. If the catalog is
     // missing the app opens to an empty globe, and nothing else in the pipeline
     // would notice.
-    const stations = list.find((l) => l.endsWith("data/stations.min.json"));
+    const stations = list.find((l) => l.endsWith("data/packed/stations.min.json.gz"));
     stations ? ok("station catalog is inside app.asar") : bad("app.asar has NO station catalog");
     list.some((l) => l.endsWith("data/sdr.min.json"))
       ? ok("receiver bundle is inside app.asar") : bad("app.asar has no receiver bundle");

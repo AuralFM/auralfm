@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Is my listening private?
-    url: https://github.com/meltonbell3/auralfm/blob/main/docs/PRIVACY.md
+    url: https://github.com/AuralFM/auralfm/blob/main/docs/PRIVACY.md
     about: Everything stored locally, and everything any third party can see. Short and specific.
   - name: Why does it work this way?
     about: The design record — what was measured, what was decided, and why.

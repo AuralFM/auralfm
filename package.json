@@ -13,7 +13,7 @@
     "tags": "node --max-old-space-size=4096 scripts/tags.mjs",
     "vendor": "node scripts/vendor.mjs && node scripts/lights.mjs",
     "postinstall": "node scripts/vendor.mjs",
-    "dist": "npm run vendor && npm run notices && npm run icons && node scripts/audit.mjs --release && electron-builder --mac",
+    "dist": "npm run vendor && npm run notices && npm run icons && node scripts/pack-data.mjs && node scripts/audit.mjs --release && electron-builder --mac",
     "sky": "node scripts/sky.mjs",
     "audit": "node scripts/audit.mjs",
     "web": "node scripts/build-web.mjs",
@@ -44,9 +44,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meltonbell3/auralfm.git"
+    "url": "git+https://github.com/AuralFM/auralfm.git"
   },
-  "homepage": "https://github.com/meltonbell3/auralfm",
+  "homepage": "https://github.com/AuralFM/auralfm",
   "dependencies": {
     "@noble/ciphers": "^2.3.0",
     "@noble/curves": "^2.2.0",
@@ -70,8 +70,7 @@
       "assets/ATTRIBUTION.md",
       "THIRD-PARTY-NOTICES.md",
       "package.json",
-      "data/stations.min.json",
-      "data/profiles/*.json",
+      "data/packed/**/*",
       "data/sdr.min.json",
       "docs/PRIVACY.md",
       "docs/TERMS.md",
@@ -86,7 +85,8 @@
       "!**/*.ts",
       "!node_modules/satellite.js/wasm-build/**",
       "!node_modules/@noble/*/src/**",
-      "!assets/generated/app-1024.png"
+      "!assets/generated/app-1024.png",
+      "!src/renderer/vendor/lite/**"
     ],
     "mac": {
       "electronLanguages": ["en", "en_GB", "es", "es_419", "fr", "de", "pt_BR", "pt_PT"],

@@ -442,7 +442,7 @@ for (const f of ["launch.js", "bridge.js", "sheet.js", "rail-sheet.js", "phone-b
 // 100 requests an hour per visitor by default, which headlines — fetched only
 // while the panel is open, and cached for 15 minutes — come nowhere near.
 // Every route names the app, because saying who is asking is polite.
-const UA = { "User-Agent": `AuralFM/${version} (+https://github.com/meltonbell3/auralfm)` };
+const UA = { "User-Agent": `AuralFM/${version} (+https://auralfm.xyz)` };
 // scripts/serve-web.mjs reads this same file to stand in for here.now locally.
 fs.mkdirSync(path.join(OUT, ".herenow"), { recursive: true });
 /**

@@ -7,10 +7,8 @@
  * reads them from disk, so a profile opens without the network: the catalogue
  * lives on your machine. The web version fetches the same files (web/bridge.js).
  */
-const fs = require("node:fs");
-const path = require("node:path");
+const packed = require("./packed");
 
-const DIR = path.join(__dirname, "..", "data", "profiles");
 const shards = new Map();
 
 /** The shard a station's profile lives in. scripts/profiles.mjs and web/bridge.js use the same hash. */
@@ -25,7 +23,7 @@ function profile(id) {
   if (!id || id.length > 80) return null;
   const s = shardOf(id);
   if (!shards.has(s)) {
-    try { shards.set(s, JSON.parse(fs.readFileSync(path.join(DIR, `${s}.json`), "utf8"))); }
+    try { shards.set(s, JSON.parse(packed.read(`profiles/${s}.json`) || "{}")); }
     catch { shards.set(s, {}); }
   }
   return shards.get(s)[id] || null;

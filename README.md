@@ -1,5 +1,7 @@
 # AuralFM
 
+## Introduction
+
 **Listen in.** A globe you listen to: 60,000 live radio stations, placed where
 they broadcast and played from each station's own server.
 
@@ -24,7 +26,7 @@ they broadcast and played from each station's own server.
 Needs macOS and [Node.js](https://nodejs.org) 18 or later.
 
 ```bash
-git clone https://github.com/meltonbell3/auralfm.git
+git clone https://github.com/AuralFM/auralfm.git
 cd auralfm
 npm install
 node scripts/base.mjs && node scripts/profiles.mjs   # build the catalogue, under a minute
@@ -51,10 +53,17 @@ npm start
 | `home/`, `site/`, `docs-site/` | auralfm.xyz, the Journal and the docs |
 | `docs/` | Privacy, Terms, Code of Conduct, and notes for stations |
 
-## Privacy and terms
+## Project resources
 
-[Privacy](docs/PRIVACY.md) · [Terms](docs/TERMS.md) ·
-[Code of Conduct](docs/CODE-OF-CONDUCT.md) · [For stations](docs/STATIONS.md)
+| Resource | What |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to build, test and send a change |
+| [GOVERNANCE.md](GOVERNANCE.md) | How decisions are made |
+| [CODEOWNERS](CODEOWNERS) | Who reviews changes |
+| [Code of Conduct](docs/CODE-OF-CONDUCT.md) | What is welcome, here and in the app |
+| [Privacy](docs/PRIVACY.md) · [Terms](docs/TERMS.md) | What the app does with data, and the terms of use |
+| [For stations](docs/STATIONS.md) | Correct, remove or claim a station |
+| [LICENSE](LICENSE) | MIT |
 
 ## Credits
 

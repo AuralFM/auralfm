@@ -1070,6 +1070,7 @@ if (!app.requestSingleInstanceLock()) {
     // for, so it opens on launch rather than hiding behind an unlabelled tray
     // icon. The menu bar keeps every behaviour it had — it is now the thing that
     // keeps playback going once the window is closed.
+    catalog.usePacked(require("./packed").read);   // the packaged app carries the catalogue gzipped
     catalog.load();
     catalog.setHideExplicit(getPrefs().hideExplicit);
     // Favourites and the last station saved under the catalogue's old ids find

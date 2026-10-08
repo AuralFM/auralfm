@@ -1584,6 +1584,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   walk(R("src"));
   const missing = [...wanted].filter((f) => {
     if (allow.has(f)) return false;
+    // The catalogue ships gzipped under data/packed/ (scripts/pack-data.mjs),
+    // and a later check holds that it is there and current.
+    if (f === "data/stations.min.json" && allow.has("data/packed/**/*")) return false;
     // A directory glob covering it counts too.
     return ![...allow].some((a) => a === "data/**/*" || a === "data/*");
   });
@@ -3692,6 +3695,35 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/copyFileSync\(R\("web", "sitemap\.xml"\)/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the player's sitemap is not in its build");
   gaps.length ? fail("the front page can be found", gaps.join("; "))
     : pass("auralfm.xyz and the player let search engines in, keep training crawlers out, and each says where its sitemap is");
+}
+
+
+// ── the Mac app carries the catalogue once, packed ───────────────────────────
+// 38 MB of the app was the catalogue as plain JSON. `npm run dist` gzips it
+// into data/packed/ (scripts/pack-data.mjs) and src/packed.js reads either
+// form. Three ways that goes wrong: a release built before packing opens to
+// an empty globe (as on 18 September, when the list was missing); both forms
+// ship and nothing is saved; or a stale data/packed/ shadows a rebuilt
+// catalogue on the machine that built it.
+{
+  console.log("\nthe Mac app carries the catalogue once, packed");
+  const gaps = [];
+  const files = pkg.build.files;
+  if (!files.includes("data/packed/**/*")) gaps.push("the build does not carry data/packed/");
+  if (files.some((f) => /^data\/(stations\.min\.json|profiles\/)/.test(f))) gaps.push("the build still carries the plain catalogue beside the packed one");
+  if (!/pack-data\.mjs && node scripts\/audit\.mjs --release/.test(pkg.scripts.dist)) gaps.push("npm run dist does not pack the catalogue before its checks");
+  const reader = readSrc("src/packed.js");
+  if (!(reader.indexOf("fs.existsSync(plain)") > 0 && reader.indexOf("fs.existsSync(plain)") < reader.indexOf("fs.existsSync(gz)"))) gaps.push("src/packed.js does not read the plain file first");
+  if (!/readPacked\("stations\.min\.json"\)/.test(readSrc("src/catalog.js")) || !/catalog\.usePacked\(require\("\.\/packed"\)\.read\)/.test(readSrc("src/main.js"))) gaps.push("the catalogue is not read through src/packed.js");
+  // The web build wraps catalog.js and has no zlib (it stopped the build on 8 Oct).
+  if (/require\("\.\/packed"\)|node:zlib/.test(readSrc("src/catalog.js"))) gaps.push("src/catalog.js reaches for zlib itself, which the web build cannot wrap");
+  if (!/packed\.read\(`profiles\/\$\{s\}\.json`\)/.test(readSrc("src/profiles.js"))) gaps.push("profiles are not read through src/packed.js");
+  if (RELEASE || fs.existsSync(R("data/packed"))) {
+    const r = spawnSync(process.execPath, [R("scripts/pack-data.mjs"), "--check"], { encoding: "utf8" });
+    if (r.status !== 0 && RELEASE) gaps.push((r.stderr || "data/packed/ is behind").trim());
+  }
+  gaps.length ? fail("the Mac app carries the catalogue once, packed", gaps.join("; "))
+    : pass("packed in the build, plain in a checkout, and a release is checked against the catalogue it was built from");
 }
 
 

@@ -17,6 +17,8 @@ assets/generated/
 data/_radiobrowser.json
 data/_enrich.jsonl
 data/profiles/
+# The catalogue gzipped for the packaged app (scripts/pack-data.mjs)
+data/packed/
 data/enrich.log
 src/renderer/vendor/
 dist/

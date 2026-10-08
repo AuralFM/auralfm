@@ -19,6 +19,14 @@ const path = require("node:path");
 const region = require("./region");
 
 const BUNDLE = path.join(__dirname, "..", "data", "stations.min.json");
+/**
+ * How to read the bundle where the plain file is not there. The packaged Mac
+ * app carries it gzipped (src/packed.js), and main.js hands that reader in.
+ * It is handed in, not required here, because the web build wraps this file
+ * and has no zlib: there the plain file always exists.
+ */
+let readPacked = null;
+const usePacked = (fn) => { readPacked = fn; };
 
 let places = [];
 let channels = [];
@@ -72,11 +80,12 @@ function norm(s) {
 }
 
 function load() {
-  if (!fs.existsSync(BUNDLE)) {
+  const text = fs.existsSync(BUNDLE) ? fs.readFileSync(BUNDLE, "utf8") : readPacked ? readPacked("stations.min.json") : null;
+  if (text === null) {
     console.warn("catalog: no bundle at data/stations.min.json — run `npm run catalogue`");
     return false;
   }
-  const raw = JSON.parse(fs.readFileSync(BUNDLE, "utf8"));
+  const raw = JSON.parse(text);
   generated = raw.g;
   places = raw.p;
   channels = raw.c;
@@ -564,4 +573,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { setHideExplicit, setPlayableOnly, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces };
+module.exports = { setHideExplicit, setPlayableOnly, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces, usePacked };
