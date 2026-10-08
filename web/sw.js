@@ -65,6 +65,9 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== location.origin) return;            // never someone else's
   // The proxied sources are live data wearing our own address.
   if (url.pathname.startsWith("/api/")) return;
+  // The list of shows AuralFM no longer lists: a takedown read from a cache
+  // is a takedown that has not happened.
+  if (url.pathname.endsWith("/data/hidden-shows.json")) return;
 
   if (request.mode === "navigate") {
     e.respondWith((async () => {

@@ -28,6 +28,7 @@ safety.init(HOME);
 // Favorites sync is the desktop's file as well. The page gives it the list
 // (web/bridge.js); nothing runs until the listener turns it on.
 window.AuralFavSync = require("../src/favsync.js");
+const unlisted = require("../src/unlisted.js");
 
 window.AuralChat = function create({ getPrefs, emit }) {
   const visible = (list) => {
@@ -118,6 +119,9 @@ window.AuralChat = function create({ getPrefs, emit }) {
       presenceStats: async () => nostr.stats(),
       studioHost: (lat, lon, live, title) => host(lat, lon, live, title),
       showsWatch: (on) => { if (watching === (on === true)) return; watching = on === true; sync(lastPlayer); },
+      // The hosts AuralFM no longer lists (src/unlisted.js). Never from a cache:
+      // the service worker lets this one file through to the network (web/sw.js).
+      hiddenShows: async () => { try { const r = await fetch("data/hidden-shows.json", { cache: "no-store" }); return r.ok ? unlisted.read(await r.json()) : null; } catch { return null; } },
       rtcSignal: async (to, payload) => nostr.signal(String(to || ""), payload),
       presenceView: (lat, lon) => { if (getPrefs().presence === true) nostr.view(lat, lon); },
       chatHistory: async () => visible(nostr.history()),

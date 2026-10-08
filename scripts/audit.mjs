@@ -3624,6 +3624,41 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 
+// ── AuralFM can take a show off its list ─────────────────────────────────────
+// The Terms say AuralFM "can hide a show from the apps" and removes what a
+// valid copyright notice identifies. Until 8 Oct 2026 nothing in the app could:
+// the promise was words. data/hidden-shows.json is the list, src/unlisted.js
+// reads it, and explore-shows.js keeps a listed host off the globe and out of
+// On air. A takedown that is cached, shipped only with the next release, or
+// undone by one malformed line is not a takedown.
+{
+  console.log("\nAuralFM can take a show off its list");
+  const gaps = [];
+  const { createRequire } = await import("node:module");
+  const { read } = createRequire(import.meta.url)(R("src/unlisted.js"));
+  const A = "ab".repeat(32), B = "cd".repeat(32), C = "ef".repeat(32), now = Date.parse("2026-10-09T12:00:00Z");
+  const got = read({ v: 1, hosts: [{ key: A }, { key: B.toUpperCase(), until: "2026-10-09" }, { key: C, until: "2026-10-08" }, { key: "not a key" }, null] }, now) || [];
+  if (!got.includes(A)) gaps.push("a listed host is not hidden");
+  if (!got.includes(B)) gaps.push("a key in capitals, or a hiding on its last day, is let through");
+  if (got.includes(C)) gaps.push("a hiding that has ended still hides");
+  if (got.length !== 2) gaps.push("a malformed entry was taken for a host");
+  if (read({ v: 2, hosts: [] }) !== null || read("x") !== null || read(null) !== null) gaps.push("a file that is not ours is read as an empty list, which would unhide everyone");
+  if (!Array.isArray(read(JSON.parse(readSrc("data/hidden-shows.json"))))) gaps.push("data/hidden-shows.json is not a list the apps can read");
+  const shows = readSrc("src/renderer/explore-shows.js");
+  if (!/live = unlistedKnown \? announced\.filter\(listed\) : \[\];/.test(shows)) gaps.push("shows are listed before the hidden list has answered, or without it");
+  if (!/if \(!listed\(peer\)\) return;/.test(shows)) gaps.push("a hidden show can still be tuned to");
+  if (!/if \(Array\.isArray\(keys\)\) unlisted = new Set\(keys\);/.test(shows)) gaps.push("no answer empties the list instead of leaving it");
+  if (!/hidden-shows\.json"\)\) return;/.test(readSrc("web/sw.js"))) gaps.push("the web app reads the hidden list from its cache");
+  const web = readSrc("scripts/build-web.mjs");
+  if (!/copy\("data\/hidden-shows\.json"/.test(web) || !/rel === "data\/hidden-shows\.json"\) continue;/.test(web)) gaps.push("the web build does not carry the list, or precaches it");
+  if (!/listen\.auralfm\.xyz\/data\/hidden-shows\.json/.test(readSrc("src/hidden-shows.js"))) gaps.push("the desktop reads only the copy it shipped with");
+  if (!pkg.build.files.includes("data/hidden-shows.json")) gaps.push("the Mac build ships without the list");
+  if (!/list of shows AuralFM no longer lists/.test(readSrc("docs/PRIVACY.md"))) gaps.push("the privacy policy does not name the request");
+  gaps.length ? fail("AuralFM can take a show off its list", gaps.join("; "))
+    : pass("a listed host is off the globe and On air in both apps, read fresh, and a damaged file hides and unhides nobody");
+}
+
+
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

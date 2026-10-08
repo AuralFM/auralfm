@@ -87,6 +87,31 @@
   let live = [];                   // the shows on air, from the peers the relays have shown us
   const gone = new Set();          // hosts reported or muted: their shows are not listed here again
   let said = "";                   // one line under the list, for a few seconds
+  /**
+   * Hosts AuralFM no longer lists (src/unlisted.js): off the globe, out of On
+   * air, and not tuned to from here. Asked for only when there is a show to
+   * list, and held until the first answer, so a hidden show never flashes up.
+   * No answer (offline, a damaged file) leaves the last list as it was.
+   */
+  let unlisted = new Set(), unlistedKnown = false, asking = null;
+  let announced = [];              // the shows on air as the relays last gave them, before the list
+  const listed = (p) => !unlisted.has(String(p.pubkey || "").toLowerCase());
+  function takeUnlisted() {
+    if (asking) return asking;
+    asking = Promise.resolve(window.auralfm.hiddenShows?.()).catch(() => null).then((keys) => {
+      if (Array.isArray(keys)) unlisted = new Set(keys);
+      unlistedKnown = true;
+      setTimeout(() => { asking = null; }, 60_000);   // the main process and the bridge keep their own half hour
+      relist();
+    });
+    return asking;
+  }
+  function relist() {
+    live = unlistedKnown ? announced.filter(listed) : [];
+    // Being listened to when it was taken down: it stops, as if it had ended.
+    if (show && !listed(show.peer)) end("ended");
+    paint();
+  }
   Promise.resolve(window.auralfm.muteList?.()).then((list) => { for (const k of list || []) gone.add(typeof k === "string" ? k : k?.pubkey); paint(); }).catch(() => {});
   const audio = new Audio();
   audio.autoplay = true;
@@ -151,6 +176,7 @@
   }
   async function listen(peer) {
     if (window.AuralStudio?.live) return;             // on air yourself: one sound at a time
+    if (!listed(peer)) return;                        // not from here (src/unlisted.js)
     if (show) await stop();
     const sid = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
     show = { peer, sid, pc: null, state: "connecting" };
@@ -367,9 +393,10 @@
   /** Called with the peers each time they change (explore-chat.js). */
   window.AuralShows = {
     peers(list) {
-      live = (Array.isArray(list) ? list : []).filter((p) => p.live);
+      announced = (Array.isArray(list) ? list : []).filter((p) => p.live);
       // The host has stopped saying the show is on.
-      paint();
+      if (announced.length) takeUnlisted();
+      relist();
     },
     listen, stop, report,
     /** The On Air layer was switched (explore-view.js), or a preference (explore-chat.js). */

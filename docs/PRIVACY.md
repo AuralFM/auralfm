@@ -74,6 +74,7 @@ differently" below. The rest of this table applies to both.
 | wheretheiss.at / Celestrak | ISS and satellite positions | Your IP address |
 | rx.linkfanel.net | The list of shortwave receivers, refreshed at most twice a day | Your IP address |
 | A shortwave receiver you click | Listening to that antenna | Your IP address, and which frequency you tuned |
+| listen.auralfm.xyz (AuralFM's own site, hosted by here.now) | The list of shows AuralFM no longer lists. Asked for only while a show is on air to be listed, at most every half hour | Your IP address. Nothing about you or what you are hearing |
 
 Two points worth stating plainly:
 

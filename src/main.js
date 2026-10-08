@@ -794,6 +794,8 @@ let hosting = null;
 // (explore-shows.js): on only where shows are, and with the On Air layer.
 let watching = false;
 ipcMain.on("shows:watch", (_e, on) => { if (watching === (on === true)) return; watching = on === true; syncNostrPresence(); });
+// The hosts AuralFM no longer lists (src/hidden-shows.js).
+ipcMain.handle("shows:hidden", () => require("./hidden-shows").get());
 ipcMain.on("studio:host", (_e, lat, lon, live, title) => {
   // Live, the show's name goes out as the label and is marked as a show, which
   // is how a listener finds it; off air, or only listening to someone else's

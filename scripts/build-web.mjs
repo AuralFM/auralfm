@@ -474,6 +474,7 @@ fs.writeFileSync(path.join(OUT, ".herenow", "proxy.json"), JSON.stringify({
 copy("assets/fonts", "assets/fonts");
 copy("assets/sky.json", "assets/sky.json");
 copy("data/stations.min.json", "data/stations.min.json");
+copy("data/hidden-shows.json", "data/hidden-shows.json");   // shows AuralFM no longer lists (src/unlisted.js)
 // Each station's profile (scripts/profiles.mjs), fetched one file at a time when
 // a station is opened: 256 files, none precached.
 if (fs.existsSync(R("data/profiles"))) copy("data/profiles", "data/profiles");
@@ -562,6 +563,7 @@ fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
     for (const e of fs.readdirSync(path.join(OUT, dir), { withFileTypes: true })) {
       const rel = `${dir}/${e.name}`;
       if (e.isDirectory()) walk(rel);
+      else if (rel === "data/hidden-shows.json") continue;   // always asked of the network (web/sw.js)
       else if (/\.(js|json|jpg|png|svg|woff2)$/.test(e.name)) shell.push(rel.replace(/^\.\//, ""));
     }
   };

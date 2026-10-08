@@ -87,6 +87,8 @@ contextBridge.exposeInMainWorld("auralfm", {
   studioOpenTrack: (url) => ipcRenderer.invoke("studio:openTrack", url),
   studioHost: (lat, lon, live, title) => ipcRenderer.send("studio:host", lat, lon, live, title),
   showsWatch: (on) => ipcRenderer.send("shows:watch", on === true),
+  /** Keys of the hosts AuralFM no longer lists, fresh from listen.auralfm.xyz. */
+  hiddenShows: () => ipcRenderer.invoke("shows:hidden"),
   rtcSignal: (to, payload) => ipcRenderer.invoke("rtc:signal", to, payload),
   onRtcSignal: (fn) => ipcRenderer.on("rtc:signal", (_e, from, payload, at) => fn(from, payload, at)),
 

@@ -1,0 +1,5 @@
+{
+  "v": 1,
+  "about": "Shows AuralFM no longer lists (docs/TERMS.md: Your show, Copyright). One entry per host: key (64 hex, the key the show was announced with), since (date), why (copyright, conduct or impersonation), and until (date) if it ends. Published at listen.auralfm.xyz/data/hidden-shows.json; the apps read it there.",
+  "hosts": []
+}
