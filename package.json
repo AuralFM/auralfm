@@ -92,6 +92,9 @@
       "electronLanguages": ["en", "en_GB", "es", "es_419", "fr", "de", "pt_BR", "pt_PT"],
       "category": "public.app-category.music",
       "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",
@@ -118,5 +121,8 @@
     "dmg": {
       "title": "AuralFM ${version}"
     }
+  },
+  "overrides": {
+    "global-agent": "^4.1.3"
   }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- What a signed build may do under the hardened runtime, which
+     electron-builder turns on by default. Without the first two, an Electron
+     app signs, passes verification and then does not launch: V8 needs to write
+     and run its own code. The third is the microphone in Your show; without it
+     macOS refuses the microphone with no prompt at all. Nothing else is asked
+     for. Used for the app and for its helpers (entitlementsInherit). -->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+</dict>
+</plist>
