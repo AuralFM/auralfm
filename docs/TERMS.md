@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 9 October 2026**
+**Last updated: 8 October 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 

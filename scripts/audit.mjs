@@ -3664,7 +3664,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // are out, and the app never learns you existed. The crawl leaves them out of
 // the shipped list. But the app also refreshed that list from the public one
 // twice a day and took every receiver on it, so the first operator to opt out
-// would have been back within hours (found 9 Oct 2026, before anyone had).
+// would have been back within hours (found 8 Oct 2026, before anyone had).
 // Run for real, with the network and the cache faked.
 {
   console.log("\na receiver that asked to be left out stays out");
@@ -3699,6 +3699,39 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     gaps.length ? fail("a receiver that asked to be left out stays out", gaps.join("; "))
       : pass("neither a refresh nor an old cache can add a receiver this build was not shipped with");
   }
+}
+
+
+// ── the Mac app does not grow by itself ──────────────────────────────────────
+// electron-builder 26.17 began shipping LICENSES.chromium.html (19 MB) and 24
+// gendered language folders (7 MB) that earlier versions left out. It arrived
+// with a routine dependency update, and the first build after it was no
+// smaller for having had 28 MB of catalogue packed. scripts/after-pack.cjs
+// takes both back out; this runs it on a made-up app.
+{
+  console.log("\nthe Mac app does not grow by itself");
+  const gaps = [];
+  if (pkg.build.afterPack !== "scripts/after-pack.cjs") gaps.push("the build does not run scripts/after-pack.cjs");
+  const { createRequire } = await import("node:module");
+  const os = await import("node:os");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "auralfm-pack-"));
+  try {
+    const app = path.join(tmp, "AuralFM.app");
+    const res = path.join(app, "Contents", "Frameworks", "Electron Framework.framework", "Versions", "A", "Resources");
+    for (const d of ["en.lproj", "en_GB.lproj", "es_419.lproj", "en_FEMININE.lproj", "es_419_NEUTER.lproj", "de_MASCULINE.lproj"]) fs.mkdirSync(path.join(res, d), { recursive: true });
+    fs.mkdirSync(path.join(app, "Contents", "Resources"), { recursive: true });
+    fs.writeFileSync(path.join(app, "Contents", "Resources", "LICENSES.chromium.html"), "x");
+    fs.writeFileSync(path.join(app, "Contents", "Resources", "app.asar"), "x");
+    createRequire(import.meta.url)(R("scripts/after-pack.cjs")).trim(app);
+    const left = fs.readdirSync(res).sort().join(",");
+    if (left !== "en.lproj,en_GB.lproj,es_419.lproj") gaps.push(`the language folders left are ${left}`);
+    if (fs.existsSync(path.join(app, "Contents", "Resources", "LICENSES.chromium.html"))) gaps.push("the 19 MB Chromium licence page is still in the app");
+    if (!fs.existsSync(path.join(app, "Contents", "Resources", "app.asar"))) gaps.push("it removed the app itself");
+  } catch (e) { gaps.push(`could not run scripts/after-pack.cjs: ${e.message}`); }
+  finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  if (!/LICENSES\.chromium\.html/.test(readSrc("THIRD-PARTY-NOTICES.md"))) gaps.push("the notices no longer say where Chromium's full licences are");
+  gaps.length ? fail("the Mac app does not grow by itself", gaps.join("; "))
+    : pass("the Chromium licence page and the gendered language folders are taken out after packing, and the notices say where the licences are");
 }
 
 

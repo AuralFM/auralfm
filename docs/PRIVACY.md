@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 9 October 2026**
+**Last updated: 8 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers

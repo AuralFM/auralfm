@@ -48,7 +48,7 @@
   const STEPS = window.AuralTourSteps || [
     {
       welcome: true,
-      // The line the front page leads with (Melton, 9 Oct 2026).
+      // The line the front page leads with (Melton, 8 Oct 2026).
       title: "Radio chosen by people. Found by place.",
       body: "Spin the globe. Whatever sits under the middle is selected. "
           + "Click a dot to hear that place, live.",
