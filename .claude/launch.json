@@ -33,6 +33,26 @@
         "home"
       ],
       "port": 8766
+    },
+    {
+      "name": "auralfm-docs",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
+        "8768",
+        "docs-site"
+      ],
+      "port": 8768
+    },
+    {
+      "name": "auralfm-blog",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
+        "8767",
+        "site"
+      ],
+      "port": 8767
     }
   ]
 }
