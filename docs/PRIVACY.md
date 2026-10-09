@@ -127,12 +127,13 @@ and nothing it does passes through a host of ours.
 ## The waitlists (the website only)
 
 This is the one place AuralFM asks you for anything, and it is on auralfm.xyz,
-not in the app. There are two lists: one for the desktop beta, and one for
-sponsorship. If you join either, we keep:
+not in the app. There are three lists: one for the desktop beta, one for
+sponsorship, and one for the newsletter. If you join any of them, we keep:
 
 - your **name** and **email address**,
-- **which computer** you use (for the desktop beta) or **which sponsorship** you
-  are interested in,
+- **which computer** you use (for the desktop beta), **which sponsorship** you
+  are interested in, or **what you asked to hear about** (the newsletter, or
+  the shop opening),
 - anything you chose to write in the **note**,
 - that you **confirmed you are 13 or older** (a tick box; we keep the tick, not
   your age or birthday).
@@ -144,9 +145,11 @@ send, which keeps spam out.
 
 We use it for one thing: to email you about what you signed up for — a note that
 you are on the list, then an invite and a build for the beta, or sponsorship
-opening. It is never sold, shared, or added to any other list. To come off
-either list, reply "remove" to any email from us, or write to
-**hello@auralfm.xyz**, and we delete it.
+opening. The newsletter is the email you asked for: the week's stations and news
+of AuralFM, no more than once a week. Joining one list does not put you on
+another. It is never sold or shared. To come off a list, use the unsubscribe
+link in any email, reply "remove", or write to **hello@auralfm.xyz**, and we
+delete it.
 
 **How the emails are sent.** Through [Resend](https://resend.com), an email
 delivery service, from hello@auralfm.xyz. To send one, Resend receives your name,
