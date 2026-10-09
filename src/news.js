@@ -18,6 +18,8 @@
 
 const { cooldown } = require("./backoff");
 const { validUrl, safeFetch } = require("./safehost");
+// A country's own newsrooms, where we have them (src/news-feeds.js says why).
+const COUNTRY_FEEDS = require("./news-feeds");
 
 const TTL_MS = 15 * 60 * 1000;
 const cache = new Map();          // country -> { at, items }
@@ -86,9 +88,16 @@ const decode = (s) => s
   .replace(/&mdash;/g, "\u2014").replace(/&ndash;/g, "\u2013").replace(/&hellip;/g, "\u2026")
   .trim();
 
+// The opening tag may carry attributes: Atom writes `<title type="html">`.
 const pick = (item, tag) => {
-  const m = item.match(new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`));
+  const m = item.match(new RegExp(`<${tag}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`));
   return m ? decode(m[1]) : "";
+};
+// An Atom entry's link is an attribute, and the one to the story is rel="alternate" (or has no rel).
+const atomLink = (entry) => {
+  const links = [...entry.matchAll(/<link\b([^>]*)>/g)].map((m) => m[1]);
+  const pickOne = links.find((l) => /rel=["']alternate["']/.test(l)) || links.find((l) => !/rel=/.test(l)) || "";
+  return decode((/href=["']([^"']+)["']/.exec(pickOne) || [, ""])[1]);
 };
 
 /**
@@ -148,8 +157,13 @@ function readability(source) {
  */
 function parseItems(xml, limit, source = "") {
   const out = [];
-  // `<item rdf:about=…>` as well as `<item>`: DW's feed is RSS 1.0 (RDF).
-  for (const item of xml.split(/<item[\s>]/).slice(1)) {
+  // `<item rdf:about=…>` as well as `<item>`: DW's feed is RSS 1.0 (RDF). And
+  // `<entry>` where there are no items at all: several public broadcasters
+  // (VRT, Sveriges Radio, Taiwan's PTS) publish Atom, not RSS.
+  let blocks = xml.split(/<item[\s>]/).slice(1);
+  const atom = !blocks.length;
+  if (atom) blocks = xml.split(/<entry[\s>]/).slice(1);
+  for (const item of blocks) {
     const title = pick(item, "title");
     if (!title) continue;
     // Google formats titles as "Headline - Publisher"; a publisher's own feed
@@ -158,8 +172,8 @@ function parseItems(xml, limit, source = "") {
     out.push({
       title: split > 20 ? title.slice(0, split) : title,
       source: source || pick(item, "source") || (split > 20 ? title.slice(split + 3) : ""),
-      link: pick(item, "link"),
-      at: Date.parse(pick(item, "pubDate") || pick(item, "dc:date")) || null,
+      link: atom ? atomLink(item) : pick(item, "link"),
+      at: Date.parse(pick(item, "pubDate") || pick(item, "dc:date") || pick(item, "updated") || pick(item, "published")) || null,
     });
   }
   // Read the whole feed, then order it, then trim. Stopping at `limit` while
@@ -192,9 +206,10 @@ const setBase = (base) => { RSS = String(base).replace(/\/+$/, ""); };
  * works" first reported, and then "headlines are missing".
  *
  * Four publishers anyone can read, from four places, each over its own feed:
- * one failing leaves three. They are taken in rounds, so all four are heard. Country and place headlines stay on
- * Google's editions, which answer, and which are the only way to have them in
- * the country's own language.
+ * one failing leaves three. They are taken in rounds, so all four are heard.
+ * Country and place headlines stayed on Google's editions until 9 Oct 2026,
+ * when those stopped answering the relay too: they now come from each
+ * country's own newsrooms, the same way (src/news-feeds.js).
  *
  * `route` is the web version's proxy path (/api/feeds/<route>); the desktop
  * fetches `url` itself. scripts/build-web.mjs writes the routes from this list.
@@ -221,12 +236,25 @@ async function fetchFeed(url, parse) {
   return parse(await res.text());
 }
 
-async function worldHeadlines(limit) {
-  const results = await Promise.allSettled(WORLD_FEEDS.map((f) =>
-    fetchFeed(FEEDS ? `${FEEDS}/${f.route}` : f.url, (xml) => parseItems(xml, 40, f.name))));
+/**
+ * Headlines from a list of newsrooms' own feeds: the world's, or one country's.
+ *
+ * Three at a time. A country may list more: some newsrooms refuse the web
+ * version's relay (`relay: false`, found by asking each one through it), and
+ * the web then takes the next ones down the list, so a phone still hears two
+ * or three. The relay forwards the query string it is given and not the one
+ * in its own configuration, so a feed whose address ends in `?outputType=xml`
+ * is asked for with that on the end here too: without it nine feeds answered
+ * the relay with a 404 or a web page (9 Oct 2026).
+ */
+const search = (url) => { try { return new URL(url).search; } catch { return ""; } };
+async function fromFeeds(feeds, limit) {
+  const use = feeds.filter((f) => !(FEEDS && f.relay === false)).slice(0, 3);
+  const results = await Promise.allSettled(use.map((f) =>
+    fetchFeed(FEEDS ? `${FEEDS}/${f.route}${search(f.url)}` : f.url, (xml) => parseItems(xml, 40, f.name))));
   const lists = results.filter((r) => r.status === "fulfilled" && r.value.length)
     .map((r) => r.value.slice().sort((a, b) => (b.at || 0) - (a.at || 0)));
-  if (!lists.length) throw new Error("no world feed answered");
+  if (!lists.length) throw new Error("none of these feeds answered");
   /**
    * In rounds: each outlet's newest, then each one's next, and so on — within
    * a round, newest first. Strictly newest-first let the outlets that publish
@@ -254,9 +282,11 @@ async function worldHeadlines(limit) {
  * @param {string|null} country  null or "world" for the international edition
  */
 async function get(country, limit = 12) {
-  // A country with no locale here gets the world edition, as the header says.
-  // It used to get the US edition, so a station in Senegal showed American news.
-  const key = country && LOCALES[country] ? country : "world";
+  // A country with neither newsrooms nor a locale here gets the world edition,
+  // as the header says. It used to get the US edition, so a station in Senegal
+  // showed American news.
+  const own = (country && COUNTRY_FEEDS[country]) || null;
+  const key = own || (country && LOCALES[country]) ? country : "world";
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.items;
   if (cool.blocked) {
@@ -266,26 +296,38 @@ async function get(country, limit = 12) {
 
   // No country means world news, not "whatever the US is reading" — this app is
   // about the whole globe, and the default should say so. World comes from the
-  // publishers' own feeds (WORLD_FEEDS, above); a country from Google's edition.
+  // publishers' own feeds (WORLD_FEEDS, above), and so does a country that has
+  // newsrooms listed (src/news-feeds.js). Google's edition is what is left: for
+  // a country with a locale and no newsrooms, and for the desktop when every
+  // one of a country's own feeds has failed. The web never asks Google: its
+  // relay is refused there, and a refusal would also start the backoff below
+  // and take World down with it.
+  const google = () => {
+    const [gl, hl] = LOCALES[key];
+    return fetchFeed(`${RSS}?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`,
+                     (xml) => parseItems(xml, limit));
+  };
   try {
-    const items = key === "world"
-      ? await worldHeadlines(limit)
-      : await (() => {
-          const [gl, hl] = LOCALES[key];
-          return fetchFeed(`${RSS}?hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`,
-                           (xml) => parseItems(xml, limit));
-        })();
+    let items;
+    if (key === "world") items = await fromFeeds(WORLD_FEEDS, limit);
+    else if (own) {
+      try { items = await fromFeeds(own, limit); }
+      catch (err) { if (FEEDS || !LOCALES[key]) throw err; items = await google(); }
+    } else if (FEEDS) throw new Error(`news: no newsrooms listed for ${key}`);
+    else items = await google();
     cache.set(key, { at: Date.now(), items });
     cool.ok();
     return items;
   } catch (err) {
-    cool.fail(err);
+    // A small country's two papers being down is not a reason to stop asking
+    // for everybody else's: only World and Google start the backoff.
+    if (!own && !(FEEDS && key !== "world")) cool.fail(err);
     if (hit) return hit.items;
     throw err;
   }
 }
 
-module.exports = { get, setBase, setFeedBase, WORLD_FEEDS };
+module.exports = { get, setBase, setFeedBase, WORLD_FEEDS, COUNTRY_FEEDS };
 
 /**
  * Read an article without opening a browser.

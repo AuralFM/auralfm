@@ -46,7 +46,7 @@ const LITE = [["earth-blue-marble.jpg", 2048], ["earth-night.jpg", 2048], ["eart
 // Order does not matter (require is lazy), but every module a wrapped one
 // requires must be in this list or be one of the shims below.
 const MODULES = ["backoff", "useragent", "geo", "prefs", "palettes", "i18n", "safehost",
-                 "region", "catalog", "weather", "markets", "iss", "space", "clouds", "wspr", "news",
+                 "region", "catalog", "weather", "markets", "iss", "space", "clouds", "wspr", "news-feeds", "news",
                  "docs"];
 const EXPOSE = ["geo", "prefs", "palettes", "i18n", "catalog", "weather", "markets", "iss", "space",
                 "clouds", "wspr", "news", "docs"];
@@ -454,9 +454,18 @@ fs.mkdirSync(path.join(OUT, ".herenow"), { recursive: true });
  * four feeds at once; a person testing from one phone passed 100 in an
  * afternoon. 400 still stops anything that loops.
  */
-const { WORLD_FEEDS } = createRequire(import.meta.url)(R("src/news.js"));
+const { WORLD_FEEDS, COUNTRY_FEEDS } = createRequire(import.meta.url)(R("src/news.js"));
 if (!Array.isArray(WORLD_FEEDS) || WORLD_FEEDS.length < 2) {
   console.error("web: src/news.js exports no WORLD_FEEDS — world headlines would have no routes");
+  process.exit(1);
+}
+// A country's headlines come from its own newsrooms too (src/news-feeds.js),
+// and the web asks nobody else for them: a country with no route here is a
+// country with no headlines on a phone.
+// Not the ones that refuse the relay (`relay: false`): the web skips them, so a route would never be asked.
+const NEWSROOMS = Object.values(COUNTRY_FEEDS || {}).flat().filter((f) => f.relay !== false);
+if (!NEWSROOMS.length) {
+  console.error("web: src/news.js exports no COUNTRY_FEEDS — a country's headlines would have no routes");
   process.exit(1);
 }
 const LIMIT = "400/hour/ip";
@@ -464,7 +473,7 @@ fs.writeFileSync(path.join(OUT, ".herenow", "proxy.json"), JSON.stringify({
   proxies: {
     "/api/news": { upstream: "https://news.google.com/rss", method: "GET", headers: UA, rateLimit: LIMIT },
     "/api/news/*": { upstream: "https://news.google.com/rss", method: "GET", headers: UA, rateLimit: LIMIT },
-    ...Object.fromEntries(WORLD_FEEDS.map((f) =>
+    ...Object.fromEntries([...WORLD_FEEDS, ...NEWSROOMS].map((f) =>
       [`/api/feeds/${f.route}`, { upstream: f.url, method: "GET", headers: UA, rateLimit: LIMIT }])),
     // The reader: one route per newsroom, to the host its stories live on.
     ...Object.fromEntries(WORLD_FEEDS.filter((f) => f.site).map((f) =>

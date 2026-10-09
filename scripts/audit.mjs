@@ -2680,6 +2680,65 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`world headlines come from ${hosts.size} newsrooms' own feeds, each with a route`);
 }
 
+// ── a country's headlines come from its own newsrooms ───────────────────────
+// A country's headlines were Google News' edition for it. On the web that
+// request leaves from the site's relay, and on 9 Oct 2026 Google refused the
+// relay for every country tried (Indonesia six times out of six): "This place"
+// and "Now playing" showed "Could not reach the headlines" on the web and the
+// iPhone. Each country now has newsrooms of its own (src/news-feeds.js), each
+// with a route, and the web asks nobody else. This runs the real module
+// against a stubbed network.
+{
+  console.log("\na country's headlines come from its own newsrooms");
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const file = req.resolve(R("src/news.js"));
+  const fresh = () => { delete req.cache[file]; const m = req(file); delete req.cache[file]; return m; };
+  const gaps = [];
+  const src = readSrc("src/news.js"), build = readSrc("scripts/build-web.mjs");
+  let news = fresh();
+  const feeds = news.COUNTRY_FEEDS || {}, all = Object.values(feeds).flat();
+  const locales = [...src.matchAll(/"([^"]+)": \["[A-Z]{2}", "/g)].map((m) => m[1]);
+  const bare = locales.filter((c) => !feeds[c]?.length);
+  if (!all.length) gaps.push("src/news.js exports no COUNTRY_FEEDS");
+  if (bare.length) gaps.push(`${bare.slice(0, 5).join(", ")}: a Google edition and no newsroom, so no headlines on the web`);
+  const bad = all.filter((f) => !/^https:\/\/[^/]+\//.test(f.url || "") || /google\./.test(f.url) || !f.name || !/^[a-z]{2}-[a-z0-9]+$/.test(f.route || ""));
+  if (bad.length) gaps.push(`${bad.slice(0, 3).map((f) => f.name || f.url).join(", ")}: not an https feed with a name and a route`);
+  const routes = [...(news.WORLD_FEEDS || []), ...all].map((f) => f.route);
+  if (new Set(routes).size !== routes.length) gaps.push("two feeds share a route, so one of them is never asked");
+  if (!/COUNTRY_FEEDS/.test(build) || !/"news-feeds"/.test(build)) gaps.push("scripts/build-web.mjs does not carry the newsrooms or write their routes");
+  if (all.length && !gaps.length) {
+    const realFetch = globalThis.fetch, realLog = console.log, realWarn = console.warn;
+    const rss = `<rss><channel><item><title>A headline long enough to be one</title><link>https://example.org/a</link><pubDate>Fri, 09 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>`;
+    let asked = [], answer = () => new Response(rss, { status: 200 });
+    globalThis.fetch = async (u) => { asked.push(String(u)); return answer(String(u)); };
+    console.log = console.warn = () => {};
+    try {
+      const [country, list] = Object.entries(feeds).find(([c]) => locales.includes(c));
+      // the web: its own routes, and nothing else
+      news.setBase("/api/news"); news.setFeedBase("/api/feeds");
+      const got = await news.get(country);
+      if (!got.length || got[0].source !== list[0].name) gaps.push(`${country} on the web did not come back from its newsrooms`);
+      if (!asked.length || asked.some((u) => !u.startsWith("/api/feeds/"))) gaps.push(`${country} on the web asked ${asked.find((u) => !u.startsWith("/api/feeds/")) || "nothing"}`);
+      // the web, every newsroom down: no Google, and World still answers after
+      news = fresh(); news.setBase("/api/news"); news.setFeedBase("/api/feeds");
+      asked = []; answer = (u) => (list.some((f) => u.endsWith("/" + f.route)) ? new Response("no", { status: 503 }) : new Response(rss, { status: 200 }));
+      let threw = false; try { await news.get(country); } catch { threw = true; }
+      if (!threw) gaps.push("with every newsroom down, the web still returned something for the country");
+      if (asked.some((u) => u.startsWith("/api/news"))) gaps.push("with every newsroom down, the web asked Google through the relay that Google refuses");
+      let world = null; try { world = await news.get(null); } catch { /* reported below */ }
+      if (!world?.length) gaps.push("a country's newsrooms failing stopped World headlines too");
+      // the desktop, every newsroom down: Google's edition, as before
+      news = fresh(); asked = []; answer = (u) => (/news\.google\.com/.test(u) ? new Response(rss, { status: 200 }) : new Response("no", { status: 503 }));
+      let fell = null; try { fell = await news.get(country); } catch { /* reported below */ }
+      if (!fell?.length || !asked.some((u) => /news\.google\.com/.test(u))) gaps.push("with every newsroom down, the desktop did not fall back to Google's edition");
+    } catch (e) { gaps.push(`the check itself failed: ${e.message}`); }
+    finally { globalThis.fetch = realFetch; console.log = realLog; console.warn = realWarn; }
+  }
+  gaps.length ? fail("a country's headlines come from its own newsrooms", gaps.join("; "))
+    : pass(`${Object.keys(feeds).length} countries have ${all.length} newsrooms of their own, each with a route; the web asks nobody else`);
+}
+
 // ── world headlines read in the web app, and nothing pretends to ────────────
 // The web version opened every headline in a new tab, because a page cannot
 // fetch another site's article. The world feeds' stories now read in the app

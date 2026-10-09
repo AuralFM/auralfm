@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 8 October 2026**
+**Last updated: 9 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -67,7 +67,7 @@ differently" below. The rest of this table applies to both.
 | radio-browser.info | Looking up a station's current stream when you press play; play counts | Your IP address, the station played |
 | NASA GIBS | Satellite cloud imagery | Your IP address |
 | Open-Meteo | Weather for a selected place | Your IP address, the **selected city's** coordinates |
-| Google News RSS | Headlines for a country or place | Your IP address |
+| Newsrooms in that country (their own RSS feeds); Google News RSS if none of them answers | Headlines for a country or place | Your IP address |
 | BBC, Al Jazeera, France 24, DW (their own RSS feeds) | World headlines | Your IP address |
 | The publisher of a headline you open | Reading it in the app | Your IP address, and which article |
 | CoinGecko | Crypto prices | Your IP address |
@@ -114,7 +114,7 @@ going straight out, because a browser is not allowed to fetch them directly:
 
 | Route | Goes to | What the request carries |
 |---|---|---|
-| Headlines for a country or place | Google News RSS | Your IP address |
+| Headlines for a country or place | Up to three newsrooms in that country, by their own RSS feeds | Your IP address |
 | World headlines | The BBC, Al Jazeera, France 24 and DW feeds | Your IP address |
 | Reading a world headline in the app | That story's page on the BBC, Al Jazeera, France 24 or DW site | Your IP address, and which article |
 
