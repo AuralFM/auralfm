@@ -23,6 +23,16 @@
         "dev"
       ],
       "port": 8790
+    },
+    {
+      "name": "auralfm-home",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
+        "8766",
+        "home"
+      ],
+      "port": 8766
     }
   ]
 }

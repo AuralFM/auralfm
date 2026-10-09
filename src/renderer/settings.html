@@ -380,19 +380,19 @@
         <button class="sw" id="contrast" role="switch" aria-checked="false" aria-labelledby="contrast-lbl"></button>
       </div>
     </div>
-    <p class="hint" data-i18n="set.contrastHint">Stronger text and borders. Follows your macOS setting unless you turn it on here.</p>
+    <p class="hint" data-i18n="set.contrastHint">Stronger text and borders. Follows your device unless you turn it on here.</p>
   </section>
 
   <section>
     <h2 data-i18n="set.colour">Themes</h2>
     <div class="card"><div class="palettes" id="palettes"></div></div>
-    <p class="hint" data-i18n="set.colourHint">Colors the accent, the station and receiver dots, the atmosphere and the stars. The Earth itself is real satellite imagery and is never recoloured.</p>
+    <p class="hint" data-i18n="set.colourHint">Colors the accent, the dots, the atmosphere and the stars. The Earth is real satellite imagery and is never recoloured.</p>
   </section>
 
   <section>
     <h2 data-i18n="set.appIcon">App icon</h2>
     <div class="card"><div class="appicons" id="appicons"></div></div>
-    <p class="hint" data-i18n="set.appIconHint">Changes the icon in the Dock. The one Finder shows is fixed when the app is built and cannot be changed while it is running.</p>
+    <p class="hint" data-i18n="set.appIconHint">Changes the icon in the Dock. The one Finder shows is fixed when the app is built.</p>
   </section>
 
   <section>
@@ -406,7 +406,7 @@
         </div>
       </div>
     </div>
-    <p class="hint" data-i18n="set.dotSizeHint">Larger dots are easier to see and easier to hit, at the cost of some crowding in dense regions.</p>
+    <p class="hint" data-i18n="set.dotSizeHint">Bigger dots are easier to hit, and more crowded where stations cluster.</p>
   </section>
 
   <section>
@@ -424,7 +424,7 @@
   <section id="minesec" hidden>
     <h2 data-i18n="set.mine">Your stations</h2>
     <div class="card" id="minelist"></div>
-    <p class="hint" data-i18n="set.mineHint">Stations you added yourself. They live only on this Mac and are never sent anywhere. Add one from the list for a place on the globe.</p>
+    <p class="hint" data-i18n="set.mineHint">Stations you added yourself. They stay on this device and are never sent anywhere.</p>
   </section>
 
   <section>
@@ -435,7 +435,7 @@
         <select id="language" aria-labelledby="lang-lbl"></select>
       </div>
     </div>
-    <p class="hint" data-i18n="set.languageHint">Translates AuralFM's own interface. Station names, places and headlines stay in their own language.</p>
+    <p class="hint" data-i18n="set.languageHint">Translates the interface. Station names, places and headlines stay as they are.</p>
   </section>
 
   <section>
@@ -467,8 +467,8 @@
            placeholder, after erasing what had been typed. -->
       <p class="fielderr" id="relay-err" role="alert" hidden></p>
     </div>
-    <p class="hint" data-i18n="set.relayHint">Relays are the servers that carry the messages. AuralFM picks ones near the place you are listening to. Add your own and it tries those first. No relay is ever told where you are.</p>
-    <p class="hint" data-i18n="set.presenceHint">Off by default. When on, other people see that someone is listening to this station — never who, and never where you are. Your location is not sent. There is no account.</p>
+    <p class="hint" data-i18n="set.relayHint">Relays carry the messages. AuralFM picks ones near what you are listening to, and tries yours first. None is told where you are.</p>
+    <p class="hint" data-i18n="set.presenceHint">Off by default. On, others see that someone is listening here — never who, and never where you are.</p>
   </section>
 
   <section>
@@ -491,7 +491,7 @@
         <span class="name sub" id="fingerprint">—</span>
       </div>
     </div>
-    <p class="hint" data-i18n="set.privacyHint">A nickname is not an account — nothing verifies it, and it lasts as long as the key it travels with. Your key is different in every place you listen to, and none of them are saved.</p>
+    <p class="hint" data-i18n="set.privacyHint">A nickname is not an account: nothing verifies it, and your key is different in every place you listen to. None of them are saved.</p>
 
     <!-- The one setting in this app that makes you trackable across sessions, so
          it states the cost in the row itself rather than in a hint underneath. -->
@@ -520,9 +520,9 @@
         <span class="name sub" data-i18n="set.hubsHow">Type /hub in the chat</span>
       </div>
     </div>
-    <p class="hint" data-i18n="set.hubsHint">A hub is a room with no registry and no invitation: a name and a password, typed into the chat as /hub "radio club" yourpassword. Everyone who types the same pair is in the same room, and the password alone decides which room that is — the name on its own decides nothing. The relays carry it and cannot read it. What it is not: anyone who learns the pair can read everything said in it, including what was said before they knew it, so changing the password does not lock anybody out — it makes a different room.</p>
+    <p class="hint" data-i18n="set.hubsHint">Type /hub “radio club” yourpassword in the chat. The same name and password is the same room. Relays cannot read it. Anyone who learns the pair can read all of it, past messages too.</p>
 
-    <p class="hint" data-i18n="set.durableHint">Off, every key is thrown away when you quit, and nobody can favorite or verify you — there is nothing lasting to point at. On, one key is saved on this Mac and used for private messages only; presence on the globe stays anonymous either way. The cost is real: anyone watching relays can tell that the identity written to on Tuesday was written to again on Friday. Switching this off destroys the key, and anyone holding your fingerprint will find nothing answers to it.</p>
+    <p class="hint" data-i18n="set.durableHint">Off: a new key each time, so nobody can keep or verify you. On: one saved key for private messages, and anyone watching the relays can tell it is you each time. Turning it off destroys the key.</p>
 
     <!-- The safety tools. There are no moderators on this network — bitchat has
          none either — so everything here is control over your own window. -->
@@ -554,7 +554,7 @@
         </select>
       </div>
       <div class="row">
-        <span class="name sub" data-i18n="set.powHint">Also hides anyone whose app does not do this — bitchat does not. Never hides who is present, only what they said.</span>
+        <span class="name sub" data-i18n="set.powHint">Also hides anyone whose app does not do this work, bitchat included. Never hides who is present.</span>
       </div>
       <div class="row">
         <span class="name sub" id="filter-head" data-i18n="set.filterList">Word list</span>
@@ -567,7 +567,7 @@
       </div>
       <div id="filterlist"></div>
     </div>
-    <p class="hint" data-i18n="set.safetyHint">Nobody moderates this network — there is no server to run a moderator and no account to suspend, which is true of every app built this way. The word filter catches careless abuse, not determined abuse: a list cannot beat somebody who spaces out their letters. "Only people you keep" is the tool that actually holds, because being a stranger cannot be worked around. Reporting a message mutes the sender straight away and opens an email you choose whether to send.</p>
+    <p class="hint" data-i18n="set.safetyHint">Nobody moderates this network. The word filter catches careless abuse. “Only people you keep” is what really holds. Reporting mutes the sender at once.</p>
 
     <!-- Muting was one-way: you could silence somebody from the chat and then had
          no way to see who, or change your mind. -->
@@ -582,7 +582,7 @@
       <div class="row"><span class="name sub" id="contacts-head" data-i18n="set.contacts">People you keep</span></div>
       <div id="contactlist"></div>
     </div>
-    <p class="hint" data-i18n="set.contactsHint">A tick means you compared fingerprints with this person yourself and they matched. Only you can set that, and only you should — read the sixteen characters aloud on a call or in person. A fingerprint somebody typed into the chat proves nothing.</p>
+    <p class="hint" data-i18n="set.contactsHint">A tick means you compared fingerprints in person or on a call and they matched. One typed into the chat proves nothing.</p>
 
     <!-- Moving to a new install (web/bridge.js, backupCode): the web app only,
          where everything lives in this browser and goes when its icon does.
@@ -605,7 +605,7 @@
         </div>
         <div class="row" id="syncsaidrow" hidden><span class="name sub" id="syncsaid" role="status" aria-live="polite"></span></div>
       </div>
-      <p class="hint" data-i18n="set.syncHint">Keeps your favorites the same on each device that has the code. The list is sealed before it leaves. Anyone with the code can read and change it. No account.</p>
+      <p class="hint" data-i18n="set.syncHint">Keeps your favorites the same on every device with the code. The list is sealed before it leaves. Anyone with the code can read and change it.</p>
     </div>
 
     <div id="movesec" hidden>
@@ -630,7 +630,7 @@
         <button class="link danger" id="panic" data-i18n="set.panicDo">Erase</button>
       </div>
     </div>
-    <p class="hint" data-i18n="set.panicHint">Favourites, listening history, the mute list and every key this session used. Appearance settings stay. This cannot be undone.</p>
+    <p class="hint" data-i18n="set.panicHint">Erases favorites, history, the mute list and this session’s keys. Appearance stays. Cannot be undone.</p>
 
     <h2 data-i18n="set.help">Help</h2>
     <div class="card">
@@ -643,7 +643,7 @@
         <button class="link" id="replayTour" data-i18n="set.replay">Replay</button>
       </div>
     </div>
-    <p class="hint" data-i18n="set.tipsHint">Short descriptions when you rest the pointer on a control. Turn this off and macOS shows its own instead.</p>
+    <p class="hint" data-i18n="set.tipsHint">Short descriptions when you rest the pointer on a control.</p>
 
     <h2 data-i18n="set.about">About</h2>
     <div class="card">
