@@ -3234,6 +3234,22 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("every :hover rule is inside @media (hover:hover)");
 }
 
+// ── the player row stays over a moving panel ────────────────────────────────
+// On the iPhone app, with a station cued, dragging Headlines or Chat blanked
+// the player row: name, star, play and share gone, only the wave left (8 Oct
+// 2026). Those panels run on underneath the row and become a layer while they
+// move; WebKit then painted the row's contents beneath them. The row is a
+// layer of its own on a phone, which keeps it above.
+{
+  console.log("\nthe player row stays over a moving panel");
+  const css = fs.readFileSync(R("web/web.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const row = css.match(/body\.phonebar \.now \{([^}]*)\}/)?.[1] ?? "";
+  const under = /\.newspanel, #layers, \.chatpanel \{[^}]*z-index: 4/.test(css) && /z-index: 5/.test(row);
+  !under ? fail("the player row stays over a moving panel", "the panels no longer pass under the row at z-index 4 and 5: re-read this check")
+    : /will-change:\s*transform/.test(row) ? pass("the phone's player row is its own layer, above the panels that pass under it")
+    : fail("the player row stays over a moving panel", "body.phonebar .now has no will-change: transform, so WebKit can paint it under a dragged panel");
+}
+
 // ── a phone gets the half-size globe ────────────────────────────────────────
 // Four 4096-pixel textures are about 180 MB of graphics memory with their
 // mipmaps: what makes iOS discard a web app and reload it. The web build makes

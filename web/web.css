@@ -365,6 +365,18 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
        it): without this iOS takes a vertical drag for a scroll and cancels it. */
     touch-action: none;
     box-shadow: inset 0 .5px 0 var(--line);
+    /**
+     * A layer of its own, so it keeps its place over a panel that is moving.
+     *
+     * On an iPhone, with a station cued, dragging Headlines or Chat left this
+     * row blank but for the wave (8 Oct 2026). The panel runs on underneath
+     * the row and becomes a layer while a thumb moves it; the wave already is
+     * one, because it animates; and WebKit painted the rest of the row, name
+     * and buttons, beneath the panel. Chromium does not do this, so it was
+     * found from screenshots; Melton confirmed the fix on his iPhone the
+     * same day.
+     */
+    will-change: transform;
   }
   .nowopen {
     position: absolute; inset: 0; z-index: 0;
