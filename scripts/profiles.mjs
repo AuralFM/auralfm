@@ -150,6 +150,9 @@ for (const c of full.channels) {
     // a sanctioned country.
     donate: NO_TIPS.has(c.country) ? undefined : https(claim.donate) || https(checkedDonate[c.id]?.url) || https(site.donate),
     noTips: NO_TIPS.has(c.country) || undefined,
+    // The shows the station listed on the claim form, already read into slots
+    // by scripts/claims.mjs. Only from an approved claim: nothing is scraped.
+    schedule: form?.schedule?.length ? form.schedule : undefined,
     checked: e?.at,
   });
   if (profile.description) n.described++;

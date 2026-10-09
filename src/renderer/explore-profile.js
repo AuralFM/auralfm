@@ -87,6 +87,8 @@
     if (p.social?.nostr && /^npub1[02-9ac-hj-np-z]{58}$/.test(p.social.nostr)) links.append(link(`https://njump.me/${p.social.nostr}`, "Nostr"));
     if (links.childElementCount) box.append(links);
 
+    schedule(box, p, ch);
+
     const ln = p.claim?.lightning;
     const hasTip = !!ln && /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(ln);
     // The station's own donation page, for the stations a Lightning address
@@ -115,6 +117,51 @@
       // not the station claiming its page.
       box.append(claimLine(ch));
     }
+  }
+
+  /**
+   * The shows a station listed when it claimed its page, each with the next
+   * time it is on in the listener's own clock and a button that puts it in
+   * their calendar (schedule-ics.js). Nothing is kept and nothing is sent: the
+   * file is made here, and the calendar does the reminding.
+   */
+  function schedule(box, p, ch) {
+    const S = window.AuralSchedule;
+    const slots = S ? (p.schedule || []).filter(S.valid).slice(0, 12) : [];
+    if (!slots.length) return;
+    const title = el("p", "pnote", t("profile.schedule", "On the schedule"));
+    title.id = `psched-${ch.id}`;
+    const list = el("ul", "psched");
+    list.setAttribute("aria-labelledby", title.id);
+    const fmt = new Intl.DateTimeFormat(navigator.language || "en", { weekday: "short", hour: "numeric", minute: "2-digit" });
+    for (const slot of slots) {
+      const n = S.next(slot, Date.now());
+      if (!n) continue;
+      const li = el("li", "pslot");
+      const name = el("span", "pslot-name", slot.name);
+      name.dir = "auto";
+      li.append(name, el("span", "pslot-when", `${t("profile.nextShow", "Next for you")}: ${fmt.format(new Date(n.at))}`));
+      const add = el("button", "plink pcal", t("profile.addCal", "Add to calendar"));
+      add.type = "button";
+      add.setAttribute("aria-label", `${t("profile.addCal", "Add to calendar")}: ${slot.name}`);
+      add.addEventListener("click", () => {
+        const file = S.ics(slot, { id: ch.id, title: ch.title }, Date.now());
+        if (!file) return;
+        const url = URL.createObjectURL(new Blob([file], { type: "text/calendar;charset=utf-8" }));
+        const a = el("a");
+        a.href = url; a.download = `${slot.name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "show"}.ics`;
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        // Say what happened: a browser saves the file quietly, and a second
+        // press to see whether the first one worked makes a second file.
+        said.textContent = t("profile.addCalDone", "Saved. Open the file to add it to your calendar.");
+      });
+      const said = el("span", "pslot-when");
+      said.setAttribute("role", "status");
+      li.append(add, said);
+      list.append(li);
+    }
+    if (list.childElementCount) box.append(title, list);
   }
 
   const claimLine = (ch) => {

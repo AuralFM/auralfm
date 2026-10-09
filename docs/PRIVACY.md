@@ -160,7 +160,8 @@ sent us. We do not put tracking pixels or tracked links in our emails.
 
 People who run a station can claim its page with a form on docs.auralfm.xyz. It
 asks for the station, your **name** and **email address**, and whatever you choose
-to add: the station's website, a description, your links, a Nostr key and a
+to add: the station's website, a description, your links, your shows and when
+they are on, a Nostr key and a
 **Lightning address** for tips or a **donation page**, and that you confirmed you are
 18 or older. It is stored the same way as the waitlists: with
 the company that hosts the website, readable only by us, capped per connection.
@@ -168,7 +169,7 @@ the company that hosts the website, readable only by us, capped per connection.
 We use your email to confirm the station is yours, and to write to you about
 the claim — that we received it, and when it is approved — through Resend, as
 above; for nothing else. The
-description, links and Lightning address are published on the station's page in
+description, links, shows and Lightning address are published on the station's page in
 the app, because that is what you sent them for; your name and email are never
 published. To change or remove any of it, send the form again or email
 **hello@auralfm.xyz**.

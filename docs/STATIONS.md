@@ -35,6 +35,16 @@ The quickest way: fill in the short form at
 back and forth. We check the station is yours, then your description, your links
 and your Lightning address go on its page.
 
+**Your shows.** The form has a box for them, one show a line: its name, the
+days, the hours on your own clock, and your time zone.
+
+`Morning Glory | Mon-Fri | 07:00-09:00 | Europe/London`
+
+Each show then appears on your page with the time it is on for the listener,
+wherever they are, and an **Add to calendar** button. Their own calendar reminds
+them ten minutes before, every week. AuralFM keeps nothing about who added what.
+We take schedules only from the station: we never copy one off a website.
+
 Or, if you run your own website, put one small file on it, at this address:
 
 `https://your-station.example/.well-known/auralfm.json`

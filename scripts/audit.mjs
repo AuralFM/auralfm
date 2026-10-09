@@ -70,6 +70,7 @@
  *   every shipped licence is permissive ..... nothing stopped a copyleft dependency
  *   the project states one licence .......... see below
  *   shortwave schedule is current ........... a season's schedule going stale
+ *   a show goes into a calendar ............. the wrong hour across a clock change (new, 9 Oct 2026)
  *
  * ### The licence check, in more detail
  *
@@ -3809,6 +3810,59 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the Chromium licence page and the gendered language folders are taken out after packing, and the notices say where the licences are");
 }
 
+
+// ── a show goes into a calendar as the station wrote it ─────────────────────
+// 9 Oct 2026. A station lists its shows on the claim form; a listener adds one
+// to their own calendar from the station's page. Nothing is kept and nothing is
+// sent, so the one place it can go wrong is the file: the wrong hour across a
+// clock change, a first date that is not one of the show's days, a line guessed
+// at instead of refused. And the form, the review sheet, the profile and the
+// page must all carry the field, or a station's shows stop on the way.
+{
+  const name = "a show goes into a calendar as the station wrote it";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const { createRequire } = await import("node:module");
+  let S; try { S = createRequire(import.meta.url)(R("src/renderer/schedule-ics.js")); } catch (e) { gaps.push(`src/renderer/schedule-ics.js does not load: ${e.message}`); }
+  if (S) {
+    const r = S.parse("Morning Glory | Mon-Fri | 07:00-09:00 | Europe/London\nLate | Sat & Sun | 23:00 – 01:00 | America/Sao_Paulo\nno bars here\nNowhere | Mon | 10:00-11:00 | Mars/Base\nToo late | Mon | 25:00-26:00 | UTC");
+    if (r.slots.length !== 2 || r.bad.length !== 3) gaps.push(`of five lines, two good and three bad, it read ${r.slots.length} and refused ${r.bad.length}`);
+    const [glory, late] = r.slots;
+    if (glory && glory.days.join() !== "MO,TU,WE,TH,FR") gaps.push(`"Mon-Fri" became ${glory.days}`);
+    if (glory) {
+      // London is an hour ahead of UTC in July and level with it in December.
+      const summer = S.next(glory, Date.UTC(2026, 6, 1, 12)), winter = S.next(glory, Date.UTC(2026, 11, 1, 12));
+      if (new Date(summer.at).toISOString() !== "2026-07-02T06:00:00.000Z") gaps.push(`07:00 in London in July comes out as ${new Date(summer.at).toISOString()}`);
+      if (new Date(winter.at).toISOString() !== "2026-12-02T07:00:00.000Z") gaps.push(`07:00 in London in December comes out as ${new Date(winter.at).toISOString()}`);
+      // Asked on a Saturday: the first date is the Monday, not the day it was asked.
+      const sat = S.next(glory, Date.UTC(2026, 9, 10, 12));
+      if (`${sat.y}-${sat.m}-${sat.d}` !== "2026-10-12") gaps.push(`a weekday show asked for on a Saturday starts ${sat.y}-${sat.m}-${sat.d}`);
+    }
+    if (late) {
+      const file = S.ics(late, { id: "af-test", title: "Rádio; Teste, FM" }, Date.UTC(2026, 9, 9, 22));
+      const lines = file.split("\r\n");
+      for (const w of ["DTSTART;TZID=America/Sao_Paulo:20261010T230000", "DTEND;TZID=America/Sao_Paulo:20261011T010000",
+        "RRULE:FREQ=WEEKLY;BYDAY=SA,SU", "TRIGGER:-PT10M", "URL:https://listen.auralfm.xyz/?station=af-test"])
+        if (!lines.includes(w)) gaps.push(`the file has no line "${w}"`);
+      if (/[^\r]\n/.test(file)) gaps.push("the file's lines do not end as a calendar file's must (CRLF)");
+      if (!file.includes("SUMMARY:Late · Rádio\\; Teste\\, FM")) gaps.push("a station's name with a comma or a semicolon in it is not escaped");
+      if (lines.some((l) => l.length > 75)) gaps.push("a line is longer than a calendar file allows");
+    }
+    if (S.valid({ name: "x", days: ["XX"], start: "07:00", end: "08:00", tz: "UTC" })) gaps.push("a slot on a day that does not exist is called valid");
+  }
+  const html = readSrc("src/renderer/explore.html"), ui = readSrc("src/renderer/explore-profile.js");
+  const at = html.indexOf('src="schedule-ics.js"');
+  if (at < 0 || at > html.indexOf('src="explore-profile.js"')) gaps.push("explore.html does not load schedule-ics.js before the station's page");
+  if (!/AuralSchedule/.test(ui) || !/\.filter\(S\.valid\)/.test(ui)) gaps.push("the station's page does not show its schedule, or shows slots it has not checked");
+  if (!/add\.type = "button"/.test(ui)) gaps.push("Add to calendar is not a button");
+  if (!/said\.setAttribute\("role", "status"\)/.test(ui)) gaps.push("nothing says the file was saved");
+  for (const k of ["profile.schedule", "profile.nextShow", "profile.addCal", "profile.addCalDone"]) if (!new RegExp(`"${k}"`).test(readSrc("src/i18n.js"))) gaps.push(`i18n.js has no ${k}`);
+  const claims = readSrc("scripts/claims.mjs");
+  if (!/schedule-ics\.js/.test(claims) || !/schedule: shows\.slots/.test(claims)) gaps.push("scripts/claims.mjs does not read the form's shows");
+  if (!/schedule: form\?\.schedule/.test(readSrc("scripts/profiles.mjs"))) gaps.push("scripts/profiles.mjs does not publish an approved claim's schedule");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the form's lines are read or refused, the hour holds across a clock change, the file starts on one of the show's days, and the field reaches the station's page");
+}
 
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

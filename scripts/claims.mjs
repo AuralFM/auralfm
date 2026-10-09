@@ -22,6 +22,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
@@ -30,6 +31,9 @@ const SHEET = fs.existsSync(VAULT) ? path.join(VAULT, "claims-review.csv") : R("
 const STORE = R("data/claims.json");
 const SLUG = "rapid-ember-55ng";   // docs.auralfm.xyz
 const argv = process.argv.slice(2);
+// The form's "Shows" lines are read by the same code the app uses to write the
+// calendar file, so a line means one thing in both places.
+const Schedule = createRequire(import.meta.url)("../src/renderer/schedule-ics.js");
 
 // A claim sent from a page opened before 26 Sept 2026 names the station by
 // radio.garden's old id; data/legacy-ids.json (scripts/own.mjs) says what it is now.
@@ -54,7 +58,7 @@ function parseCsv(text) {
 if (argv[0] === "--import") {
   const [head, ...rows] = parseCsv(fs.readFileSync(argv[1] || SHEET, "utf8"));
   const at = (name) => head.findIndex((h) => h.trim().toLowerCase() === name);
-  const I = Object.fromEntries(["id", "approve", "station id", "station", "lightning", "donate", "nostr", "description", "links", "site"].map((k) => [k, at(k)]));
+  const I = Object.fromEntries(["id", "approve", "station id", "station", "lightning", "donate", "nostr", "description", "links", "schedule", "site"].map((k) => [k, at(k)]));
   let yes = 0, no = 0;
   for (const r of rows) {
     const verdict = (r[I.approve] || "").trim().toLowerCase();
@@ -63,6 +67,9 @@ if (argv[0] === "--import") {
     if (!/^(y|yes|x|true|1)$/.test(verdict)) { no++; continue; }
     const sid = legacy[r[I["station id"]]?.trim()] || r[I["station id"]]?.trim();
     if (!sid) { console.log(`claims: "${r[I.station]}" has no station id; find it in the app and add it to the sheet`); continue; }
+    // A line that cannot be read is said and left out, never guessed at.
+    const shows = Schedule.parse(I.schedule >= 0 ? r[I.schedule] : "");
+    for (const line of shows.bad) console.log(`claims: "${r[I.station]}": could not read the show "${line}" (Name | Mon-Fri | 07:00-09:00 | Europe/London)`);
     store.approved[sid] = {
       claim: r[I.id], at: new Date().toISOString().slice(0, 10),
       ...(r[I.lightning]?.trim() ? { lightning: r[I.lightning].trim() } : {}),
@@ -71,6 +78,7 @@ if (argv[0] === "--import") {
       ...(r[I.description]?.trim() ? { description: r[I.description].trim() } : {}),
       ...(r[I.links]?.trim() ? { links: r[I.links].trim().split(/\s*\n\s*|\s+(?=https?:)/).filter((l) => /^https?:\/\//i.test(l)) } : {}),
       ...(r[I.site]?.trim() ? { website: r[I.site].trim() } : {}),
+      ...(shows.slots.length ? { schedule: shows.slots } : {}),
     };
     yes++;
   }
@@ -93,14 +101,14 @@ const records = body.records || body.items || body.data || (Array.isArray(body) 
 const domainOf = (u) => { try { return new URL(/^https?:/i.test(u) ? u : `https://${u}`).hostname.replace(/^www\./, ""); } catch { return ""; } };
 const fresh = records.filter((r) => !store.seen[r.id]);
 const head = ["id", "sent", "station", "station id", "name", "email", "email at their site", "role", "site", "lightning", "donate",
-  "nostr", "description", "links", "note", "approve"];
+  "nostr", "description", "links", "schedule", "note", "approve"];
 const npub = (t) => (String(t || "").match(/npub1[02-9ac-hj-np-z]{58}/) || [""])[0];
 const out = [head.join(",")].concat(fresh.map((r) => {
   const d = r.data || r.fields || r;
   const site = domainOf(d.site), mail = String(d.email || "").split("@")[1] || "";
   const matches = site && mail && (mail === site || mail.endsWith(`.${site}`) || site.endsWith(`.${mail}`)) ? "yes" : "";
   return [r.id, (r.createdAt || r.created_at || "").slice(0, 10), d.station, d.station_id, d.name, d.email, matches, d.role,
-    d.site, d.lightning, d.donate, npub(d.links), d.description, d.links, d.note, ""].map(cell).join(",");
+    d.site, d.lightning, d.donate, npub(d.links), d.description, d.links, d.schedule, d.note, ""].map(cell).join(",");
 }));
 fs.writeFileSync(SHEET, out.join("\n") + "\n");
 console.log(`claims: ${records.length} sent in all, ${fresh.length} to review → ${SHEET}`);

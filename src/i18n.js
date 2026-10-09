@@ -269,6 +269,10 @@ const en = {
   "profile.website": "Website",
   "profile.tip": "Tip this station",
   "profile.donate": "Donate to this station",
+  "profile.schedule": "On the schedule",
+  "profile.nextShow": "Next for you",
+  "profile.addCal": "Add to calendar",
+  "profile.addCalDone": "Saved. Open the file to add it to your calendar.",
   "profile.donateNote": "On the station's own page. AuralFM takes no part and no cut, and giving changes nothing about where the station appears.",
   "profile.noTips": "Tips can't be sent to stations in this country.",
   // Your show: the studio (explore-studio.js). A prototype; English until it ships.
