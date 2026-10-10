@@ -42,3 +42,6 @@ data/claims-review.csv
 data/mail-sent.json
 data/email-previews/
 data/review/
+
+# Photographs made by scripts/capture.mjs when the vault is not there
+captures/
