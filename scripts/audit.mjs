@@ -61,6 +61,7 @@
  *   design tokens are not bypassed .......... radii invented outside the scale
  *   light theme agrees with itself .......... four token blocks drifting apart
  *   the favourite star survives light theme . 1.01:1 contrast in all nine palettes
+ *   nothing is written under 12px ........... 52 sizes from 9px to 11.5px on three pages (new, 10 Oct 2026)
  *
  * **What ships**
  *   shipped files exist ..................... build.files naming a missing path
@@ -3971,6 +3972,57 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/"script-src 'self'"/.test(csp)) gaps.push("the page's script rule is no longer its own files only");
   gaps.length ? fail(name, gaps.join("; "))
     : pass("hls.js is shipped and credited, fetched only when needed and only where the browser cannot, dropped on every change, and allowed to reach the station");
+}
+
+// ── nothing is written under 12px ───────────────────────────────────────────
+// 10 Oct 2026. The profile is WCAG 2.2 AA with A11Y.md's floor on top: no text
+// under 12px (docs/a11y/A11Y.md §4). A count found 52 sizes under it: 43 in
+// Explore, 6 in the popover, 3 in web.css, from 9px to 11.5px. Settings had its
+// own check and was clean; nothing held the other pages.
+//
+// Read from every page and every stylesheet and script beside them, so a size
+// set from a script is seen too. Three sizes are not words and stay: each is
+// named below with its reason, and the check fails when one of them stops
+// matching, so the list cannot outlive what it excuses.
+{
+  const name = "nothing is written under 12px";
+  console.log(`\n${name}`);
+  const MIN = 12;
+  const NOT_WORDS = {
+    "src/renderer/popover.html": { "#toggle": "the play icon, an SVG drawn at 1em" },
+    "web/web.css": {
+      ".ticker li::before": "the dot between two ticker items",
+      "body.phonebar .now #play": "the play icon, an SVG drawn at 1em",
+    },
+  };
+  const files = [
+    ...fs.readdirSync(R("src/renderer")).filter((f) => /\.(html|js)$/.test(f)).map((f) => `src/renderer/${f}`),
+    ...fs.readdirSync(R("web")).filter((f) => /\.(css|js)$/.test(f)).map((f) => `web/${f}`),
+  ];
+  const SIZE = /font-size\s*:\s*([\d.]+)px|\bfont\s*:[^;}"'`]*?\b([\d.]+)px|fontSize\s*=\s*["'`]([\d.]+)px/g;
+  const small = [], used = new Set();
+  let seen = 0;
+  for (const f of files) {
+    // Comments are blanked, not cut, so a line number is still the file's.
+    const src = fs.readFileSync(R(f), "utf8").replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, " "));
+    for (const m of src.matchAll(SIZE)) {
+      seen++;
+      const px = Number(m[1] ?? m[2] ?? m[3]);
+      if (!(px < MIN)) continue;
+      const open = src.lastIndexOf("{", m.index);
+      const from = Math.max(src.lastIndexOf("}", open), src.lastIndexOf("{", open - 1), src.lastIndexOf(";", open)) + 1;
+      const sel = src.slice(from, open).replace(/\s+/g, " ").trim();
+      if (NOT_WORDS[f]?.[sel]) { used.add(`${f} ${sel}`); continue; }
+      small.push(`${f}:${src.slice(0, m.index).split("\n").length} ${px}px`);
+    }
+  }
+  const stale = Object.entries(NOT_WORDS).flatMap(([f, sels]) => Object.keys(sels).map((s) => `${f} ${s}`)).filter((k) => !used.has(k));
+  const gaps = [];
+  if (seen < 100) gaps.push(`only ${seen} sizes found in ${files.length} files — this check is blind`);
+  if (small.length) gaps.push(`${small.length} under ${MIN}px: ${small.slice(0, 12).join(", ")}${small.length > 12 ? `, and ${small.length - 12} more` : ""}`);
+  if (stale.length) gaps.push(`excused as not words, and no longer under ${MIN}px or no longer there: ${stale.join("; ")}`);
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass(`${seen} sizes in ${files.length} files, none under ${MIN}px but ${used.size} that are not words (two icons and a dot)`);
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

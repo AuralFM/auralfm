@@ -87,7 +87,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
 .ticker {
   flex: none; position: relative; z-index: 20; height: 26px; display: flex; align-items: center;
   background: #02E8CD; color: #0C0B0B; overflow: hidden;
-  font-size: 10.5px; line-height: 26px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  font-size: 12px; line-height: 26px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
 .ticker-run { display: flex; flex: none; animation: ticker var(--ticker-s, 60s) linear infinite; }
 .ticker:focus-within .ticker-run{ animation-play-state: paused; }
@@ -530,13 +530,13 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
    * One heading style for every panel on a phone.
    *
    * Favourites, Explore ("12,579 places") and Chat head their panels in the
-   * small section style — 11px, 590, the secondary label colour. Settings and
+   * small section style — 12px, 590, the secondary label colour. Settings and
    * Headlines were the two that shouted: 17px and 19px, bold. Same as the rest
    * now, so a title says which panel this is without being the loudest thing
    * in it. The wide layouts keep their headings.
    */
   .newshead b, .setsheet-head h2 {
-    font-size: 11px; font-weight: 590; letter-spacing: .005em; line-height: 1.4; color: var(--label2);
+    font-size: 12px; font-weight: 590; letter-spacing: .005em; line-height: 1.4; color: var(--label2);
   }
   /* The desktop's slide-in from the left. Here the panel rises on Settings'
      spring (web/sheet.js), and a CSS animation owns the transform while it
