@@ -54,6 +54,36 @@ function detectBand(title) {
   return null;                        // both, or neither — don't pretend to know
 }
 
+/**
+ * Where a station sits on its band, when its name says: MHz for FM, kHz for AM.
+ * "Radio Ony FM 93.1" is 93.1; "Romántica 1380 AM" is 1380. Null when the name
+ * gives no number that could be a frequency, which is never guessed at: "Hits
+ * 80s FM" and "24/7 FM" name no frequency, and a whole number has to be in the
+ * part of the band the world uses (87 and up) before it is believed.
+ *
+ * This is what turns the FM and AM chips into a dial: a town's stations in the
+ * order a radio finds them, for somebody holding one (10 Oct 2026).
+ */
+function dial(title, band) {
+  if (band === "fm") {
+    // A number with a decimal is believed before a whole one: "K100 FM 100.5" is on 100.5.
+    for (const m of String(title).matchAll(/(^|[^\d.,])(\d{2,3})[.,](\d{1,2})(?![\d.,])/g)) {
+      const f = +`${m[2]}.${m[3]}`;
+      if (f >= 76 && f <= 108) return f;
+    }
+    for (const m of String(title).matchAll(/(^|[^\d.,])(\d{2,3})(?![\d.,])/g)) {
+      const f = +m[2];
+      if (f >= 87 && f <= 108) return f;
+    }
+  } else if (band === "am") {
+    for (const m of String(title).matchAll(/(^|[^\d.,])(\d{3,4})(?![\d.,])/g)) {
+      const f = +m[2];
+      if (f >= 520 && f <= 1710) return f;
+    }
+  }
+  return null;
+}
+
 const ASCII = /^[\x00-\x7F]*$/;
 
 function norm(s) {
@@ -137,6 +167,8 @@ function hydrate(i) {
     secure: !!c[3],
     tags: c[4] ? c[4].split(",") : [],
     band: bands[i] || null,
+    // Worked out here, not at load: only a station with a band can have one.
+    ...(bands[i] && dial(c[1], bands[i]) != null ? { freq: dial(c[1], bands[i]) } : {}),
     rbuuid: c[5] || null,          // radio-browser id, for click reporting
     ok: c[6] === 0 ? false : c[6] === 1 ? true : null,
     explicit: c[7] === 1,
@@ -280,6 +312,12 @@ function placeChannels(placeIndex, filter = {}) {
   if (!places[placeIndex]) return { place: null, channels: [], total: 0 };
   const all = byPlace[placeIndex];
   const kept = all.filter((i) => passes(i, filter));
+  // FM or AM alone is the dial: lowest frequency first, as a radio finds them.
+  // Stations whose names give no number keep their order, after the rest.
+  if (filter.band) {
+    const at = new Map(kept.map((i) => [i, dial(channels[i][1], bands[i]) ?? Infinity]));
+    kept.sort((x, y) => at.get(x) - at.get(y));
+  }
   return {
     place: hydratePlace(placeIndex),
     channels: kept.map(hydrate),
@@ -573,4 +611,4 @@ function byId(id) {
 
 const stats = () => ({ places: places.length, channels: channels.length, generated });
 
-module.exports = { setHideExplicit, setPlayableOnly, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces, usePacked };
+module.exports = { dial, setHideExplicit, setPlayableOnly, setRegion, held, relink, relinkSaved, load, search, randomChannel, placeSearch, PLACE_ORDERS, placeChannels, placeTags, placeBands, globePoints, placeById, nextInPlace, byId, stats, VIBES, vibePlaces, usePacked };

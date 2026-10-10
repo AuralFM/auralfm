@@ -238,7 +238,10 @@ function renderStations() {
     // so the map stays whole, but it says why it will not play before anyone tries.
     el.querySelector(".stags").textContent =
       [...(ch.held ? [t("st.held", "Not available where you are yet")] : []),
-       ...(ch.explicit ? [t("st.explicit", "Explicit")] : []), ...ch.tags.slice(0, 4)].join(" · ");
+       ...(ch.explicit ? [t("st.explicit", "Explicit")] : []),
+       // On the FM or AM dial the number comes first: the list is in its order.
+       ...(filter.band && ch.freq ? [`${ch.band === "am" ? "AM" : "FM"} ${ch.freq}`] : []),
+       ...ch.tags.slice(0, 4)].join(" · ");
     // The name area takes focus rather than the row, because the row holds the
     // star (and for your own stations a remove button): see activatable().
     activatable(el, (e) => {

@@ -71,6 +71,9 @@
  *   the project states one licence .......... see below
  *   shortwave schedule is current ........... a season's schedule going stale
  *   a show goes into a calendar ............. the wrong hour across a clock change (new, 9 Oct 2026)
+ *   the newsletter goes to who asked ........ an issue reaching the shop or beta list (new, 9 Oct 2026)
+ *   the FM and AM chips are a dial .......... a number that is not a frequency sending someone to dead air (new, 10 Oct 2026)
+ *   a playlist stream plays in Chrome too ... about 1,800 HLS stations saying "unavailable" on a computer (new, 10 Oct 2026)
  *
  * ### The licence check, in more detail
  *
@@ -3864,6 +3867,111 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the form's lines are read or refused, the hour holds across a clock change, the file starts on one of the show's days, and the field reaches the station's page");
 }
 
+
+// ── the newsletter goes to the people who asked for it ──────────────────────
+// 9 Oct 2026. The newsletter list holds two kinds of asking (the newsletter, and
+// "tell me when the shop opens"), and it sits beside the beta and sponsor lists.
+// The Privacy Policy promises that joining one list does not put you on another,
+// and that nobody gets the same email twice. An issue is written as a note, so
+// what a note may put into an email has to stay narrow: links to https, bold,
+// and nothing else as markup. scripts/mail.mjs is run here on made-up lists,
+// with no network, and never with --send.
+{
+  const name = "the newsletter goes to the people who asked for it";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const tmp = fs.mkdtempSync(path.join((await import("node:os")).tmpdir(), "auralfm-mail-"));
+  try {
+    const row = (id, topic) => ({ id, name: `${id} Person`, email: `${id}@example.com`, topic });
+    fs.writeFileSync(path.join(tmp, "lists.json"), JSON.stringify({
+      newsletter: [row("ann", "letter"), row("bo", "letter"), row("cy", "shop")],
+      beta: [{ id: "dee", name: "Dee", email: "dee@example.com", platform: "mac" }], members: [], claims: [],
+    }));
+    fs.writeFileSync(path.join(tmp, "sent.json"), JSON.stringify({ "issue:issue-9": { bo: "2026-10-09T00:00:00Z" }, letter: { ann: "x" }, beta: { dee: "x" } }));
+    fs.writeFileSync(path.join(tmp, "Issue 9.md"), "---\nkind: letter\n---\n# Seven stations\n\nHi {name},\n\n1. [One FM](https://listen.auralfm.xyz/?station=af-1) · Here\n2. [Bad](javascript:alert(1)) <script>x</script>\n\n**Picked** by people.\n\n[All seven](https://auralfm.xyz/links/)\n");
+    const env = { ...process.env, MAIL_RECORDS: path.join(tmp, "lists.json"), MAIL_SENT: path.join(tmp, "sent.json"), MAIL_PREVIEWS: path.join(tmp, "previews"), MAIL_POSTAL_ADDRESS: "1 Test Street, Testville" };
+    const run = (...args) => { const r = spawnSync(process.execPath, [R("scripts/mail.mjs"), ...args], { env, encoding: "utf8" }); return (r.stdout || "") + (r.stderr || ""); };
+    // An issue: ann asked for the newsletter and has not had it. bo has had it. cy only asked about the shop. dee is on another list.
+    const issue = run("--issue", path.join(tmp, "Issue 9.md"));
+    if (!/mail: 1 to send: 1 issue:issue-9;/.test(issue)) gaps.push(`an issue for one reader out of four people is queued as: ${issue.split("\n")[0]}`);
+    if (!/nothing sent/.test(issue)) gaps.push("it does not say nothing was sent");
+    const page = fs.existsSync(path.join(tmp, "previews", "issue-issue-9.html")) ? fs.readFileSync(path.join(tmp, "previews", "issue-issue-9.html"), "utf8") : "";
+    if (!page) gaps.push("an issue writes no preview");
+    else {
+      if (!page.includes('<a href="https://listen.auralfm.xyz/?station=af-1"')) gaps.push("a link in an issue is not a link in the email");
+      if (/<script>x|href="javascript:/i.test(page)) gaps.push("an issue can put a script or a javascript: link into the email");
+      if (!page.includes("<strong>Picked</strong>")) gaps.push("bold is lost");
+      if (!/>All seven<\/a><\/p>/.test(page) || /\[All seven\]/.test(page)) gaps.push("the last link standing alone is not the button");
+      if (!page.includes("1 Test Street, Testville") || !/Unsubscribe/.test(page)) gaps.push("an issue has no postal address or no way off the list");
+      if (/kind: letter/.test(page)) gaps.push("the note's front matter is in the email");
+      if (/\{name\}/.test(page)) gaps.push("{name} is not filled in");
+    }
+    // The everyday run: bo and cy have not had their welcome; ann and dee have had theirs.
+    const daily = run();
+    if (!/mail: 2 to send: 1 letter, 1 shop;/.test(daily)) gaps.push(`the welcomes are queued as: ${daily.split("\n")[0]}`);
+  } catch (e) { gaps.push(`could not run scripts/mail.mjs: ${e.message}`); }
+  finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("an issue reaches only newsletter readers who have not had it, a note cannot put a script in an email, and each email carries the address and the way off");
+}
+
+// ── the FM and AM chips are a dial ──────────────────────────────────────────
+// 10 Oct 2026. For somebody holding a radio, a town's FM stations are only
+// useful in the order the radio finds them, with the number said. The number
+// comes from the station's name, so the danger is believing one that is not a
+// frequency: "Hits 80s FM", "24/7 FM", the 100 in "K100 FM 100.5", a year on
+// an AM station. A wrong number sends somebody to dead air.
+{
+  const name = "the FM and AM chips are a dial";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const { createRequire } = await import("node:module");
+  const { dial } = createRequire(import.meta.url)(R("src/catalog.js"));
+  if (typeof dial !== "function") gaps.push("src/catalog.js exports no dial()");
+  else {
+    const want = [["Radio Ony FM 93.1", "fm", 93.1], ["Radio 2000 FM 104,9", "fm", 104.9], ["K100 FM 100.5", "fm", 100.5],
+      ["FM 100 Lahore", "fm", 100], ["98 Rock FM", "fm", 98], ["Radio 76.5 FM Tokyo", "fm", 76.5],
+      ["Hits 80s FM", "fm", null], ["24/7 FM", "fm", null], ["FM Extra", "fm", null],
+      ["Romántica 1380 AM", "am", 1380], ["AM 950 KJR", "am", 950], ["News 1990 AM", "am", null], ["Radio 1 AM", "am", null],
+      ["Radio Ony FM 93.1", null, null]];
+    for (const [title, band, f] of want) if (dial(title, band) !== f) gaps.push(`"${title}" on ${band} reads ${dial(title, band)}, not ${f}`);
+  }
+  const cat = readSrc("src/catalog.js"), rows = readSrc("src/renderer/explore-stations.js");
+  if (!/if \(filter\.band\) \{[\s\S]{0,200}kept\.sort/.test(cat)) gaps.push("a place's FM or AM list is not put in the order of the dial");
+  if (!/filter\.band && ch\.freq/.test(rows)) gaps.push("the row does not say the frequency");
+  if (/\(\?<[=!]/.test(cat)) gaps.push("src/catalog.js uses a lookbehind, which stops the whole catalogue loading on an older iPhone");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("a frequency is read from a station's name only when it can be one, and a place's FM or AM list is in the order of the dial");
+}
+
+// ── a playlist stream plays in Chrome too ───────────────────────────────────
+// 10 Oct 2026. About 1,800 stations are HLS: a playlist of short files. Safari
+// plays that; Chrome and Firefox do not, so on a computer those stations said
+// "Stream unavailable here". hls.js plays them. What can go wrong: the library
+// is not shipped, is not credited, is loaded for everyone (386 KB a phone never
+// needs), is used where the browser already plays HLS, is left running after
+// the station changes, or cannot fetch because the page's own rules forbid it.
+{
+  const name = "a playlist stream plays in Chrome too";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const bridge = readSrc("web/bridge.js"), build = readSrc("scripts/build-web.mjs");
+  if (!fs.existsSync(R("src/renderer/vendor/hls.light.min.js"))) gaps.push("src/renderer/vendor/hls.light.min.js is not there (npm run vendor)");
+  if (!/hls\.js/.test(readSrc("THIRD-PARTY-NOTICES.md"))) gaps.push("THIRD-PARTY-NOTICES.md does not credit hls.js");
+  if (!/isHls\(url\) && !nativeHls\) return viaHls/.test(bridge)) gaps.push("the library is not used only where the browser cannot play HLS itself");
+  if (!/createElement\("script"\)[\s\S]{0,120}vendor\/hls\.light\.min\.js/.test(bridge)) gaps.push("the library is not fetched only when a station needs it");
+  if (/<script[^>]+hls/i.test(readSrc("src/renderer/explore.html"))) gaps.push("explore.html loads the library for everyone");
+  const next = bridge.slice(bridge.indexOf("function tryNext"), bridge.indexOf("function tryNext") + 200);
+  if (!/dropHls\(\)/.test(next)) gaps.push("moving to the next stream leaves the library attached to the last one");
+  const stop = bridge.slice(bridge.indexOf("function stop("), bridge.indexOf("function stop(") + 300);
+  if (!/dropHls\(\)/.test(stop)) gaps.push("stopping leaves the library fetching");
+  if (!/Hls\.Events\.ERROR[\s\S]{0,120}data\.fatal[\s\S]{0,60}tryNext/.test(bridge)) gaps.push("a stream the library cannot play does not move on to the next");
+  const csp = (build.match(/const CSP = \[[\s\S]*?\]\.join/) || [""])[0];
+  if (!/"https:"/.test(csp.slice(csp.indexOf("connect-src")))) gaps.push("the page may not fetch from a station's own server, so no playlist can load");
+  if (!/"script-src 'self'"/.test(csp)) gaps.push("the page's script rule is no longer its own files only");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("hls.js is shipped and credited, fetched only when needed and only where the browser cannot, dropped on every change, and allowed to reach the station");
+}
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`

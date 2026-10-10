@@ -51,6 +51,7 @@ const SHIPPED = [
    */
   ["qrcode-generator", "vendored", "The QR code on the share card",
    "assets/licenses/qrcode-generator-LICENSE.txt"],
+  ["hls.js",         "vendored", "Plays HLS stations in browsers that cannot (the web version only)"],
   ["three",          "vendored", "3D rendering, inside globe.gl"],
   ["three-globe",    "vendored", "Earth textures and globe layers"],
   // The runtime itself. Its MIT notice was missing from every build: the app

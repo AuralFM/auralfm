@@ -121,10 +121,13 @@
     // signal, and it reads at a glance in a way a colour change does not.
     /* At the Figma set's weight: these sit beside those glyphs on the globe's
        edge, and at 1.7 the lock read as a lighter font than its neighbours. */
-    lock:   SVG(`<rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke-width="2.1"/>
-                 <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" stroke-width="2.1"/>`),
-    unlock: SVG(`<rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke-width="2.1"/>
-                 <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0" stroke-width="2.1"/>`),
+    /* And at their size (10 Oct 2026): the padlock was drawn inside 14 of its
+       24 units while layers, the star and shuffle run edge to edge, so beside
+       them it looked a size smaller. It fills the box now, as they do. */
+    lock:   SVG(`<rect x="3" y="9.8" width="18" height="12" rx="2.8" stroke-width="2.1"/>
+                 <path d="M7.3 9.8V7.2a4.7 4.7 0 0 1 9.4 0v2.6" stroke-width="2.1"/>`),
+    unlock: SVG(`<rect x="3" y="9.8" width="18" height="12" rx="2.8" stroke-width="2.1"/>
+                 <path d="M7.3 9.8V7.2a4.7 4.7 0 0 1 9.4 0" stroke-width="2.1"/>`),
 
     // Three states, because volume is not a boolean and the middle one is where
     // most people leave it.

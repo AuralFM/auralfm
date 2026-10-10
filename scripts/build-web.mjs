@@ -174,7 +174,12 @@ const CSP = [
     + "wss://ws-feed.exchange.coinbase.com https://api.wheretheiss.at "
     + "https://services.swpc.noaa.gov https://*.api.radio-browser.info "
     // Chat relays are chosen by where the station is, so any secure socket.
-    + "wss: https://celestrak.org https://db1.wspr.live",
+    + "wss: https://celestrak.org https://db1.wspr.live "
+    // And any secure host, since 10 Oct 2026: an HLS station is a playlist and
+    // short files that hls.js has to fetch from the station's own server, as
+    // <audio> already may (media-src). It opens nothing wss: had not: a page
+    // that could reach any socket could already reach any host.
+    + "https:",
 ].join("; ");
 
 /**

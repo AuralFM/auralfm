@@ -427,14 +427,56 @@
     tryNext(urls, my);
   }
 
+  /**
+   * HLS (a stream that is a playlist of short files, .m3u8). Safari and the
+   * iPhone play it themselves. Chrome and Firefox do not, so about 1,800
+   * stations said "Stream unavailable here" on a computer (Melton, in India's
+   * list, 10 Oct 2026). hls.js plays them through the same <audio>. It is
+   * fetched only when a station needs it: 386 KB that most listeners, on
+   * iPhone, will never load.
+   */
+  const isHls = (url) => /\.m3u8(\?|#|$)/i.test(url);
+  const nativeHls = !!audio.canPlayType("application/vnd.apple.mpegurl");
+  let hls = null, hlsLib = null;
+  const loadHls = () => (hlsLib ||= new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = "vendor/hls.light.min.js";
+    s.onload = () => ok(window.Hls); s.onerror = () => { hlsLib = null; no(new Error("hls.js did not load")); };
+    document.head.append(s);
+  }));
+  const dropHls = () => { if (hls) { try { hls.destroy(); } catch { /* already gone */ } hls = null; } };
+
+  function viaHls(url, urls, my) {
+    playingUrl = url;
+    setStatus("Connecting…");
+    watchdog = setTimeout(() => { if (my === gen && !live) tryNext(urls, my); }, 12000);
+    audio.onerror = () => { if (my === gen) tryNext(urls, my); };
+    loadHls().then((Hls) => {
+      if (my !== gen) return;
+      if (!Hls || !Hls.isSupported()) return tryNext(urls, my);
+      hls = new Hls({ enableWorker: false });
+      // A fatal error is the stream's, or its host refusing a page it does not
+      // know (CORS): either way, the next candidate.
+      hls.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal && my === gen) tryNext(urls, my); });
+      hls.loadSource(url);
+      hls.attachMedia(audio);
+      audio.play().catch((err) => {
+        if (my !== gen || err.name === "AbortError") return;
+        if (err.name === "NotAllowedError") { clearTimeout(watchdog); return setStatus("Press play"); }
+      });
+    }).catch(() => { if (my === gen) tryNext(urls, my); });
+  }
+
   function tryNext(urls, my) {
     clearTimeout(watchdog);
+    dropHls();
     if (my !== gen) return;
     // A blip is not a broken station. Spending the list here is how walking out
     // of wifi used to end on "Stream unavailable here".
     if (!navigator.onLine) return hold(my);
     const url = urls.shift();
     if (!url) return fail("Stream unavailable here");
+    if (isHls(url) && !nativeHls) return viaHls(url, urls, my);
     audio.src = url;
     playingUrl = url;                 // the card's waveform samples a copy of it
     setStatus("Connecting…");
@@ -483,7 +525,9 @@
     // The URL that was working is the one to put back. Only when there was none
     // — the network went while the stream was still being found — is the search
     // worth running again.
-    if (!url) return tune(current);
+    // An HLS stream in a browser that needs the library is found again from
+    // the start: the library's own state did not survive the gap.
+    if (!url || (isHls(url) && !nativeHls)) return tune(current);
     setStatus("Connecting…");
     audio.src = url;
     playingUrl = url;
@@ -496,6 +540,7 @@
     gen++; clearTimeout(watchdog); live = false;
     held = null;
     playingUrl = null;
+    dropHls();
     audio.pause(); audio.removeAttribute("src"); audio.load();
     setStatus(said);
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";

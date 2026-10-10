@@ -22,6 +22,9 @@ const LIBS = [
 // reason globe.gl is: the renderer loads it as a plain script and there is no
 // build step to resolve a bare import.
 LIBS.push(["qrcode-generator", "dist/qrcode.js"]);
+// HLS for the browsers that cannot play it themselves (web/bridge.js). The
+// light build: no subtitles, no alternate audio, which a radio stream has none of.
+LIBS.push(["hls.js", "dist/hls.light.min.js"]);
 
 fs.mkdirSync(OUT, { recursive: true });
 for (const [pkg, rel] of LIBS) {

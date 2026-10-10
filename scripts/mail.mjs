@@ -6,12 +6,27 @@
  *   node scripts/mail.mjs --send           send them (Melton runs this: it writes as him)
  *   node scripts/mail.mjs --test ADDRESS   every email once, to ADDRESS, marked TEST
  *
- * Four, each an answer to something the person did:
+ *   node scripts/mail.mjs --issue NOTE.md           one issue of the newsletter: who would get it, and a preview
+ *   node scripts/mail.mjs --issue NOTE.md --send    send it to the newsletter list
+ *   node scripts/mail.mjs --issue NOTE.md --test ADDRESS
+ *
+ * Six, each an answer to something the person did:
  *
  *   beta       they joined the desktop beta list (auralfm.xyz/beta)
  *   sponsor    they joined the sponsorship waitlist (auralfm.xyz/support)
  *   claim      they claimed their station's page (docs.auralfm.xyz/claim)
  *   approved   Melton approved that claim (scripts/claims.mjs --import)
+ *   letter     they signed up for the newsletter (auralfm.xyz/newsletter)
+ *   shop       they asked to be told when the shop opens (auralfm.xyz/shop)
+ *
+ * And the newsletter itself. An issue is a note: its first line, "# …", is the
+ * subject; the paragraphs under it are the email. A link is [words](https://…),
+ * **bold** is bold, {name} is the reader's first name, and a paragraph that is
+ * one link and nothing else becomes the button. It goes to the people on the
+ * newsletter list who asked for the newsletter: not to the beta or sponsor
+ * lists, and not to those who only asked about the shop (the Privacy Policy
+ * says joining one list does not put you on another). Nobody gets an issue
+ * twice.
  *
  * The lists live in each site's own data on here.now (read with the owner key
  * publishing already uses, ~/.herenow/credentials); sending goes through Resend
@@ -32,8 +47,10 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
 const VAULT = "/Users/mb3/Library/Mobile Documents/iCloud~md~obsidian/Documents/MB3Vault/04 Projects/AuralFM";
-const PREVIEWS = fs.existsSync(VAULT) ? path.join(VAULT, "Email previews") : R("data/email-previews");
-const SENT = R("data/mail-sent.json");
+// MAIL_PREVIEWS, MAIL_SENT and MAIL_RECORDS (a file of { collection: [rows] } read in
+// place of here.now) are for the audit, which runs this without a network or a list.
+const PREVIEWS = process.env.MAIL_PREVIEWS || (fs.existsSync(VAULT) ? path.join(VAULT, "Email previews") : R("data/email-previews"));
+const SENT = process.env.MAIL_SENT || R("data/mail-sent.json");
 const FROM = "AuralFM <hello@auralfm.xyz>";
 const REPLY = "hello@auralfm.xyz";
 /**
@@ -49,11 +66,12 @@ const POSTAL = process.env.MAIL_POSTAL_ADDRESS || (fs.existsSync(postalFile) ? f
 const argv = process.argv.slice(2);
 const send = argv.includes("--send");
 const testTo = argv.includes("--test") ? argv[argv.indexOf("--test") + 1] : null;
+const issueFile = argv.includes("--issue") ? argv[argv.indexOf("--issue") + 1] : null;
 
 // ── the words ──────────────────────────────────────────────────────────────
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const first = (name) => String(name || "").trim().split(/\s+/)[0] || "there";
-const TIERS = { listener: "Listener · $3 a month", supporter: "Supporter · $8 a month", operator: "Operator · $25 a month",
+const TIERS = { listener: "Listener · $5 a month", supporter: "Supporter · $12 a month", patron: "Patron · $30 a month",
   undecided: "not sure yet — that is fine" };
 const PLATFORMS = { mac: "a Mac", windows: "Windows", linux: "Linux" };
 
@@ -107,7 +125,50 @@ const EMAILS = {
     button: ["Find your station", "https://listen.auralfm.xyz"],
     why: "You're getting this because you claimed a station's page at docs.auralfm.xyz.",
   }),
+  letter: (d) => ({
+    subject: "You're on the AuralFM list",
+    label: "Newsletter",
+    body: [
+      `Hi ${first(d.name)},`,
+      "You're on the list. Seven stations a week, picked by people, east to west. Sometimes a story, or something new on the globe.",
+      "No more than one email a week, and nothing in them tracks you.",
+    ],
+    button: ["This week's stations", "https://auralfm.xyz/links/"],
+    why: "You're getting this because you signed up for the newsletter at auralfm.xyz.",
+  }),
+  shop: (d) => ({
+    subject: "We'll tell you when the AuralFM shop opens",
+    label: "Shop",
+    body: [
+      `Hi ${first(d.name)},`,
+      "The shop isn't open yet. You'll get one email from me when it is, and nothing else from this list.",
+      "Until then, every station is free to hear, and stays free.",
+    ],
+    button: ["Listen now", "https://listen.auralfm.xyz"],
+    why: "You're getting this because you asked to be told when the shop opens, at auralfm.xyz.",
+  }),
 };
+
+/** One issue of the newsletter, from a note: see the top of this file for how it is written. */
+function issue(file) {
+  if (!file || !fs.existsSync(file)) { console.error(`mail: no issue at ${file || "(no file given)"}`); process.exit(1); }
+  const src = fs.readFileSync(file, "utf8").replace(/^---\n[\s\S]*?\n---\n/, "");      // a note's front matter is not part of the letter
+  const blocks = src.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  if (!/^#\s+\S/.test(blocks[0] || "")) { console.error(`mail: ${path.basename(file)} must begin with "# " and the subject`); process.exit(1); }
+  const only = /^\[([^\]]+)\]\((https:\/\/[^\s)]+)\)$/;
+  const rest = blocks.slice(1), at = rest.findLastIndex((b) => only.test(b));
+  const button = at >= 0 ? rest[at].match(only).slice(1, 3) : null;
+  const body = rest.filter((_, i) => i !== at);
+  if (!body.length) { console.error(`mail: ${path.basename(file)} has a subject and nothing under it`); process.exit(1); }
+  const slug = path.basename(file).replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return { kind: `issue:${slug}`, slug, make: (d) => ({
+    subject: blocks[0].replace(/^#\s+/, ""), label: "Newsletter",
+    body: body.map((p) => p.replace(/\{name\}/g, first(d.name))), button,
+    why: "You're getting this because you signed up for the newsletter at auralfm.xyz.",
+  }) };
+}
+const ISSUE = issueFile ? issue(issueFile) : null;
+const compose = (kind, d) => (ISSUE && kind === ISSUE.kind ? ISSUE.make(d) : EMAILS[kind](d));
 
 // ── the look ───────────────────────────────────────────────────────────────
 // The site's palette (home/aural.css), light, because mail apps flip dark
@@ -115,14 +176,16 @@ const EMAILS = {
 const ONYX = "#0C0B0B", BONE = "#F7F4EE", MUTED = "#5A5752", RULE = "#02E8CD";
 const FONT = "'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
 const MONO = "'Space Mono', ui-monospace, Menlo, Consolas, monospace";
-const bold = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+// What a paragraph may hold: **bold**, [words](https://…) and line breaks. Everything else is text.
+const bold = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+  .replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, `<a href="$2" style="color:${ONYX}">$1</a>`).replace(/\n/g, "<br>");
 function html(e, test) {
   const ps = e.body.map((p) => `<p style="margin:0 0 16px;font:16px/1.55 ${FONT};color:${ONYX}">${bold(p)}</p>`).join("");
   const btn = e.button ? `<p style="margin:24px 0 8px"><a href="${esc(e.button[1])}" style="display:inline-block;background:${ONYX};color:${BONE};font:600 15px/1 ${FONT};text-decoration:none;padding:14px 20px;border-radius:999px">${esc(e.button[0])}</a></p>` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${esc(e.subject)}</title></head>
 <body style="margin:0;padding:0;background:${BONE}">
-<div style="display:none;max-height:0;overflow:hidden">${esc(e.body[1] || "").slice(0, 140)}</div>
+<div style="display:none;max-height:0;overflow:hidden">${esc((e.body[1] || "").replace(/\*\*/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")).slice(0, 140)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BONE}"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 <tr><td style="padding:0 0 24px;border-bottom:2px solid ${RULE}">
@@ -136,13 +199,15 @@ function html(e, test) {
 <p style="margin:0;font:12px/1.5 ${MONO};color:${MUTED}">A globe you listen to · <a href="https://auralfm.xyz" style="color:${MUTED}">auralfm.xyz</a> · <a href="https://docs.auralfm.xyz/privacy/" style="color:${MUTED}">Privacy</a></p>
 </td></tr></table></td></tr></table></body></html>`;
 }
-const text = (e) => [...e.body.map((p) => p.replace(/\*\*/g, "")), ...(e.button ? [`${e.button[0]}: ${e.button[1]}`] : []), "— Melton, AuralFM", "",
+const text = (e) => [...e.body.map((p) => p.replace(/\*\*/g, "").replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, "$1 ($2)")), ...(e.button ? [`${e.button[0]}: ${e.button[1]}`] : []), "— Melton, AuralFM", "",
   `${e.why} Reply with "remove" and you're off the list, or write to ${REPLY} with "remove" in the subject.`,
   `AuralFM · ${POSTAL || "[postal address goes here]"}`, "auralfm.xyz"].join("\n\n");
 
 // ── who ────────────────────────────────────────────────────────────────────
 const key = (() => { const f = path.join(os.homedir(), ".herenow", "credentials"); return fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim().split(/\s+/).pop() : ""; })();
+const fixture = process.env.MAIL_RECORDS ? JSON.parse(fs.readFileSync(process.env.MAIL_RECORDS, "utf8")) : null;
 async function records(slug, collection) {
+  if (fixture) return fixture[collection] || [];
   if (!key) throw new Error("no here.now key in ~/.herenow/credentials");
   const res = await fetch(`https://here.now/api/v1/publishes/${slug}/data/${collection}`, {
     headers: { Authorization: `Bearer ${key}`, "X-HereNow-Client": "claude-code/mail" } });
@@ -153,8 +218,14 @@ async function records(slug, collection) {
 const sent = fs.existsSync(SENT) ? JSON.parse(fs.readFileSync(SENT, "utf8")) : {};
 const had = (kind, id) => !!sent[kind]?.[id];
 
+// The newsletter list holds two kinds of asking: the newsletter, and "tell me when the shop opens".
+const wantsLetter = (r) => r.topic !== "shop";
 const queue = [];
-if (!testTo) {
+if (ISSUE) {
+  if (testTo) queue.push([ISSUE.kind, { id: "test", name: "Melton Bell", email: testTo }]);
+  else for (const r of await records("mantra-portal-hsqy", "newsletter")) if (wantsLetter(r) && !had(ISSUE.kind, r.id)) queue.push([ISSUE.kind, r]);
+} else if (!testTo) {
+  for (const r of await records("mantra-portal-hsqy", "newsletter")) { const k = wantsLetter(r) ? "letter" : "shop"; if (!had(k, r.id)) queue.push([k, r]); }
   for (const r of await records("mantra-portal-hsqy", "beta")) if (!had("beta", r.id)) queue.push(["beta", r]);
   for (const r of await records("mantra-portal-hsqy", "members")) if (!had("sponsor", r.id)) queue.push(["sponsor", r]);
   const claims = await records("rapid-ember-55ng", "claims");
@@ -175,6 +246,7 @@ if (!testTo) {
 fs.mkdirSync(PREVIEWS, { recursive: true });
 const demo = { name: "Ada Okafor", platform: "mac", tier: "supporter", station: "Radio Princesa FM 99.1", lightning: "tips@example.com" };
 for (const [k, make] of Object.entries(EMAILS)) fs.writeFileSync(path.join(PREVIEWS, `${k}.html`), html(make(demo), false));
+if (ISSUE) fs.writeFileSync(path.join(PREVIEWS, `issue-${ISSUE.slug}.html`), html(ISSUE.make(demo), false));
 
 console.log(`mail: ${queue.length} to send` + (queue.length ? `: ${Object.entries(queue.reduce((a, [k]) => ((a[k] = (a[k] || 0) + 1), a), {})).map(([k, n]) => `${n} ${k}`).join(", ")}` : "") +
   `; previews in ${PREVIEWS}`);
@@ -191,15 +263,15 @@ if (!rkey) { console.error("mail: no Resend key — put it in ~/.resend/credenti
 let ok = 0, bad = 0;
 for (const [kind, r] of queue) {
   if (!r.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email)) { bad++; continue; }
-  const e = EMAILS[kind](r);
+  const e = compose(kind, r);
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${rkey}`, "Content-Type": "application/json", "Idempotency-Key": `${kind}-${r.id}${testTo ? `-test-${Date.now()}` : ""}` },
+    headers: { Authorization: `Bearer ${rkey}`, "Content-Type": "application/json", "Idempotency-Key": `${kind.replace(/[^\w-]/g, "-")}-${r.id}${testTo ? `-test-${Date.now()}` : ""}` },
     body: JSON.stringify({
       from: FROM, to: [r.email], reply_to: REPLY, subject: testTo ? `[TEST] ${e.subject}` : e.subject,
       html: html(e, !!testTo), text: text(e),
       headers: { "List-Unsubscribe": `<mailto:${REPLY}?subject=remove>` },
-      tags: [{ name: "kind", value: kind }],
+      tags: [{ name: "kind", value: kind.replace(/[^\w-]/g, "-") }],
     }),
   });
   if (!res.ok) { bad++; console.error(`mail: ${kind} to ${r.email.replace(/(.).*@/, "$1…@")} failed: ${res.status} ${(await res.text()).slice(0, 160)}`); continue; }
