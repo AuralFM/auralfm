@@ -187,6 +187,8 @@ async function windowOf(port, file, tries = 160) {
 }
 /** A window that is not on screen may never draw a frame: do not wait for ever. */
 const within = (ms, p) => Promise.race([p, sleep(ms).then(() => null)]);
+/** A picture of the app, with any tip card it has just raised put away first. */
+const snap = async (name, opts) => { await within(4000, tap("Got it").catch(() => false)); await sleep(350); return shot(name, opts); };
 async function desktop() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const port = PORT + 500;
@@ -196,7 +198,7 @@ async function desktop() {
   try {
   // The splash is on screen only until the globe has drawn: catch it first.
   page = await windowOf(port, "splash.html", 60);
-  if (page) { await sleep(700); said.splash = await within(9000, shot("desktop-00-splash").then(() => true, (e) => e.message)); page.close(); }
+  if (page) { await sleep(700); said.splash = await within(9000, snap("desktop-00-splash").then(() => true, (e) => e.message)); page.close(); }
   page = await windowOf(port, "explore.html");
   if (!page) throw new Error("the desktop app did not open its window");
   await cdp("Page.enable"); await cdp("Runtime.enable");
@@ -205,23 +207,23 @@ async function desktop() {
   await cdp("Page.reload"); await sleep(3000);
   said.drawn = await ready();
   await sleep(3000);
-  await shot("desktop-01-globe");
+  await snap("desktop-01-globe");
   await run(`const r = await window.auralfm.placeSearch("Chicago"); const list = Array.isArray(r) ? r : (r?.places || []); const hit = list.find((p) => /Chicago/.test(p.title)) || list[0]; if (!hit) return null; await selectPlace(hit.i); return String(hit.title);`);
   await sleep(2000);
-  await shot("desktop-02-town");
+  await snap("desktop-02-town");
   await run(`const c = [...document.querySelectorAll("#chips button")].find((b) => /^FM \\d/.test(b.textContent)); c?.click();`);
   await sleep(1200);
-  await shot("desktop-03-town-fm-dial");
+  await snap("desktop-03-town-fm-dial");
   await run(`document.querySelector(".pinfo")?.click();`);
   await sleep(2200);
-  await shot("desktop-04-station-page");
+  await snap("desktop-04-station-page");
   said.opened = [];
-  if (await tap("Headlines")) { said.opened.push("Headlines"); await sleep(2600); await shot("desktop-05-headlines"); await tap("Headlines"); await sleep(600); }
-  if (await tap("Favorites")) { said.opened.push("Favorites"); await sleep(1500); await shot("desktop-06-favorites"); await tap("Favorites"); await sleep(600); }
-  if (await tap("Globe layers")) { said.opened.push("Globe layers"); await sleep(1500); await shot("desktop-07-globe-layers"); await tap("Globe layers"); await sleep(600); }
+  if (await tap("Headlines")) { said.opened.push("Headlines"); await sleep(2600); await snap("desktop-05-headlines"); await tap("Headlines"); await sleep(600); }
+  if (await tap("Favorites")) { said.opened.push("Favorites"); await sleep(1500); await snap("desktop-06-favorites"); await tap("Favorites"); await sleep(600); }
+  if (await tap("Globe layers")) { said.opened.push("Globe layers"); await sleep(1500); await snap("desktop-07-globe-layers"); await tap("Globe layers"); await sleep(600); }
   // Your show, opened and left alone: the microphone is asked for by a button in it, not by opening it.
   say("your show");
-  if (await tap("Your show")) { said.opened.push("Your show"); await sleep(1800); await shot("desktop-12-your-show"); await tap("Your show"); await sleep(600); }
+  if (await tap("Your show")) { said.opened.push("Your show"); await sleep(1800); await snap("desktop-12-your-show"); await tap("Your show"); await sleep(600); }
   // Chat is only there with other listeners shown and something playing.
   say("presence on");
   await within(5000, run(`await window.auralfm.setPrefs({ presence: true });`));
@@ -236,7 +238,7 @@ async function desktop() {
   for (let i = 0; i < 12; i++) { if (await within(6000, run(`return !document.getElementById("chat").hidden && document.body.classList.contains("playing")`))) break; await sleep(1500); }
   say("chat");
   said.chat = await within(15000, run(`const chat = document.getElementById("chat"); if (chat.hidden) return "not shown"; let n = 0; for (const m of document.querySelectorAll("#chatlog .msg:not(.mine)")) { const who = m.querySelector(".who:not(.tuned)"); if (!who) continue; n++; who.textContent = "a listener"; for (const c of [...m.childNodes]) if (c !== who && !c.classList?.contains("who")) c.remove(); m.append(" (their words are left out of this picture)"); } return n + " messages from others, left out";`)) ?? "the page did not answer in time";
-  said.chatShot = await within(40000, shot("desktop-13-chat-and-playing").then(() => true, (e) => e.message));
+  said.chatShot = await within(40000, snap("desktop-13-chat-and-playing").then(() => true, (e) => e.message));
   await within(8000, run(`if (document.body.classList.contains("playing")) document.getElementById("play")?.click();`));
   await sleep(1500);
   await within(5000, run(`await window.auralfm.setPrefs({ presence: false });`));
@@ -244,15 +246,15 @@ async function desktop() {
   // A receiver's list first; then one is tuned, for the dial.
   said.receiver = await run(`const near = await window.auralfm.sdrNearest(41.88, -87.63, 1); const rx = Array.isArray(near) ? near[0] : null; if (!rx) return null; await selectReceiver(rx); return rx.name || rx.title || "a receiver";`).catch((e) => `not opened: ${e.message}`);
   await sleep(2200);
-  await shot("desktop-08-shortwave-receiver");
-  if (await run(`const b = [...document.querySelectorAll("#railtabs [role=radio]")].find((e) => /^Shortwave/.test(e.textContent.trim())); b?.click(); return !!b;`)) { await sleep(1500); await shot("desktop-09-shortwave-nearby"); }
+  await snap("desktop-08-shortwave-receiver");
+  if (await run(`const b = [...document.querySelectorAll("#railtabs [role=radio]")].find((e) => /^Shortwave/.test(e.textContent.trim())); b?.click(); return !!b;`)) { await sleep(1500); await snap("desktop-09-shortwave-nearby"); }
   say("tune");
   // Back to the receiver's own list, and the first broadcast on it: choosing one is what tunes.
   said.tuned = await within(15000, run(`const near = await window.auralfm.sdrNearest(41.88, -87.63, 1); await selectReceiver(near[0]); await new Promise((r) => setTimeout(r, 1800)); const row = [...document.querySelectorAll("#stationlist .st")].find((r) => /kHz/.test(r.textContent)); row?.click(); return row?.querySelector(".sn")?.textContent || null;`));
   for (let i = 0; i < 14; i++) { if (await within(6000, run(`const t = document.getElementById("tuner"), w = document.getElementById("wfwait"); return !t.hidden && (!w || getComputedStyle(w).display === "none" || getComputedStyle(w).opacity === "0" || w.hidden);`))) { said.waterfall = true; break; } await sleep(1500); }
   await sleep(2500);
   said.tuner = await within(8000, run(`return !document.getElementById("tuner").hidden`));
-  said.tunerShot = await within(40000, shot("desktop-14-shortwave-tuner").then(() => true, (e) => e.message));
+  said.tunerShot = await within(40000, snap("desktop-14-shortwave-tuner").then(() => true, (e) => e.message));
   // Let the receiver go: its owner has a few listener slots and this was one of them.
   await within(8000, run(`if (document.body.classList.contains("playing")) document.getElementById("play")?.click(); try { tunerStop(); } catch {}`));
   await sleep(1500);
@@ -265,14 +267,14 @@ async function desktop() {
     // Its palettes and icons arrive from the main process a moment after the page does.
     said.palettes = await within(20000, run(`for (let i = 0; i < 40 && !document.querySelector("#palettes")?.children.length; i++) await new Promise((r) => setTimeout(r, 250)); return document.querySelector("#palettes")?.children.length || 0;`));
     await sleep(800);
-    await within(30000, shot("desktop-10-settings").catch(() => {}));
+    await within(30000, snap("desktop-10-settings").catch(() => {}));
     // The page scrolls inside itself, so the whole of it is photographed by
     // making the page as tall as what it holds. The window is not resized.
     const tall = await within(15000, run(`let h = innerHeight; for (const e of document.querySelectorAll("*")) if (e.scrollHeight > e.clientHeight + 4 && getComputedStyle(e).overflowY !== "visible") h = Math.max(h, e.scrollHeight + e.getBoundingClientRect().top); return { w: innerWidth, h: Math.ceil(h), dpr: devicePixelRatio };`));
     if (tall) {
       await cdp("Emulation.setDeviceMetricsOverride", { width: tall.w, height: Math.min(tall.h, 8000), deviceScaleFactor: tall.dpr, mobile: false });
       await sleep(1200);
-      said.settings = await within(40000, shot("desktop-10-settings-whole").then(() => tall.h, (e) => e.message));
+      said.settings = await within(40000, snap("desktop-10-settings-whole").then(() => tall.h, (e) => e.message));
       await cdp("Emulation.clearDeviceMetricsOverride").catch(() => {});
     }
     page.close();
@@ -280,7 +282,7 @@ async function desktop() {
   // The menu-bar popover exists from launch but is only on screen when the
   // menu-bar icon is pressed, which a script cannot do.
   page = await windowOf(port, "popover.html", 8);
-  if (page) { await cdp("Page.reload").catch(() => {}); await sleep(1500); said.popover = await within(6000, shot("desktop-11-popover").then(() => true, (e) => e.message)); page.close(); }
+  if (page) { await cdp("Page.reload").catch(() => {}); await sleep(1500); said.popover = await within(6000, snap("desktop-11-popover").then(() => true, (e) => e.message)); page.close(); }
   explore.close();
   } finally { page = null; desk.kill(); await sleep(800); }
   return said;
