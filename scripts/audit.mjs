@@ -62,6 +62,7 @@
  *   light theme agrees with itself .......... four token blocks drifting apart
  *   the favourite star survives light theme . 1.01:1 contrast in all nine palettes
  *   nothing is written under 12px ........... 52 sizes from 9px to 11.5px on three pages (new, 10 Oct 2026)
+ *   on a phone the name keeps its room ...... "KU…" beside "Austin TX · United St…" (new, 10 Oct 2026)
  *
  * **What ships**
  *   shipped files exist ..................... build.files naming a missing path
@@ -4023,6 +4024,33 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (stale.length) gaps.push(`excused as not words, and no longer under ${MIN}px or no longer there: ${stale.join("; ")}`);
   gaps.length ? fail(name, gaps.join("; "))
     : pass(`${seen} sizes in ${files.length} files, none under ${MIN}px but ${used.size} that are not words (two icons and a dot)`);
+}
+
+// ── on a phone the station's name keeps its room ────────────────────────────
+// 10 Oct 2026, from Melton's iPhone: playing a station in Austin, the player
+// row read "KU…  Austin TX · United St…". The status (the town and country,
+// once playing) was rigid up to two fifths of the row, and the name was the
+// only thing that gave way. The status gives way first now, down to a floor
+// that still holds "Press play" (once squeezed to "P…"), and then the name.
+{
+  const name = "on a phone the station's name keeps its room";
+  console.log(`\n${name}`);
+  const css = readSrc("web/web.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  // Every rule for a selector, joined: the status has a second one for its margin.
+  const rules = (sel) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter((m) => m[1].trim() === sel).map((m) => m[2]).join(";");
+  const st = rules("body.phonebar .now #nowStatus"), nm = rules("body.phonebar .now b");
+  const shrink = (r) => Number((r.match(/flex:\s*[\d.]+\s+([\d.]+)/) || [])[1]);
+  const gaps = [];
+  if (!st || !nm) gaps.push("the phone's rules for the name and the status were not found — this check is blind");
+  else {
+    if (!(shrink(nm) > 0)) gaps.push("the name can no longer shorten at all, so a long one pushes the buttons off the row");
+    if (!(shrink(st) >= shrink(nm) * 100)) gaps.push(`the status does not give way before the name (it shrinks ${shrink(st)} to the name's ${shrink(nm)})`);
+    if (/max-width:\s*[\d.]+%/.test(st)) gaps.push("the status is held to a share of the row whatever the name needs");
+    if (shrink(st) > 0 && !/min-width:\s*(?:[5-9]|\d\d)(?:\.\d+)?em/.test(st)) gaps.push('the status has no floor of 5em, so "Press play" can be squeezed to "P…"');
+  }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the status gives way first, down to the width of \"Press play\", and only then the name");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

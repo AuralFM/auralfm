@@ -385,12 +385,14 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   .nowopen:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
   body.phonebar .now > *:not(.nowopen):not(.sronly) { position: relative; z-index: 1; }
   body.phonebar .now .brand svg { height: 15px; }
-  /* The name gives way before the status does: "Press play" is an instruction,
-     and the station's name is also on the globe and in the card above. */
+  /* The station's name keeps its room first (Melton, 10 Oct 2026): playing,
+     the status is the town and country, and it held two fifths of the row
+     while the name beside it was cut to "KU…". The status gives way instead,
+     down to the width of "Press play" and no further: that one is an
+     instruction, and it was once squeezed to "P…" beside a long name. Only
+     then does the name shorten. */
   body.phonebar .now b { flex: 0 1 auto; min-width: 3ch; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* The status keeps its words ("Press play") up to two fifths of the row; it
-     was the first thing squeezed, down to "P…", beside any long name. */
-  body.phonebar .now #nowStatus { flex: 0 0 auto; max-width: 40%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.phonebar .now #nowStatus { flex: 0 1000 auto; min-width: 5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Volume and the output picker belong to iOS here: the hardware keys set one
      and Control Centre sets the other, from outside any app. */
   body.phonebar .now .volwrap, body.phonebar .now .outwrap:not(.route),
