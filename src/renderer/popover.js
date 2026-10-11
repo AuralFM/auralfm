@@ -901,6 +901,10 @@ function retranslateToggle() {
 async function applyStrings() {
   T = (await window.auralfm.strings()) || {};
   for (const el of document.querySelectorAll("[data-i18n]")) {
+    // The name and the status start as words ("Nothing playing") and then
+    // belong to the player. This runs again on every change of any preference,
+    // and used to put the starting words back over a station that was playing.
+    if ((el === nowName || el === statusEl) && (current || sdrRx)) continue;
     const v = T[el.dataset.i18n];
     if (v) el.textContent = v;
   }

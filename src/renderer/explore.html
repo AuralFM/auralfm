@@ -545,7 +545,9 @@
     content:"·"; margin:0 10px; color:rgba(247,244,238,.34);
   }
   .globebar > span:empty{display:none}
-  #globe{position:absolute;inset:0}
+  /* Clipped: the canvas is left taller than the pane when the play bar comes
+     in (sizeGlobe), and what hangs below must not show under the bar. */
+  #globe{position:absolute;inset:0;overflow:hidden}
   #globe canvas{display:block}
   /* Slides over the globe rather than taking a column from it — the globe is the
      product, and news should not permanently shrink it. */

@@ -56,6 +56,8 @@
  *   a hub is its name and password ....... a room the relays carry and cannot read
  *   a profile lookup names one person .... a bulk fetch would name your whole cell
  *   the chosen output moves both kinds ... shortwave would keep using the laptop
+ *   a station starting keeps the globe .... a 1.4 s freeze on the first press
+ *   the popover remembers the station ..... any setting changed while playing wrote "Nothing playing"
  *
  * **Design system**
  *   design tokens are not bypassed .......... radii invented outside the scale
@@ -4051,6 +4053,66 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   gaps.length ? fail(name, gaps.join("; "))
     : pass("the status gives way first, down to the width of \"Press play\", and only then the name");
+}
+
+// ── a station starting does not rebuild the globe ───────────────────────────
+// 10 Oct 2026, timed on Melton's Intel MacBook with the app's own profiler:
+// the first press on a station froze the window for over a second. The play
+// bar comes in under the globe, the globe's pane loses the bar's 44px, the
+// pane's observer calls sizeGlobe(), and one WebGLRenderer.setSize() for that
+// took 1,402 ms in a single task. Nothing else in the press cost a tenth of it.
+//
+// The canvas keeps its height now when the pane only loses a strip at the
+// bottom: the mount clips what hangs below, and the camera is centred in the
+// pane rather than in the canvas, the same way it already allows for a panel.
+{
+  const name = "a station starting does not rebuild the globe";
+  console.log(`\n${name}`);
+  const src = readSrc("src/renderer/explore-trackers.js");
+  const body = (fn) => (src.match(new RegExp(`function ${fn}\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}`)) || [])[1];
+  const size = body("sizeGlobe"), centre = body("centreGlobe");
+  const css = readSrc("src/renderer/explore.html").replace(/\/\*[\s\S]*?\*\//g, "");
+  const mount = (css.match(/#globe\{([^}]*)\}/) || [])[1];
+  const gaps = [];
+  if (!size || !centre || mount === undefined) gaps.push("sizeGlobe, centreGlobe or the #globe rule is gone — this check is blind");
+  else {
+    const calls = size.match(/globe\.width\([^)]+\)\.height\([^)]+\)/g) || [];
+    const guarded = /if\s*\([^{]*SPARE_HEIGHT[^{]*\)\s*\{[^}]*globe\.width\(/.test(size.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""));
+    if (!calls.length) gaps.push("sizeGlobe no longer sizes the globe at all");
+    else if (!guarded) gaps.push("the canvas is rebuilt for any change in the pane's height, the play bar's 44px included (1.4 s on an Intel Mac)");
+    if (/const css\s*=\s*w\.clientWidth\s*\*\s*w\.clientHeight/.test(size)) gaps.push("the pixel ratio is worked out from the pane, so on a large window the bar's 44px still changes it and rebuilds the canvas");
+    if (!/globe\.height\(\)/.test(centre)) gaps.push("the planet is centred in the pane's height, not allowing for a canvas left taller than it");
+    if (!/overflow:\s*hidden/.test(mount)) gaps.push("the canvas is not clipped to its pane, so what hangs below would show under the play bar");
+  }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the canvas keeps its size when the play bar takes a strip from the pane, and the planet is centred in what shows");
+}
+
+// ── a changed setting does not make the popover forget the station ──────────
+// 10 Oct 2026, seen in a photograph of the menu-bar popover taken while a
+// station played: the pause button, the on-air lamp, and "Nothing playing /
+// Search for a station". The name and the status carry data-i18n for the words
+// they start with, and applyStrings() rewrites every data-i18n element. It runs
+// again on every change of any preference, the theme, the palette and "Show
+// other listeners" included, so the first setting touched while listening put
+// the starting words back over the station's name, and had the status
+// (role="status") announce "Search for a station" to a screen reader.
+{
+  const name = "a changed setting does not make the popover forget the station";
+  console.log(`\n${name}`);
+  const src = readSrc("src/renderer/popover.js");
+  const html = readSrc("src/renderer/popover.html");
+  const fn = (src.match(/async function applyStrings\s*\(\)\s*\{([\s\S]*?)\n\}/) || [])[1];
+  const live = ["nowName", "status"].filter((id) => new RegExp(`id="${id}"[^>]*data-i18n=`).test(html));
+  const gaps = [];
+  if (!fn) gaps.push("applyStrings is gone — this check is blind");
+  else if (live.length) {
+    const loop = (fn.match(/for \(const el of document\.querySelectorAll\("\[data-i18n\]"\)\) \{([\s\S]*?)\n  \}/) || [])[1] || "";
+    if (!/nowName/.test(loop) || !/statusEl/.test(loop) || !/continue/.test(loop))
+      gaps.push(`#${live.join(" and #")} start as translated words and are rewritten with them on every preference change, while a station is playing`);
+  }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the name and the status are translated only while nothing has been tuned");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

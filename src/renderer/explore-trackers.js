@@ -233,11 +233,34 @@ async function tickISS() {
  */
 const TARGET_PIXELS = 3.5e6;
 
+/**
+ * How much shorter than its canvas the pane may get before the canvas is
+ * rebuilt to match.
+ *
+ * The play bar comes in under the globe the first time a station is pressed,
+ * and the pane loses the bar's 44px. Rebuilding the drawing buffer for that
+ * was one task of 1,402 ms, measured on an Intel MacBook on 10 Oct 2026: the
+ * window froze for over a second after every first press, and nothing else in
+ * the press cost a tenth of it.
+ *
+ * So a strip lost from the bottom is not a new size. The canvas keeps its
+ * height, #globe clips what hangs below the pane, and centreGlobe() centres
+ * the planet in the pane, as it already does for a panel lying across the
+ * bottom. Wide enough for the bar and for a phone browser's own bar sliding
+ * up; anything more, or any change in width, is a real resize.
+ */
+const SPARE_HEIGHT = 96;
+let globeSized = false;
+
 function sizeGlobe() {
   if (!globe) return;
   const w = $("globewrap");
   if (!w.clientWidth || !w.clientHeight) return;
-  globe.width(w.clientWidth).height(w.clientHeight);
+  const spare = globe.height() - w.clientHeight;
+  if (!(globeSized && globe.width() === w.clientWidth && spare > 0 && spare <= SPARE_HEIGHT)) {
+    globe.width(w.clientWidth).height(w.clientHeight);
+    globeSized = true;
+  }
   centreGlobe(w);
 
   /**
@@ -250,7 +273,9 @@ function sizeGlobe() {
    */
   const r = globe.renderer();
   if (!r) return;
-  const css = w.clientWidth * w.clientHeight;
+  // From the canvas, not the pane: on a large window the bar's strip alone
+  // moved this by more than its tolerance, which rebuilt the canvas after all.
+  const css = globe.width() * globe.height();
   const ratio = Math.max(0.75, Math.min(window.devicePixelRatio || 1,
                                         Math.sqrt(TARGET_PIXELS / Math.max(css, 1))));
   if (Math.abs(r.getPixelRatio() - ratio) > 0.02) r.setPixelRatio(ratio);
@@ -340,7 +365,12 @@ function centreGlobe(w) {
   const shiftY = peek !== null
     ? Math.round((peek - covered) / 2)
     : Math.round((Math.max(0, ...panels.map(below)) - covered) / 2);
-  if (shiftX || shiftY) cam.setViewOffset(g.width, g.height, shiftX, shiftY, g.width, g.height);
+  // The canvas can be left taller than the pane (sizeGlobe). What hangs below
+  // is covered just as a panel under the globe covers it, so it lifts the
+  // planet by half its height, and the offset is measured on the canvas.
+  const full = { w: globe.width(), h: globe.height() };
+  const lift = shiftY + Math.round(Math.max(0, full.h - g.height) / 2);
+  if (shiftX || lift) cam.setViewOffset(full.w, full.h, shiftX, lift, full.w, full.h);
   else cam.clearViewOffset();
   cam.updateProjectionMatrix();
 }
