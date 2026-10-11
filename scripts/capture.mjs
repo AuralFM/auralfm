@@ -125,6 +125,8 @@ async function shot(name, { full = false } = {}) {
 /* ── the web app ──────────────────────────────────────────────────── */
 // The words in the page that open each thing. One place, so a renamed tab is one line here.
 const tap = (label) => run(`const b = [...document.querySelectorAll("button, [role=tab], [role=button], a")].find((e) => (e.textContent || "").trim() === ${JSON.stringify(label)} || e.getAttribute("aria-label") === ${JSON.stringify(label)}); if (b) b.click(); return !!b;`);
+/** A tab of the phone's tab bar, by its name in the code. */
+const tab = (name) => run(`const b = document.querySelector('.tab[data-tab="${name}"]'); b?.click(); return !!b;`);
 /** The globe is drawn and the launch screen has lifted. A window that is never shown draws slowly: give it time, then lift it by hand. */
 async function ready() {
   for (let i = 0; i < 100; i++) { if (await run(`return !document.getElementById("launch") || getComputedStyle(document.getElementById("launch")).display === "none"`)) return true; await sleep(300); }
@@ -145,9 +147,14 @@ async function app(d, tag) {
   await sleep(2600);
   await shot(`${tag}-01-globe`);
   // A town, and its FM dial.
-  const town = await run(`const r = await window.auralfm.placeSearch("Chicago"); const list = Array.isArray(r) ? r : (r?.places || []); const hit = list.find((p) => /Chicago/.test(p.title)) || list[0]; if (!hit) return null; await selectPlace(hit.i); return hit.title;`);
-  await sleep(1500);
-  if (d.mobile) { await tap("Explore"); await sleep(900); }
+  // On a phone the sheet is the way in: a town is opened by pressing its row,
+  // as a thumb would. Choosing one from a script left the sheet showing two
+  // lists at once, which no listener can reach.
+  if (d.mobile) { await tab("explore"); await sleep(1600); }
+  const town = d.mobile
+    ? await run(`const row = document.querySelector("#placelist .place"); row?.click(); return row?.querySelector(".pn")?.textContent || null;`)
+    : await run(`const r = await window.auralfm.placeSearch("Chicago"); const list = Array.isArray(r) ? r : (r?.places || []); const hit = list.find((p) => /Chicago/.test(p.title)) || list[0]; if (!hit) return null; await selectPlace(hit.i); return String(hit.title);`);
+  await sleep(1800);
   await shot(`${tag}-02-town`);
   await run(`const c = [...document.querySelectorAll("#chips button")].find((b) => /^FM \\d/.test(b.textContent)); c?.click();`);
   await sleep(1200);
@@ -155,10 +162,16 @@ async function app(d, tag) {
   await run(`document.querySelector(".pinfo")?.click();`);
   await sleep(2200);
   await shot(`${tag}-04-station-page`);
+  if (d.mobile) { await run(`document.querySelector(".pinfo[aria-expanded=true]")?.click();`); await sleep(500); }
+  // On a phone these are the tab bar's own buttons. By their words alone the
+  // first match is the wide layout's hidden button of the same name, which
+  // opens the panel behind the tab bar's back and leaves two tabs lit.
+  const open = (label) => d.mobile ? tab(label.toLowerCase()) : tap(label);
   for (const [n, label] of [["05-headlines", "Headlines"], ["06-chat", "Chat"], ["07-favorites", "Favorites"]]) {
-    if (await tap(label)) { await sleep(2600); await shot(`${tag}-${n}`); }
+    if (await open(label)) { await sleep(2600); await shot(`${tag}-${n}`); }
   }
-  if (await tap("Settings")) { await sleep(1800); await shot(`${tag}-08-settings`); }
+  // The wide layout's button is named "Settings…".
+  if (await open("Settings") || await tap("Settings…")) { await sleep(1800); await shot(`${tag}-08-settings`); }
   return { drawn, town };
 }
 
@@ -208,8 +221,10 @@ async function desktop() {
   said.drawn = await ready();
   await sleep(3000);
   await snap("desktop-01-globe");
-  await run(`const r = await window.auralfm.placeSearch("Chicago"); const list = Array.isArray(r) ? r : (r?.places || []); const hit = list.find((p) => /Chicago/.test(p.title)) || list[0]; if (!hit) return null; await selectPlace(hit.i); return String(hit.title);`);
-  await sleep(2000);
+  // The app goes to a town near the listener by itself a few seconds after it
+  // opens. If it has not, the first town in the list is pressed.
+  said.town = await within(20000, run(`for (let i = 0; i < 24 && document.getElementById("head").hidden; i++) await new Promise((r) => setTimeout(r, 500)); if (document.getElementById("head").hidden) document.querySelector("#placelist .place")?.click(); await new Promise((r) => setTimeout(r, 1500)); return document.querySelector("#head h2")?.textContent || null;`));
+  await sleep(1500);
   await snap("desktop-02-town");
   await run(`const c = [...document.querySelectorAll("#chips button")].find((b) => /^FM \\d/.test(b.textContent)); c?.click();`);
   await sleep(1200);
@@ -228,8 +243,8 @@ async function desktop() {
   say("presence on");
   await within(5000, run(`await window.auralfm.setPrefs({ presence: true });`));
   say("town");
-  await run(`const r = await window.auralfm.placeSearch("Chicago"); const list = Array.isArray(r) ? r : (r?.places || []); const hit = list.find((p) => /Chicago/.test(p.title)) || list[0]; if (hit) await selectPlace(hit.i);`);
-  await sleep(1500);
+  await within(8000, run(`[...document.querySelectorAll("#railtabs [role=radio]")].find((e) => /^Stations/.test(e.textContent.trim()))?.click();`));
+  await sleep(1200);
   say("play");
   // A place's row and a station's row share a class; only a station has the small "about" button.
   const STATION = `[...document.querySelectorAll("#stationlist .st")].find((r) => r.querySelector(".pinfo"))`;
@@ -239,6 +254,8 @@ async function desktop() {
   say("chat");
   said.chat = await within(15000, run(`const chat = document.getElementById("chat"); if (chat.hidden) return "not shown"; let n = 0; for (const m of document.querySelectorAll("#chatlog .msg:not(.mine)")) { const who = m.querySelector(".who:not(.tuned)"); if (!who) continue; n++; who.textContent = "a listener"; for (const c of [...m.childNodes]) if (c !== who && !c.classList?.contains("who")) c.remove(); m.append(" (their words are left out of this picture)"); } return n + " messages from others, left out";`)) ?? "the page did not answer in time";
   said.chatShot = await within(40000, snap("desktop-13-chat-and-playing").then(() => true, (e) => e.message));
+  // The menu-bar popover, while this is playing: it is the window that holds the sound.
+  { const explorePage = page; page = await windowOf(port, "popover.html", 8); if (page) { said.popoverPlaying = await within(15000, shot("desktop-15-popover-playing").then(() => true, (e) => e.message)); page.close(); } page = explorePage; }
   await within(8000, run(`if (document.body.classList.contains("playing")) document.getElementById("play")?.click();`));
   await sleep(1500);
   await within(5000, run(`await window.auralfm.setPrefs({ presence: false });`));
