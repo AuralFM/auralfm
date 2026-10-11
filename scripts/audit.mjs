@@ -4115,6 +4115,53 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the name and the status are translated only while nothing has been tuned");
 }
 
+// ── gaps and lone paddings sit on even steps ────────────────────────────────
+// 10 Oct 2026, counted for the design system file: the space between things
+// was written as plain px in twelve different steps, 3, 5, 7, 9 and 11 among
+// them, and nobody could say why a row of chips was 5 apart and a row of
+// buttons 7. The steps are even now: 2, 4, 6, 8, 10, 12, 14, 16, 20.
+//
+// Only where a number stands alone: a gap, or a padding or margin of one value.
+// A padding of several values is usually arithmetic (the play bar's right edge
+// is a 7px gutter plus a row's 10px inset, and says so), and evening those out
+// one by one would move edges that were lined up on purpose. Negative margins
+// are nudges, not spacing. A padding that only gives back a negative margin of
+// the same size, in the same rule, is the same arithmetic and is left alone.
+{
+  const name = "gaps and lone paddings sit on even steps";
+  console.log(`\n${name}`);
+  const sheets = [["src/renderer/explore.html", true], ["src/renderer/settings.html", true], ["src/renderer/popover.html", true],
+                  ["src/renderer/splash.html", true], ["web/web.css", false]];
+  const PROP = /(?<![-\w])(gap|row-gap|column-gap|padding|margin|(?:padding|margin)-(?:top|right|bottom|left|inline|block))\s*:\s*([^;}{]+)/g;
+  const odd = [];
+  let seen = 0;
+  for (const [file, html] of sheets) {
+    const raw = readSrc(file);
+    const css = (html ? (raw.match(/<style[^>]*>[\s\S]*?<\/style>/g) || []).join("\n") : raw).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const sel = rule[1].trim().replace(/\s+/g, " ").slice(-48), body = rule[2];
+      for (const d of body.matchAll(PROP)) {
+        const prop = d[1], val = d[2].trim();
+        const lone = /gap/.test(prop) || val.split(/\s+/).length === 1;
+        if (!lone) continue;
+        seen++;
+        for (const n of val.matchAll(/(?<![\w.-])(\d+(?:\.\d+)?)px/g)) {
+          const px = Number(n[1]);
+          if (px < 3 || px % 2 !== 1) continue;
+          const side = (prop.match(/^padding-(\w+)$/) || [])[1];
+          if (side && new RegExp(`margin-${side}\\s*:\\s*-${n[1]}px`).test(body)) continue;   // gives back its own negative margin
+          odd.push(`${file.split("/").pop()}: ${sel} { ${prop}:${val} }`);
+        }
+      }
+    }
+  }
+  const gaps = [];
+  if (seen < 100) gaps.push(`only ${seen} gaps and lone paddings were found — this check is blind`);
+  if (odd.length) gaps.push(`${odd.length} off the even steps: ${odd.slice(0, 6).join("; ")}${odd.length > 6 ? "; …" : ""}`);
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass(`${seen} gaps and lone paddings, every one on an even step`);
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

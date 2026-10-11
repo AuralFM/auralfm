@@ -172,7 +172,7 @@
 
   /* The 9px replaces what the header used to give this. Removing that button
      left the field flush against the top edge of the panel. */
-  body>.searchwrap:first-of-type{padding-top:9px}
+  body>.searchwrap:first-of-type{padding-top:8px}
   /* Help tag. Sized and timed like the system's, drawn like the app's.
      `pointer-events:none` matters: a tag that can be hovered would sit under the
      pointer, fire its own pointerout on the control beneath, and flicker. */
@@ -248,7 +248,7 @@
   .list::-webkit-scrollbar-track{background:transparent}
 
   .row{
-    display:flex;align-items:center;gap:9px;padding:3px 8px;border-radius:var(--r-md);
+    display:flex;align-items:center;gap:8px;padding:3px 8px;border-radius:var(--r-md);
     transition:background var(--dur-hover) var(--ease-out);
   }
   .row:hover{background:var(--fill)}
@@ -296,7 +296,7 @@
 
   button svg{display:block}
   .bar{
-    flex:none;display:flex;align-items:center;gap:11px;padding:7px 13px 9px;
+    flex:none;display:flex;align-items:center;gap:12px;padding:7px 13px 9px;
     box-shadow:inset 0 .5px 0 var(--line);
   }
 
@@ -315,7 +315,7 @@
   #status.err{color:var(--err)}
   #status.live::before{
     content:"";display:inline-block;width:5px;height:5px;border-radius:50%;
-    background:var(--accent);margin-right:5px;vertical-align:1px;
+    background:var(--accent);margin-right:4px;vertical-align:1px;
     animation:pulse 2s ease-in-out infinite;
   }
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
@@ -338,7 +338,7 @@
   #outbtn:hover{color:var(--label)}
   #outbtn[aria-expanded="true"]{color:var(--accent);background:var(--fill)}
   .outmenu{
-    position:fixed;z-index:9400;min-width:170px;max-width:260px;padding:5px;
+    position:fixed;z-index:9400;min-width:170px;max-width:260px;padding:4px;
     border-radius:var(--r-lg);background:var(--pane);border:1px solid var(--line);
     box-shadow:0 12px 40px rgba(0,0,0,.45);backdrop-filter:blur(20px);
   }

@@ -325,7 +325,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
     place-items: start center; z-index: 1;
   }
   .sheetgrab::before {
-    content: ""; margin-top: 7px; width: 36px; height: 5px;
+    content: ""; margin-top: 8px; width: 36px; height: 5px;
     border-radius: var(--r-pill); background: var(--label3);
   }
   .sheetgrab:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: var(--r-xl); }
