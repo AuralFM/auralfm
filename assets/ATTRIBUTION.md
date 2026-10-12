@@ -95,5 +95,5 @@ Where a station gave only its town or region, AuralFM places it using
 [GeoNames](https://www.geonames.org) (`cities1000`, `admin1CodesASCII`,
 `countryInfo`), licensed under
 [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
-The data is read at build time by `scripts/lib/gazetteer.mjs` and is not shipped
+The data is read at build time by `scripts/lib/gazetteer.mjs` (in the catalogue repository, AuralFM/catalogue) and is not shipped
 as a file; the places it produced are in the station catalogue.

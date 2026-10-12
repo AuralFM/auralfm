@@ -64,11 +64,26 @@ pictures through `texUrl()`, descriptions decoded, no station named by a URL.
 Chrome's device emulation does not reproduce sticky hover, tap delay, safe
 areas or the keyboard: say what was verified from code and what needs the phone.
 
+## The catalogue is in another repo
+
+The station list, the taxonomy and the scripts that build them moved to
+**AuralFM/catalogue** (private) on 12 Oct 2026, checked out beside this repo
+as `../auralfm-catalogue`. Read its `CLAUDE.md` before touching it.
+
+- `src/catalog.js`, `src/taxonomy.js` and `src/region.js` here are **copies**.
+  Edit them there, then `npm run catalogue` here. The audit fails if they
+  differ.
+- `npm run catalogue` no longer builds anything: it takes the built list, the
+  profiles and that code from the catalogue's checkout. It refuses a list much
+  smaller than the one already here.
+- The catalogue's checks are still in `npm run audit`, reading that checkout.
+  Without it they report "not checkable here", which is not a pass.
+
 ## The sites are in another repo
 
 auralfm.xyz, the Journal and the docs moved to **AuralFM/site** (private) on
 8 Oct 2026, checked out beside this repo as `../auralfm-site`. It reads this
-repo for the catalogue (`data/`, `src/catalog.js`, `src/taxonomy.js`), the legal
+repo for the catalogue (`data/`, `src/catalog.js`, `src/taxonomy.js`: the copies `npm run catalogue` brings here), the legal
 text (`docs/*.md`) and the Markdown renderer (`src/docs.js`). After changing any
 of those, run `npm run build && npm run check` there. This repo's README and
 issues carry code and how to run it; strategy and plans go to the vault.

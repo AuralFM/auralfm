@@ -27,9 +27,10 @@ Needs macOS and [Node.js](https://nodejs.org) 18 or later.
 
 ```bash
 git clone https://github.com/AuralFM/auralfm.git
+git clone https://github.com/AuralFM/catalogue.git auralfm-catalogue   # the station list, beside the app
 cd auralfm
 npm install
-node scripts/base.mjs && node scripts/profiles.mjs   # build the catalogue, under a minute
+npm run catalogue   # take the list and its code from ../auralfm-catalogue
 npm start
 ```
 

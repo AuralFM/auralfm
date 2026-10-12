@@ -440,8 +440,9 @@ everywhere, which is the same shape. The US has no equivalent ruling; linking is
 generally treated there as not itself a copy.
 
 **What is already in place**
-- Stations are removed on request, the same day: `data/corrections.json` with
-  `"remove": true` (scripts/review.mjs), applied on every build.
+- Stations are removed on request, the same day: `data/corrections.json` in the
+  catalogue repository (AuralFM/catalogue) with `"remove": true`, applied on
+  every build.
 - A copyright notice procedure in the Terms; a DMCA agent to register (§8).
 - No recording, no re-streaming, no subscription streams, no ads.
 
@@ -485,7 +486,7 @@ features. What that changes and what it does not:
 *1. Carry on, and honour every removal request at once (today).*
 Everything stays listed and playable everywhere. The protection is speed: a
 station, a label or a collecting society asks, and the station comes off the
-same day (`data/corrections.json`, `"remove": true`, applied on every build and
+same day (`data/corrections.json` in the catalogue repository, `"remove": true`, applied on every build and
 then published). Add: a register of requests and actions (date, who, which
 stations, when removed), which is what a court would ask to see; the DMCA agent
 (§8); and a line in the Terms that rights holders can reach us at hello@. Cost:
@@ -614,7 +615,7 @@ Referer to get through; the web app used the same endpoint as a fallback.
     station's country; radio.garden's coordinates are never read. 11,315
     places; 959 of our stations went to "Somewhere in <country>" where GeoNames
     had no town of that name (the review sheet can move them).
-  - Our own stations are now tracked in the repository (data/catalogue.json),
+  - Our own stations are tracked in a repository (data/catalogue.json, in AuralFM/catalogue since 12 Oct 2026),
     because that list exists nowhere else; builds start from it.
 
 **What is left for the lawyer.** The names and towns of the stations radio.garden
@@ -684,7 +685,7 @@ airs, as it always was.
 page (or its fiscal sponsor's page for it), https only; the note under it says
 AuralFM takes no part and no cut and that giving changes nothing about where
 the station appears; a station's own claim wins over anything crawled; a list
-checked by hand (data/donate.json) covers sites the crawl cannot read; paid
+checked by hand (data/donate.json, in the catalogue repository) covers sites the crawl cannot read; paid
 memberships ("supporters", "membership") are not treated as donations.
 
 **For the lawyer:**

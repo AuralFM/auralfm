@@ -138,6 +138,19 @@ let skipped = 0;
 // Set by `npm run dist`: files that may be absent in CI must be present in a build.
 const RELEASE = process.argv.includes("--release");
 const skip = (rule, why) => { skipped++; console.log(`  --    ${rule}\n        not checkable here: ${why}`); };
+/**
+ * The catalogue's own files.
+ *
+ * The station list, the taxonomy and the scripts that build them moved to
+ * AuralFM/catalogue on 12 Oct 2026 (scripts/catalogue.mjs brings copies here).
+ * The checks that read those scripts came with a fault each, and stay here,
+ * reading the catalogue's checkout beside this one. Without it they say they
+ * could not be run, which is not the same as passing.
+ */
+const CAT = process.env.AURALFM_CATALOGUE || path.resolve(ROOT, "..", "auralfm-catalogue");
+const HAS_CAT = fs.existsSync(path.join(CAT, "scripts", "profiles.mjs"));
+const C = (p) => path.join(CAT, p);
+const NO_CAT = `the catalogue repo is not at ${CAT} (set AURALFM_CATALOGUE)`;
 
 const renderers = fs.readdirSync(R("src/renderer"))
   .filter((f) => f.endsWith(".html"))
@@ -2901,7 +2914,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const name = "a donation link is the station's own page, and never for a sanctioned country";
   console.log(`\n${name}`);
   const bad = [];
-  const src = fs.readFileSync(R("scripts/enrich.mjs"), "utf8");
+  if (!HAS_CAT) skip(name, NO_CAT); else {
+  const src = fs.readFileSync(C("scripts/enrich.mjs"), "utf8");
   const a = src.indexOf("const GIVING"), b = src.indexOf("/**\n * What a homepage says");
   const donationPage = a < 0 || b < 0 ? null : new Function(src.slice(a, b) + "; return donationPage;")();
   if (!donationPage) bad.push("scripts/enrich.mjs has no donationPage()");
@@ -2918,11 +2932,12 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       if (got !== want) bad.push(`${what}: got ${got}`);
     }
   }
-  const prof = fs.readFileSync(R("scripts/profiles.mjs"), "utf8");
+  const prof = fs.readFileSync(C("scripts/profiles.mjs"), "utf8");
   if (!/donate:\s*NO_TIPS\.has\(c\.country\)\s*\?\s*undefined/.test(prof)) bad.push("scripts/profiles.mjs writes a donation page for a sanctioned country");
   const ui = fs.readFileSync(R("src/renderer/explore-profile.js"), "utf8");
   if (!/const donate = !p\.noTips && \/\^https:/.test(ui)) bad.push("the station card shows Donate without checking noTips and https");
   bad.length ? fail(name, bad.join("; ")) : pass("own page first, https only, no memberships, none where tips are barred");
+  }
 }
 
 // ── the web app's offline cache asks only for files that exist ─────────────
@@ -3034,7 +3049,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const { createRequire } = await import("node:module");
   const { pathToFileURL } = await import("node:url");
   const desktop = createRequire(import.meta.url)(R("src/profiles.js")).shardOf;
-  const build = (await import(pathToFileURL(R("scripts/lib/shard.mjs")).href).catch(() => null))?.shardOf;
+  const build = HAS_CAT ? (await import(pathToFileURL(C("scripts/lib/shard.mjs")).href).catch(() => null))?.shardOf : desktop;
   const bridgeSrc = fs.readFileSync(R("web/bridge.js"), "utf8");
   const body = /const shardOf = \(id\) => \{([\s\S]*?)\n\s*\};/.exec(bridgeSrc)?.[1];
   const web = body ? new Function("id", body) : null;
@@ -3362,9 +3377,11 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // by throwing the catalogue's own worst cases at the phone layout (break-ui).
 {
   console.log("\na description is words, and a name is a name");
-  const { decodeEntities } = await import("./lib/entities.mjs");
-  const { urlTitle } = await import("./lib/match.mjs");
   const gaps = [];
+  if (!HAS_CAT) skip("a description is words, and a name is a name", NO_CAT); else {
+  const { pathToFileURL } = await import("node:url");
+  const { decodeEntities } = await import(pathToFileURL(C("scripts/lib/entities.mjs")).href);
+  const { urlTitle } = await import(pathToFileURL(C("scripts/lib/match.mjs")).href);
   const cases = [["&#x62F;&#x627;&#x631;", "دار"], ["Caf&eacute; &amp; bar", "Café & bar"], ["&amp;#1056;&#1072;&#1076;&#1080;&#1086;", "Радио"], ["R&B", "R&B"]];
   for (const [inp, want] of cases) if (decodeEntities(inp) !== want) gaps.push(`decodeEntities(${inp}) gives ${decodeEntities(inp)}, not ${want}`);
   if (!urlTitle("https://stream.example.com/live.mp3") || urlTitle("Radio https://example.com") || urlTitle("KEXP 90.3")) gaps.push("urlTitle no longer tells a web address from a name");
@@ -3379,6 +3396,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   gaps.length ? fail("a description is words, and a name is a name", gaps.join("; "))
     : pass("character references are decoded (decimal, hex, named, twice-escaped) and no station is named by a URL");
+  }
 }
 
 // ── the broadcast desk ───────────────────────────────────────────────────────
@@ -3548,8 +3566,10 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // exact word, so a real tag that contains one keeps it.
 {
   console.log("\na tag says something");
-  const { junkTag } = await import("./lib/match.mjs");
   const gaps = [];
+  if (!HAS_CAT) skip("a tag says something", NO_CAT); else {
+  const { pathToFileURL } = await import("node:url");
+  const { junkTag } = await import(pathToFileURL(C("scripts/lib/match.mjs")).href);
   for (const t of ["(null)", "TBD", "music", "Música", "moi merino", "#", "@fm te conecta", "--", ""]) if (!junkTag(t)) gaps.push(`"${t}" is kept`);
   for (const t of ["world music", "radio drama", "jazz", "r&b", "80s", "fm", "música regional"]) if (junkTag(t)) gaps.push(`"${t}" is dropped`);
   const min = R("data/stations.min.json");
@@ -3561,6 +3581,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   gaps.length ? fail("a tag says something", gaps.join("; "))
     : pass("no station in the bundle carries a placeholder, a filler word or a contributor's name as a tag");
+  }
 }
 
 // ── favorites sync keeps its promises ───────────────────────────────────────
@@ -3864,9 +3885,11 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/add\.type = "button"/.test(ui)) gaps.push("Add to calendar is not a button");
   if (!/said\.setAttribute\("role", "status"\)/.test(ui)) gaps.push("nothing says the file was saved");
   for (const k of ["profile.schedule", "profile.nextShow", "profile.addCal", "profile.addCalDone"]) if (!new RegExp(`"${k}"`).test(readSrc("src/i18n.js"))) gaps.push(`i18n.js has no ${k}`);
-  const claims = readSrc("scripts/claims.mjs");
-  if (!/schedule-ics\.js/.test(claims) || !/schedule: shows\.slots/.test(claims)) gaps.push("scripts/claims.mjs does not read the form's shows");
-  if (!/schedule: form\?\.schedule/.test(readSrc("scripts/profiles.mjs"))) gaps.push("scripts/profiles.mjs does not publish an approved claim's schedule");
+  if (HAS_CAT) {
+    const claims = fs.readFileSync(C("scripts/claims.mjs"), "utf8");
+    if (!/schedule-ics\.js/.test(claims) || !/schedule: shows\.slots/.test(claims)) gaps.push("the catalogue's scripts/claims.mjs does not read the form's shows");
+    if (!/schedule: form\?\.schedule/.test(fs.readFileSync(C("scripts/profiles.mjs"), "utf8"))) gaps.push("the catalogue's scripts/profiles.mjs does not publish an approved claim's schedule");
+  }
   gaps.length ? fail(name, gaps.join("; "))
     : pass("the form's lines are read or refused, the hour holds across a clock change, the file starts on one of the show's days, and the field reaches the station's page");
 }
@@ -4282,6 +4305,23 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   gaps.length ? fail(name, gaps.join("; "))
     : pass("language, category, screenshots for a phone and a wide screen, and one window for a link into the app");
+}
+
+// ── the catalogue's code here is the catalogue's ────────────────────────────
+// 12 Oct 2026. The station list, the taxonomy and their build moved to their
+// own repository, AuralFM/catalogue. The app keeps copies of the three files
+// it runs (src/catalog.js, src/taxonomy.js, src/region.js) so that a checkout,
+// a worktree and a packaged app still work alone. A copy edited here would be
+// overwritten by the next `npm run catalogue`, and a fix made there and never
+// brought over would never ship. Compared byte for byte.
+{
+  const name = "the catalogue's code here is the catalogue's";
+  console.log(`\n${name}`);
+  const { spawnSync } = await import("node:child_process");
+  const r = spawnSync(process.execPath, [R("scripts/catalogue.mjs"), "--check"], { encoding: "utf8" });
+  if (r.status === 2) skip(name, NO_CAT);
+  else if (r.status !== 0) fail(name, (r.stdout + r.stderr).trim());
+  else pass("src/catalog.js, src/taxonomy.js and src/region.js match the catalogue's, byte for byte");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
