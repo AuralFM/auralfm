@@ -59,6 +59,36 @@ async function travel(step) {
 }
 
 /**
+ * Kilometres or miles, for every distance the page words itself.
+ *
+ * The hop line below asks the main process for a finished sentence. Six other
+ * lines had a number in hand and wrote " km" after it, so a listener in
+ * Houston read miles under the place and kilometres everywhere else. They all
+ * come through fmtKm() now.
+ *
+ * The unit is asked for once and again whenever the preference changes
+ * (explore-prefs.js): "system" means the operating system's own answer, miles
+ * in the United States and the United Kingdom, kilometres elsewhere. The
+ * rounding is src/geo.js's, step for step, and the audit holds the two
+ * together: two lines on one screen must not disagree.
+ */
+let distUnit = "km";
+const KM_PER_MILE = 1.609344;
+async function refreshUnit() {
+  try { distUnit = (await window.auralfm.unit(prefs.units)) === "mi" ? "mi" : "km"; } catch { /* stays as it was */ }
+}
+function fmtKm(km) {
+  const v = distUnit === "mi" ? km / KM_PER_MILE : km;
+  if (v < 1) return `under 1 ${distUnit}`;
+  const rounded = v < 10 ? Math.round(v)
+                : v < 1000 ? Math.round(v / 10) * 10
+                : Math.round(v / 100) * 100;
+  return `${rounded.toLocaleString()} ${distUnit}`;
+}
+/** A speed, from km/h: mph where distances are miles. */
+const fmtKph = (kph) => (distUnit === "mi" ? `${Math.round(kph / KM_PER_MILE)} mph` : `${Math.round(kph)} km/h`);
+
+/**
  * How far the last hop was.
  *
  * Deliberately the distance from the previous place rather than from the

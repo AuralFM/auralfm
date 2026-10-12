@@ -77,6 +77,7 @@ function applyPrefs(next) {
   window.Tour?.maybeStart(next);
   const prev = prefs;
   prefs = { ...prefs, ...next };
+  refreshUnit();                     // km or mi, for the lines the page words itself
   const r = document.documentElement;
 
   if (prefs.theme === "system") r.removeAttribute("data-theme");

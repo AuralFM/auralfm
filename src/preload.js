@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld("auralfm", {
    */
   distance: (aLat, aLon, bLat, bLon, units) =>
     ipcRenderer.invoke("geo:distance", aLat, aLon, bLat, bLon, units),
+  // "km" or "mi": the same answer, for a distance the page already has in hand.
+  unit: (units) => ipcRenderer.invoke("geo:unit", units),
 
   // persistence
   getState: () => ipcRenderer.invoke("state:get"),

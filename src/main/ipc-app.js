@@ -214,6 +214,8 @@ module.exports = function register(ctx) {
     try { channel = require(require("node:path").join(app.getAppPath(), "package.json")).buildChannel || null; } catch { /* dev */ }
     return { version: app.getVersion(), channel, dev: !app.isPackaged };
   });
+  // Which of the two the listener uses, for the lines the page words itself.
+  ipcMain.handle("geo:unit", (_e, units) => geo.resolveUnits(units, app.getLocale()));
   ipcMain.handle("geo:distance", (_e, aLat, aLon, bLat, bLon, units) =>
     geo.format(geo.haversine(aLat, aLon, bLat, bLon),
                geo.resolveUnits(units, app.getLocale())));

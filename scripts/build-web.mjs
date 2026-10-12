@@ -529,17 +529,42 @@ for (const name of ["apple-touch-icon.png", "apple-touch-icon-precomposed.png",
   fs.copyFileSync(path.join(OUT, "assets", "icons", "icon-180.png"), path.join(OUT, name));
 }
 for (const f of ["favicon.ico", "favicon.svg", "share.jpg"]) fs.copyFileSync(R("assets", "brand", f), path.join(OUT, f));
+// What the install sheet shows of the app before it is installed: Android
+// draws these above its Install button. Not in the worker's cache list (that
+// walks web/, vendor/, data/ and the icons only); a phone asks for them once.
+fs.mkdirSync(path.join(OUT, "assets", "screens"), { recursive: true });
+for (const f of fs.readdirSync(R("assets", "brand", "screens")).filter((x) => x.endsWith(".jpg")))
+  fs.copyFileSync(R("assets", "brand", "screens", f), path.join(OUT, "assets", "screens", f));
 fs.writeFileSync(path.join(OUT, "manifest.webmanifest"), JSON.stringify({
   name: "AuralFM",
   short_name: "AuralFM",
   description: "A globe you listen to: live radio from 12,000 places, and the sky over them.",
+  lang: "en",
+  dir: "ltr",
+  categories: ["music", "entertainment", "news"],
   // A stable identity, so the icon somebody added stays the same app when the
   // start URL or scope ever changes.
   id: "/",
   start_url: "./",
   scope: "./",
   display: "standalone",
+  display_override: ["standalone", "minimal-ui"],
   orientation: "any",
+  // A link into the installed app (a station's page on the site, a shared
+  // card) goes to the window that is already open. Without this it opened a
+  // second one, and a second station played over the first.
+  launch_handler: { client_mode: ["navigate-existing", "auto"] },
+  // There is no store app to prefer, and saying so stops a browser guessing.
+  prefer_related_applications: false,
+  // Edge can keep it in its side panel: the phone layout, 400px wide.
+  edge_side_panel: { preferred_width: 400 },
+  screenshots: [
+    { src: "assets/screens/phone-1.jpg", sizes: "780x1688", type: "image/jpeg", form_factor: "narrow", label: "The globe, with every place that has a station" },
+    { src: "assets/screens/phone-2.jpg", sizes: "780x1688", type: "image/jpeg", form_factor: "narrow", label: "A town and its stations" },
+    { src: "assets/screens/phone-3.jpg", sizes: "780x1688", type: "image/jpeg", form_factor: "narrow", label: "A station's own page" },
+    { src: "assets/screens/wide-1.jpg", sizes: "1440x900", type: "image/jpeg", form_factor: "wide", label: "A town on the globe, with its stations beside it" },
+    { src: "assets/screens/wide-2.jpg", sizes: "1440x900", type: "image/jpeg", form_factor: "wide", label: "A station's own page" },
+  ],
   /**
    * The two things worth doing without opening the app first, on the icon's
    * long press: somewhere else, and what you kept.

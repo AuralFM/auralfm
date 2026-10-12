@@ -15,6 +15,9 @@
  *
  * `?go=install` shows the guide anywhere but the home-screen app, so it can be
  * linked to and tested from a desktop.
+ *
+ * An Android phone gets the same card with one button: Chrome can add the app
+ * itself, and tells the page when it is ready to (see below).
  */
 (() => {
   const phone = matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)");
@@ -39,6 +42,65 @@
       tourStart(prefs);
     };
   }
+  // After the splash has lifted, like the tour: the globe first, then a card.
+  const whenRevealed = (fn) => {
+    const soon = () => setTimeout(fn, 700);
+    if (document.body.classList.contains("revealed")) return soon();
+    const obs = new MutationObserver(() => {
+      if (document.body.classList.contains("revealed")) { obs.disconnect(); soon(); }
+    });
+    obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  };
+
+  /**
+   * Android: the browser can install the app itself, and says when.
+   *
+   * Chrome fires beforeinstallprompt once the manifest and the worker satisfy
+   * it. Nothing listened, so an Android listener was never offered the home
+   * screen at all. The event is held (its own bar would otherwise slide up
+   * beside this card), shown as the same card the iPhone gets with one button
+   * in place of four steps, and made when that button is pressed. "Not now" is
+   * remembered for a week, as on the iPhone; while it is, the event is left
+   * alone and Chrome's own menu still offers it.
+   */
+  let offer = null, offerCard = null;
+  const closeOffer = (remember) => {
+    if (!offerCard) return;
+    if (remember) { try { localStorage.setItem(KEY, String(Date.now() + LATER_MS)); } catch { /* private mode */ } }
+    offerCard.remove(); offerCard = null; open = false;
+    if (deferred && tourStart && !phone.matches) tourStart(deferred);
+  };
+  function showOffer() {
+    if (offerCard || !offer) return;
+    open = true;
+    offerCard = document.createElement("div");
+    offerCard.className = "installhint";
+    offerCard.setAttribute("role", "dialog");
+    offerCard.setAttribute("aria-labelledby", "installh");
+    offerCard.innerHTML = `
+      <div class="installhero" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg></div>
+      <h2 id="installh">Add AuralFM to your Home Screen</h2>
+      <p class="installsub">It opens full screen, like an app.</p>
+      <button type="button" class="installgo">Add to Home Screen</button>
+      <button type="button" class="installlater">Not now</button>`;
+    offerCard.querySelector(".installgo").addEventListener("click", async () => {
+      const e = offer; offer = null;
+      closeOffer(false);
+      try { e.prompt(); const choice = await e.userChoice; if (choice?.outcome === "dismissed") { try { localStorage.setItem(KEY, String(Date.now() + LATER_MS)); } catch { /* private mode */ } } }
+      catch { /* the browser withdrew the offer */ }
+    });
+    offerCard.querySelector(".installlater").addEventListener("click", () => closeOffer(true));
+    document.body.append(offerCard);
+    offerCard.querySelector(".installgo").focus({ preventScroll: true });
+  }
+  addEventListener("beforeinstallprompt", (e) => {
+    if (standalone || iOS || later()) return;
+    e.preventDefault();
+    offer = e;
+    whenRevealed(showOffer);
+  });
+  addEventListener("appinstalled", () => { offer = null; closeOffer(false); });
+
   if (!due) return;
 
   const svg = (body) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" `
@@ -112,13 +174,5 @@
     go(0);
   }
 
-  // After the splash has lifted, like the tour: the globe first, then this.
-  const soon = () => setTimeout(show, 700);
-  if (document.body.classList.contains("revealed")) soon();
-  else {
-    const obs = new MutationObserver(() => {
-      if (document.body.classList.contains("revealed")) { obs.disconnect(); soon(); }
-    });
-    obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-  }
+  whenRevealed(show);
 })();

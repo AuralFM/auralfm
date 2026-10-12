@@ -73,8 +73,11 @@
       // Was "Nothing is collected … no server of ours": true of AuralFM, but a
       // station you play still sees your IP address, and the privacy policy
       // says so. The card says what is true without the absolute.
-      title: "No algorithm. Nobody in the middle.",
-      body: "Nothing is ranked or recommended. Each station plays straight from "
+      // "Nothing is ranked or recommended" until 12 Oct 2026: but people do
+      // recommend here (the weekly and monthly picks), and that is the point.
+      // What is absent is the machine, so the card says that.
+      title: "Less algorithms. More humans.",
+      body: "Nothing is ranked by a machine, and nobody pays to be heard. Each station plays straight from "
           + "its own server, and there is no account to listen. "
           + "Settings has the privacy policy.",
     },

@@ -768,6 +768,7 @@
     nextStation: cat((ch, t) => M.catalog.nextInPlace(ch, t || [])),
     distance: async (aLat, aLon, bLat, bLon, units) =>
       M.geo.format(M.geo.haversine(aLat, aLon, bLat, bLon), M.geo.resolveUnits(units, locale)),
+    unit: async (units) => M.geo.resolveUnits(units, locale),
 
     // playback
     tune, transport, onPlayerState: on("player"),
@@ -974,8 +975,9 @@
   applyOutput();
   // After the page's own scripts have subscribed, or they would miss it.
   addEventListener("DOMContentLoaded", () => {
-    const asked = new URLSearchParams(location.search).get("station");
-    if (asked) return cueAsked(asked);
+    const q = new URLSearchParams(location.search);
+    const asked = q.get("station");
+    if (asked) return cueAsked(asked, q.has("play"));
     const saved = getState().lastChannel;
     if (saved) { current = saved; setStatus("Press play"); }
     else cueHome();
@@ -988,8 +990,14 @@
    * sound is still something the listener starts — with the globe gone to its
    * place and its card open. A station that has left the catalogue falls back
    * to the usual first visit rather than an empty player.
+   *
+   * &play=1 is our own Play button (the site's station pages): the listener
+   * has asked, so the station starts. A browser may still refuse sound on a
+   * page nobody has touched yet; tune() then leaves it at "Press play", and
+   * the first press anywhere on the page starts it. Not a press on the play
+   * button itself, which does its own job.
    */
-  async function cueAsked(id) {
+  async function cueAsked(id, wantsPlay = false) {
     await catalogReady;
     const ch = M.catalog.byId(String(id));
     if (!ch || (!ch.secure && location.protocol === "https:")) {
@@ -1001,6 +1009,11 @@
     setStatus("Press play");
     const show = () => (document.getElementById("launch") ? setTimeout(show, 400) : window.AuralOpenStation?.(ch));
     show();
+    if (!wantsPlay) return;
+    tune(ch);
+    addEventListener("click", (e) => {
+      if (audio.paused && current === ch && !e.target.closest?.("#play")) tune(ch);
+    }, { once: true, capture: true });
   }
 
   /**

@@ -238,7 +238,7 @@ function paintFrequency(nearby) {
     el.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
     el.querySelector(".sn").textContent = rx.loc || rx.name;
     el.querySelector(".stags").textContent =
-      `${rx.km < 1 ? "here" : `${rx.km.toLocaleString()} km`} · ${o.open
+      `${rx.km < 1 ? "here" : fmtKm(rx.km)} · ${o.open
         ? t("sdr.pathLikely", "path likely open") : t("sdr.pathUnlikely", "path unlikely")}`
       + (o.why ? ` · ${o.why}` : "");
 
@@ -265,7 +265,7 @@ function renderNearbyReceivers(nearby) {
   if (freqView) { paintFrequency(nearby); return; }
   stationListEl.innerHTML = "";
   stationListEl.append(frequencyRow(nearby));
-  const dist = (km) => km < 1 ? "here" : `${km.toLocaleString()} km`;
+  const dist = (km) => km < 1 ? "here" : fmtKm(km);
   for (const rx of nearby) {
     const el = document.createElement("div");
     el.className = "st";

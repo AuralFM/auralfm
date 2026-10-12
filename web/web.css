@@ -159,6 +159,15 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
 /* The hint is what finds a hidden menu, so it keeps most of the text's
    contrast rather than the secondary colour's. */
 .installtxt small { display: block; font-size: 12px; color: var(--label); opacity: .78; }
+/* Android's one step (web/install.js): the app's own accent, a full thumb tall. */
+.installgo {
+  display: block; width: 100%; margin: 4px 0 0; min-height: 48px; padding: 0 16px;
+  appearance: none; border: 0; cursor: default; border-radius: var(--r-lg);
+  background: var(--accent); color: var(--on-accent);
+  font: inherit; font-size: 15px; font-weight: 600;
+}
+.installgo:active { transform: scale(.98); }
+.installgo:focus-visible { outline: 2px solid var(--label); outline-offset: 2px; }
 .installlater {
   display: block; margin: 8px auto 0; min-height: 44px; min-width: 44px; padding: 0 16px;
   appearance: none; border: 0; background: none; cursor: default;

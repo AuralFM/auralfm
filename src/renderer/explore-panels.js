@@ -549,7 +549,7 @@ async function loadWeather(place) {
   el.querySelector(".d").textContent =
     `· ${w.text}` + (local ? ` · ${local} local` : "");
   el.title =
-    `Feels like ${temp(w.feelsC)} · humidity ${w.humidity}% · wind ${Math.round(w.windKph)} km/h`
+    `Feels like ${temp(w.feelsC)} · humidity ${w.humidity}% · wind ${fmtKph(w.windKph)}`
     + (w.tz ? ` · ${w.tz}` : "");
   el.classList.add("on");
 }

@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 9 October 2026**
+**Last updated: 12 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -155,6 +155,15 @@ delete it.
 delivery service, from hello@auralfm.xyz. To send one, Resend receives your name,
 your email address and the email itself; it does not get the rest of what you
 sent us. We do not put tracking pixels or tracked links in our emails.
+
+## Light and dark (the website only)
+
+The website follows your device: light if it is set to light, dark if dark.
+If you press the switch to choose the other, that choice is kept in one cookie
+called `auralfm_theme`. It holds the word "light" or "dark" and nothing else.
+It is set for auralfm.xyz so that the home page, the Journal and the docs
+agree, it is read only by our own pages, and it is removed when you switch back
+to what your device says. It is the only cookie our pages set.
 
 ## Claiming a station (the website only)
 

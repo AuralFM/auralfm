@@ -172,7 +172,7 @@ function paintOrbits() {
     .pathStroke((d) => (d.wspr ? 0.45 : d.orbit ? 0.7 : 1.1))
     .pathDashLength(1).pathDashGap(0)
     .pathLabel((d) => d.wspr
-      ? `${d.spot.tx} → ${d.spot.rx} · ${d.spot.bandName} · ${d.spot.km.toLocaleString()} km · SNR ${d.spot.snr}`
+      ? `${d.spot.tx} → ${d.spot.rx} · ${d.spot.bandName} · ${fmtKm(d.spot.km)} · SNR ${d.spot.snr}`
       : "")
     .pathTransitionDuration(0);
 
@@ -214,7 +214,7 @@ async function tickISS() {
   const el = $("issreadout");
   if (el) {
     el.innerHTML = `⌖ ISS <b>${Math.abs(p.lat).toFixed(1)}°${p.lat >= 0 ? "N" : "S"} `
-      + `${Math.abs(p.lng).toFixed(1)}°${p.lng >= 0 ? "E" : "W"}</b> · ${Math.round(p.altKm)} km`
+      + `${Math.abs(p.lng).toFixed(1)}°${p.lng >= 0 ? "E" : "W"}</b> · ${fmtKm(p.altKm)}`
       + (p.sunlit === null ? "" : p.sunlit ? " · sunlit" : " · in shadow");
   }
 }

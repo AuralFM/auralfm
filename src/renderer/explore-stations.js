@@ -202,7 +202,7 @@ function renderStations() {
     const km = greatCircleKm(place.lat, place.lon, playing.lat, playing.lon);
     // Under 20km is the same town by another name; saying "3 km from what's
     // playing" is noise, not information.
-    if (km > 20) sub += ` · ${km.toLocaleString()} km from ${playing.title}`;
+    if (km > 20) sub += ` · ${fmtKm(km)} from ${playing.title}`;
   }
   headEl.querySelector("p").textContent = sub;
 
@@ -384,7 +384,7 @@ async function paintNearby() {
   stationListEl.append(head);
 
   for (const p of near) {
-    stationListEl.append(placeSuggestion(p, `${Math.round(p.km)} km · ${p.count} ` +
+    stationListEl.append(placeSuggestion(p, `${fmtKm(p.km)} · ${p.count} ` +
       (p.count === 1 ? t("cold.station", "station") : t("cold.stationsShort", "stations"))));
   }
 }

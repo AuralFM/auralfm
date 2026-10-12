@@ -4162,6 +4162,128 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${seen} gaps and lone paddings, every one on an even step`);
 }
 
+// ── every distance follows the listener's units ─────────────────────────────
+// 12 Oct 2026, Melton, in Houston: "it uses kilometers, but I'm in the U.S."
+// The hop line under a place already asked src/geo.js, which asks the system
+// (miles in the US and the UK, kilometres elsewhere) and honours the units
+// preference. Six other lines wrote " km" straight into the page: how far the
+// place is from what is playing, the towns within reach, the shortwave
+// receivers nearby (twice), a propagation spot, the space station's height.
+// The wind was km/h beside a temperature in Fahrenheit.
+{
+  const name = "every distance follows the listener's units";
+  console.log(`\n${name}`);
+  const dir = path.join(ROOT, "src", "renderer");
+  const gaps = [];
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".js"))) {
+    const src = fs.readFileSync(path.join(dir, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    src.split("\n").forEach((line, i) => {
+      // An interpolated number followed by a written unit: `${x} km`, `${x} km/h`.
+      if (/\$\{[^}]*\}\s*km(?:\/h)?\b/.test(line) && !/function fmtKm|const fmtKph/.test(line)) gaps.push(`${f}:${i + 1} writes km whatever the listener uses`);
+    });
+  }
+  const core = readSrc("src/renderer/explore-core.js");
+  if (!/function fmtKm\s*\(/.test(core)) gaps.push("there is no fmtKm() for the page to write a distance with");
+  else {
+    const fn = (core.match(/function fmtKm\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/) || [])[1] || "";
+    const geoFn = (readSrc("src/geo.js").match(/function format\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/) || [])[1] || "";
+    const steps = (s) => (s.match(/Math\.round\(v(?: \/ \d+)?\)(?: \* \d+)?/g) || []).join("|");
+    if (!steps(geoFn) || steps(fn) !== steps(geoFn)) gaps.push("fmtKm() rounds differently from src/geo.js, so two lines on one screen would disagree");
+  }
+  if (!/unit:\s*\(/.test(readSrc("src/preload.js"))) gaps.push("the page cannot ask which unit the listener uses (no unit() on the bridge)");
+  if (!/unit:\s*async/.test(readSrc("web/bridge.js"))) gaps.push("the web build cannot ask which unit the listener uses");
+  gaps.length ? fail(name, gaps.slice(0, 8).join("; "))
+    : pass("no line writes km on its own; all of them ask the system, or the units preference");
+}
+
+// ── a link that asks to play is played ──────────────────────────────────────
+// 12 Oct 2026, Melton: pressing "Play on the globe" on a station's page on the
+// site "just goes to the globe"; it should go to that station, start buffering
+// and play. ?station= opened the station cued and paused, on purpose: a shared
+// card's link should not make sound for whoever scans it. A press on our own
+// Play button is the listener asking, so that link says so (&play=1) and the
+// app starts the station. A browser may still refuse sound nobody has touched
+// the page for; then the station waits, and the first press anywhere starts it.
+{
+  const name = "a link that asks to play is played";
+  console.log(`\n${name}`);
+  const src = readSrc("web/bridge.js");
+  const fn = (src.match(/async function cueAsked\s*\([^)]*\)\s*\{([\s\S]*?)\n  \}/) || [])[1];
+  const gaps = [];
+  if (!fn) gaps.push("cueAsked is gone — this check is blind");
+  else {
+    if (!/wantsPlay|["']play["']/.test(src.slice(src.indexOf("DOMContentLoaded")))) gaps.push("?play is never read, so every link opens its station paused");
+    if (!/tune\(ch\)/.test(fn)) gaps.push("a station asked for with ?play is cued and never started");
+    if (!/once:\s*true/.test(fn)) gaps.push("when the browser refuses the sound, nothing starts it on the listener's first press");
+  }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("?station=…&play=1 starts the station, or waits for the first press if the browser will not");
+}
+
+// ── an Android phone is offered the home screen too ─────────────────────────
+// 12 Oct 2026. The guide to the home screen was written for the iPhone, where
+// Safari hides the way three screens deep. Chrome on Android can install the
+// app itself and says when it is ready to (beforeinstallprompt), but nothing
+// listened, so an Android listener was never offered it and had to know to
+// look in Chrome's menu. The manifest and the worker were already enough.
+{
+  const name = "an Android phone is offered the home screen too";
+  console.log(`\n${name}`);
+  const src = readSrc("web/install.js"), css = readSrc("web/web.css");
+  const gaps = [];
+  if (!/beforeinstallprompt/.test(src)) gaps.push("nothing listens for the browser saying the app can be installed");
+  else {
+    if (!/preventDefault\(\)/.test(src)) gaps.push("the browser's own bar is not held back, so it and the app's card would both show");
+    if (!/\.prompt\(\)/.test(src)) gaps.push("the offer is kept and never made");
+    if (!/later\(\)/.test(src.slice(src.indexOf("beforeinstallprompt")))) gaps.push('"Not now" is not remembered for Android');
+    if (!/appinstalled/.test(src)) gaps.push("the card stays up after the app has been installed");
+  }
+  if (!/\.installgo\b/.test(css)) gaps.push("the Install button has no style");
+  else if (!/\.installgo\s*\{[^}]*min-height:\s*4[4-9]px/.test(css)) gaps.push("the Install button is under 44px tall");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the browser's offer is held, shown as the app's own card, and made on a press; Not now is remembered");
+}
+
+// ── the manifest says what a phone is about to install ──────────────────────
+// 12 Oct 2026, from PWABuilder's report card on listen.auralfm.xyz: nothing
+// required was missing, but the manifest named no language, no category and no
+// screenshots, so Android's install sheet showed an icon and a name and nothing
+// of the app; and nothing said what a link into an installed app should do, so
+// a station's link opened a second window beside the one already playing.
+//
+// Its other suggestions are not faults and are left out on purpose. Push
+// notifications, background sync and periodic sync each need a server that
+// remembers a device. An age rating and related store apps would be claims
+// about a certificate and apps that do not exist.
+{
+  const name = "the manifest says what a phone is about to install";
+  console.log(`\n${name}`);
+  const src = readSrc("scripts/build-web.mjs");
+  const m = src.slice(src.indexOf('"manifest.webmanifest"), JSON.stringify('));
+  const gaps = [];
+  if (m.length < 50) gaps.push("the manifest is no longer written where this check looks — it is blind");
+  else {
+    for (const [key, why] of [["lang", "no language"], ["dir", "no text direction"], ["categories", "no category for a store or a launcher to file it under"],
+                              ["display_override", "no order of display modes to fall back through"], ["launch_handler", "a link into the installed app opens a second window"]])
+      if (!new RegExp(`\\b${key}:`).test(m)) gaps.push(why);
+    for (const no of ["iarc_rating_id", "gcm_sender_id"]) if (new RegExp(`\\b${no}:`).test(m)) gaps.push(`${no} claims something AuralFM does not have`);
+    const shots = [...m.matchAll(/src:\s*"assets\/screens\/([\w-]+\.jpg)",\s*sizes:\s*"(\d+)x(\d+)",\s*type:\s*"image\/jpeg",\s*form_factor:\s*"(narrow|wide)"/g)];
+    if (!shots.some((x) => x[4] === "narrow") || !shots.some((x) => x[4] === "wide")) gaps.push("no screenshots for a phone and for a wide screen");
+    // A JPEG's real size, from its frame header: the manifest must not say otherwise.
+    const sizeOf = (buf) => { let i = 2; while (i < buf.length) { if (buf[i] !== 0xFF) return null; const k = buf[i + 1]; if (k >= 0xC0 && k <= 0xCF && k !== 0xC4 && k !== 0xC8 && k !== 0xCC) return [buf.readUInt16BE(i + 7), buf.readUInt16BE(i + 5)]; i += 2 + buf.readUInt16BE(i + 2); } return null; };
+    for (const [, file, w, h] of shots) {
+      const f = path.join(ROOT, "assets", "brand", "screens", file);
+      if (!fs.existsSync(f)) { gaps.push(`${file} is named and is not in assets/brand/screens`); continue; }
+      const real = sizeOf(fs.readFileSync(f));
+      if (!real || real[0] !== Number(w) || real[1] !== Number(h)) gaps.push(`${file} is ${real ? real.join("x") : "unreadable"}, and the manifest says ${w}x${h}`);
+      if (fs.statSync(f).size > 400 * 1024) gaps.push(`${file} is over 400 KB`);
+    }
+    if (shots.length && !/assets\/brand\/screens|"screens"/.test(src.slice(0, src.indexOf('"manifest.webmanifest"), JSON.stringify(')))) gaps.push("the screenshots are named and never copied into the build");
+  }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("language, category, screenshots for a phone and a wide screen, and one window for a link into the app");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
