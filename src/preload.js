@@ -210,6 +210,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   publishState: (state) => ipcRenderer.send("player:state", state),
   onTune: (fn) => ipcRenderer.on("player:tune", (_e, ch) => fn(ch)),
   onPlayerState: (fn) => ipcRenderer.on("player:state", (_e, s) => fn(s)),
+  playerNow: () => ipcRenderer.invoke("player:now"),
 
   // windows
   openExplore: () => ipcRenderer.send("explore:open"),

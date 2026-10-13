@@ -47,7 +47,7 @@ function paintChatHead() {
    *
    * `peers` is everyone the relays have shown us anywhere on Earth, which is
    * right for the rings on the globe and wrong here: the first version of this
-   * header read "Near Lisbon · 11 listening" while the eleven were in Toronto,
+   * header read "Near Lisbon · 11 listening" (as it said then) while the eleven were in Toronto,
    * Tehran and Prague. A true number under a false label is worse than no
    * number.
    */
@@ -66,19 +66,26 @@ function paintChatHead() {
     : playing?.place
       ? `${t("chat.near", "Near")} ${playing.place}`
       : t("chat.here", "Around here");
+  /**
+   * "3 here", not "3 listening".
+   *
+   * The count is everyone the public relays show in this cell, and a relay
+   * carries more than AuralFM: somebody on another app in the same square is
+   * counted and may have no radio on at all. "Listening" claimed to know what
+   * they were doing. "Here" is the part that is true.
+   */
   who.textContent = near
-    ? `${near} ${near === 1 ? t("chat.listener", "listening") : t("chat.listeners", "listening")}`
+    ? `${near} ${t("chat.count", "here")}`
     : t("chat.alone", "nobody else yet");
 
   /**
    * Say what the number is not.
    *
-   * "3 listening" invites the obvious wrong reading — that three people are
-   * using AuralFM. The relays can see far more than that, everywhere on Earth,
-   * and the difference between the two numbers is the whole shape of the
-   * network. It does not belong in the header, where it would compete with the
-   * count that actually describes this place, but leaving it unexplained is why
-   * the question keeps getting asked.
+   * The relays can see far more people than the ones in this cell, everywhere
+   * on Earth, and the difference between the two numbers is the whole shape of
+   * the network. It does not belong in the header, where it would compete with
+   * the count that actually describes this place, but leaving it unexplained is
+   * why the question keeps getting asked.
    */
   const everywhere = peers.length;
   // No tag. This was two sentences explaining a number that is already on

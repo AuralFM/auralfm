@@ -221,6 +221,8 @@ function sortOpts() {
  *
  * While it is up the globe does not follow its centre (followCentre), the same
  * as favourites: spinning to look around must not swap the list for a place.
+ * It re-sorts instead: a hand on the globe makes it "Near here" (followBrowse,
+ * explore-view.js).
  */
 let browsingPlaces = false;
 async function showBrowse() {
@@ -249,9 +251,9 @@ function restorePlaceView() {
   syncTunerVisibility();
 }
 
-async function loadPlaces(query = "") {
+async function loadPlaces(query = "", limit = 400) {
   const my = ++seq;
-  const res = await guard("places", () => window.auralfm.places(query, 400, sortOpts()), null);
+  const res = await guard("places", () => window.auralfm.places(query, limit, sortOpts()), null);
   if (my !== seq) return;
   if (!res) {
     placeListEl.hidden = false;

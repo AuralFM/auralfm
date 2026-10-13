@@ -314,7 +314,7 @@
    * "playback" is what a radio is. Safari 16.4 and later; elsewhere a no-op.
    */
   const asPlayer = () => { try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { /* older Safari */ } };
-  let current = null, previous = null, live = false, status = "", isError = false;
+  let current = null, previous = null, live = false, status = "", isError = false, isNotice = false;
   let gen = 0, tried = [], watchdog = null;
   /**
    * What is kept while the network is away: the URL that was playing and the
@@ -329,12 +329,15 @@
   const publish = () => {
     const was = lastPlayer?.playing && lastPlayer.channel?.id;
     lastPlayer = { channel: channelOf(current), status, error: isError,
-      playing: live, volume: audio.volume, rssi: null };
+      playing: live, volume: audio.volume, rssi: null,
+      // A line that has to be read whole (cueAsked): the row gives it the room.
+      notice: isNotice,
+      sleepEndsAt: window.AuralSleep?.endsAt() || 0 };
     emit("player", lastPlayer);
     // Presence follows what is playing, as the desktop's syncNostrPresence does.
     if ((live && lastPlayer.channel?.id) !== was) chat?.sync(lastPlayer);
   };
-  const setStatus = (text, err = false) => { status = text; isError = err; publish(); };
+  const setStatus = (text, err = false, notice = false) => { status = text; isError = err; isNotice = notice; publish(); };
 
   function applyOutput() {
     const id = getPrefs().audioOutput || "";
@@ -616,9 +619,27 @@
     navigator.mediaSession.setActionHandler("previoustrack", () => { if (previous) tune(previous); });
   }
 
+  /**
+   * The sleep timer (src/renderer/sleep.js), the same file the Mac's player
+   * uses. The fade sets the level directly so it is never saved half-faded;
+   * on an iPhone it does nothing (iOS owns the volume) and the stop is what
+   * counts. `timeupdate` keeps arriving while a stream plays with the screen
+   * off, when a page's own timers may not.
+   */
+  window.AuralSleep?.init({
+    level: () => audio.volume,
+    setLevel: (v) => { audio.volume = v; },
+    playing: () => live || (!!playingUrl && !audio.paused),
+    stop: () => stop("Sleep timer ended"),
+    changed: () => publish(),
+  });
+  audio.addEventListener("timeupdate", () => window.AuralSleep?.check());
+
   function transport({ action, value } = {}) {
     if (action === "toggle") { if (live) stop(); else if (current) tune(current); }
+    else if (action === "sleep") window.AuralSleep?.set(value);
     else if (action === "volume") {
+      window.AuralSleep?.userLevel(Math.max(0, Math.min(1, Number(value) || 0)));
       // iOS ignores volume set by a page (the hardware buttons own it) but does
       // honour mute, so zero is also a mute and the mute button works there too.
       audio.muted = (Number(value) || 0) === 0;
@@ -771,7 +792,7 @@
     unit: async (units) => M.geo.resolveUnits(units, locale),
 
     // playback
-    tune, transport, onPlayerState: on("player"),
+    tune, transport, onPlayerState: on("player"), playerNow: async () => lastPlayer,
     // Safari's own output picker (AirPods, Bluetooth, AirPlay); see `routes`.
     canPickOutput: () => routes,
     pickOutput: () => { try { audio.webkitShowPlaybackTargetPicker?.(); } catch { /* not Safari */ } },
@@ -1001,8 +1022,19 @@
     await catalogReady;
     const ch = M.catalog.byId(String(id));
     if (!ch || (!ch.secure && location.protocol === "https:")) {
+      /**
+       * Say so. The link named a station and the app opened on another one
+       * with no word about it, which reads as the link being wrong. A station
+       * with only an http stream cannot play on an https page (the catalogue
+       * leaves it out of every list here), and one that has left the
+       * catalogue is not anywhere. The line stays until the listener presses
+       * something.
+       */
+      // Short enough to be read whole in a phone's player row (about 150pt).
+      const why = ch ? "Not playable here" : "No longer listed";
       const saved = getState().lastChannel;
-      if (saved) { current = saved; setStatus("Press play"); } else cueHome();
+      if (saved) current = saved; else await cueHome();
+      setStatus(why, false, true);
       return;
     }
     current = ch;

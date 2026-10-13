@@ -600,18 +600,23 @@
   .newslist::-webkit-scrollbar{width:0}
   /* The reader. Measured for prose rather than for a list: longer line height,
      a real paragraph gap, and a maximum width the eye can track. */
+  /* Both of the reader's buttons wear the palette's colour. They were the grey
+     of a caption, so in a palette with a colour of its own (Tally, Deep Field)
+     the way back and the way out read as text, not as things to press. */
   .readback{
-    appearance:none;border:0;background:none;color:var(--label2);font:inherit;
-    font-size:12px;padding:4px 0 10px;cursor:default;
+    appearance:none;border:0;background:none;color:var(--accent);font:inherit;
+    font-size:12px;font-weight:530;padding:4px 0 10px;cursor:default;border-radius:var(--r-sm);
   }
-  @media (hover:hover){.readback:hover{color:var(--label)}}
+  @media (hover:hover){.readback:hover{text-decoration:underline;text-underline-offset:2px}}
+  .readback:active,.readopen:active{opacity:.7}
+  .readback:focus-visible,.readopen:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .readtitle{font-size:16px;font-weight:640;line-height:1.28;letter-spacing:-.012em}
   .readmeta{font-size:12px;color:var(--label2);margin:5px 0 12px}
   .readp{margin:0 0 11px;font-size:13px;line-height:1.62;color:var(--label)}
   .readnote{font-size:12.5px;line-height:1.5;color:var(--label2);margin-bottom:12px}
   .readopen{
     appearance:none;border:0;border-radius:var(--r-md);background:var(--fill);
-    color:var(--label);font:inherit;font-size:12px;padding:7px 12px;cursor:default;
+    color:var(--accent);font:inherit;font-size:12px;font-weight:530;padding:7px 12px;cursor:default;
   }
   @media (hover:hover){.readopen:hover{background:var(--fill-hi)}}
 

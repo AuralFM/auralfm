@@ -299,6 +299,9 @@ function publish(){
      * does not tell them. The absence is the honest value.
      */
     rssi: sdrRx ? lastRssi : null,
+    // When the sleep timer ends, or 0. A time, not a countdown: whoever shows
+    // it does its own counting, and this is not sent again every second.
+    sleepEndsAt: window.AuralSleep?.endsAt() || 0,
   });
 }
 /**
@@ -576,7 +579,7 @@ function sdrEnded(message, cls = "") {
   setStatus(message, cls);
 }
 
-function stop(){
+function stop(said = "Stopped"){
   clearTimeout(watchdog); gen++; live = false;
   clearMediaSession();
   window.auralfm.mediaKeys(false);
@@ -584,7 +587,7 @@ function stop(){
   audio.pause(); audio.removeAttribute("src"); audio.load();
   setToggle("play");
   document.body.classList.remove("playing");
-  setStatus("Stopped");
+  setStatus(said);
 }
 
 function fail(msg){
@@ -659,6 +662,7 @@ toggle.onclick = () => {
   togglePlay();
 };
 function applyVolume(v) {
+  window.AuralSleep?.userLevel(v);   // moved during the fade: this is the level to keep
   audio.volume = v;
   sdrSession?.setVolume(v);
   vol.value = v;
@@ -817,9 +821,25 @@ window.auralfm.onTuneSdr((rx) => {
 
 
 // Explore's transport talks to this player; there is still only one <audio>.
+/**
+ * The sleep timer (sleep.js) fades and stops whatever this window is playing,
+ * a station or a receiver. The fade sets the level directly: applyVolume would
+ * save each step and move both sliders, and the level it ended on would be the
+ * one the app opened with tomorrow.
+ */
+window.AuralSleep?.init({
+  level: () => audio.volume,
+  setLevel: (v) => { audio.volume = v; sdrSession?.setVolume(v); },
+  playing: () => !!sdrSession || (!!current && !audio.paused),
+  stop: () => stop("Sleep timer ended"),
+  changed: () => publish(),
+});
+audio.addEventListener("timeupdate", () => window.AuralSleep?.check());
+
 window.auralfm.onTransport(({ action, value }) => {
   if (action === "toggle") togglePlay();
   else if (action === "volume") applyVolume(Math.max(0, Math.min(1, value)));
+  else if (action === "sleep") window.AuralSleep?.set(value);
   // The dial lives in Explore now; this window still owns the only socket that
   // makes sound, so retuning arrives as a message rather than a button press.
   else if (action === "retune" && sdrSession) {

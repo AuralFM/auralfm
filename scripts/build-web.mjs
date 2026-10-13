@@ -400,7 +400,7 @@ page("explore.html", "index.html", {
   beforeScript: "errors.js",
   // levels.js before the bridge: the card's waveform is measured from a private
   // copy of the stream, exactly as the desktop's popover does it.
-  before: ["web/launch.js", "web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "web/bridge.js", "web/sheet.js"],
+  before: ["web/launch.js", "web/modules.js", "web/messaging.js", "web/live.js", "levels.js", "sleep.js", "web/bridge.js", "web/sheet.js"],
   after: { "explore.js": ["web/after.js", "web/install.js", "web/rail-sheet.js", "web/phone-bar.js", "web/ticker.js"] },
   logo: true,
   share: true,

@@ -38,6 +38,14 @@ const DEFAULTS = {
    */
   hidePreviews: false,
   /**
+   * A notification when a private message arrives and the app is not in front.
+   *
+   * Off, and only for private messages (src/notify.js says why). It is the
+   * running app that notifies: nothing is registered with a push service, so
+   * turning this on tells no server anything.
+   */
+  notify: false,
+  /**
    * Keep one identity across sessions, so people can favorite and verify you.
    *
    * **Off, and it should stay off unless somebody wants what it buys.** Every

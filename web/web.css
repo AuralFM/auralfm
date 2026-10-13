@@ -351,7 +351,19 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   /* The read-out belongs to the globe, so it rides just above the sheet rather
      than up among the status bar's own clock and battery. --peek is how much
      sheet is showing (web/rail-sheet.js). */
-  .globebar { right: 0; top: auto; bottom: calc(var(--peek, 40%) + 8px); padding-bottom: 0; }
+  /* And above whichever sheet is up, not only where the station sheet rests:
+     --ride is how far the highest sheet reaches (web/sheet.js). It is a length
+     the browser can animate, so when the station sheet settles the read-out
+     makes the same move in the same time; a dragged sheet sets it each frame.
+     Below zero is a sheet hidden under the player, which lifts nothing. */
+  .globebar {
+    right: 0; top: auto; bottom: 8px; padding-bottom: 0;
+    transform: translate3d(0, calc(-1 * max(0px, var(--ride, var(--peek, 0px)))), 0);
+    transition: opacity .18s var(--ease-out);
+  }
+  .globebar.settling { transition: --ride .42s cubic-bezier(.32,.72,0,1), opacity .18s var(--ease-out); }
+  .globebar.tucked { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { .globebar, .globebar.settling { transition: none; } }
 
   /**
    * What is playing: one row, and the whole row is the way back to the list.
@@ -418,6 +430,10 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   /* The star, left of play: the same 32pt glyph button as share on its right,
      so the three read as one set. The name takes the slack, not a gap. */
   body.phonebar .now #nowStatus { margin-right: auto; }
+  /* A notice ("That station is no longer listed") was cut to "That sta…": the
+     name always won the row. For a notice the name gives way instead. */
+  body.phonebar .now.notice #nowName { flex: 0 1000 auto; min-width: 3em; }
+  body.phonebar .now.notice #nowStatus { flex: 0 0 auto; max-width: 62%; }
   body.phonebar .now #nowStar {
     display: grid; place-items: center; flex: none;
     width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;
@@ -680,6 +696,9 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   #vol, .markets { display: none !important; }
 }
 
+/* How far up the view the highest sheet reaches; see .globebar above. */
+@property --ride { syntax: "<length>"; inherits: false; initial-value: 0px; }
+
 /* ── touch ─────────────────────────────────────────────────────────────────── */
 /**
  * Hover does not exist on a phone, and a phone fakes it: touch browsers leave
@@ -691,6 +710,9 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
 @media (hover: none) {
   .toolbar button[aria-pressed="true"]::before { background: var(--fill-hi); }
 }
+
+/* How far up the view the highest sheet reaches; see .globebar above. */
+@property --ride { syntax: "<length>"; inherits: false; initial-value: 0px; }
 
 /* ── touch ─────────────────────────────────────────────────────────────────── */
 /* 44 points is the smallest target a finger hits reliably. */
@@ -704,6 +726,11 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   .chips button { min-height: 34px; padding-inline: 12px; }
   .st, .place, .story { min-height: 44px; }
   .layrow { min-height: 44px; }
+  /* The reader's way back and way out were 30pt tall, the two smallest things
+     to press in the sheet. The words stay where they were; the target grows. */
+  .readback, .readopen { min-height: 44px; font-size: 14px; }
+  .readback { padding: 0 14px 0 0; margin-bottom: 4px; }
+  .readopen { padding-inline: 16px; }
   /* Hover never comes on a touch screen, so the star is always there. */
   .st .star { opacity: 1; }
 }

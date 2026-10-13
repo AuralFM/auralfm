@@ -81,7 +81,52 @@
   const CHROME = ".tabbar, .now";
   const behind = () => [...document.body.children].filter((el) =>
     el !== root && el.tagName !== "SCRIPT" && !(phone() && el.matches(CHROME)));
-  const place = (y) => { panel.style.transform = `translateY(${y}px)`; root.style.setProperty("--dim", String(Math.max(0, 1 - y / panel.offsetHeight))); };
+  const place = (y) => { panel.style.transform = `translateY(${y}px)`; root.style.setProperty("--dim", String(Math.max(0, 1 - y / panel.offsetHeight))); ride(null, 0, false); };
+
+  /**
+   * The globe's read-out rides on whichever sheet is up.
+   *
+   * It was anchored to where the station sheet rests (--peek), not to where any
+   * sheet is. So with a station in the player it sat just above the player row,
+   * and Explore, Headlines, Chat and Settings each rose straight over it: the
+   * line about the sun and the moon was simply gone while a sheet was open, and
+   * came back when the sheet went down. It belongs to the globe, so it stays on
+   * the edge of the globe that is still showing.
+   *
+   * Two kinds of sheet move in two ways. The panels and Settings are moved a
+   * frame at a time by the springs below, so they are measured where they are.
+   * The station sheet settles by a CSS transition, and measuring it would give
+   * where it started, so it says where it is going (web/rail-sheet.js) and the
+   * read-out makes the same transition (--ride, web/web.css).
+   *
+   * With under 120pt of globe left there is nothing for it to describe, and it
+   * would sit under the clock, so it fades out until there is room again.
+   */
+  const PANELS = ".newspanel, .chatpanel, #layers, .setsheet-panel";
+  let railUp = null;
+  function ride(rail, cover, settling) {
+    const bar = document.getElementById("globehint");
+    const host = bar?.offsetParent;
+    if (rail) railUp = { el: rail, cover };
+    if (!bar || !host) return;
+    if (!phone()) {
+      bar.style.removeProperty("--ride");
+      bar.classList.remove("settling", "tucked");
+      return;
+    }
+    const box = host.getBoundingClientRect();
+    let up = railUp && railUp.el.getClientRects().length ? railUp.cover : 0;
+    for (const el of document.querySelectorAll(PANELS)) {
+      const r = el.getBoundingClientRect();
+      if (r.height) up = Math.max(up, box.bottom - r.top);
+    }
+    // Who moved says how: the station sheet by a transition, a spring by
+    // frames. A re-check (a panel hidden, the window resized) says nothing, and
+    // must not cut short a transition that is still running.
+    if (settling !== undefined) bar.classList.toggle("settling", settling);
+    bar.style.setProperty("--ride", `${Math.round(up)}px`);
+    bar.classList.toggle("tucked", box.height - up < 120);
+  }
 
   function open() {
     if (!root) build();
@@ -218,7 +263,7 @@
     };
     springs.set(el, requestAnimationFrame(step));
   }
-  const moveTo = (el) => (y) => { el.style.transform = y ? `translateY(${y}px)` : ""; };
+  const moveTo = (el) => (y) => { el.style.transform = y ? `translateY(${y}px)` : ""; ride(null, 0, false); };
   const yNow = (el) => new DOMMatrix(getComputedStyle(el).transform).m42;
 
   /**
@@ -281,5 +326,18 @@
     }
   }
 
-  window.AuralSheet = { open, close, rise, sink, draggable };
+  // A panel shown or hidden with no spring (reduced motion, or closed by its
+  // own button) moves nothing a frame at a time, so those are watched for.
+  if (typeof MutationObserver !== "undefined") {
+    const mo = new MutationObserver(() => ride());
+    const watch = () => {
+      for (const el of document.querySelectorAll(PANELS)) mo.observe(el, { attributes: true, attributeFilter: ["hidden"] });
+      mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      ride();
+    };
+    if (document.readyState === "loading") addEventListener("DOMContentLoaded", watch); else watch();
+  }
+  addEventListener("resize", () => ride());
+
+  window.AuralSheet = { open, close, rise, sink, draggable, ride };
 })();

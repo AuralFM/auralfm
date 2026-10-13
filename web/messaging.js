@@ -29,6 +29,8 @@ safety.init(HOME);
 // (web/bridge.js); nothing runs until the listener turns it on.
 window.AuralFavSync = require("../src/favsync.js");
 const unlisted = require("../src/unlisted.js");
+const notify = require("../src/notify.js");
+const i18n = require("../src/i18n.js");
 
 window.AuralChat = function create({ getPrefs, emit }) {
   const visible = (list) => {
@@ -49,7 +51,35 @@ window.AuralChat = function create({ getPrefs, emit }) {
   nostr.onMessages((list) => emit("chat", visible(list)));
   nostr.onNotes((list) => emit("notes", visible(list)));
   nostr.onHub((list) => emit("hub", visible(list)));
-  nostr.onDms((list) => emit("dms", visible(list)));
+  /**
+   * A notification for a private message, if the listener asked for one
+   * (src/notify.js, the same rules the Mac uses). Only with the page out of
+   * sight: in sight, the message is already there to read. Through the service
+   * worker where there is one, because Android's Chrome and an installed
+   * iPhone app only show a notification that comes from it.
+   */
+  const freshDms = notify.tracker(nostr.dmHistory());
+  const tell = async (m) => {
+    const p = getPrefs();
+    if (p.notify !== true || !document.hidden) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const strings = i18n.strings(p.language, navigator.language);
+    const { title, body } = notify.words(m, {
+      hidePreviews: p.hidePreviews === true,
+      name: social.get(m.pubkey)?.label || "",
+    }, (k, d) => strings[k] || d);
+    const opts = { body, tag: "auralfm-dm", icon: "assets/icons/icon-192.png", silent: true };
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg?.showNotification) await reg.showNotification(title, opts);
+      else new Notification(title, opts);
+    } catch { /* a notification that cannot be shown is not an error to raise */ }
+  };
+  nostr.onDms((list) => {
+    const clean = visible(list);
+    for (const m of freshDms(clean)) tell(m);
+    emit("dms", clean);
+  });
   nostr.onSignal((from, payload, at) => { if (!muted.has(from)) emit("rtc", [from, payload, at]); });
   nostr.onFavorited((pubkey, on) => {
     if (muted.has(pubkey)) return;

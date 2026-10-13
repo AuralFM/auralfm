@@ -131,7 +131,9 @@ async function initGlobe() {
   globe.controls().rotateSpeed = 0.75;
   globe.controls().addEventListener("change", onCameraChange);
   // A hand on the globe is browsing again, whatever was holding the rail.
-  globe.controls().addEventListener("start", () => { holdCentre = false; });
+  globe.controls().addEventListener("start", () => { holdCentre = false; handOn = true; handFrom = globe.pointOfView(); });
+  // The globe coasts on after the finger lifts; the list follows it to rest.
+  globe.controls().addEventListener("end", () => { handOn = false; handUntil = Date.now() + HAND_COAST_MS; restSoon(); });
   applyLod(true);
 
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
@@ -429,9 +431,75 @@ function throttle(fn, ms) {
 const followThrottled = throttle(followCentre, 90);
 const lodThrottled = throttle(() => applyLod(), 200);
 
+const browseThrottled = throttle(() => followBrowse(false), 280);
+let browseRest = null;
+
 function onCameraChange() {
   lodThrottled();
   followThrottled();
+  browseThrottled();
+  // Once the finger is off, the globe coasts, and each move it makes is still
+  // the hand's: the window stays open for as long as the coasting lasts. Not
+  // for the idle drift or a flight, which would hold it open for good.
+  if (!handOn && Date.now() <= handUntil && !flying && !globe.controls().autoRotate) {
+    handUntil = Date.now() + HAND_COAST_MS;
+    restSoon();
+  }
+}
+function restSoon() {
+  clearTimeout(browseRest);
+  browseRest = setTimeout(() => followBrowse(true), 180);
+}
+/** Degrees between two views of the globe. */
+function povApart(a, b) {
+  const rad = Math.PI / 180;
+  return Math.acos(Math.max(-1, Math.min(1,
+    Math.sin(a.lat * rad) * Math.sin(b.lat * rad) +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((a.lng - b.lng) * rad)))) / rad;
+}
+
+/**
+ * The list of places follows a hand on the globe.
+ *
+ * On a phone Explore opens on the list of places, and that list stood still
+ * while the globe turned above it: Paris and London at the top with Lagos in
+ * the middle of the screen. With one place open the rail has always followed
+ * the centre (followCentre, below). The browse list could not do the same,
+ * because swapping it for a single town is the thing it exists to prevent. So
+ * it stays a list and changes its order: turn the globe and it becomes "Near
+ * here", measured from the middle of what you are looking at.
+ *
+ * Only a hand does this. The idle drift and a flight to a station also move
+ * the camera, and a list that reshuffled itself with nobody touching anything
+ * would be a list you could not press. The sort button still leads away from
+ * "Near here"; the next turn of the globe brings it back.
+ *
+ * In two weights, because the list is not free. Asking for the 400 nearest and
+ * drawing them took 120ms on a 2019 Intel Mac, 19 of it the asking, and a
+ * globe that stops for an eighth of a second four times a second is a globe
+ * that stutters under the finger. So while it is moving the list is its first
+ * forty rows, about 30ms, asked for again only when the centre has moved far
+ * enough to change them (a degree close in, under three from orbit). When the
+ * globe comes to rest the whole list is drawn once, from exactly where it
+ * stopped.
+ */
+const HAND_COAST_MS = 500, MOVING_ROWS = 40;
+let handOn = false, handUntil = 0, handFrom = null, browseAt = null;
+function followBrowse(atRest) {
+  if (!globe || !browsingPlaces || showingFavorites || flying || locked) return;
+  if (!atRest && !handOn && Date.now() > handUntil) return;
+  if (qEl.value.trim()) return;               // a search ranks by the match
+  const pov = globe.pointOfView();
+  // A tap, or a pinch that only came closer, turned nothing: the list stays.
+  if (!handFrom || povApart(pov, handFrom) < 0.05) return;
+  if (placeOrder === "near" && browseAt) {
+    const moved = povApart(pov, browseAt);
+    // At rest, anything short of the same list is worth drawing in full.
+    if (atRest ? (browseAt.whole && moved < 0.05) : moved < 0.6 + pov.altitude * 1.5) return;
+  }
+  browseAt = { lat: pov.lat, lng: pov.lng, whole: !!atRest };
+  placeOrder = "near";
+  loadPlaces("", atRest ? 400 : MOVING_ROWS);
 }
 
 /**

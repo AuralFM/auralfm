@@ -321,6 +321,9 @@
   .sw[aria-checked="true"]{background:var(--accent)}
   .sw[aria-checked="true"]::after{transform:translateX(16px)}
   .sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* Cannot be used here (settings.js says why under it). Still focusable, so
+     the reason beside it is reachable. */
+  .sw[aria-disabled="true"]{opacity:.45}
 
   select{
     appearance:none;background:var(--fill);color:var(--label);border:0;border-radius:var(--r-md);
@@ -419,6 +422,25 @@
       </div>
     </div>
     <p class="hint" id="hideExplicit-hint" data-i18n="set.hideExplicitHint">Stations with explicit sexual content are listed and labelled Explicit. Turn this on to leave them out of lists, search and shuffle.</p>
+  </section>
+
+  <section>
+    <h2 data-i18n="set.listening">Listening</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" id="sleep-lbl" data-i18n="set.sleep">Sleep timer</span>
+        <select id="sleep" aria-labelledby="sleep-lbl" aria-describedby="sleep-hint sleep-left"></select>
+      </div>
+      <div class="row">
+        <span class="name" id="notify-lbl" data-i18n="set.notify">Notify me of private messages</span>
+        <button class="sw" id="notify" role="switch" aria-checked="false"
+                aria-labelledby="notify-lbl" aria-describedby="notify-hint"></button>
+      </div>
+    </div>
+    <!-- Two lines for the timer: what it does, and, while it runs, when it ends.
+         The second is filled by settings.js and is not a translated string. -->
+    <p class="hint"><span id="sleep-hint" data-i18n="set.sleepHint">Fades out, then stops what is playing.</span> <span id="sleep-left"></span></p>
+    <p class="hint" id="notify-hint" data-i18n="set.notifyHint">Only while AuralFM is running and not in front. No server is told about this device.</p>
   </section>
 
   <section id="minesec" hidden>

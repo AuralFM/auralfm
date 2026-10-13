@@ -5,7 +5,7 @@
  * hidden rather than destroyed, so audio keeps playing while it's out of sight.
  */
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme, protocol, desktopCapturer } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, shell, globalShortcut, dialog, session, nativeTheme, protocol, desktopCapturer, Notification } = require("electron");
 const path = require("node:path");
 
 /**
@@ -34,6 +34,7 @@ const mine = require("./mystations");
 const tips = require("./tips");
 const muted = require("./muted");
 const social = require("./social");
+const notify = require("./notify");
 const durable = require("./identity");
 const favsync = require("./favsync");
 const safety = require("./safety");
@@ -970,7 +971,10 @@ ipcMain.on("player:state", (_e, state) => {
   const t = state.playing && state.channel?.title ? state.channel.title : "";
   tray?.setTitle(t ? ` ${t.slice(0, 22)}` : "");
   if (explore && !explore.isDestroyed()) explore.webContents.send("player:state", state);
+  // Settings shows the sleep timer, which belongs to the player.
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send("player:state", state);
 });
+ipcMain.handle("player:now", () => playerState);
 
 // ── deep links ────────────────────────────────────────────────────────────────
 /**
@@ -1105,8 +1109,26 @@ if (!app.requestSingleInstanceLock()) {
     // window rather than about the channel, so it goes through the same funnel.
     nostr.onHub((list) =>
       explore?.webContents.send("hub:messages", visible(list)));
+    /**
+     * A notification for a private message, if the listener asked for one
+     * (src/notify.js). After `visible`, so a muted person or a filtered word
+     * cannot reach the screen this way either. Not while Explore is in front:
+     * the message is already there to read.
+     */
+    const freshDms = notify.tracker(nostr.dmHistory());
     nostr.onDms((list) => {
       const clean = visible(list);
+      for (const m of freshDms(clean)) {
+        const p = getPrefs();
+        if (p.notify !== true || !Notification.isSupported() || explore?.isFocused()) continue;
+        const { title, body } = notify.words(m, {
+          hidePreviews: p.hidePreviews === true,
+          name: social.get(m.pubkey)?.label || "",
+        }, (k, d) => getStrings()[k] || d);
+        const n = new Notification({ title, body, silent: true });
+        n.on("click", () => openExplore());
+        n.show();
+      }
       explore?.webContents.send("presence:dms", clean);
       // The menu bar shows the count, so it has to hear about it too.
       win?.webContents.send("presence:unread", clean.filter((m) => m.unread).length);

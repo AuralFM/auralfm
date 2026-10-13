@@ -4324,6 +4324,239 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   else pass("src/catalog.js, src/taxonomy.js and src/region.js match the catalogue's, byte for byte");
 }
 
+// ── the reader's two buttons wear the palette ───────────────────────────────
+// 13 Oct 2026. In the headline reader on a phone, "‹ Headlines" and "Open in
+// browser" were the grey of a caption while every other thing to press wore the
+// palette's colour, and each was 30pt tall in a sheet worked by a thumb.
+{
+  const name = "the reader's two buttons wear the palette";
+  console.log(`\n${name}`);
+  const css = readSrc("src/renderer/explore.html"), web = readSrc("web/web.css");
+  const rule = (sel) => css.match(new RegExp(`\\n\\s*\\.${sel}\\{([^}]*)\\}`))?.[1] || "";
+  const gaps = [];
+  for (const sel of ["readback", "readopen"]) {
+    const r = rule(sel);
+    if (!r) gaps.push(`.${sel} has no rule — this check is blind`);
+    else if (!/color:var\(--accent\)/.test(r)) gaps.push(`.${sel} is not the palette's colour`);
+  }
+  if (!/\.readback:focus-visible,\.readopen:focus-visible\{[^}]*outline/.test(css)) gaps.push("neither shows where the keyboard is");
+  if (!/\.readback,\s*\.readopen\s*\{[^}]*min-height:\s*4[4-9]px/.test(web)) gaps.push("on a touch screen they are under 44px tall");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("the way back and the way out are the accent, focusable, and 44px to a thumb");
+}
+
+// ── the chat counts who is here, not who is listening ───────────────────────
+// 13 Oct 2026. The rail read "3 listening". The number is everyone the public
+// relays show in that cell, and a relay carries other apps: the count never
+// knew what anyone was doing. "Here" is the part that is true.
+{
+  const name = "the chat counts who is here, not who is listening";
+  console.log(`\n${name}`);
+  const chat = readSrc("src/renderer/explore-chat.js"), i18n = readSrc("src/i18n.js");
+  const gaps = [];
+  if (!/t\("chat\.count",\s*"here"\)/.test(chat)) gaps.push("the heading does not say \"here\"");
+  if (/chat\.listeners?"/.test(chat + i18n)) gaps.push("\"listening\" is still a string for the count");
+  const langs = (i18n.match(/"chat\.count":/g) || []).length;
+  if (langs !== 5) gaps.push(`${langs} of 5 languages have the word`);
+  gaps.length ? fail(name, gaps.join("; ")) : pass("\"3 here\", in five languages");
+}
+
+// ── the list of places follows a hand on the globe ──────────────────────────
+// 13 Oct 2026. On a phone Explore opens on the list of places, and it stood
+// still while the globe turned: Paris and London on top with Lagos in the
+// middle of the screen. It re-sorts to "Near here" now, and only for a hand:
+// the idle drift or a flight must not reshuffle a list somebody is about to
+// press. Drawing 400 rows took 120ms, so a moving globe gets a short list and a
+// resting one gets the whole of it.
+{
+  const name = "the list of places follows a hand on the globe";
+  console.log(`\n${name}`);
+  const view = readSrc("src/renderer/explore-view.js"), core = readSrc("src/renderer/explore-core.js");
+  const fn = view.slice(view.indexOf("function followBrowse("), view.indexOf("function followBrowse(") + 1400);
+  const gaps = [];
+  if (fn.length < 200) gaps.push("followBrowse is gone — this check is blind");
+  else {
+    if (!/!browsingPlaces/.test(fn)) gaps.push("it does not stop when the list is not the browse list");
+    if (!/handOn/.test(fn) || !/handUntil/.test(fn)) gaps.push("anything that moves the camera re-sorts the list, not only a hand");
+    if (!/flying/.test(fn) || !/locked/.test(fn)) gaps.push("a flight or a locked station still re-sorts it");
+    if (!/qEl\.value/.test(fn)) gaps.push("a search's results are replaced by it");
+    if (!/povApart\(pov,\s*handFrom\)/.test(fn)) gaps.push("a tap that turned nothing re-sorts it");
+    if (!/placeOrder\s*=\s*"near"/.test(fn)) gaps.push("it does not sort by nearness");
+    if (!/atRest\s*\?\s*400\s*:\s*MOVING_ROWS/.test(fn)) gaps.push("it draws the whole list on every move, or never draws it whole");
+  }
+  if (!/addEventListener\("start",[^\n]*handOn = true/.test(view)) gaps.push("nothing marks a hand going on the globe");
+  if (!/addEventListener\("end",[^\n]*handOn = false/.test(view)) gaps.push("nothing marks the hand coming off");
+  if (!/!globe\.controls\(\)\.autoRotate/.test(view.slice(view.indexOf("function onCameraChange"), view.indexOf("function restSoon")))) gaps.push("the idle drift keeps the hand's window open");
+  if (!/async function loadPlaces\(query = "", limit = 400\)/.test(core)) gaps.push("loadPlaces cannot be asked for a short list");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("nearest first while a hand turns it: forty rows moving, the whole list at rest; not for drift, a flight, a lock, a search or a tap");
+}
+
+// ── the globe's read-out rides the sheet ────────────────────────────────────
+// 13 Oct 2026. On a phone the read-out was anchored to where the station sheet
+// rests, so Explore, Headlines, Chat and Settings each rose straight over it.
+// It sits on the top edge of whichever sheet is up, and when the station sheet
+// settles it makes the same move in the same time. That last part is two CSS
+// transitions that have to agree, which is exactly what drifts.
+{
+  const name = "the globe's read-out rides the sheet";
+  console.log(`\n${name}`);
+  const css = readSrc("web/web.css"), sheet = readSrc("web/sheet.js"), rail = readSrc("web/rail-sheet.js");
+  const gaps = [];
+  if (!/@property --ride\s*\{[^}]*syntax:\s*"<length>"/.test(css)) gaps.push("--ride is not a length the browser can animate");
+  const bar = css.match(/\.globebar\s*\{[^}]*\}/g)?.find((r) => /--ride/.test(r)) || "";
+  if (!bar) gaps.push("the read-out does not use --ride");
+  else if (/--peek\)\s*\+/.test(bar)) gaps.push("the read-out is anchored to the sheet's rest again");
+  const timing = (sel) => css.match(new RegExp(`\\.${sel}\\.settling\\s*\\{\\s*transition:\\s*[\\w-]+\\s+([\\d.]+s\\s+cubic-bezier\\([^)]*\\))`))?.[1];
+  const a = timing("railcol"), b = timing("globebar");
+  if (!a || !b) gaps.push("the sheet or the read-out has no settling transition to compare");
+  else if (a !== b) gaps.push(`the sheet settles in ${a} and the read-out in ${b}`);
+  if (!/\.globebar\.tucked/.test(css)) gaps.push("it is never put away when the sheet reaches the top");
+  if (!/AuralSheet\?\.ride\?\.\(rail,\s*rail\.offsetHeight - v,\s*rail\.classList\.contains\("settling"\)\)/.test(rail)) gaps.push("the station sheet does not say where it is going");
+  if (!/const moveTo = [^\n]*ride\(/.test(sheet)) gaps.push("a panel on a spring does not move it");
+  if (!/const place = [^\n]*ride\(/.test(sheet)) gaps.push("Settings does not move it");
+  if (!/if \(settling !== undefined\)/.test(sheet)) gaps.push("a re-check cuts a running transition short");
+  if (!/MutationObserver\(\(\) => ride\(\)\)/.test(sheet)) gaps.push("a panel hidden without a spring leaves it where it was");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("on the edge of whichever sheet is up, in step with the station sheet, away when there is no globe left");
+}
+
+// ── the sleep timer goes by the clock ───────────────────────────────────────
+// 13 Oct 2026. New: stop the station after 15 to 90 minutes, fading the last
+// twenty seconds. Run here with a clock that can be moved, because the two
+// things worth getting wrong are both about time: counting ticks (a background
+// tab's are slowed, a sleeping laptop's do not happen) and leaving the volume
+// where the fade ended.
+{
+  const name = "the sleep timer goes by the clock";
+  console.log(`\n${name}`);
+  const gaps = [];
+  let now = 1_000_000, level = 0.8, playing = true, stops = 0, changes = 0;
+  const box = { window: {}, Date: { now: () => now }, setInterval: () => 1, clearInterval: () => {}, Number, Math };
+  try {
+    vm.runInNewContext(readSrc("src/renderer/sleep.js"), box);
+    const S = box.window.AuralSleep;
+    S.init({ level: () => level, setLevel: (v) => { level = v; }, playing: () => playing,
+             stop: () => { stops++; playing = false; }, changed: () => { changes++; } });
+    S.set(7);
+    if (S.endsAt()) gaps.push("7 minutes is not a choice and started a timer");
+    S.set(30);
+    if (S.endsAt() !== now + 30 * 60000) gaps.push("30 minutes does not end 30 minutes from now");
+    now += 29 * 60000; S.check();
+    if (level !== 0.8 || stops) gaps.push("it touched the sound with a minute still to go");
+    now += 50000; S.check();                    // ten seconds left
+    if (!(level > 0.35 && level < 0.45)) gaps.push(`ten seconds from the end the level is ${level.toFixed(2)}, not half`);
+    now += 3 * 3600000; S.check();              // a laptop that slept through it
+    if (stops !== 1) gaps.push(`the station was stopped ${stops} times`);
+    if (level !== 0.8) gaps.push(`the level was left at ${level.toFixed(2)} after the fade`);
+    if (S.endsAt()) gaps.push("it is still running after it ended");
+    S.check();
+    if (stops !== 1) gaps.push("it stops again on the next look");
+    S.set(15); now += 14 * 60000 + 50000; S.check(); S.set(0);
+    if (level !== 0.8 || S.endsAt()) gaps.push("turned off during the fade, it left the level faded or kept running");
+    if (!changes) gaps.push("nobody is told when it starts or ends");
+  } catch (e) { gaps.push(`sleep.js did not run: ${e.message}`); }
+  const pop = readSrc("src/renderer/popover.js"), bridge = readSrc("web/bridge.js");
+  for (const [who, src] of [["the Mac's player", pop], ["the web's player", bridge]]) {
+    const init = src.slice(src.indexOf("AuralSleep?.init("), src.indexOf("AuralSleep?.init(") + 420);
+    if (init.length < 100) { gaps.push(`${who} never starts it`); continue; }
+    if (/setLevel:[^\n]*(applyVolume|setState|persist)/.test(init)) gaps.push(`${who} saves the faded level`);
+    if (!/action === "sleep"/.test(src)) gaps.push(`${who} does not take the request`);
+    if (!/sleepEndsAt:/.test(src)) gaps.push(`${who} does not say when it ends`);
+    if (!/addEventListener\("timeupdate",[^\n]*AuralSleep/.test(src)) gaps.push(`${who} looks only on a timer, which a phone with its screen off may not run`);
+  }
+  if (!/<script src="sleep\.js"><\/script>\s*<script src="popover\.js">/.test(readSrc("src/renderer/popover.html"))) gaps.push("the menu bar panel does not load it before its player");
+  if (!/"sleep\.js",\s*"web\/bridge\.js"/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the web build does not load it before its player");
+  if (!/id="sleep"/.test(readSrc("src/renderer/settings.html"))) gaps.push("Settings has no way to set it");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("ends on time whatever the timers did, fades the last 20s, puts the level back, and both players use the one file");
+}
+
+// ── a private message can notify, and nothing else does ─────────────────────
+// 13 Oct 2026. New, and off unless asked for: a notification when a private
+// message arrives and the app is not in front. The rules that matter are the
+// ones that keep it from becoming something else: never the public room, never
+// history replayed by a relay, never past the mute list or the word filter,
+// never the text when previews are hidden, and never through a push service.
+{
+  const name = "a private message can notify, and nothing else does";
+  console.log(`\n${name}`);
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const gaps = [];
+  try {
+    const N = req(R("src/notify.js"));
+    let now = 10_000_000;
+    const fresh = N.tracker([{ id: "old", unread: true, at: now }], () => now);
+    const got = fresh([
+      { id: "old", unread: true, at: now },                 // there before
+      { id: "mine", mine: true, unread: false, at: now },   // sent by the listener
+      { id: "read", unread: false, at: now },               // already read
+      { id: "stale", unread: true, at: now - N.RECENT_MS - 1 },
+      { id: "new", unread: true, at: now, from: "a1b2c3d4", text: "hello\n there" },
+    ]).map((m) => m.id);
+    if (got.join() !== "new") gaps.push(`of five messages it would notify for: ${got.join(", ") || "none"}`);
+    if (fresh([{ id: "new", unread: true, at: now }]).length) gaps.push("the same message notifies twice");
+    const open = N.words({ from: "a1b2c3d4", text: "hello\n there" });
+    if (!/hello there/.test(open.body)) gaps.push("the message is not in the notification");
+    const shut = N.words({ from: "a1b2c3d4", text: "the secret" }, { hidePreviews: true });
+    if (/secret|a1b2c3d4/.test(shut.title + shut.body)) gaps.push("with previews hidden it still shows the text or the sender");
+    if (req(R("src/prefs.js")).DEFAULTS.notify !== false) gaps.push("it is not off by default");
+  } catch (e) { gaps.push(`src/notify.js did not run: ${e.message}`); }
+  const main = readSrc("src/main.js"), web = readSrc("web/messaging.js"), sw = readSrc("web/sw.js");
+  for (const [who, src] of [["the Mac", main], ["the web", web]]) {
+    const hook = src.slice(src.indexOf("const freshDms = notify.tracker("), src.indexOf("const freshDms = notify.tracker(") + 1500);
+    if (hook.length < 100) { gaps.push(`${who} never looks for a new private message`); continue; }
+    if (!/freshDms\(clean\)/.test(hook) || !/const clean = visible\(list\)/.test(hook)) gaps.push(`on ${who} a muted person or a filtered word can still notify`);
+    if (!/\.notify !== true/.test(hook)) gaps.push(`on ${who} it notifies without being asked to`);
+    if (!/hidePreviews/.test(hook)) gaps.push(`on ${who} it ignores "Hide message text until opened"`);
+  }
+  if (!/explore\?\.isFocused\(\)/.test(main)) gaps.push("the Mac notifies with Explore in front");
+  if (!/!document\.hidden/.test(web)) gaps.push("the web notifies with the page in sight");
+  if (/addEventListener\(\s*["']push["']/.test(sw)) gaps.push("the service worker listens for a push, which needs a server that knows this device");
+  if (!/notificationclick/.test(sw)) gaps.push("pressing the notification does nothing");
+  if (/new Notification|showNotification/.test(readSrc("src/renderer/explore-chat.js"))) gaps.push("the public room raises notifications");
+  const set = readSrc("src/renderer/settings.js");
+  if (!/Notification\.requestPermission\(\)/.test(set) || !/Notification\.permission === "denied"/.test(set)) gaps.push("the switch never asks the browser, or does not say when it is blocked");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("off by default; new, unread, recent, inbound, past the mute list; no text when previews are hidden; no push service");
+}
+
+// ── a vibe counts what this copy shows ──────────────────────────────────────
+// 13 Oct 2026. "Some stations in Vibes do not show on the web app." A vibe
+// counted every station carrying its tags; the web shows only what a page
+// served over https can play. So a vibe said 969 and showed 743, 1,318 of its
+// rows across the vibes opened a place with nothing of that vibe in it, and a
+// link to one of the missing stations opened the app on some other station
+// without a word. Run against the catalogue as the web loads it.
+{
+  const name = "a vibe counts what this copy shows";
+  console.log(`\n${name}`);
+  const gaps = [];
+  if (!fs.existsSync(R("data/stations.min.json"))) skip(name, "no built catalogue here (npm run catalogue)");
+  else {
+    const { createRequire } = await import("node:module");
+    const req = createRequire(import.meta.url);
+    const file = req.resolve(R("src/catalog.js"));
+    delete req.cache[file];
+    const log = console.log; console.log = () => {};
+    const cat = req(file); cat.load(); cat.setPlayableOnly(true);
+    console.log = log;
+    let said = 0, shown = 0, empty = 0;
+    for (const v of cat.VIBES) {
+      const want = new Set(v.tags);
+      for (const p of cat.vibePlaces(v.id)) {
+        const n = cat.placeChannels(p.i).channels.filter((c) => c.tags.some((t) => want.has(t.toLowerCase()))).length;
+        said += p.n; shown += n; if (!n) empty++;
+      }
+    }
+    delete req.cache[file];
+    if (shown < 10000) gaps.push(`only ${shown} stations found in the vibes — this check is blind`);
+    if (said !== shown) gaps.push(`the vibes say ${said.toLocaleString()} stations and show ${shown.toLocaleString()}`);
+    if (empty) gaps.push(`${empty.toLocaleString()} rows open a place with nothing of that vibe to play`);
+    const bridge = readSrc("web/bridge.js");
+    const cue = bridge.slice(bridge.indexOf("async function cueAsked("), bridge.indexOf("async function cueAsked(") + 1400);
+    if (!/Not playable here/.test(cue) || !/No longer listed/.test(cue) || !/setStatus\(why, false, true\)/.test(cue)) gaps.push("a link to a station the web cannot show opens another one and says nothing");
+    if (!/\.now\.notice #nowStatus/.test(readSrc("web/web.css")) || !/classList\.toggle\("notice"/.test(readSrc(EXPLORE))) gaps.push("on a phone that line is cut to its first few letters");
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`${shown.toLocaleString()} stations across ${cat.VIBES.length} vibes, each one counted is one shown; a link to a missing one says why`);
+  }
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

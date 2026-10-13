@@ -34,6 +34,7 @@ function paint() {
   $("#presence").setAttribute("aria-checked", String(P.presence === true));
   $("#tips").setAttribute("aria-checked", String(P.tips !== false));
   $("#hidePreviews").setAttribute("aria-checked", String(P.hidePreviews === true));
+  paintNotify();
   $("#durableIdentity").setAttribute("aria-checked", String(P.durableIdentity === true));
   $("#filterChat").setAttribute("aria-checked", String(P.filterChat !== false));
   $("#powFloor").value = String(P.powFloor ?? 0);
@@ -54,6 +55,9 @@ function translate() {
     if (s) el.textContent = s;
   }
   document.title = "AuralFM — " + (T["set.title"] || "Settings");
+  fillSleep();
+  paintSleep();
+  paintNotify();
 }
 
 async function set(patch) {
@@ -103,6 +107,92 @@ $("#contrast").addEventListener("click", () =>
 $("#tips").addEventListener("click", () => set({ tips: P.tips === false }));
 
 $("#hidePreviews").addEventListener("click", () => set({ hidePreviews: P.hidePreviews !== true }));
+
+/**
+ * The sleep timer. Not a preference: it belongs to the player, which is in the
+ * menu bar panel on the Mac and in the page on the web (sleep.js), so this asks
+ * the player to start it and shows what the player says. Asking with the choice
+ * already running starts it again from now.
+ */
+const SLEEP_MINUTES = [15, 30, 45, 60, 90];
+let sleepEndsAt = 0, sleepTick = null;
+let sleepChoice = "0";
+function fillSleep() {
+  const sel = $("#sleep");
+  sel.textContent = "";
+  for (const m of [0, ...SLEEP_MINUTES]) {
+    const o = document.createElement("option");
+    o.value = String(m);
+    o.textContent = m ? `${m} ${T["set.minutes"] || "minutes"}` : (T["set.sleepOff"] || "Off");
+    sel.append(o);
+  }
+  sel.value = sleepChoice;
+}
+function paintSleep() {
+  const on = sleepEndsAt > Date.now();
+  if (!on) sleepChoice = "0";
+  if (document.activeElement !== $("#sleep")) $("#sleep").value = sleepChoice;
+  $("#sleep-left").textContent = on
+    ? (T["set.sleepLeft"] || "Stops at {time}.").replace("{time}",
+        new Date(sleepEndsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))
+    : "";
+  clearTimeout(sleepTick);
+  // One look when it should be over, so the row goes back to Off by itself.
+  if (on) sleepTick = setTimeout(paintSleep, sleepEndsAt - Date.now() + 1000);
+}
+function heardPlayer(state) {
+  const next = state?.sleepEndsAt || 0;
+  if (next === sleepEndsAt) return;
+  sleepEndsAt = next;
+  // Which choice it was is not sent, only when it ends; the nearest one above
+  // what is left is the one that was picked.
+  if (next > Date.now()) {
+    const left = (next - Date.now()) / 60000;
+    sleepChoice = String(SLEEP_MINUTES.find((m) => m >= left - 0.5) || 90);
+  }
+  paintSleep();
+}
+$("#sleep").addEventListener("change", (e) => {
+  sleepChoice = e.target.value || "0";
+  window.auralfm.transport({ action: "sleep", value: Number(sleepChoice) || 0 });
+});
+// Filled now, in English, and again when the strings arrive (translate): the
+// player can answer before they do, and a row with no choices cannot show one.
+fillSleep();
+window.auralfm.onPlayerState?.(heardPlayer);
+window.auralfm.playerNow?.().then(heardPlayer).catch(() => {});
+
+/**
+ * Notifications, for private messages (src/notify.js).
+ *
+ * The switch is the place the browser's own question is asked, because a
+ * browser only lets a page ask from a press. Three things can be true and the
+ * line under the switch says which: it works, the listener has blocked it, or
+ * this browser has no notifications at all (Safari on an iPhone, until AuralFM
+ * is on the Home Screen). A switch that turned on and then never notified
+ * would be the worst of the three.
+ */
+const canNotify = () => "Notification" in window;
+function paintNotify() {
+  const sw = $("#notify"), hint = $("#notify-hint");
+  const blocked = canNotify() && Notification.permission === "denied";
+  const on = P.notify === true && canNotify() && !blocked;
+  sw.setAttribute("aria-checked", String(on));
+  sw.setAttribute("aria-disabled", String(!canNotify()));
+  hint.textContent = !canNotify() ? (T["set.notifyNone"] || "Not available in this browser. On an iPhone, add AuralFM to the Home Screen first.")
+    : blocked ? (T["set.notifyBlocked"] || "Notifications are blocked for AuralFM. Allow them in your browser or system settings, then turn this on.")
+    : (T["set.notifyHint"] || "Only while AuralFM is running and not in front. No server is told about this device.");
+}
+$("#notify").addEventListener("click", async () => {
+  if (!canNotify()) return;
+  if (P.notify === true) return set({ notify: false });
+  let allowed = Notification.permission;
+  if (allowed === "default") {
+    try { allowed = await Notification.requestPermission(); } catch { allowed = "denied"; }
+  }
+  if (allowed === "granted") set({ notify: true });
+  else paintNotify();
+});
 
 // On blur rather than on every keystroke: a nickname is written to disk and
 // broadcast to both windows, and doing that per character is a lot of churn for

@@ -137,6 +137,9 @@
      * the player row is the way back up, and it is a real button.
      */
     rail.inert = phone.matches && rest === "down";
+    // The globe's read-out sits on this sheet's top edge and makes the same
+    // move, in the same time, when the sheet settles (web/sheet.js, ride).
+    window.AuralSheet?.ride?.(rail, rail.offsetHeight - v, rail.classList.contains("settling"));
   };
   const yOf = (r) => ({ open: 0, card: cardY, explore: exploreY, peek: restY }[r] ?? downY);
   const busyNow = () => !!window.AuralRailSheet?.busy?.();
@@ -242,7 +245,7 @@
   rail.addEventListener("pointercancel", end);
 
   const reset = () => {
-    if (!phone.matches) { rail.style.removeProperty("--sheet-y"); rail.inert = false; return; }
+    if (!phone.matches) { rail.style.removeProperty("--sheet-y"); rail.inert = false; window.AuralSheet?.ride?.(); return; }
     if (rest === "down" && !hasStation() && !busyNow()) rest = "peek";
     measure(); rail.classList.remove("sliding"); put(yOf(rest));
   };

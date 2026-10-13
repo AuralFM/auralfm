@@ -107,3 +107,21 @@ self.addEventListener("fetch", (e) => {
     }
   })());
 });
+
+/**
+ * A notification was pressed: bring the app forward.
+ *
+ * The only notification this app shows is for a private message, and the page
+ * shows it itself while it is running (web/messaging.js). Nothing is pushed
+ * here from a server, and there is no `push` listener for that reason. So a
+ * press almost always finds the page still open; if it has gone, it opens.
+ */
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const pages = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const page = pages.find((c) => new URL(c.url).origin === location.origin);
+    if (page) return page.focus();
+    return self.clients.openWindow("./");
+  })());
+});

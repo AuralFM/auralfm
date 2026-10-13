@@ -384,16 +384,23 @@ const VIBES = [
  * The places that play a vibe, most of it first: [{ ...place, n }], where n is
  * how many of the place's stations carry the vibe. One pass over the channels,
  * a few milliseconds, so it is computed when asked rather than kept.
+ *
+ * Counted the way every other list is: only what this copy will show
+ * (setPlayableOnly, setHideExplicit). It counted every station, so on the web,
+ * where an http-only stream cannot play and is left out, a vibe listed 20,845
+ * stations and showed 16,177 of them, and 1,318 of its rows opened a place with
+ * nothing of that vibe in it (13 Oct 2026).
  */
 function vibePlaces(id) {
   const vibe = VIBES.find((m) => m.id === id);
   if (!vibe) return [];
   const want = new Set(vibe.tags);
   const n = new Map();
-  for (const c of channels) {
-    if (!c[4] || !c[4].split(",").some((t) => want.has(t.toLowerCase()))) continue;
+  channels.forEach((c, i) => {
+    if (unplayable(i) || (hideExplicit && isExplicit(i))) return;
+    if (!c[4] || !c[4].split(",").some((t) => want.has(t.toLowerCase()))) return;
     n.set(c[2], (n.get(c[2]) || 0) + 1);
-  }
+  });
   // The real towns first, most of the vibe first; "Across Germany" and its kin
   // after every one of them, as wherever else places are listed.
   return [...n].sort((a, b) => nowhere[a[0]] - nowhere[b[0]] || b[1] - a[1]).map(([i, k]) => ({ ...hydratePlace(i), n: k }));

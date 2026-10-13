@@ -475,6 +475,9 @@ function wirePlayback() {
       $("nowName").textContent = s.channel.title;
       $("nowStatus").textContent = s.status || "";
       $("nowStatus").classList.toggle("err", !!s.error);
+      // A notice is a line that has to be read whole: on a phone the status
+      // gets the room and the name gives way (web/web.css).
+      bar.classList.toggle("notice", !!s.notice);
       const spoken = [s.channel.title, s.status].filter(Boolean).join(", ");
       if ($("nowSpoken").textContent !== spoken) $("nowSpoken").textContent = spoken;
       // Pending is over the moment there is an answer, either way.
