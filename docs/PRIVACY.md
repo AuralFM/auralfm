@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 12 October 2026**
+**Last updated: 13 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -255,6 +255,20 @@ account.
   the code nobody can read it. AuralFM cannot delete it for you, because it
   does not run those relays.
 - **Erase everything** turns sync off on that device first.
+
+**Notifications** are off until you turn them on in Settings. With them on,
+AuralFM shows a notification when a private message arrives and the app is not
+in front of you. Nothing else notifies: not the public room, not a mention.
+
+- **It is the app that notifies, on your device, while it is running.** AuralFM
+  uses no push service, so nothing about your device is registered with us,
+  with Apple, with Google or with anyone else, and a closed app says nothing.
+- **What it shows:** who the message is from and its first line. With "Hide
+  message text until opened" on, it shows neither.
+- **Whom it leaves out:** anyone you have muted, and anything your word filter
+  hides.
+- Your browser or your system asks before the first one, and you can take the
+  permission back there at any time.
 
 ## Live shows (beta)
 
