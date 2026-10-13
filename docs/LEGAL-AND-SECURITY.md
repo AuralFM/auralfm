@@ -20,7 +20,7 @@ a lawyer, and they are marked.
 | Streaming other people's audio | **Low** | The app is a client. The station holds the licence, as with any browser. |
 | Open-source notice compliance | **Fixed, with one judgement call** | `THIRD-PARTY-NOTICES.md` credits nine components including Electron and Chromium, ships in the app, and is audit-checked. Chromium's 19 MB third-party set is linked rather than embedded — a deliberate choice, see below. |
 | Copyleft creeping in | **Fixed** | `npm run audit` walks the production tree, the vendored bundle and Electron, and fails on any licence outside a permissive allowlist. 51 packages, all MIT/ISC/Apache-2.0/BSD/0BSD/Unlicense. |
-| **What licence AuralFM itself is under** | **Fixed** | `LICENSE` granted MIT while `docs/TERMS.md` — shipped — forbade redistribution. Settled 8 August 2026 in favour of the licence: **MIT, open source.** The terms were the document that had to change. Audit-checked across all four statements, in both directions. Not lawyer-reviewed. |
+| **What licence AuralFM itself is under** | **Fixed** | `LICENSE` granted MIT while `docs/TERMS.md` — shipped — forbade redistribution. Settled 8 August 2026 in favour of the licence: open source. **Apache 2.0 since 13 October 2026** (MIT before). The terms were the document that had to change. Audit-checked across all five statements, in both directions. Not lawyer-reviewed. |
 | **Cleartext receiver list over HTTP** | **Real, unfixed** | The KiwiSDR list is fetched over `http://` and cannot be fetched over HTTPS. |
 | Unmoderated public chat | **Medium** | No hosting liability, but an App Store age rating problem. |
 | Privacy | **Strong** | Fresh key each launch, nothing persisted, no account, no backend. |
@@ -103,7 +103,36 @@ reputational one, in a small community that will notice.
 
 ## 3. Licensing — what was out of compliance, and what still is
 
-### AuralFM's own licence: was contradictory, now MIT
+### AuralFM's own licence: Apache 2.0 since 13 October 2026
+
+Melton's decision, 13 October 2026: the app moves from MIT to the **Apache
+License, version 2.0**. What changes for anyone using the code:
+
+- **A patent grant.** Every contributor licenses any patent of theirs that their
+  contribution needs, and loses that licence if they sue over the code. MIT says
+  nothing about patents.
+- **A `NOTICE` file** that must travel with the code, beside `LICENSE`.
+- **Changed files must say so.** MIT asks only that the notice be kept.
+- **The name is spelled out.** Section 6 gives no rights in "AuralFM" or its
+  marks. Under MIT that rested on trademark law alone, and still does in the end.
+- **Contributions come in under the same licence** unless the contributor says
+  otherwise (section 5). `CONTRIBUTING.md` says so.
+
+What does not change: it is still permissive, still compatible with every
+dependency (the audit's allowlist already held Apache-2.0), and versions that
+went out under MIT stay MIT for whoever has them. Melton is the only author of
+the code, so nobody else's agreement was needed. `LICENSE` is the licence's own
+text, unedited, and the audit compares it to the published text byte for byte.
+What used to be written under the MIT text (third-party components, the name)
+is in `NOTICE`.
+
+The site and catalogue repositories carry no licence yet, which means all
+rights reserved; that is a separate decision.
+
+Not lawyer-reviewed. The history below is how the project came to be open at
+all, and it is kept as written.
+
+#### Before: contradictory, then MIT (8 August 2026)
 
 `LICENSE` carried an **MIT License** — which grants any recipient the right to
 copy, modify, publish, distribute, sublicense and sell — while `docs/TERMS.md`,
@@ -311,12 +340,12 @@ Verified rather than assumed:
 
 Four things:
 
-1. **The MIT licence and the terms sitting beside it.** `LICENSE` is MIT and
+1. **The licence (Apache 2.0 since 13 October 2026, MIT before) and the terms sitting beside it.** `LICENSE` was MIT and
    `docs/TERMS.md` was rewritten to stop contradicting it, both by an engineer and
    not a lawyer. The specific thing worth a read is whether the terms still narrow
    the grant anywhere by implication — the intent is that they do not, and the
    document says the licence wins, but intent is not the same as drafting.
-   Releasing under MIT is also irreversible for that version.
+   Releasing under MIT was irreversible for those versions, as Apache 2.0 is for these.
 2. **The 1,000-unit Noun Project resale cap**, if the app is ever sold. §3.A is
    ambiguous about what "an item for resale" means for software, and getting it
    wrong is cheap to avoid and expensive to discover.
@@ -336,7 +365,8 @@ In order:
 
 1. ~~`THIRD-PARTY-NOTICES.md`, shipped and linked from About.~~ **Done** —
    generated, seven packages with full licence texts, in the bundle, and
-   audit-checked. AuralFM's own licence was contradictory and is now MIT; that one
+   audit-checked. AuralFM's own licence was contradictory, then MIT, and is Apache 2.0
+   since 13 October 2026; that one
    still wants a lawyer.
 2. Decide the KiwiSDR list question — hard validation, or lean on the bundled
    snapshot.

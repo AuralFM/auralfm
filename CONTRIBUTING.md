@@ -25,6 +25,13 @@ This is the test suite. Every check in it was written after a real bug. If you
 fix a bug, add a check that fails when the bug is put back, and watch it fail
 once before you trust it.
 
+## Licence
+
+AuralFM is under the [Apache License 2.0](LICENSE). A change you send is
+licensed to the project under the same terms (section 5 of the licence), unless
+you say otherwise in the pull request. Only send what you have the right to
+license.
+
 ## Send a change
 
 1. Open an issue first for anything larger than a small fix.

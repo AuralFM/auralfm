@@ -63,7 +63,7 @@ npm start
 | [Code of Conduct](docs/CODE-OF-CONDUCT.md) | What is welcome, here and in the app |
 | [Privacy](docs/PRIVACY.md) · [Terms](docs/TERMS.md) | What the app does with data, and the terms of use |
 | [For stations](docs/STATIONS.md) | Correct, remove or claim a station |
-| [LICENSE](LICENSE) | MIT |
+| [LICENSE](LICENSE) · [NOTICE](NOTICE) | Apache 2.0 |
 
 ## Credits
 
@@ -73,4 +73,4 @@ Receivers from the [KiwiSDR](http://kiwisdr.com) community. Imagery from
 [NASA GIBS](https://nasa-gibs.github.io/gibs-api-docs/). Every library and its
 licence is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-MIT licensed. See [LICENSE](LICENSE).
+Apache 2.0 licensed. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

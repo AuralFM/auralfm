@@ -81,7 +81,7 @@ Envato Elements on 6 August 2026, item licence `WBJ67S4UYL`.
 > into an End Product"* — so the typeface may be used to draw the wordmark,
 > headers and marketing artwork, and those **outlined or rasterised** results
 > may ship. The font file itself may not, and it must never be committed here:
-> the repository is MIT licensed, and MIT would purport to grant recipients
+> the repository is Apache 2.0 licensed, and that would purport to grant recipients
 > rights over a file we have no power to sublicense.
 >
 > The licence is also revocable and tied to an active subscription at the time

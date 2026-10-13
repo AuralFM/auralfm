@@ -1,6 +1,6 @@
 # Third-party notices
 
-**AuralFM is open source, under the MIT licence** — see `LICENSE`, and
+**AuralFM is open source, under the Apache License 2.0** — see `LICENSE` and `NOTICE`, and
 `docs/TERMS.md` for what that means to somebody using the app rather than
 building on it.
 

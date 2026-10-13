@@ -1,0 +1,26 @@
+AuralFM
+Copyright 2026 Melton Bell III
+
+This product is licensed under the Apache License, Version 2.0. The full text
+is in the LICENSE file.
+
+Third-party components
+
+The licence covers Melton Bell III's own code. AuralFM also bundles, vendors
+and runs on third-party software under its own licences: Electron and
+Chromium, globe.gl, three.js, three-globe, satellite.js and the @noble
+cryptography libraries among them. Every one is permissive, and every licence
+text is reproduced in full in THIRD-PARTY-NOTICES.md and in the application
+under Settings, About, Open source licences.
+
+Some files in assets/ are licensed from others and are not covered by the
+licence. Their terms are recorded in assets/ATTRIBUTION.md.
+
+The station list is data, not code. It comes from the stations themselves,
+radio-browser.info and GeoNames (CC BY 4.0), as the README credits.
+
+On the name
+
+The licence grants rights in the code. It does not grant rights in the name
+"AuralFM" or in the project's marks (section 6 of the licence). A fork is free
+and welcome; presenting a fork as AuralFM is a different thing.

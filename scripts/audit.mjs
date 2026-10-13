@@ -86,7 +86,8 @@
  * shipped documents granting and withholding the same rights, with
  * `THIRD-PARTY-NOTICES.md` (also shipped) siding with the MIT one.
  *
- * Settled 8 August 2026: **AuralFM is open source under MIT**, and the terms were
+ * Settled 8 August 2026: **AuralFM is open source** (MIT then, Apache 2.0 since
+ * 13 October 2026), and the terms were
  * the document that had to change. The reason is the project's own thesis — it
  * claims no backend and no collection, and in a closed binary those are promises
  * rather than facts.
@@ -1702,7 +1703,13 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // while docs/TERMS.md, which ships to every user, said the software is not open
 // source and may not be redistributed. Two shipped documents granting and
 // withholding the same rights, and THIRD-PARTY-NOTICES.md (also shipped) sided
-// with the MIT one. Resolved in favour of the terms; this stops it drifting back.
+// with the MIT one. Resolved in favour of the licence on 8 August 2026.
+//
+// 13 Oct 2026: the licence is the Apache License 2.0 (Melton's decision; MIT
+// before). Five statements now, and a new way to be wrong: an Apache LICENSE
+// is the licence's own text and nothing else, so it is compared with the
+// published text by its hash, and what the project has to say for itself lives
+// in NOTICE, which the licence requires to travel with the code.
 {
   console.log("\nthe project states one licence for itself");
   const problems = [];
@@ -1711,35 +1718,46 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   // Only the preamble: the rest of the notices file is third-party licence text.
   const notices = fs.readFileSync(R("THIRD-PARTY-NOTICES.md"), "utf8").split("\n---")[0];
 
-  // The grant itself has to be present and unambiguous. A LICENSE that says MIT
-  // in the heading and nothing else is not a licence.
-  if (!/^MIT License/m.test(licence)) problems.push("LICENSE is not titled MIT License");
-  if (!/permission is hereby granted, free of charge/i.test(licence)) {
-    problems.push("LICENSE does not contain the MIT grant");
+  // https://www.apache.org/licenses/LICENSE-2.0.txt, SHA-256.
+  const APACHE_2 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30";
+  if (createHash("sha256").update(fs.readFileSync(R("LICENSE"))).digest("hex") !== APACHE_2) {
+    problems.push(/Apache License/.test(licence) ? "LICENSE is not the Apache License 2.0 as published — it has been edited"
+                                                 : "LICENSE is not the Apache License 2.0");
   }
-  if (/\bproprietary\b/i.test(licence.split("--------")[0])) {
-    problems.push("LICENSE still calls the project proprietary in its opening section");
+  if (!fs.existsSync(R("NOTICE"))) problems.push("there is no NOTICE file, which the licence requires to travel with the code");
+  else {
+    const notice = fs.readFileSync(R("NOTICE"), "utf8");
+    if (!/^AuralFM\nCopyright \d{4} Melton Bell III$/m.test(notice)) problems.push("NOTICE does not open with the name and the copyright");
+    if (!/Apache License, Version 2\.0/.test(notice)) problems.push("NOTICE does not name the licence");
+    if (/\bMIT\b/.test(notice)) problems.push("NOTICE still speaks of MIT");
   }
   // The two documents that ship must not contradict the grant. This is the exact
-  // failure that ran for months in the other direction: LICENSE granted MIT while
-  // docs/TERMS.md forbade redistribution, and both reached every user.
+  // failure that ran for months in the other direction: LICENSE granted rights
+  // while docs/TERMS.md forbade redistribution, and both reached every user.
   if (/not open source/i.test(terms)) {
     problems.push("docs/TERMS.md still says the software is not open source");
   }
   if (/you may not redistribute/i.test(terms)) {
     problems.push("docs/TERMS.md still forbids redistribution");
   }
-  if (!/MIT licence|MIT license/i.test(terms)) problems.push("docs/TERMS.md does not name the MIT licence");
+  if (!/Apache License, version 2\.0|Apache 2\.0 licen[cs]e/i.test(terms)) problems.push("docs/TERMS.md does not name the Apache 2.0 licence");
+  if (/under the MIT licen[cs]e\.\*\*|narrowing the MIT/i.test(terms)) problems.push("docs/TERMS.md still grants the MIT licence");
   if (/is proprietary/i.test(notices)) problems.push("THIRD-PARTY-NOTICES preamble calls AuralFM proprietary");
   if (!/open source/i.test(notices)) {
     problems.push("THIRD-PARTY-NOTICES preamble does not say AuralFM is open source");
   }
+  if (!/Apache License 2\.0/.test(notices)) problems.push("THIRD-PARTY-NOTICES preamble does not say Apache 2.0 (npm run notices)");
   const pkgLicence = JSON.parse(fs.readFileSync(R("package.json"), "utf8")).license || "";
-  if (pkgLicence !== "MIT") problems.push(`package.json license is "${pkgLicence}", not MIT`);
+  if (pkgLicence !== "Apache-2.0") problems.push(`package.json license is "${pkgLicence}", not Apache-2.0`);
+  if (!/Apache 2\.0 licensed/.test(fs.readFileSync(R("README.md"), "utf8"))) problems.push("the README does not say Apache 2.0");
+  // "Give any other recipients of the Work a copy of this License" (4a), and
+  // the NOTICE with it (4d): they have to be inside the app that is handed out.
+  const shipped = JSON.parse(fs.readFileSync(R("package.json"), "utf8")).build?.files || [];
+  for (const f of ["LICENSE", "NOTICE"]) if (!shipped.includes(f)) problems.push(`${f} is not packed into the app`);
 
   problems.length
     ? fail("licence", problems.join("; "))
-    : pass("LICENSE, TERMS, the notices preamble and package.json all say MIT");
+    : pass("LICENSE (the published text, unedited), NOTICE, TERMS, the notices preamble, package.json and the README all say Apache 2.0");
 }
 
 // ── every licence that ships is one we can ship ───────────────────────────────

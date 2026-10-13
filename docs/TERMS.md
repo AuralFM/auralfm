@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 8 October 2026**
+**Last updated: 13 October 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -164,19 +164,24 @@ and they too are for people aged 13 and over.
 Delete the app. Nothing needs to be cancelled, because there is nothing to
 cancel: no account, no subscription, no record of you.
 
-Your rights under the MIT licence are not something AuralFM can withdraw, and
-nothing here tries to.
+Your rights under the Apache 2.0 licence are not something AuralFM can withdraw,
+and nothing here tries to.
 
 ## Your licence to use AuralFM
 
-**AuralFM is open source, under the MIT licence.** You may use it, copy it,
-change it, publish it, distribute it and sell it, and you may build something
-else out of it. The one condition is the one MIT states: keep the copyright
-notice and the permission notice with any substantial portion you pass on. The
+**AuralFM is open source, under the Apache License, version 2.0.** You may use
+it, copy it, change it, publish it, distribute it and sell it, and you may build
+something else out of it. The licence also gives you a licence to any patent of
+ours that the code needs. The conditions are the ones it states: pass on a copy
+of the licence, keep the copyright notices and the `NOTICE` file, and say which
+files you changed. It does not give you the name "AuralFM" or its marks. The
 full text is in `LICENSE`.
 
+Versions released before 13 October 2026 were under the MIT licence, and
+whoever has one keeps the rights it gave.
+
 Nothing in these terms takes that away. Where anything here could be read as
-narrowing the MIT licence, the licence wins.
+narrowing the Apache 2.0 licence, the licence wins.
 
 The rest of this document is not a restriction on the software. It is about
 **how the app behaves and what you can expect from it** — that it collects
