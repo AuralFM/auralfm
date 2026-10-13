@@ -4575,6 +4575,53 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── the repository's own paperwork holds together ───────────────────────────
+// 13 Oct 2026. Four things that fail silently on GitHub. The issue chooser had
+// a link with no address, which GitHub answers by ignoring the whole file. A
+// branch rule names the check that must pass, and a job renamed later is a
+// rule nothing can ever satisfy. Code scanning on a private repository fails
+// at its last step on every push. And a page of links is only as good as the
+// files it points at.
+{
+  const name = "the repository's own paperwork holds together";
+  console.log(`\n${name}`);
+  const { createRequire } = await import("node:module");
+  let yaml = null;
+  try { yaml = createRequire(import.meta.url)("js-yaml"); } catch { /* not installed here */ }
+  if (!yaml) skip(name, "js-yaml is not installed (npm ci)");
+  else {
+    const gaps = [];
+    const y = (f) => yaml.load(fs.readFileSync(R(f), "utf8"));
+    for (const l of y(".github/ISSUE_TEMPLATE/config.yml").contact_links || []) {
+      if (!l.name || !l.about || !/^https:\/\//.test(l.url || "")) gaps.push(`the issue chooser's "${l.name || "?"}" has no address or no description, so GitHub ignores the whole file`);
+      const local = (l.url || "").match(/\/blob\/main\/(.+)$/)?.[1];
+      if (local && !fs.existsSync(R(local))) gaps.push(`the issue chooser links to ${local}, which is not here`);
+    }
+    const flows = fs.readdirSync(R(".github/workflows")).filter((f) => f.endsWith(".yml"));
+    const jobs = new Set();
+    for (const f of flows) {
+      const w = y(`.github/workflows/${f}`);
+      if (!w.permissions) gaps.push(`${f} does not say what its token may do`);
+      const on = w.on || w[true] || {};          // YAML reads a bare `on` as true
+      if ("pull_request_target" in on) gaps.push(`${f} runs with secrets on a stranger's pull request`);
+      for (const j of Object.keys(w.jobs || {})) jobs.add(j);
+    }
+    const rule = JSON.parse(fs.readFileSync(R(".github/rulesets/main.json"), "utf8"));
+    const need = rule.rules.find((r) => r.type === "required_status_checks")?.parameters.required_status_checks.map((c) => c.context) || [];
+    if (!need.length) gaps.push("the rule for main requires no check");
+    for (const c of need) if (!jobs.has(c)) gaps.push(`the rule for main waits for a check called "${c}", and no workflow has that job`);
+    const scan = y(".github/workflows/codeql.yml").jobs.analyze;
+    if (!/repository\.private/.test(scan.if || "")) gaps.push("code scanning is not held back on a private repository, where it fails on every push");
+    for (const page of ["README.md", "docs/README.md"]) {
+      const dir = path.dirname(R(page));
+      for (const [, to] of fs.readFileSync(R(page), "utf8").matchAll(/\]\((?!https?:|#|mailto:)([^)#]+)(?:#[^)]*)?\)/g))
+        if (!fs.existsSync(path.resolve(dir, to))) gaps.push(`${page} links to ${to}, which is not here`);
+    }
+    gaps.length ? fail(name, gaps.join("; "))
+      : pass(`the issue chooser's links have addresses, ${flows.length} workflows say what their token may do, the rule for main waits for a job that exists, and every link in the two READMEs lands`);
+  }
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

@@ -8,8 +8,9 @@ AuralFM is led by its founder, Melton Bell III ([@meltonbell3](https://github.co
   and must pass `npm run audit`.
 - **Direction.** Open an issue to propose something. Small fixes can go
   straight to a pull request.
-- **Conduct.** The [Code of Conduct](docs/CODE-OF-CONDUCT.md) applies here as
-  it does in the app.
+- **Conduct.** The [Code of Conduct](CODE_OF_CONDUCT.md) applies to working
+  on the project. What people say inside the app has
+  [its own rules](docs/CODE-OF-CONDUCT.md).
 - **Security.** Do not open a public issue for a vulnerability. Write to
   hello@auralfm.xyz.
 

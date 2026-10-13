@@ -1,0 +1,61 @@
+# Code scanning.
+#
+# CodeQL reads the JavaScript and the workflow files for the patterns that turn
+# into holes: a string that reaches innerHTML, a URL built from input, an
+# Actions step that trusts a pull request's text.
+#
+# It runs only when the repository is public. GitHub gives code scanning free to
+# public repositories; on a private one it needs a paid security add-on, and
+# without it this job fails at the upload on every push. So it is written and
+# waiting: the day the repository opens, it starts by itself.
+#
+# `npm run audit` is still the gate. This looks for a different kind of fault,
+# and its findings land in the Security tab, not in a red build.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * 1"   # Mondays, for rules added since the last push
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # Nothing to compile: the app is plain scripts.
+          build-mode: none
+          queries: security-extended
+          # Other people's code, and what the builds write.
+          config: |
+            paths-ignore:
+              - src/renderer/vendor
+              - node_modules
+              - dist
+              - dist-web
+              - docs/a11y
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"

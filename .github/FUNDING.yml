@@ -1,3 +1,6 @@
-# Enabled once GitHub Sponsors is approved on the account.
-# See docs/SPONSORSHIP.md for the sequence.
+# Where the Sponsor button points.
+#
+# The support page is live and says what the money is for. The GitHub Sponsors
+# line takes effect once Sponsors is approved on the account.
 github: [meltonbell3]
+custom: ["https://auralfm.xyz/support/"]

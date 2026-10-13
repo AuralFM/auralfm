@@ -1,5 +1,7 @@
 # AuralFM
 
+![AuralFM: a globe of radio stations, with a town's stations listed beside it](assets/brand/screens/wide-1.jpg)
+
 ## Introduction
 
 **Listen in.** A globe you listen to: 60,000 live radio stations, placed where
@@ -40,7 +42,7 @@ npm start
 | `npm run audit` | The test suite. Run it before every commit |
 | `npm run web` | Build the web player into `dist-web/` |
 | `npm run web:serve` | Serve that build at `localhost:8765` |
-| `npm run catalogue` | Rebuild the full catalogue (slow the first time) |
+| `npm run catalogue` | Take the station list and its code from `../auralfm-catalogue` |
 | `npm run dist` | Build the Mac DMGs (unsigned for now) |
 
 ## Where things are
@@ -51,16 +53,18 @@ npm start
 | `web/` | What the web player adds on top of the app's pages |
 | `data/` | The catalogue, the shortwave schedule and the relay list |
 | `scripts/` | Builds, the catalogue pipeline and the audit |
-| `docs/` | Privacy, Terms, Code of Conduct, and notes for stations |
+| `docs/` | How it is built, and the public documents. Start at [docs/README.md](docs/README.md) |
 
 ## Project resources
 
 | Resource | What |
 |---|---|
+| [How it is built](docs/ARCHITECTURE.md) | One set of pages, run two ways |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to build, test and send a change |
 | [GOVERNANCE.md](GOVERNANCE.md) | How decisions are made |
 | [CODEOWNERS](CODEOWNERS) | Who reviews changes |
-| [Code of Conduct](docs/CODE-OF-CONDUCT.md) | What is welcome, here and in the app |
+| [SECURITY.md](SECURITY.md) | How to report a security problem |
+| [Code of Conduct](CODE_OF_CONDUCT.md) | For working on the project. The app's rooms have [their own rules](docs/CODE-OF-CONDUCT.md) |
 | [Privacy](docs/PRIVACY.md) · [Terms](docs/TERMS.md) | What the app does with data, and the terms of use |
 | [For stations](docs/STATIONS.md) | Correct, remove or claim a station |
 | [LICENSE](LICENSE) · [NOTICE](NOTICE) | Apache 2.0 |

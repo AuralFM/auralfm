@@ -3,5 +3,9 @@ contact_links:
   - name: Is my listening private?
     url: https://github.com/AuralFM/auralfm/blob/main/docs/PRIVACY.md
     about: Everything stored locally, and everything any third party can see. Short and specific.
-  - name: Why does it work this way?
-    about: The design record — what was measured, what was decided, and why.
+  - name: A station wants to correct, remove or claim its listing
+    url: https://github.com/AuralFM/auralfm/blob/main/docs/STATIONS.md
+    about: For stations. The quickest way, and what happens next.
+  - name: Report a security problem
+    url: https://github.com/AuralFM/auralfm/blob/main/SECURITY.md
+    about: By email, not in a public issue.
