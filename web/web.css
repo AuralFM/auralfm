@@ -434,6 +434,10 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
      name always won the row. For a notice the name gives way instead. */
   body.phonebar .now.notice #nowName { flex: 0 1000 auto; min-width: 3em; }
   body.phonebar .now.notice #nowStatus { flex: 0 0 auto; max-width: 62%; }
+  /* And the little meter steps out: it says "waiting for sound", which a notice
+     is not, and on a 375pt phone with the AirPlay button in the row its 24pt
+     are the difference between "Sleep timer ended" and "Sleep timer en…". */
+  body.phonebar .now.notice #nowWave { display: none; }
   body.phonebar .now #nowStar {
     display: grid; place-items: center; flex: none;
     width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;

@@ -4480,6 +4480,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (!/sleepEndsAt:/.test(src)) gaps.push(`${who} does not say when it ends`);
     if (!/addEventListener\("timeupdate",[^\n]*AuralSleep/.test(src)) gaps.push(`${who} looks only on a timer, which a phone with its screen off may not run`);
   }
+  // 13 Oct, on Melton's iPhone: the timer worked and the row read "Sleep ti…".
+  if (!/stop: \(\) => stop\("Sleep timer ended", true\)/.test(bridge) || !/setStatus\(said, false, notice\)/.test(bridge)) gaps.push("on a phone the line that says why the sound stopped is cut short");
   if (!/<script src="sleep\.js"><\/script>\s*<script src="popover\.js">/.test(readSrc("src/renderer/popover.html"))) gaps.push("the menu bar panel does not load it before its player");
   if (!/"sleep\.js",\s*"web\/bridge\.js"/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the web build does not load it before its player");
   if (!/id="sleep"/.test(readSrc("src/renderer/settings.html"))) gaps.push("Settings has no way to set it");
@@ -4619,6 +4621,30 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     }
     gaps.length ? fail(name, gaps.join("; "))
       : pass(`the issue chooser's links have addresses, ${flows.length} workflows say what their token may do, the rule for main waits for a job that exists, and every link in the two READMEs lands`);
+  }
+}
+
+// ── a place is named after a town ───────────────────────────────────────────
+// 13 Oct 2026, from Melton's phone: "Truro area area", a hundred miles from
+// Truro, holding one station called Jack FM Halifax. A station too far from
+// any town to join it gets a place of its own, "<nearest town> area", and the
+// nearest place was sometimes another "… area" or a country's stand-in. Eight
+// places shipped that way ("Seoul area area", "Across Germany area").
+{
+  const name = "a place is named after a town";
+  console.log(`\n${name}`);
+  if (!fs.existsSync(R("data/stations.min.json"))) skip(name, "no built catalogue here (npm run catalogue)");
+  else {
+    const places = JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8")).p.map((p) => p[0]);
+    const bad = places.filter((t) => / area area$/.test(t) || /^(Across |Somewhere in |Online).* area$/.test(t));
+    const gaps = [];
+    if (places.filter((t) => / area$/.test(t)).length < 50) gaps.push("almost no \"… area\" places found — this check is blind");
+    if (bad.length) gaps.push(`${bad.length} places are named after a stand-in: ${bad.slice(0, 4).join(", ")}`);
+    if (HAS_CAT) {
+      const build = fs.readFileSync(C("scripts/expand.mjs"), "utf8");
+      if (!/nearestTown\(s\.lat, s\.lon\)\[1\] <= 150/.test(build) || !/if \(standIn\(full\.places\[i\]\)\) continue;/.test(build)) gaps.push("the build still names a place after whatever place is nearest");
+    }
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`${places.filter((t) => / area$/.test(t)).length} "… area" places, each named after a real town`);
   }
 }
 

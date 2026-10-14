@@ -539,13 +539,13 @@
     audio.play().catch(() => tune(current));
   });
 
-  function stop(said = "Stopped") {
+  function stop(said = "Stopped", notice = false) {
     gen++; clearTimeout(watchdog); live = false;
     held = null;
     playingUrl = null;
     dropHls();
     audio.pause(); audio.removeAttribute("src"); audio.load();
-    setStatus(said);
+    setStatus(said, false, notice);
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
   }
 
@@ -630,7 +630,9 @@
     level: () => audio.volume,
     setLevel: (v) => { audio.volume = v; },
     playing: () => live || (!!playingUrl && !audio.paused),
-    stop: () => stop("Sleep timer ended"),
+    // A notice, so a phone's player row shows it whole: on Melton's iPhone it
+    // read "Sleep ti…" (13 Oct), which does not say why the sound stopped.
+    stop: () => stop("Sleep timer ended", true),
     changed: () => publish(),
   });
   audio.addEventListener("timeupdate", () => window.AuralSleep?.check());
