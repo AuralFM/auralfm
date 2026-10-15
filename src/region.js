@@ -6,7 +6,7 @@
  * country is not thereby licensed for listeners somewhere else, and an index
  * that makes it easy for them to reach it needs a licence there itself. TuneIn
  * answered by holding back foreign stations in the UK; this is the same answer
- * (Melton, 26 Sept: option 3 of docs/LEGAL-AND-SECURITY.md §9), until PPL, PRS
+ * (option 3 of docs/LEGAL-AND-SECURITY.md §9), until PPL, PRS
  * and a lawyer say otherwise. What stays open there: the listener's own
  * country's stations, and talk, news, sport and faith from anywhere (the
  * bundle's speech slot, scripts/lib/match.mjs). Everywhere else, nothing

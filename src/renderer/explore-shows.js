@@ -32,8 +32,8 @@
  *
  * Where the studio is: the desktop's development and beta builds, and a
  * preview on this machine. And, for listening only, in a browser that has
- * opened the app once with ?ears (Melton, 6 Oct 2026: a private link, so a
- * host with one computer can hear their own show on their phone). ?ears=off
+ * opened the app once with ?ears (a private link, so a host with one
+ * computer can hear their own show on their phone). ?ears=off
  * takes it away again. The studio itself has no such link
  * (explore-studio.js, and the audit holds that).
  */
@@ -340,8 +340,8 @@
   }
   /**
    * A show's beacon on the globe: a pill at its town with the show's name and a
-   * halo that breathes, and a button (press it to listen). Melton, 6 Oct 2026:
-   * the ring alone was easy to miss. One element per show, kept between paints
+   * halo that breathes, and a button (press it to listen). The ring alone was
+   * easy to miss. One element per show, kept between paints
    * so the halo does not restart every time a heartbeat arrives.
    */
   const pinOf = new Map();

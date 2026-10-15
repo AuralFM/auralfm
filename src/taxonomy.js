@@ -7,7 +7,7 @@
  *   formats  what kind of station     Talk, News, Community …
  *   moods    what it is good for      Focus, Party, After hours … (derived)
  *
- * Melton's list (September 2026), the ten vibes already on the site, and seven
+ * A hand-made list (September 2026), the ten vibes already on the site, and seven
  * the stations' own tags asked for (Arabic, Balkan, Bollywood & Indian, Creole,
  * Crooners, Greek, Schlager). The
  * vibes stay as they are: a vibe is a hand-picked lane across the globe, and

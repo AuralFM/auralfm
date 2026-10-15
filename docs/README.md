@@ -2,7 +2,7 @@
 
 | Document | For | What it is |
 |---|---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Anyone changing the code | How the app is built, and the one rule that explains it |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Anyone changing the code | How the app is built |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Anyone sending a change | Set up, test, send |
 | [../GOVERNANCE.md](../GOVERNANCE.md) | Anyone asking who decides | How decisions are made |
 | [../SECURITY.md](../SECURITY.md) | Anyone who found a hole | How to report it |
@@ -22,5 +22,5 @@ app. They are written once, here.
 **What does not live here:** plans, research and strategy. This folder is for
 what is true of the code today.
 
-There is no wiki. A wiki is edited apart from the code and drifts from it; a
-page here changes in the same commit as the thing it describes.
+There is no wiki. Documentation changes in the same commit as the code it
+describes.

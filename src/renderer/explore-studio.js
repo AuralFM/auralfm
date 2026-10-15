@@ -1,7 +1,7 @@
 /**
  * Your show: the studio. A prototype (26 Sept 2026).
  *
- * Melton, 26 Sept: "your own show", inside the app on all three platforms —
+ * "Your own show", inside the app on all three platforms —
  * the desktop app, the web app and the iPhone app — never a separate program.
  * This is the studio's shape and its sound, working end to end on this
  * device: a microphone with its level, a track from the computer under it that
@@ -30,9 +30,8 @@
   async function allowed() {
     try {
       /**
-       * The desktop beta only (Melton, 5 Oct 2026: the ?studio link on the web
-       * was too buggy to hand out; test on the desktop until the bugs and the
-       * experience are settled). A page opened with ?studio used to switch it
+       * The desktop beta only: the ?studio link on the web was too unfinished
+       * to hand out; it is tested on the desktop until it is settled. A page opened with ?studio used to switch it
        * on and remember that in this browser; the memory is cleared here so a
        * browser that tried it once does not keep showing it.
        */
@@ -98,8 +97,7 @@
     musicGain.connect(musicAn); musicGain.connect(mix);
     /**
      * What the host hears. The music always: a track that played into the show
-     * and not into the room was a track that seemed never to load (Melton, 5
-     * Oct), because only "Hear yourself" sent anything to the speakers. Your own
+     * and not into the room was a track that seemed never to load, because only "Hear yourself" sent anything to the speakers. Your own
      * voice only when you ask for it (micMon), since a microphone played back
      * through speakers howls.
      */
@@ -120,8 +118,8 @@
    * What went wrong, in words someone can act on. It used to be "blocked" or
    * "No microphone was found" for everything, so a microphone busy in a call,
    * or headphones that had been unplugged since last time, read as having no
-   * microphone at all (Melton, 27 Sept: it struggled with the computer's and
-   * with headphones).
+   * microphone at all (seen with a computer's built-in microphone and with
+   * headphones).
    */
   const micTrouble = (name) =>
     name === "NotAllowedError" || name === "SecurityError" || name === "denied" || name === "restricted"
@@ -299,8 +297,8 @@
   // ── the queue ─────────────────────────────────────────────────────────────
   /**
    * The show's music, when it is played here: several tracks in order, each
-   * fading into the next (Melton, 5 Oct 2026: one track under a microphone made
-   * playing music "difficult and strenuous"; the Mixcloud study's second step).
+   * fading into the next: one track under a microphone made playing music
+   * hard work (the Mixcloud study's second step).
    *
    * Each track is streamed through its own element (studio-deck.js) and its own
    * gain, so two can sound at once for the length of a crossfade. Only the one
@@ -479,8 +477,8 @@
   function clearQueue() { dropPre(); const old = deck; deck = null; closeDeck(old); queue = []; trackNote = ""; }
   /**
    * A track from a link (desktop: main opens it and passes it through as it
-   * arrives, src/main/ipc-app.js, so it plays from the first second). Melton,
-   * 27 Sept, asked for "a link to stream from any platform". Mixcloud,
+   * arrives, src/main/ipc-app.js, so it plays from the first second). The
+   * request was "a link to stream from any platform". Mixcloud,
    * SoundCloud, YouTube and the rest do not give other apps their audio and
    * their terms forbid taking it, so a link to one of them is answered with how
    * to use your own show from there instead; a direct link to an audio file you
@@ -686,7 +684,7 @@
         /**
          * One tap to do what that says. With AirPods Max the headset's own
          * microphone is the system default once they connect, so every show
-         * started on it (Melton, 28 Sept) — and at call quality, the
+         * started on it — and at call quality, the
          * headphones dropped the station's sound to match.
          */
         const builtIn = devices.find((d) => d.deviceId !== "default" && /macbook|built-in|internal|imac|studio display/i.test(d.label));
@@ -819,7 +817,7 @@
 
   // ── the show's room ──────────────────────────────────────────────────────
   /**
-   * With the studio open, the app is a broadcast desk (Melton, 5 Oct 2026): the
+   * With the studio open, the app is a broadcast desk: the
    * stations card folds away, the town's messages take the whole column on the
    * right, the studio widens on the left and the globe sits between them
    * (explore.html, body.studio-open; explore-trackers.js, centreGlobe).

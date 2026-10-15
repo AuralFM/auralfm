@@ -360,7 +360,7 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
        * The cap was there because 1–9 are the keyboard shortcuts and there is no
        * tenth key. But the effect was a list that counted to nine and then went
        * blank, which reads as the app losing track rather than as a keyboard
-       * running out — Melton has more than nine and saw exactly that.
+       * running out.
        *
        * So the number is a position now and the *key cap* is the shortcut. Past
        * nine the number is still there, without the cap around it, because
@@ -681,7 +681,7 @@ vol.oninput = () => applyVolume(+vol.value);
 /* The transport button starts as a play triangle.
    Icons.set(toggle, ...) only ran from tune, stop and fail, so before anything
    had ever played the button was an empty circle of accent colour with no glyph
-   in it at all -- which is what Melton saw on a fresh launch. */
+   in it at all, on a fresh launch. */
 setToggle("play");
 let preMute = 0.8;
 $("mute").onclick = () => {
@@ -883,8 +883,8 @@ async function applyPalette() {
   // In light theme the star follows the accent, not `palette.star`.
   // Every palette's star is a near-white or a pale tint -- #F5F0E4, #DCE7FF,
   // #FFE9B0 -- because it was chosen to sit on the night side of a globe. On the
-  // light background those measure 1.01 to 1.40:1, which is invisible: Melton
-  // could not find the favourite stars at all. accentLight is already designed
+  // light background those measure 1.01 to 1.40:1, which is invisible: the
+  // favourite stars could not be found at all. accentLight is already designed
   // for this background and clears the 3:1 floor WCAG sets for non-text UI in all
   // nine palettes. Dark theme keeps the pale star, where it measures 12 to 18:1.
   r.style.setProperty("--star", light ? pal.accentLight : pal.star);

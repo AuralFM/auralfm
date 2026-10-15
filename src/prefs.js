@@ -109,8 +109,8 @@ const DEFAULTS = {
   /**
    * Leave explicit stations out: of the lists, of search, of shuffle.
    *
-   * Explicit stations are listed (Melton, 26 Sept: keep them if real and on the
-   * air) and labelled Explicit. Off by default, so nothing is hidden that the
+   * Explicit stations are listed when real and on the air, and labelled
+   * Explicit. Off by default, so nothing is hidden that the
    * listener did not choose to hide; one switch in Settings for anyone who would
    * rather not see them.
    */

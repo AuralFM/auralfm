@@ -53,6 +53,16 @@
         "site"
       ],
       "port": 8767
+    },
+    {
+      "name": "auralfm-learn",
+      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeArgs": [
+        "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
+        "8769",
+        "learn-site"
+      ],
+      "port": 8769
     }
   ]
 }

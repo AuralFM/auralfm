@@ -64,6 +64,18 @@ pictures through `texUrl()`, descriptions decoded, no station named by a URL.
 Chrome's device emulation does not reproduce sticky hover, tap delay, safe
 areas or the keyboard: say what was verified from code and what needs the phone.
 
+## Writing for GitHub
+
+Everything in the repositories (docs, issues, pull requests, commit messages,
+code comments) is technical record, not conversation. State what is true of
+the code, what was measured and what remains. No first person, no "you", no
+who-said-what ("Melton, 26 Sept: ..."), no dates of discussions, no links to
+the vault. A decision appears as the rule it made, not as who made it. Credits
+and copyright lines are the exception.
+
+Issues follow one shape: a one-line summary, the current state, a checklist of
+acceptance criteria, and references (commits, files, issues).
+
 ## The catalogue is in another repo
 
 The station list, the taxonomy and the scripts that build them moved to

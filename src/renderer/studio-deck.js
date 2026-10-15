@@ -5,7 +5,7 @@
  * It was decoded into one AudioBuffer, which is every sample of the file as
  * 32-bit floats held in memory at once: a one-hour mix is about 1.4 GB, so a
  * DJ's actual set either failed as "could not be played" or hung the panel
- * with nothing on screen (Melton, 28 Sept: adding tracks was "difficult").
+ * with nothing on screen.
  * An <audio> element plays it as it goes, and starts at once.
  *
  * Routing an element through Web Audio is what silenced one station in six

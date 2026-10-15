@@ -237,7 +237,7 @@
   /**
    * ─── The card as a broadcast ticket ────────────────────────────────────────
    *
-   * Melton, 28 Sept: the card is the one place in the app that leaves it, so it
+   * The card is the one place in the app that leaves it, so it
    * should look like the brand the way the site does, not like a screenshot of
    * the app. So it borrows the site's language: the Earth under a tilted band, a
    * mast-red rule and foot, bracketed mono labels, the hairline grid, and the
@@ -245,7 +245,7 @@
    * ticket, with the facts in labelled fields.
    *
    * The site's type is used here and only here. The app's own fonts do not
-   * change (Melton: never); these faces are loaded under names of their own
+   * change; these faces are loaded under names of their own
    * ("AuralCard …") so no rule in the app's stylesheet can reach them.
    */
   const DISPLAY = '"AuralCard Display", Inter, system-ui, sans-serif';
@@ -297,7 +297,7 @@
     cv.width = W; cv.height = H;
     const ctx = cv.getContext("2d");
     /**
-     * The palette in use when the card is made (Melton, 28 Sept): its ground,
+     * The palette in use when the card is made: its ground,
      * its words, its hairlines and its accent, which takes the place of the
      * site's mast red in the rule, the band and the foot. Whatever sits on the
      * accent is the palette's own on-accent colour, so it stays legible.
@@ -324,9 +324,8 @@
       ctx.fillRect(rnd() * W, rnd() * H, 1.5, 1.5);
     }
     /**
-     * Space, behind everything, fading out before the words (Melton, 28 Sept:
-     * the stars were missed — the planet sits somewhere, and the sky thins into
-     * the station's name). Seeded like the grain, so a station keeps its sky.
+     * Space, behind everything, fading out before the words: the planet sits
+     * somewhere, and the sky thins into the station's name. Seeded like the grain, so a station keeps its sky.
      */
     for (let i = 0; i < 620; i++) {
       const x = rnd() * W, y = rnd() * H;
@@ -366,7 +365,7 @@
       ctx.fillStyle = GROUND;
       ctx.beginPath(); ctx.arc(CX, CY, R + 6, 0, Math.PI * 2); ctx.fill();
       /**
-       * The real Earth, not a halftone (Melton, 28 Sept): the card is for
+       * The real Earth, not a halftone: the card is for
        * showing where the station is, and a dot screen lost the coastlines
        * that say so. The rest of the ticket keeps the site's look.
        */
@@ -484,8 +483,8 @@
     /**
      * What it is on the dial, when its name says (most FM and AM stations put
      * the frequency in it), and what it sounds like, from its own tags. These
-     * took the place of "Algorithms: 0" (Melton, 28 Sept: a statement, but
-     * nothing a listener can use on a card about one station).
+     * took the place of "Algorithms: 0": a statement, but nothing a listener
+     * can use on a card about one station.
      */
     const dial = String(now.title || "").match(/\b(\d{2,3}[.,]\d{1,2})\s*(?:fm|mhz)?\b|\b(\d{3,4})\s*(?:am|khz)\b/i);
     const signal = now.sdr && now.freq ? `${Number(now.freq.toFixed(2))} kHz`

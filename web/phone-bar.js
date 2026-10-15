@@ -272,8 +272,8 @@
    * It went straight to the system's share sheet, but the card takes a moment
    * to draw and iOS only shares inside the tap that asked: by the time the
    * card was ready the tap was spent, the share was refused, and it fell back
-   * to this sheet anyway, with Copy and Save that could not work from there
-   * (Melton, 28 Sept). Now the card is drawn first and each button acts inside
+   * to this sheet anyway, with Copy and Save that could not work from there.
+   * Now the card is drawn first and each button acts inside
    * its own tap: Save or share opens the system sheet, Copy copies.
    */
 
@@ -295,8 +295,8 @@
       // locking onto the place, which is not a thing it can do.
       /**
        * Star, play, share: the station's three things, in one group at the
-       * right, there whether it is playing or paused (Melton, 28 Sept: paused,
-       * the row was a name, a gap and a lone play button).
+       * right, there whether it is playing or paused. Paused, the row used to
+       * be a name, a gap and a lone play button.
        */
       const play = $("play"), share = $("nowShare"), star = $("nowStar");
       if (star) { remember(star); now.append(star); }

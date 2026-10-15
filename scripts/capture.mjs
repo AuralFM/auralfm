@@ -15,7 +15,7 @@
  *
  * What it cannot show: the iPhone itself. The notch, the home bar and Safari's
  * own behaviour only exist on the phone, so the iPhone screens in Figma are
- * Melton's own screenshots. These are the web app at a phone's size.
+ * screenshots taken on a device. These are the web app at a phone's size.
  *
  * The desktop app is only photographed when asked for by name, because it
  * cannot be done unseen: the app from this checkout opens on the screen for a

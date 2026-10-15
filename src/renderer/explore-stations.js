@@ -285,7 +285,7 @@ function renderStations() {
  * Stations that gave only their country live at "Across <country>"
  * (scripts/expand.mjs). They have no dot and come last in every list, so this
  * row, at the end of any real town in that country, is how you reach them:
- * the town first, then the country's stations with no town (Melton, 26 Sept).
+ * the town first, then the country's stations with no town.
  */
 async function paintElsewhere() {
   const here = selection.place;

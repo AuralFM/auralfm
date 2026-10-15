@@ -113,7 +113,7 @@ const atomLink = (entry) => {
  *
  * The feed is Google's aggregate, so it ranks by whatever Google ranks by, and
  * a headline from a title nobody can open is worse than no headline: it is a
- * promise the app cannot keep. Melton's users are across the globe, and a
+ * promise the app cannot keep. Listeners are across the globe, and a
  * subscription to a New York newspaper is not a reasonable prerequisite for
  * reading what happened today.
  *

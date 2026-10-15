@@ -258,8 +258,7 @@ function closeOutMenu({ refocus = false } = {}) {
  * Show the card before it goes anywhere.
  *
  * It used to be copied straight to the clipboard, which is indistinguishable
- * from nothing having happened — Melton pressed it and reported that the card
- * never came up, which was exactly right. Something you are about to publish
+ * from nothing having happened: the card never came up. Something you are about to publish
  * under your own name should be looked at first.
  */
 let sheetPng = null;
@@ -286,8 +285,7 @@ async function buildCard() {
      *
      * Favourites were saved as a name and a place-string with no point, so a
      * station played from favourites — which is most of them — produced a card
-     * with a city printed on it and no globe. Melton's screenshot was exactly
-     * that. The shape is fixed above, but 27 favourites were already on disk
+     * with a city printed on it and no globe. The shape is fixed above, but 27 favourites were already on disk
      * and a stored file does not fix itself, so this looks the station up by id
      * rather than making people re-save anything.
      */

@@ -34,7 +34,7 @@ flowchart LR
   bridge -- "through the site's proxy routes" --> feeds
 ```
 
-## The one rule that explains the rest
+## The bridge
 
 **The pages talk to `window.auralfm` and to nothing else.**
 
@@ -93,5 +93,5 @@ handler, a colour off the palette, a licence that crept in. Every check was
 written after a bug and seen to fail with that bug put back. There is no unit
 test runner. The same command runs on every push (`.github/workflows/audit.yml`).
 
-What a script cannot see is checked by hand and said plainly when it has not
-been: a real iPhone, VoiceOver, a keyboard-only pass.
+Checks that need a device or a person (a real iPhone, VoiceOver, a
+keyboard-only pass) are tracked as issues labelled `device test`.

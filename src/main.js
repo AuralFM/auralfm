@@ -93,8 +93,7 @@ app.commandLine.appendSwitch("disk-cache-size", String(150 * 1024 * 1024));
  * The studio's own address for a track from a link (src/main/ipc-app.js).
  *
  * A show's music from a link used to be downloaded whole before a note of it
- * played, which for an hour-long mix is minutes of nothing (Melton, 5 Oct: "it
- * takes hours to load"). Under this scheme the main process passes the file
+ * played, which for an hour-long mix is minutes of nothing. Under this scheme the main process passes the file
  * through as it arrives, so it plays from the first second and seeks like any
  * other. It has to be declared before the app is ready; `stream` lets an
  * <audio> element read it, and `corsEnabled` lets the studio's mixer hear it.
@@ -527,7 +526,7 @@ const LAYERS = [
   // switch off: turning every layer off left them pulsing.
   { id: "listeners",      key: "layer.listeners",      default: true },
   // Shows on air (explore-shows.js): their beacons on the globe and the list
-  // that goes with them. Its own layer (Melton, 6 Oct 2026), not part of the
+  // that goes with them. Its own layer, not part of the
   // listeners' rings, and on at every launch: a show is something to listen to.
   { id: "onAir",          key: "layer.onAir",          default: true },
   { id: "statusBar",      key: "layer.statusBar",      default: true },
@@ -535,7 +534,7 @@ const LAYERS = [
 
 /**
  * Every launch starts quiet: the station dots and the shortwave receivers, and
- * nothing else (Melton, 26 Sept). Clouds, day and night, the ISS, the
+ * nothing else. Clouds, day and night, the ISS, the
  * constellations, the drift, the listeners' rings and the status read-out all
  * come back off each time the app is started from closed, however they were
  * left, so a cold start draws and fetches only what the globe is for. Turning
@@ -784,7 +783,7 @@ function syncNostrPresence() {
  * Your show: the host stands in the town the show goes out from.
  *
  * The studio's panel puts that town's room beside the globe so a host can read
- * and answer the people there (Melton, 5 Oct 2026). It is the same rule as a
+ * and answer the people there. It is the same rule as a
  * station, with the same two conditions: presence is on, and the place is one
  * the host chose on the globe, never where they are. No label goes out with it
  * (a station's name would): a show nobody can hear yet is not something to

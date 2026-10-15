@@ -130,7 +130,7 @@ function load() {
   // Stations whose town nobody gave live at "Across <country>" (or
   // "Online, no country"), made by scripts/expand.mjs. Their position is a stand-in, so
   // they come after every real town wherever places are listed, and draw no dot
-  // on the globe (Melton, 26 Sept: the real cities first; these at the end).
+  // on the globe: real towns first, these at the end.
   nowhere = Uint8Array.from(places, (p) => (NOWHERE.test(p[0]) ? 1 : 0));
   setRegion();
 
@@ -247,8 +247,8 @@ function placeMatches(idx, terms) {
 
 /** Shared filter used by both search and place browsing. */
 /**
- * Explicit stations are listed like any other (Melton, 26 Sept: keep them if
- * real), marked explicit, and left out everywhere — lists, search, shuffle —
+ * Explicit stations are listed like any other when real and on the air,
+ * marked explicit, and left out everywhere — lists, search, shuffle —
  * when the listener turns on Settings → Hide explicit stations.
  */
 let hideExplicit = false;
@@ -346,7 +346,7 @@ const VIBES = [
   { id: "house", name: "Deep & house", tags: ["deep house", "house"] },
   { id: "techno", name: "Techno", tags: ["techno"] },
   { id: "electronic", name: "Electronic & ambient", tags: ["electronic", "ambient", "experimental"] },
-  // Seven more (Melton, 5 Oct 2026): the site had lanes for techno and old-time
+  // Seven more: the site had lanes for techno and old-time
   // radio and none for the biggest music there is. Tags are the spellings the
   // stations themselves use, counted in the catalogue; "urban" alone is left
   // out (it is hip-hop in one country and reggaeton in another), and so are
@@ -367,7 +367,7 @@ const VIBES = [
   { id: "afro", name: "Afrobeats & amapiano", tags: ["afrobeats", "afrobeat", "afro", "afropop", "afro-pop", "afro pop",
     "afrofusion", "amapiano", "highlife", "afro house", "afro-house", "afrohouse", "naija", "gqom", "bongo flava"] },
   { id: "tropical", name: "Cumbia & tropical", tags: ["cumbia", "tropical"] },
-  // Two more the same evening (Melton): Latin beyond cumbia, and classical.
+  // Two more the same evening: Latin beyond cumbia, and classical.
   // "latinoamérica" is where a station is, not what it plays, and stays out.
   { id: "latin", name: "Salsa & Latin", tags: ["salsa", "latin", "latino", "latina", "reggaeton", "bachata", "merengue",
     "latin pop", "pop latino", "latin music", "musica latina", "música latina", "salsa colombiana", "latin salsa",

@@ -180,7 +180,7 @@
   @media (prefers-reduced-motion: reduce){ .railtabs::before{transition:none} }
   .railtabs.ghost{visibility:hidden}
   /* The list of places has no place to have receivers near: the tabs' held
-     space was an empty band over "11,466 places" (Melton, 28 Sept). */
+     space was an empty band over "11,466 places". */
   .placehead[hidden] ~ .railtabs{display:none}
   .railtabs button{
     flex:1;appearance:none;border:0;background:transparent;color:var(--label2);
@@ -827,7 +827,7 @@
      far along, because nothing here knows that.
      --wave sets the height; the bars and gaps scale from it. */
   /* In the palette's accent, like the bars of the station that is playing, so
-     waiting wears the theme you chose (Melton, 27 Sept). */
+     waiting wears the theme you chose. */
   .wave{--wave:14px;display:inline-flex;align-items:center;gap:calc(var(--wave) * .14);height:var(--wave);flex:none;vertical-align:middle;color:var(--accent)}
   .wave i{display:block;width:calc(var(--wave) * .14);min-width:2px;height:100%;background:currentColor;
     transform:scaleY(.3);animation:wave 1.1s var(--ease-in-out,ease-in-out) infinite}
@@ -1020,7 +1020,7 @@
   @media (hover:hover){.st:hover .pinfo{opacity:1}}
   .pinfo[aria-expanded="true"]{color:var(--accent);border-color:var(--accent)}
   .pinfo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  /* Drawn smaller than the star beside it (Melton: never bigger than the
+  /* Drawn smaller than the star beside it (never bigger than the
      favourite), hit at 37px: a touch target has to be big enough for a thumb. */
   .pinfo::after{content:"";position:absolute;inset:-12px}
   @media (hover:none){.pinfo{opacity:.8}}
@@ -1049,8 +1049,7 @@
   .pcal{background:none;border:0;padding:0;min-height:24px;font:inherit;font-size:12px;cursor:pointer}
   @media (pointer:coarse){.pcal{min-height:44px}}
   /* ── The playing station's card, pulled up out of the player ─────────────────
-     Melton, 26 Sept: an "i" that popped a card out over Explore or Headlines was
-     clutter. The player itself pulls up instead: the handle on its top edge, or
+     An "i" that popped a card out over Explore or Headlines was clutter. The player itself pulls up instead: the handle on its top edge, or
      a drag anywhere on the bar that is not a control. The drawer's height is
      set by explore-profile.js as the finger moves; its content rides the top
      edge, as a sheet's does, and anything taller than the cap scrolls. */
@@ -1102,7 +1101,7 @@
   /* Shows on air (explore-shows.js). In the rail it is the first section of
      the list: a name, Listen, and one line saying what is happening. On the
      globe it is a beacon: a pill at the show's town with a halo that breathes,
-     which is also a button (Melton, 6 Oct: make the beacon obvious). */
+     which is also a button. */
   .livenow{flex:none;padding:2px 17px 8px;box-shadow:inset 0 -.5px 0 var(--line)}
   .livenow[hidden]{display:none}
   .livenow .secthead{padding:0 0 2px;color:var(--err)}
@@ -1173,7 +1172,7 @@
        On air across the top; the show on the left; where and sound on the
        right; the two confirmations across the bottom, side by side. They were
        third down the right column, which made it half as tall again as the
-       left and pushed them off the bottom of a 700px window (Melton, 8 Oct).
+       left and pushed them off the bottom of a 700px window.
        Named, not counted: nth-child put a new section in the wrong column. */
     @container (min-width:500px){
       .studio .studiobody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;align-content:start}
@@ -1272,7 +1271,7 @@
      the headlines and the station list make room for it rather than having it
      laid over their bottom edge. (On a phone it is chrome instead; web.css.) */
   /* A wide window has the rail for this: the "i" beside the name opens the
-     station there (Melton, 26 Sept). The pull-up is the phone's, which has no rail. */
+     station there. The pull-up is the phone's, which has no rail. */
   body:not(.phonebar) .nowgrab,body:not(.phonebar) .nowdrawer{display:none}
   body.phonebar .now .nowinfo{display:none}
   .pinfo.nowinfo{opacity:1;width:14px;height:14px;font-size:12px;line-height:12px}
@@ -1468,7 +1467,7 @@
      This set no `color` at all, so it took the user agent's button default,
      which is black in both appearances. On the light bar that measured 4.6:1
      and looked fine; on the dark one it was 1.04:1, which is a black icon on a
-     near-black bar. Melton could not see it and neither could anything else.
+     near-black bar, invisible to people and to contrast checks alike.
      A resting opacity of .55 on top of a themed colour is the same trap one
      step further on, so the resting state is a token and hover raises it. */
   #lock{
@@ -2087,8 +2086,7 @@
 <script src="reveal.js"></script>
 <script src="astro.js"></script>
 <!--
-  The share sheet. Melton's report was "the card never came up" — it was copied
-  to the clipboard silently, which is indistinguishable from nothing happening.
+  The share sheet. The card used to be copied to the clipboard silently, which is indistinguishable from nothing happening.
   A thing you are about to publish under your own name should be looked at first.
 -->
 <!--
@@ -2103,7 +2101,7 @@
   <div class="sheetbox">
     <!-- While the card is drawn. It listens to the station for about three
          seconds to draw its wave, and an empty panel for that long read as
-         broken (Melton, 4 Oct). The card's own shape, the wave, and why. -->
+         broken. The card's own shape, the wave, and why. -->
     <div id="sheetwait" class="sheetwait" role="status" aria-live="polite" hidden>
       <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       <b id="sheetwaitline"></b>

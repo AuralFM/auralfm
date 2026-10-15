@@ -314,8 +314,8 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <!-- "black-translucent": the page runs under the clock and the battery, so
-     the sky reaches the top of the phone the way a full-screen video does
-     (Melton, 5 Oct 2026). It was "black" because the see-through mode once
+     the sky reaches the top of the phone the way a full-screen video does.
+     It was "black" because the see-through mode once
      sized the installed window short and stranded a dead band under the tab
      bar; web/web.css now makes the root taller by the bar's height when it is
      installed, and an icon added that way was tried on a real iPhone before

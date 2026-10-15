@@ -32,7 +32,7 @@
    *
    * Installed on an iPhone with the see-through status bar, the page starts at
    * the very top of the screen, and iOS then lays it out a status bar short of
-   * the bottom: a blank strip under the tab bar (Melton, 6 Oct 2026).
+   * the bottom: a blank strip under the tab bar.
    *
    * The first fix added the strip's height to the page's own idea of its
    * height, and overshot by about as much again: on his phone the labels under
@@ -433,8 +433,8 @@
   /**
    * HLS (a stream that is a playlist of short files, .m3u8). Safari and the
    * iPhone play it themselves. Chrome and Firefox do not, so about 1,800
-   * stations said "Stream unavailable here" on a computer (Melton, in India's
-   * list, 10 Oct 2026). hls.js plays them through the same <audio>. It is
+   * stations said "Stream unavailable here" on a computer (first seen in
+   * India's list). hls.js plays them through the same <audio>. It is
    * fetched only when a station needs it: 386 KB that most listeners, on
    * iPhone, will never load.
    */
@@ -630,8 +630,8 @@
     level: () => audio.volume,
     setLevel: (v) => { audio.volume = v; },
     playing: () => live || (!!playingUrl && !audio.paused),
-    // A notice, so a phone's player row shows it whole: on Melton's iPhone it
-    // read "Sleep ti…" (13 Oct), which does not say why the sound stopped.
+    // A notice, so a phone's player row shows it whole: on an iPhone it
+    // read "Sleep ti…", which does not say why the sound stopped.
     stop: () => stop("Sleep timer ended", true),
     changed: () => publish(),
   });
@@ -864,7 +864,7 @@
       profilesKnown: async () => ({}), filterList: async () => ({ terms: [], shipped: [] }),
     }),
     /**
-     * Moving to a new install (Melton, 6 Oct 2026).
+     * Moving to a new install.
      *
      * An iPhone fixes some things when the icon is added to the Home Screen
      * (the status bar's style is one), so getting them means removing the icon

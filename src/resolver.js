@@ -6,7 +6,7 @@
  * used to begin with radio.garden's listen endpoint, which answers only
  * requests that look like its own site, so the app sent a borrowed browser
  * User-Agent and radio.garden's Referer to get through. That is gone
- * (Melton, 26 Sept: completely separate from radio.garden).
+ *.
  *
  * In order:
  *   1. radio-browser.info by the station's own id, when the catalogue matched

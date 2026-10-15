@@ -28,8 +28,8 @@ module.exports = function register(ctx) {
    * errors.js covers the renderers, and that felt like the job was done. It was
    * not: a throw in main has no listener, so Electron shows its own dialog — a grey
    * box with a stack trace and an OK button, which is the least reassuring thing a
-   * shipped app can put in front of somebody. Melton hit exactly that when a
-   * relay's message handler threw.
+   * shipped app can put in front of somebody. It appeared when a relay's
+   * message handler threw.
    *
    * What this does and does not do:
    *

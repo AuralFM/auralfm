@@ -68,7 +68,7 @@
   // a station arriving turns over like its name does.
   flapOnChange(document.getElementById("nowStatus"));
   // For anything else that changes a word in place — the launch screen's steps
-  // (web/launch.js) and whatever comes next. Melton, 26 Sept: the turn-over is
+  // (web/launch.js) and whatever comes next. The turn-over is
   // part of how AuralFM moves from here on, on every platform.
   window.AuralFlap = {
     flap: (el, text) => { if (still) el.textContent = text; else flap(el, text); },

@@ -10,10 +10,9 @@ What it does:
 - `main` cannot be deleted or force-pushed, and its history stays a straight line.
 - A change reaches `main` through a pull request, with every comment resolved.
 - The `audit` check must pass on the latest commit first.
-- No approving review is required. There is one maintainer, and a rule that
-  needs a second person would be a rule that is always bypassed. Raise
-  `required_approving_review_count` to 1 when there is a second reviewer, and
-  turn on `require_code_owner_review` with it.
+- No approving review is required while there is one maintainer. With a
+  second reviewer, set `required_approving_review_count` to 1 and turn on
+  `require_code_owner_review`.
 
 To apply it: Settings, Rules, Rulesets, New ruleset, Import a ruleset, and
 choose this file. Or:

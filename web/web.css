@@ -205,15 +205,14 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
    * Installed with the page under the clock, iOS lays the page out as if the
    * window were shorter than the screen by the status bar's height, starting
    * at the top: everything ended that far above the bottom, with a blank strip
-   * under the tab bar (Melton's screenshot, 6 Oct 2026; it is why the bar was
-   * opaque black before). The strip is part of the page all the same: it took
+   * under the tab bar (why the bar was opaque black before). The strip is part of the page all the same: it took
    * the page's colour. So the page is told how tall the screen is, in points
    * (--tall, from web/bridge.js, which says why it is not "100dvh plus the
    * strip": that overshot), and the body becomes what fixed things are
    * measured from, so every sheet and panel pinned to "the bottom" means the
    * bottom of the screen.
    */
-  /* Taller, and held still. Three things were learned on Melton's phone:
+  /* Taller, and held still. Three things were learned on an iPhone:
        - a page merely made taller can be scrolled, whatever "overflow:
          hidden" says: opening Settings moved the focus into its sheet, the
          phone scrolled it into view, and the whole app slid half a screen up;
@@ -244,7 +243,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
     /* 44pt, like every other target here: these three sit over a moving globe,
        which is the last place to ask for a precise tap. */
     /* 22pt glyphs, beside the tab bar's 24: at 15 these three read as a
-       smaller set than the icons under them (Melton, 6 Oct 2026). */
+       smaller set than the icons under them. */
     width: 44px; height: 44px; display: grid; place-items: center; font-size: 22px;
     border: 0; border-radius: var(--r-lg); cursor: default; color: var(--label);
     background: color-mix(in srgb, var(--bg) 62%, transparent);
@@ -394,8 +393,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
      * the row and becomes a layer while a thumb moves it; the wave already is
      * one, because it animates; and WebKit painted the rest of the row, name
      * and buttons, beneath the panel. Chromium does not do this, so it was
-     * found from screenshots; Melton confirmed the fix on his iPhone the
-     * same day.
+     * found from screenshots and the fix confirmed on an iPhone.
      */
     will-change: transform;
   }
@@ -406,7 +404,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   .nowopen:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
   body.phonebar .now > *:not(.nowopen):not(.sronly) { position: relative; z-index: 1; }
   body.phonebar .now .brand svg { height: 15px; }
-  /* The station's name keeps its room first (Melton, 10 Oct 2026): playing,
+  /* The station's name keeps its room first: playing,
      the status is the town and country, and it held two fifths of the row
      while the name beside it was cut to "KU…". The status gives way instead,
      down to the width of "Press play" and no further: that one is an
@@ -511,7 +509,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
     color: var(--label2); font: inherit;
   }
   /* 24pt, about what an iPhone's own tab bar draws: at 17 they read as small
-     beside the system's (Melton, 6 Oct 2026). The padding and gap give back
+     beside the system's. The padding and gap give back
      most of the height, so the bar is 2pt taller, not 7. */
   .tabicon { display: grid; place-items: center; font-size: 24px; line-height: 1; }
   /* 12px is the floor for text meant to be read; five words at that size fit a

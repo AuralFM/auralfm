@@ -3,7 +3,7 @@
  *
  * A receiver used to offer 21 band centres. Tuning "49 m" put you on 6100 kHz
  * whether or not anything was transmitting there, which is why a New Zealand
- * receiver gave Melton something audible but never a station — RNZ Pacific is on
+ * receiver gave something audible but never a station — RNZ Pacific is on
  * 11725, and only inside a window that moves twice a season.
  *
  * This turns the EiBi schedule into the question a listener actually has: at

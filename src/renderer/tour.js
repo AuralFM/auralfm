@@ -48,7 +48,7 @@
   const STEPS = window.AuralTourSteps || [
     {
       welcome: true,
-      // The line the front page leads with (Melton, 8 Oct 2026).
+      // The line the front page leads with.
       title: "Radio chosen by people. Found by place.",
       body: "Spin the globe. Whatever sits under the middle is selected. "
           + "Click a dot to hear that place, live.",
@@ -255,9 +255,9 @@
      *
      * `pending` rather than a permanent latch. applyPrefs fires on boot and on
      * every prefs:changed, and a once-only flag meant Settings could set
-     * tourSeen back to false and nothing happened until the app was restarted —
-     * which is exactly what Melton hit. The flag now covers only the gap between
-     * being asked and the card appearing.
+     * tourSeen back to false and nothing happened until the app was restarted.
+     * The flag now covers only the gap between being asked and the card
+     * appearing.
      */
     maybeStart(prefs) {
       if (!prefs || prefs.tourSeen) return;

@@ -11,8 +11,7 @@
  * the money: the link is `lightning:` or the station's page, and the wallet or
  * the station does the rest.
  *
- * It started on the web and came to the desktop once Melton approved it
- * (26 Sept). The profile itself comes from window.auralfm.profile(id): on the
+ * It started on the web and came to the desktop after. The profile itself comes from window.auralfm.profile(id): on the
  * desktop, the files that ship with the app (src/profiles.js); on the web, the
  * same files fetched from the site (web/bridge.js). This wraps renderStations,
  * the global Explore draws the list with. Everything is set as text, never as
@@ -65,7 +64,7 @@
     const facts = [where, langName, p.bitrate ? `${p.bitrate} kbps` : null].filter(Boolean).join(" · ");
     head.append(el("p", "pwhere", facts));
     box.append(head);
-    // Thirty words at most, then "…" (Melton): a taste of the station, not its page.
+    // Thirty words at most, then "…": a taste of the station, not its page.
     if (p.description) {
       const words = p.description.trim().split(/\s+/);
       const desc = el("p", "pdesc", words.length > 30 ? `${words.slice(0, 30).join(" ").replace(/[,;:.\-–—]+$/, "")}…` : p.description);
@@ -93,7 +92,7 @@
     const hasTip = !!ln && /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(ln);
     // The station's own donation page, for the stations a Lightning address
     // does not fit: a college or community station that is a nonprofit takes
-    // gifts through its own page (Melton, 26 Sept, on 8-Ball Radio). Opened in
+    // gifts through its own page. Opened in
     // the browser; AuralFM is never in the middle of it. Not in a sanctioned
     // country, for the same reason as tips.
     const donate = !p.noTips && /^https:\/\//.test(p.donate || "") ? safe(p.donate) : null;
@@ -194,7 +193,7 @@
   }
 
   /**
-   * The two "i"s are one switch (Melton, 26 Sept). The player's "i" is lit while
+   * The two "i"s are one switch. The player's "i" is lit while
    * the playing station's card is open in the list, and pressing it again
    * closes that card, as the row's own "i" does; open or closed from either,
    * both show it. syncInfo() is called wherever a card opens or closes, and
@@ -208,8 +207,8 @@
   }
 
   // ── the player bar ───────────────────────────────────────────────────────
-  // The playing station's card, from the player (Melton, 26 Sept: a card that
-  // popped out over Explore or Headlines was clutter).
+  // The playing station's card, from the player: a card that popped out over
+  // Explore or Headlines was clutter.
   //
   // A wide window has the rail, so the "i" beside the station's name opens the
   // station there: its place, the list, and its card unfolded and scrolled to.
@@ -250,7 +249,7 @@
   let nowCh = null, h = 0, isOpen = false, drag = null, painted = null;
 
   /**
-   * One sheet, not two (Melton, 28 Sept).
+   * One sheet, not two.
    *
    * The card used to rise out of the player as a card of its own, above it,
    * with a handle of its own — so a pull showed two handles and two edges, and

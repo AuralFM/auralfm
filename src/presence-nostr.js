@@ -570,7 +570,7 @@ const peers = new Map();          // pubkey -> { geohash, label, at }
  * messages survive both. One set could only be cleared on the shortest of those
  * lifetimes, so `view()` cleared it for the chat's sake — and the very next
  * subscription replayed a note the still-populated notes list was holding, which
- * appended a second copy. Melton found it with seven identical notes on screen
+ * appended a second copy. It showed as seven identical notes on screen
  * from one stranger who had said "hola" once.
  *
  * The rule, therefore: **a set is cleared exactly where its list is, on the same
@@ -1358,7 +1358,7 @@ function join(lat, lon, label, live = false) {
  *
  * A show on air is found from its host's presence, and presence was only read
  * while something was playing: somebody who opened the app to see what was on
- * saw an empty globe (Melton's tester would have). This connects and listens
+ * saw an empty globe. This connects and listens
  * with no place joined. Nothing is announced (there is no `here` to announce),
  * nothing can be said or sent (both need a place), and it stops like any other
  * connection, with leave().

@@ -49,7 +49,7 @@
   const FIG_STAR = `<path d="M101.791 10.5592C101.728 10.5983 101.677 10.6542 101.644 10.7206L99.9127 14.2298C99.7985 14.461 99.6298 14.661 99.4212 14.8126C99.2125 14.9641 98.9702 15.0627 98.715 15.0998L94.8412 15.6661C94.7675 15.6765 94.6982 15.7074 94.6412 15.7553C94.5842 15.8032 94.5418 15.8661 94.5188 15.937C94.4958 16.0078 94.4932 16.0836 94.5112 16.1559C94.5292 16.2281 94.5672 16.2938 94.6207 16.3456L97.4227 19.0733C97.6077 19.2534 97.7461 19.4758 97.8259 19.7213C97.9057 19.9669 97.9246 20.2281 97.881 20.4826L97.2202 24.3368C97.2074 24.4101 97.2153 24.4855 97.2432 24.5545C97.2711 24.6235 97.3178 24.6832 97.378 24.727C97.4381 24.7707 97.5094 24.7967 97.5836 24.802C97.6578 24.8073 97.732 24.7916 97.7977 24.7568L101.26 22.9358C101.489 22.816 101.743 22.7534 102 22.7534C102.258 22.7534 102.512 22.816 102.74 22.9358L106.204 24.7568C106.27 24.7918 106.344 24.8077 106.418 24.8025C106.492 24.7973 106.564 24.7713 106.624 24.7276C106.684 24.6838 106.731 24.6239 106.759 24.5548C106.787 24.4857 106.795 24.4102 106.782 24.3368L106.12 20.4818C106.077 20.2275 106.096 19.9664 106.176 19.721C106.256 19.4757 106.394 19.2534 106.579 19.0733L109.381 16.3448C109.434 16.293 109.471 16.2274 109.489 16.1554C109.507 16.0834 109.504 16.0078 109.481 15.9373C109.458 15.8667 109.416 15.804 109.359 15.7562C109.303 15.7084 109.234 15.6774 109.16 15.6668L105.286 15.0998C105.031 15.0624 104.789 14.9637 104.58 14.8122C104.372 14.6606 104.204 14.4608 104.089 14.2298L102.357 10.7206C102.324 10.6542 102.273 10.5983 102.21 10.5592C102.147 10.5201 102.075 10.4994 102.001 10.4994C101.927 10.4994 101.854 10.5201 101.791 10.5592Z"`;
 
   /**
-   * Melton's own drawings, kept as drawn.
+   * The AuralFM marks, hand-drawn, kept as drawn.
    *
    * These arrive as filled artwork on their own large grids rather than as
    * strokes on the 24×24 one, so they get their own helper instead of being
@@ -62,7 +62,7 @@
    * against onyx.
    */
   /**
-   * Melton's marks, on their own viewBoxes, at the set's stroke weight.
+   * The hand-drawn marks, on their own viewBoxes, at the set's stroke weight.
    *
    * The system icons are stroked 1.6 on a 24 grid — 6.67% of the box. These
    * arrive as *filled outlines* on boxes as large as 3955 units, so their line
@@ -87,7 +87,7 @@
     `aria-hidden="true" focusable="false">${body}</svg>`;
 
   const PATHS = {
-    /* Melton's filter mark (Desktop/filter.svg, 2026-09-23), redrawn as lines.
+    /* The hand-drawn filter mark (filter.svg), redrawn as lines.
        Drawn filled, its bars were 12 units of an 83-unit box — about twice the
        weight of every glyph beside it. Same proportions (the bars run 100%, 76%
        and 40% of the width, evenly spaced, round-ended), stroked at 2.1 on the

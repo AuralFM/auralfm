@@ -167,7 +167,7 @@ function repaintLog() {
    * conversation is a person: it belongs to them and follows you everywhere.
    *
    * Merging them put a message meant for one person into every room's log and
-   * carried it from city to city — Melton sent a screenshot of exactly that, a
+   * carried it from city to city: a
    * PRIVATE line sitting above a public composer in a city it had nothing to do
    * with. So the room shows the room, a conversation shows the conversation, and
    * neither one borrows the other's column.

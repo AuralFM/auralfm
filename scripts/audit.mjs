@@ -687,7 +687,7 @@ console.log("\nlight theme agrees with itself");
   /**
    * And every writer sends a patch, never its own copy of everything.
    *
-   * This is the rule that cost Melton his favorites. Two windows write state,
+   * This is the rule that once lost a user's favorites. Two windows write state,
    * the popover read it once at launch and never again, and `persist()` sent
    * that whole boot-time object back on every volume change — quietly restoring
    * a stale `favorites` array over the one Explore had just saved. The handler
@@ -1069,7 +1069,7 @@ console.log("\nlight theme agrees with itself");
 // Rooms are scoped to a place and stop meaning anything when you tune away.
 // Private messages are scoped to a person and follow you everywhere. Merged into
 // one column, a message meant for one person appeared in every room's log and
-// travelled from city to city — Melton sent a screenshot of a PRIVATE line
+// travelled from city to city: a PRIVATE line was seen
 // sitting in a city it had nothing to do with. The two scopes stay apart.
 {
   console.log("\nthe room log carries the room, not private conversations");
@@ -1141,7 +1141,7 @@ console.log("\nlight theme agrees with itself");
 // and was still holding its notes. The next subscription replayed them, the set
 // no longer recognised them, and each one was appended again.
 //
-// Melton hit it as seven identical notes from a stranger who had said "hola"
+// Seen as seven identical notes from a stranger who had said "hola"
 // once. Six selection changes, six extra copies. Nothing static would have found
 // this: every function here is correct on its own, and the defect only exists in
 // the order they run in.
@@ -1266,7 +1266,7 @@ console.log("\nlight theme agrees with itself");
 // still reporting that it was playing — the stream arriving, the clock
 // advancing, the station named on screen, and no sound.
 //
-// Melton found it as "a lot of stations with no sound, very random". It is not
+// Reported as "a lot of stations with no sound, very random". It is not
 // random: it is whether the station's server answers a cross-origin request.
 //
 // The measurement that originally justified the analyser was true and
@@ -1312,8 +1312,8 @@ console.log("\nlight theme agrees with itself");
 }
 
 // ── the studio's music bed plays only what its mixer can hear ──────────────
-// Tracks were decoded whole into memory, and an hour-long mix did not fit
-// (Melton, 28 Sept). studio-deck.js streams them through an <audio> element
+// Tracks were decoded whole into memory, and an hour-long mix did not fit.
+// studio-deck.js streams them through an <audio> element
 // instead, which is the one other place an element may be routed through Web
 // Audio: it must be an element that file made itself with `new Audio(`, and it
 // may play two things only. A `blob:` URL of a file already on this device; or
@@ -1362,7 +1362,7 @@ console.log("\nlight theme agrees with itself");
 // one — and the button vanished at exactly the moment somebody had lost the
 // device they were listening on, reflowing the transport bar as it went.
 //
-// Melton reported it as the speaker disappearing. Both windows had the rule.
+// It looked like the speaker disappearing. Both windows had the rule.
 {
   console.log("\nthe output button does not come and go");
   const bad = [];
@@ -1382,7 +1382,7 @@ console.log("\nlight theme agrees with itself");
 }
 
 // ── every mark carries the set's stroke weight ───────────────────────────────
-// The system icons are stroked 1.6 on a 24 grid. Melton's marks arrive as filled
+// The system icons are stroked 1.6 on a 24 grid. The hand-drawn marks arrive as filled
 // outlines on boxes up to 3955 units wide, so their line thickness is baked into
 // the geometry and lands wherever the artwork put it — the aeroplane measured
 // 0.33 CSS px against the star's 1.07 and read as a hairline in a row of icons
@@ -1508,7 +1508,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // ── every button in a toolbar calls something that exists ────────────────────
 // The travel globe shipped calling `playChannel(pick)`. There is no such
 // function in explore.js — it threw on click and the button did nothing at all,
-// which is exactly what Melton reported. It passed review because the *data*
+// which is exactly what was reported. It passed review because the *data*
 // path was verified (randomStation returns a station) and the handler was not.
 //
 // This checks the whole class: every identifier a click handler calls has to be
@@ -1705,7 +1705,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // withholding the same rights, and THIRD-PARTY-NOTICES.md (also shipped) sided
 // with the MIT one. Resolved in favour of the licence on 8 August 2026.
 //
-// 13 Oct 2026: the licence is the Apache License 2.0 (Melton's decision; MIT
+// Since 13 Oct 2026 the licence is the Apache License 2.0 (MIT
 // before). Five statements now, and a new way to be wrong: an Apache LICENSE
 // is the licence's own text and nothing else, so it is compared with the
 // published text by its hash, and what the project has to say for itself lives
@@ -2454,9 +2454,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // ── on a phone, a panel sits behind the chrome, not over it ─────────────────
 // Headlines, layers and chat were z-index 6 against the tab bar's 5, and threw
 // a downward shadow (0 18px 48px) across it. They read as cards hovering over
-// the app instead of content the bar sits on top of. Melton, testing on his
-// phone: "it's almost like it's hovering, and you see a shadow ... it should be
-// positioned behind the bar of the tab."
+// the app instead of content the bar sits on top of. On a phone they must sit
+// behind the tab bar, with no shadow across it.
 //
 // Favourites was already right, and is the reference: the rail sheet is
 // z-index 4, under the chrome's 5, and its shadow points *up* onto the globe
@@ -2492,8 +2491,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // `#lock{background:none}` outranked the tile every button in that column
 // wears. Measured in the phone layout: layers and shuffle rested on
 // `rgb(.047 .043 .043 / .62)`, the lock on `rgba(0,0,0,0)` — no tile at all.
-// Melton: "when the lock is unchecked, it is almost too transparent. It doesn't
-// match the unchecked layers and the shuffle."
+// Unchecked, the lock read as too transparent beside the unchecked layers and
+// the shuffle.
 {
   console.log("\nthe three globe buttons rest alike");
   const css = fs.readFileSync(R("web/web.css"), "utf8");
@@ -2554,7 +2553,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // and wrong for a phone, where Settings IS one of the five tabs and sits under
 // the bar on purpose. `inert` takes the whole subtree out of hit-testing, so
 // the bar was there, lit, showing Settings as the current tab — and dead. Done
-// really was the only way out, which is exactly how Melton described it.
+// really was the only way out.
 //
 // Measured: with the sheet shut, a hit test over the bar returns
 // `button.tab, nav.tabbar, …`. With it open, `body, html` — no bar at all.
@@ -2671,8 +2670,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── chat speaks in short lines ──────────────────────────────────────────────
-// Melton, 2026-09-23: "we don't need this much copy ever — keep it around 30
-// characters." The chat's opening notice was 381 characters of italic in a
+// The rule: about 30 characters a line. The chat's opening notice was 381 characters of italic in a
 // panel people glance at, and the command replies ran to two sentences each.
 // Everything the chat says: its strings in every language, and the literal
 // text the slash commands answer with (the fixed part — a name is extra).
@@ -2925,7 +2923,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 
 // ── a donation link is the station's own page, and never for a sanctioned country
 // Stations that can't take a Lightning address (a 501(c)(3) like 8-Ball Radio)
-// get a Donate link to their own page (Melton, 26 Sept). It must be https, the
+// get a Donate link to their own page. It must be https, the
 // station's own page before any platform, not a paid membership, and absent
 // wherever tips are absent: Cuba, Iran, North Korea and Syria.
 {
@@ -3012,7 +3010,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // those stations through radio.garden's listen endpoint — which answers only
 // requests that look like its own website, so the app sent a borrowed Chrome
 // User-Agent and radio.garden's Referer. The web app used the same endpoint as
-// a fallback. Both are gone (Melton, 26 Sept: completely separate). This fails
+// a fallback. Both are gone. This fails
 // if any code the apps run names radio.garden or sends a Referer, and, with the
 // network faked, if resolving a station asks anything but radio-browser: by id
 // when the station has one, else not at all (its own stream, from its profile).
@@ -3079,7 +3077,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── "Hide explicit stations" hides them ───────────────────────────────────
-// Explicit stations are listed and labelled (Melton, 26 Sept); the setting
+// Explicit stations are listed and labelled; the setting
 // leaves them out of lists, search and shuffle. Checked on the real catalogue:
 // an explicit station is found by its name with the setting off, not with it on.
 {
@@ -3105,7 +3103,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── foreign music stations are held back in the UK and the EU ──────────────
-// Option 3 of docs/LEGAL-AND-SECURITY.md §9 (Melton, 26 Sept): on London time a
+// Option 3 of docs/LEGAL-AND-SECURITY.md §9: on London time a
 // US music station is listed but held, a UK one and a speech station elsewhere
 // are not, the shuffle lands only on what can play, and the two places that
 // start a stream (the desktop's resolve, the web bridge's tune) ask first. On
@@ -3442,9 +3440,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 
 // ── the installed phone app reaches the bottom of the screen ────────────────
 // With the sky behind the status bar, iOS lays the page out short by the status
-// bar's height and leaves a blank strip under the tab bar (Melton's screenshot,
-// 6 Oct 2026). Adding the strip to "100dvh" overshot by as much again on his
-// phone (the tab bar's labels went off the screen): that height is not a
+// bar's height and leaves a blank strip under the tab bar. Adding the strip to
+// "100dvh" overshot by as much again on an iPhone (the tab bar's labels went off the screen): that height is not a
 // steady number there. So the page is given the screen's own height. Ways to
 // bring either bug back: lean on dvh again; do it under the opaque bar (there
 // the page starts lower and the tab bar would leave the screen); hold the
@@ -3562,8 +3559,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 
 // ── the studio is not on the public web ─────────────────────────────────────
 // listen.auralfm.xyz/?studio opened the studio for anyone with the link, and a
-// flag kept in the browser kept it open afterwards. Melton, 5 Oct 2026: too
-// buggy to hand out; the desktop beta only until it is settled. A query string
+// flag kept in the browser kept it open afterwards. It is too
+// unfinished to hand out: the desktop beta only until it is settled. A query string
 // or a stored flag that switches it on is that link coming back.
 {
   console.log("\nthe studio is not on the public web");
@@ -4070,7 +4067,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── on a phone the station's name keeps its room ────────────────────────────
-// 10 Oct 2026, from Melton's iPhone: playing a station in Austin, the player
+// Seen on an iPhone: playing a station in Austin, the player
 // row read "KU…  Austin TX · United St…". The status (the town and country,
 // once playing) was rigid up to two fifths of the row, and the name was the
 // only thing that gave way. The status gives way first now, down to a floor
@@ -4097,7 +4094,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── a station starting does not rebuild the globe ───────────────────────────
-// 10 Oct 2026, timed on Melton's Intel MacBook with the app's own profiler:
+// Timed on an Intel MacBook with the app's own profiler:
 // the first press on a station froze the window for over a second. The play
 // bar comes in under the globe, the globe's pane loses the bar's 44px, the
 // pane's observer calls sizeGlobe(), and one WebGLRenderer.setSize() for that
@@ -4204,7 +4201,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── every distance follows the listener's units ─────────────────────────────
-// 12 Oct 2026, Melton, in Houston: "it uses kilometers, but I'm in the U.S."
+// A listener in the US was shown kilometres.
 // The hop line under a place already asked src/geo.js, which asks the system
 // (miles in the US and the UK, kilometres elsewhere) and honours the units
 // preference. Six other lines wrote " km" straight into the page: how far the
@@ -4238,9 +4235,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── a link that asks to play is played ──────────────────────────────────────
-// 12 Oct 2026, Melton: pressing "Play on the globe" on a station's page on the
-// site "just goes to the globe"; it should go to that station, start buffering
-// and play. ?station= opened the station cued and paused, on purpose: a shared
+// Pressing "Play on the globe" on a station's page on the site only opened
+// the globe; it must go to that station, start buffering and play. ?station= opened the station cued and paused, on purpose: a shared
 // card's link should not make sound for whoever scans it. A press on our own
 // Play button is the listener asking, so that link says so (&play=1) and the
 // app starts the station. A browser may still refuse sound nobody has touched
@@ -4480,7 +4476,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (!/sleepEndsAt:/.test(src)) gaps.push(`${who} does not say when it ends`);
     if (!/addEventListener\("timeupdate",[^\n]*AuralSleep/.test(src)) gaps.push(`${who} looks only on a timer, which a phone with its screen off may not run`);
   }
-  // 13 Oct, on Melton's iPhone: the timer worked and the row read "Sleep ti…".
+  // On an iPhone the timer worked and the row read "Sleep ti…".
   if (!/stop: \(\) => stop\("Sleep timer ended", true\)/.test(bridge) || !/setStatus\(said, false, notice\)/.test(bridge)) gaps.push("on a phone the line that says why the sound stopped is cut short");
   if (!/<script src="sleep\.js"><\/script>\s*<script src="popover\.js">/.test(readSrc("src/renderer/popover.html"))) gaps.push("the menu bar panel does not load it before its player");
   if (!/"sleep\.js",\s*"web\/bridge\.js"/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the web build does not load it before its player");
@@ -4625,7 +4621,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 }
 
 // ── a place is named after a town ───────────────────────────────────────────
-// 13 Oct 2026, from Melton's phone: "Truro area area", a hundred miles from
+// Seen in the app: "Truro area area", a hundred miles from
 // Truro, holding one station called Jack FM Halifax. A station too far from
 // any town to join it gets a place of its own, "<nearest town> area", and the
 // nearest place was sometimes another "… area" or a country's stand-in. Eight

@@ -49,7 +49,7 @@ module.exports = function register(ctx) {
    * that sends a whole state object sends whatever it last read — which is not
    * what is on disk.
    *
-   * That cost Melton his favorites. The popover reads state once at launch and
+   * That once lost a user's favorites. The popover reads state once at launch and
    * never again; every volume nudge and every tune called `persist()`, which sent
    * its entire boot-time snapshot back. Star a station in Explore, then touch the
    * volume, and the popover's stale `favorites` array overwrote it. It looked

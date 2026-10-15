@@ -50,8 +50,8 @@ async function applyPalette() {
   // In light theme the star follows the accent, not `palette.star`.
   // Every palette's star is a near-white or a pale tint -- #F5F0E4, #DCE7FF,
   // #FFE9B0 -- because it was chosen to sit on the night side of a globe. On the
-  // light background those measure 1.01 to 1.40:1, which is invisible: Melton
-  // could not find the favourite stars at all. accentLight is already designed
+  // light background those measure 1.01 to 1.40:1, which is invisible: the
+  // favourite stars could not be found at all. accentLight is already designed
   // for this background and clears the 3:1 floor WCAG sets for non-text UI in all
   // nine palettes. Dark theme keeps the pale star, where it measures 12 to 18:1.
   r.style.setProperty("--star", light ? palette.accentLight : palette.star);

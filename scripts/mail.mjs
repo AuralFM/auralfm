@@ -3,7 +3,7 @@
  * The emails AuralFM sends: to the people who asked for one, and nobody else.
  *
  *   node scripts/mail.mjs                  who would get what; previews written, nothing sent
- *   node scripts/mail.mjs --send           send them (Melton runs this: it writes as him)
+ *   node scripts/mail.mjs --send           send them (run by hand: it sends as the founder)
  *   node scripts/mail.mjs --test ADDRESS   every email once, to ADDRESS, marked TEST
  *
  *   node scripts/mail.mjs --issue NOTE.md           one issue of the newsletter: who would get it, and a preview
@@ -15,7 +15,7 @@
  *   beta       they joined the desktop beta list (auralfm.xyz/beta)
  *   sponsor    they joined the sponsorship waitlist (auralfm.xyz/support)
  *   claim      they claimed their station's page (docs.auralfm.xyz/claim)
- *   approved   Melton approved that claim (scripts/claims.mjs --import)
+ *   approved   the claim was approved (scripts/claims.mjs --import)
  *   letter     they signed up for the newsletter (auralfm.xyz/newsletter)
  *   shop       they asked to be told when the shop opens (auralfm.xyz/shop)
  *
@@ -57,7 +57,7 @@ const REPLY = "hello@auralfm.xyz";
  * A postal address in every email. US law on commercial email (CAN-SPAM)
  * requires a valid physical postal address in each one (a PO box or a
  * registered agent's address counts), and the beta and sponsor emails invite
- * people to pay, so they count. Melton puts his in ~/.resend/postal-address, one
+ * people to pay, so they count. It lives in ~/.resend/postal-address, one
  * line; it is kept out of the repo like the key. --send refuses without it;
  * previews and --test show where it goes.
  */
@@ -220,12 +220,28 @@ const had = (kind, id) => !!sent[kind]?.[id];
 
 // The newsletter list holds two kinds of asking: the newsletter, and "tell me when the shop opens".
 const wantsLetter = (r) => r.topic !== "shop";
+// The Journal is its own here.now site (blog.auralfm.xyz) with its own sign-up
+// form, so its list is a second collection. Both are one list: an address on
+// both gets one email. A Journal list that cannot be read is said, not fatal.
+const JOURNAL = "brave-thistle-7jqb";
+async function letterList() {
+  const own = await records("mantra-portal-hsqy", "newsletter");
+  let journal = [];
+  try { journal = (await records(JOURNAL, "newsletter")).map((r) => ({ ...r, id: `journal:${r.id}` })); }
+  catch (e) { console.log(`mail: the Journal's list could not be read (${e.message})`); }
+  const seen = new Set();
+  return [...own, ...journal].filter((r) => {
+    const k = String(r.email || "").trim().toLowerCase();
+    if (!k || seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
 const queue = [];
 if (ISSUE) {
   if (testTo) queue.push([ISSUE.kind, { id: "test", name: "Melton Bell", email: testTo }]);
-  else for (const r of await records("mantra-portal-hsqy", "newsletter")) if (wantsLetter(r) && !had(ISSUE.kind, r.id)) queue.push([ISSUE.kind, r]);
+  else for (const r of await letterList()) if (wantsLetter(r) && !had(ISSUE.kind, r.id)) queue.push([ISSUE.kind, r]);
 } else if (!testTo) {
-  for (const r of await records("mantra-portal-hsqy", "newsletter")) { const k = wantsLetter(r) ? "letter" : "shop"; if (!had(k, r.id)) queue.push([k, r]); }
+  for (const r of await letterList()) { const k = wantsLetter(r) ? "letter" : "shop"; if (!had(k, r.id)) queue.push([k, r]); }
   for (const r of await records("mantra-portal-hsqy", "beta")) if (!had("beta", r.id)) queue.push(["beta", r]);
   for (const r of await records("mantra-portal-hsqy", "members")) if (!had("sponsor", r.id)) queue.push(["sponsor", r]);
   const claims = await records("rapid-ember-55ng", "claims");

@@ -36,7 +36,7 @@ const MAX = 1024;
  *
  * There used to be two, because the licensed outlined globe was beautiful at 128
  * and collapsed into a solid disc at 32 — its latitude lines merged once they
- * were under a pixel apart. Melton's mark has no such problem: the continents are
+ * were under a pixel apart. The AuralFM mark has no such problem: the continents are
  * knocked out of a filled disc, so the shapes that carry it are chunky enough to
  * survive 16px and clean enough to hold up at 1024. Carrying two glyphs was a
  * workaround for artwork that could not do both, and it is not needed.
@@ -105,7 +105,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /**
  * The switchable icons.
  *
- * The mark is Melton's globe, and this is how it composes against the brand. The
+ * The mark is the AuralFM globe, and this is how it composes against the brand. The
  * Earth is not the mark at all: it is the same texture the globe is wearing, so
  * the thing in the Dock and the thing on screen are one object rather than an
  * emblem of it.
