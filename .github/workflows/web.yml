@@ -1,0 +1,44 @@
+# The web app builds on every push and pull request (#61).
+#
+# scripts/build-web.mjs needs the station list, which is not in this
+# repository: it is a release of AuralFM/catalogue, taken with
+# `npm run catalogue -- --release`. That needs CATALOGUE_TOKEN, a fine-grained
+# token with read-only Contents on AuralFM/catalogue, stored as this
+# repository's Actions secret. Without it the job says so and stops.
+name: web
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HAS_TOKEN: ${{ secrets.CATALOGUE_TOKEN != '' }}
+    steps:
+      - name: Say what is missing
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::warning::CATALOGUE_TOKEN is not set, so the web app cannot be built here (it needs the catalogue release). Add it in Settings, Secrets and variables, Actions."
+      - uses: actions/checkout@v7
+        if: env.HAS_TOKEN == 'true'
+      - uses: actions/setup-node@v7
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: 24
+          cache: npm
+      - if: env.HAS_TOKEN == 'true'
+        run: npm ci --ignore-scripts
+      - if: env.HAS_TOKEN == 'true'
+        run: node scripts/vendor.mjs
+      - name: The catalogue, from its latest release
+        if: env.HAS_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CATALOGUE_TOKEN }}
+        run: npm run catalogue -- --release
+      - name: Build the web app
+        if: env.HAS_TOKEN == 'true'
+        run: npm run web
