@@ -16,6 +16,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -144,6 +145,10 @@ async function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run, not imported (the audit imports parse and build). Compared as URLs: a
+// path with a space or a "#" in it ("HARD DRIVE #2") is escaped in
+// import.meta.url and not in argv, so a plain "file://" + argv never matched and
+// the script exited having done nothing.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => { console.error("sdr:", err.message); process.exit(1); });
 }

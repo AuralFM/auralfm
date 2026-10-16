@@ -4679,7 +4679,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (calls.length < 2) gaps.push("the radio-browser lookups in candidates() were not found — this check is blind");
   for (const [c] of calls) if (!/signal:/.test(c)) gaps.push(`a radio-browser lookup has no timeout: ${c.slice(0, 60)}`);
   if (!/json\/servers/.test(bridge)) gaps.push("web/bridge.js always uses one radio-browser mirror");
-  gaps.length ? fail(name, gaps.join("; ")) : pass(`${calls.length} radio-browser lookups each time out, on a mirror chosen from the pool`);
+  // One after another, a slow radio-browser cost two timeouts before play tried anything.
+  if (!/Promise\.allSettled\(/.test(body)) gaps.push("the lookups run one after another, so a slow directory costs the sum of their timeouts");
+  gaps.length ? fail(name, gaps.join("; ")) : pass(`${calls.length} radio-browser lookups each time out, run side by side, on a mirror chosen from the pool`);
 }
 
 // ── a relay that drops is dialled again ─────────────────────────────────────
@@ -4837,6 +4839,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/id="errorReportsCard" hidden/.test(readSrc("src/renderer/settings.html"))) gaps.push("the switch shows on the desktop, which never sends");
   if (!/\*\*Error reports\*\*/.test(readSrc("docs/PRIVACY.md"))) gaps.push("docs/PRIVACY.md does not say what an error report carries");
   gaps.length ? fail(name, gaps.join("; ")) : pass("off by default; on, a report carries no outside address, no key and nothing a caller adds, and only AuralFM can read it");
+}
+
+// ── a script run from a folder with a space or a "#" still runs ─────────────
+// crawl-sdr.mjs decided whether it had been run (rather than imported) with
+// import.meta.url compared with "file://" + process.argv[1]. In a folder like
+// "HARD DRIVE #2" the left side is escaped and the right is not: the two never
+// matched, `npm run crawl:sdr` exited 0 having done nothing, and the receiver
+// list went two months without a refresh. Compare as URLs (pathToFileURL).
+{
+  const name = "a script run from a folder with a space or a \"#\" still runs";
+  console.log(`\n${name}`);
+  const bad = fs.readdirSync(R("scripts")).filter((f) => /\.m?js$/.test(f))
+    .filter((f) => /import\.meta\.url\s*===\s*`file:\/\/\$\{process\.argv\[1\]\}`/.test(fs.readFileSync(R(`scripts/${f}`), "utf8")));
+  bad.length ? fail(name, `${bad.join(", ")} compare import.meta.url with a plain "file://" + argv; use pathToFileURL(process.argv[1]).href`)
+    : pass("every script that checks whether it was run compares URLs, not strings");
 }
 
 const tail = skipped ? ` (${skipped} not checkable here)` : "";

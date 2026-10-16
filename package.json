@@ -25,6 +25,7 @@
     "notices": "node scripts/notices.mjs",
     "capture": "node scripts/capture.mjs",
     "mail": "node scripts/mail.mjs",
+    "errors": "node scripts/errors.mjs",
     "dist:staging": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=staging",
     "dist:beta": "npm run audit && npm run dist -- --config.extraMetadata.buildChannel=beta",
     "dist:prod": "npm run audit && npm run dist",
@@ -33,9 +34,9 @@
     "test:app-inbound": "node scripts/relay-test/app-inbound.mjs"
   },
   "devDependencies": {
-    "electron": "^43.7.2",
+    "electron": "^43.8.0",
     "electron-builder": "^26.15.3",
-    "esbuild": "^0.25.12",
+    "esbuild": "^0.28.2",
     "globe.gl": "^2.46.1",
     "qrcode-generator": "^2.0.4"
   },
@@ -45,9 +46,9 @@
   },
   "homepage": "https://github.com/AuralFM/auralfm",
   "dependencies": {
-    "@noble/ciphers": "^2.3.0",
-    "@noble/curves": "^2.2.0",
-    "@noble/hashes": "2.2.0",
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "hls.js": "^1.7.3",
     "satellite.js": "^7.1.0"
   },

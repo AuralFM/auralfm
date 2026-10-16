@@ -394,19 +394,23 @@
   async function candidates(ch) {
     const out = [];
     const add = (u) => { if (u && u.startsWith("https://") && !out.includes(u)) out.push(u); };
-    if (ch.rbuuid) {
-      try {
-        const [s] = await (await fetch(`${RB}/json/stations/byuuid/${encodeURIComponent(ch.rbuuid)}`, { signal: within(8000) })).json();
-        if (s && s.lastcheckok !== 0) add(s.url_resolved || s.url);
-      } catch { /* try the others */ }
+    // All three asked at once, and taken in this order: one lookup that times
+    // out costs one timeout before play tries something, not the sum of them.
+    const byId = ch.rbuuid
+      ? fetch(`${RB}/json/stations/byuuid/${encodeURIComponent(ch.rbuuid)}`, { signal: within(8000) }).then((r) => r.json())
+      : Promise.resolve([]);
+    const ours = profileOf(ch.id);
+    const q = new URLSearchParams({ name: ch.title, limit: "5", hidebroken: "true", order: "votes", reverse: "true" });
+    const byName = fetch(`${RB}/json/stations/search?${q}`, { signal: within(8000) }).then((r) => r.json());
+    const [id, profile, named] = await Promise.allSettled([byId, ours, byName]);
+    const [s] = id.status === "fulfilled" && Array.isArray(id.value) ? id.value : [];
+    if (s && s.lastcheckok !== 0) add(s.url_resolved || s.url);
+    if (profile.status === "fulfilled") add(profile.value?.stream);
+    if (named.status === "fulfilled" && Array.isArray(named.value)) {
+      const list = named.value;
+      const same = (x) => !ch.country || (x.country || "").toLowerCase() === String(ch.country).toLowerCase();
+      for (const x of [...list.filter(same), ...list.filter((x) => !same(x))]) add(x.url_resolved || x.url);
     }
-    try { add((await profileOf(ch.id))?.stream); } catch { /* the others, then */ }
-    try {
-      const q = new URLSearchParams({ name: ch.title, limit: "5", hidebroken: "true", order: "votes", reverse: "true" });
-      const list = await (await fetch(`${RB}/json/stations/search?${q}`, { signal: within(8000) })).json();
-      const same = (s) => !ch.country || (s.country || "").toLowerCase() === String(ch.country).toLowerCase();
-      for (const s of [...list.filter(same), ...list.filter((s) => !same(s))]) add(s.url_resolved || s.url);
-    } catch { /* what we have, then */ }
     return out;
   }
 

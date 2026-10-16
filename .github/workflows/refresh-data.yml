@@ -1,0 +1,55 @@
+# The lists the app ships that other people keep, refreshed on the 1st of each
+# month: the Nostr relay directory (scripts/relays.mjs --nip66, which dials
+# every new candidate), the KiwiSDR receivers (scripts/crawl-sdr.mjs) and the
+# EiBi shortwave schedule (scripts/fetch-schedule.mjs; the seasons change on
+# the last Sundays of March and October).
+#
+# The audit runs on the result. A change is never pushed to main: it goes to a
+# branch and a pull request, or, where Actions may not open pull requests, an
+# issue linking the branch. The station catalogue is refreshed weekly in
+# AuralFM/catalogue and taken with `npm run catalogue -- --release`.
+name: refresh-data
+on:
+  schedule:
+    - cron: "0 7 1 * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/vendor.mjs
+      - name: Relays
+        run: node scripts/relays.mjs --nip66
+      - name: Receivers
+        run: node scripts/crawl-sdr.mjs
+      - name: Shortwave schedule
+        run: node scripts/fetch-schedule.mjs
+      - name: Audit
+        run: npm run audit
+      - name: A branch and a pull request
+        run: |
+          git diff --quiet -- data && { echo "nothing changed"; exit 0; }
+          day=$(date -u +%F); branch="refresh-data/${day}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add data/relays.json data/sdr.min.json data/schedule.json
+          git commit -q -m "Monthly data refresh ${day}: relays, receivers, shortwave schedule" -m "Written by .github/workflows/refresh-data.yml; npm run audit passed on it."
+          git push origin "$branch"
+          body="Relays, receivers and the shortwave schedule, refreshed ${day}. npm run audit passed. $(git diff --stat HEAD~1 | tail -1)"
+          gh pr create --base main --head "$branch" --title "Monthly data refresh ${day}" --body "$body" \
+            || gh issue create --title "Monthly data refresh ${day}" --label "area: infra" \
+                 --body "${body} Actions may not open pull requests here, so the change is on a branch: https://github.com/${GITHUB_REPOSITORY}/compare/main...${branch}?expand=1"
