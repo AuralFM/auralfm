@@ -1352,6 +1352,9 @@
   #nowName{flex:0 1 auto;min-width:0}
   #nowStatus{flex:0 1 auto;min-width:0}
   #nowName,#nowStatus{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nowsleep{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--label2);font-size:12px;font-variant-numeric:tabular-nums}
+  .nowsleep[hidden]{display:none}
+  .nowsleep .ico{display:inline-flex;font-size:14px;color:var(--accent)}
   /* The prices keep their natural width and lose whole symbols instead. */
   .markets{flex:0 0 auto}
 
@@ -2043,6 +2046,10 @@
   <b id="nowName"></b>
   <span class="wave" id="nowWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
   <span id="nowStatus"></span>
+  <!-- The sleep timer, when one is running (Settings, Listening): a moon and the
+       time it stops. Its words are in the label, for a phone where the row
+       keeps only the moon. -->
+  <span id="nowSleep" class="nowsleep" role="img" hidden><span class="ico"></span><span class="t"></span></span>
   <!-- About the station you are hearing: opens its place in the rail with its
        card unfolded (explore-profile.js). A phone pulls the bar up instead. -->
   <button id="nowInfo" class="pinfo nowinfo" type="button"

@@ -187,6 +187,8 @@
 
     /* Your show: the studio's button and its on-air state. Drawn at the chat
        glyph's weight so the two sit together in a toolbar. */
+    // The sleep timer's mark in the player row: a crescent on the 24 grid.
+    moon: SVG(`<path d="M19.4 14.6A7.6 7.6 0 1 1 9.4 4.6a6.2 6.2 0 0 0 10 10Z"/>`),
     mic: SVG(`<rect x="8.6" y="3" width="6.8" height="11.6" rx="3.4" stroke-width="2.1"/>
               <path d="M5.2 11.2a6.8 6.8 0 0 0 13.6 0M12 18v3" stroke-width="2.1"/>`),
   };

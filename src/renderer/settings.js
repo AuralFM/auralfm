@@ -24,7 +24,7 @@ function paint() {
     b.setAttribute("aria-checked", String(b.querySelector(".nm").textContent === paletteName(P.palette)));
   }
   paintAppIcons();
-  for (const group of ["theme", "dotSize"]) {
+  for (const group of ["theme", "dotSize", "units"]) {
     for (const b of $("#" + group).children) {
       b.setAttribute("aria-checked", String(b.dataset.v === P[group]));
       b.tabIndex = b.dataset.v === P[group] ? 0 : -1;
@@ -85,7 +85,7 @@ window.auralfm.onSocial(() => paintContacts());
 
 // Segmented controls: click, plus arrow keys for keyboard users, because a
 // radiogroup that only responds to the mouse is a radiogroup in name only.
-for (const group of ["theme", "dotSize"]) {
+for (const group of ["theme", "dotSize", "units"]) {
   const el = $("#" + group);
   el.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-v]");

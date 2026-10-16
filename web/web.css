@@ -436,6 +436,8 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
      is not, and on a 375pt phone with the AirPlay button in the row its 24pt
      are the difference between "Sleep timer ended" and "Sleep timer en…". */
   body.phonebar .now.notice #nowWave { display: none; }
+  /* The sleep mark keeps only its moon in a phone's row; the time is in its label. */
+  body.phonebar .nowsleep .t { display: none; }
   body.phonebar .now #nowStar {
     display: grid; place-items: center; flex: none;
     width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;

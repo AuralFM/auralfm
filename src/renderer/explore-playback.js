@@ -419,6 +419,29 @@ function setLocked(on) {
   window.auralfm.getState().then((st) => window.auralfm.setState({ ...(st || {}), locked: on }));
 }
 
+/**
+ * The sleep timer in the player row, while one runs: it was only in Settings,
+ * so the one person who set it could not see it was still set. The time it
+ * stops, in the listener's own clock; hidden again when it ends.
+ */
+let sleepShown = 0, sleepTimer = null;
+function paintSleep(endsAt) {
+  const at = Number(endsAt) || 0, el = $("nowSleep");
+  if (!el || at === sleepShown) return;
+  sleepShown = at;
+  clearTimeout(sleepTimer);
+  const on = at > Date.now();
+  el.hidden = !on;
+  if (!on) return;
+  const when = new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (typeof Icons !== "undefined") Icons.set(el.querySelector(".ico"), "moon");
+  el.querySelector(".t").textContent = when;
+  const label = t("now.sleepUntil", "Sleep timer: stops at {time}").replace("{time}", when);
+  el.setAttribute("aria-label", label);
+  el.title = label;
+  sleepTimer = setTimeout(() => { sleepShown = -1; paintSleep(0); }, at - Date.now() + 500);
+}
+
 function wirePlayback() {
   window.auralfm.onPlayerState((s) => {
     // Kept for the row to be given back after a show (explore-shows.js).
@@ -460,6 +483,7 @@ function wirePlayback() {
         }, 90_000);
       }
     }
+    paintSleep(s.sleepEndsAt);
     playing = s.playing ? s.channel : null;
     inPlayer = s.channel || null;
     document.body.classList.toggle("playing", !!s.playing);
