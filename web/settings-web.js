@@ -20,6 +20,9 @@
     // The durable identity's card, and the paragraph that explains it.
     hide(document.getElementById("durableIdentity")?.closest(".card"));
     hide(document.querySelector('[data-i18n="set.durableHint"]'));
+    // Error reports exist only here: the desktop never sends its errors.
+    document.getElementById("errorReportsCard")?.removeAttribute("hidden");
+    document.getElementById("errorReportsHint")?.removeAttribute("hidden");
     // Wording that is about the Mac — the privacy promise among it — comes from
     // the bridge's web strings (WEB_EN in web/bridge.js), through the page's own
     // translation pass.

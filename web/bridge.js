@@ -346,8 +346,18 @@
 
   // radio-browser asks to be told when one of its stations is played; that is how
   // its rankings stay honest. Fire and forget.
-  const RB = "https://de1.api.radio-browser.info";
-  const reportClick = (uuid) => { if (uuid) fetch(`${RB}/json/url/${uuid}`).catch(() => {}); };
+  // A mirror from radio-browser's pool, as the desktop picks one (src/resolver.js):
+  // it asks clients to spread across them, and one mirror down is then not play
+  // down for everybody. de1 until the pool answers, and if it never does.
+  let RB = "https://de1.api.radio-browser.info";
+  // Every call to it ends: a server that takes the connection and never answers
+  // left play spinning. AbortSignal.timeout is iOS 16+; older phones wait, as before.
+  const within = (ms) => (typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(ms) : undefined);
+  fetch(`${RB}/json/servers`, { signal: within(6000) }).then((r) => (r.ok ? r.json() : [])).then((list) => {
+    const names = [...new Set(list.map((s) => s.name).filter((n) => /^[a-z0-9-]+\.api\.radio-browser\.info$/.test(n || "")))];
+    if (names.length) RB = `https://${names[Math.floor(Math.random() * names.length)]}`;
+  }).catch(() => { /* keep de1 */ });
+  const reportClick = (uuid) => { if (uuid) fetch(`${RB}/json/url/${uuid}`, { signal: within(5000) }).catch(() => {}); };
   const heldText = () => M.i18n.strings(getPrefs().language, locale)["st.held"] || "Not available where you are yet";
 
   /**
@@ -386,14 +396,14 @@
     const add = (u) => { if (u && u.startsWith("https://") && !out.includes(u)) out.push(u); };
     if (ch.rbuuid) {
       try {
-        const [s] = await (await fetch(`${RB}/json/stations/byuuid/${encodeURIComponent(ch.rbuuid)}`)).json();
+        const [s] = await (await fetch(`${RB}/json/stations/byuuid/${encodeURIComponent(ch.rbuuid)}`, { signal: within(8000) })).json();
         if (s && s.lastcheckok !== 0) add(s.url_resolved || s.url);
       } catch { /* try the others */ }
     }
     try { add((await profileOf(ch.id))?.stream); } catch { /* the others, then */ }
     try {
       const q = new URLSearchParams({ name: ch.title, limit: "5", hidebroken: "true", order: "votes", reverse: "true" });
-      const list = await (await fetch(`${RB}/json/stations/search?${q}`)).json();
+      const list = await (await fetch(`${RB}/json/stations/search?${q}`, { signal: within(8000) })).json();
       const same = (s) => !ch.country || (s.country || "").toLowerCase() === String(ch.country).toLowerCase();
       for (const s of [...list.filter(same), ...list.filter((s) => !same(s))]) add(s.url_resolved || s.url);
     } catch { /* what we have, then */ }
@@ -968,8 +978,43 @@
     // The globe has painted: lift the launch screen (web/launch.js).
     exploreReady: () => window.AuralLaunch?.done(),
     tipNext: none, tipDonate: noop, tipRetire: noop,
-    reportError: noop,
+    reportError: (r) => sendReport(r),
   };
+
+  /**
+   * Error reports, only when the listener has turned them on (Settings, Privacy;
+   * off by default, prefs.errorReports). errors.js sends each distinct error
+   * at most three times; this adds a ceiling of ten a session, and takes out
+   * anything that could say what was playing or who was listening: every
+   * address that is not this app's own becomes <url> (a stream's address is a
+   * station), and any 64-character key becomes <key>. Only the kind, the
+   * message, the stack and the page go; nothing a caller adds. The platform is
+   * one word, not the user agent. here.now keeps the list, readable by AuralFM
+   * only (.herenow/data.json, written by scripts/build-web.mjs).
+   */
+  let reportsSent = 0;
+  function redactReport(r, version, platform) {
+    const own = /^https?:\/\/(listen\.auralfm\.xyz|localhost(:\d+)?|127\.0\.0\.1(:\d+)?)\//;
+    const scrub = (t, n) => String(t || "")
+      .replace(/\b(?:https?|wss?|blob|data):[^\s)'"]+/g, (u) => (own.test(u) ? u.replace(/[?#][^:\s)]*/, "") : "<url>"))
+      .replace(/\b[0-9a-f]{64}\b/gi, "<key>")
+      .slice(0, n);
+    return {
+      where: scrub(r?.where, 40), message: scrub(r?.message, 300), stack: scrub(r?.stack, 2000),
+      page: scrub(r?.page, 60), repeat: Math.max(1, Math.min(99, Math.round(+r?.repeat || 1))),
+      build: String(version || "").slice(0, 40), platform,
+    };
+  }
+  function sendReport(r) {
+    if (getPrefs().errorReports !== true || reportsSent >= 10) return;
+    reportsSent++;
+    const ua = navigator.userAgent;
+    const platform = /iPhone|iPad|iPod/.test(ua) ? "ios" : /Android/.test(ua) ? "android"
+      : /Mac/.test(ua) ? "mac" : /Windows/.test(ua) ? "windows" : "other";
+    const body = { ...redactReport(r, VERSION, platform), standalone: matchMedia("(display-mode: standalone)").matches };
+    fetch(".herenow/data/errors", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(body), keepalive: true, signal: within(8000) }).catch(() => { /* a report must never become an error */ });
+  }
 
   /** A data: URL as a PNG, made synchronously so it can be used inside a tap. */
   function pngFile(dataUrl, named) {

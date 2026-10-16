@@ -451,6 +451,29 @@ const UA = { "User-Agent": `AuralFM/${version} (+https://auralfm.xyz)` };
 // scripts/serve-web.mjs reads this same file to stand in for here.now locally.
 fs.mkdirSync(path.join(OUT, ".herenow"), { recursive: true });
 /**
+ * Error reports (web/bridge.js, sendReport), sent only by listeners who turned
+ * them on. Anyone may add one; only AuralFM can read them. Every field capped,
+ * no free-form object, and 20 an hour from one connection at most.
+ */
+fs.writeFileSync(path.join(OUT, ".herenow", "data.json"), JSON.stringify({
+  collections: {
+    errors: {
+      fields: {
+        where: { type: "string", required: true, maxLength: 40, trim: true },
+        message: { type: "string", maxLength: 300 },
+        stack: { type: "string", maxLength: 2000 },
+        page: { type: "string", maxLength: 60 },
+        repeat: { type: "integer", minimum: 1, maximum: 99 },
+        build: { type: "string", maxLength: 40 },
+        platform: { type: "string", maxLength: 10 },
+        standalone: { type: "boolean" },
+      },
+      access: { read: "owner", insert: "public", update: "owner", delete: "owner" },
+      rateLimit: "20/hour/ip",
+    },
+  },
+}, null, 2) + "\n");
+/**
  * The world headlines' feeds, one route each, from the list in src/news.js —
  * read, not copied, so a feed added there cannot be missing here. A missing
  * route is not an error anywhere: it is a 404 that reads as "no headlines".

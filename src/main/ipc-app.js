@@ -14,6 +14,7 @@ const i18n = require("../i18n");
 const palettes = require("../palettes");
 const tips = require("../tips");
 const favsync = require("../favsync");
+const { validUrl } = require("../safehost");
 
 module.exports = function register(ctx) {
   const { broadcast, getPrefs, getStrings, load, openExplore, openOutside, openSettings, save, setPrefs } = ctx;
@@ -152,10 +153,15 @@ module.exports = function register(ctx) {
   const UA = { "User-Agent": "AuralFM/0.1" };
   ipcMain.handle("studio:openTrack", async (_e, url) => {
     if (typeof url !== "string" || !/^https:\/\/\S+$/i.test(url)) return { error: "https" };
+    // Not a machine on this network: the page reads whatever comes back
+    // (Access-Control-Allow-Origin below), so a link to a router's admin page,
+    // or a redirect to one, would hand that page to the renderer.
+    if (!validUrl(url, { schemes: ["https:"] })) return { error: "https" };
     try {
       // Two bytes are enough to learn what it is.
       const res = await net.fetch(url, { redirect: "follow", headers: { ...UA, Range: "bytes=0-1" }, signal: AbortSignal.timeout(20000) });
       res.body?.cancel().catch(() => {});
+      if (res.url && !validUrl(res.url, { schemes: ["https:"] })) return { error: "https" };
       if (!res.ok) return { error: "status", status: res.status };
       const type = res.headers.get("content-type") || "";
       if (/text\/html|application\/xhtml/i.test(type)) return { error: "page" };
@@ -177,6 +183,8 @@ module.exports = function register(ctx) {
       const range = req.headers.get("range");
       try {
         const res = await net.fetch(to, { redirect: "follow", headers: range ? { ...UA, Range: range } : UA, signal: req.signal });
+        // A host can redirect differently on a later request than it did on the first.
+        if (res.url && !validUrl(res.url, { schemes: ["https:"] })) { res.body?.cancel().catch(() => {}); return new Response(null, { status: 403 }); }
         const headers = new Headers();
         for (const k of ["content-type", "content-length", "content-range", "accept-ranges"]) {
           const v = res.headers.get(k); if (v) headers.set(k, v);

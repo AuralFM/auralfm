@@ -23,6 +23,7 @@
  */
 
 const fs = require("node:fs");
+const { writeAtomic } = require("./atomic");
 const path = require("node:path");
 
 let file = null;
@@ -39,7 +40,7 @@ function init(userDataPath) {
   if (mine.length) console.log(`mine: ${mine.length} station${mine.length === 1 ? "" : "s"} you added`);
 }
 
-const flush = () => { try { fs.writeFileSync(file, JSON.stringify(mine)); } catch {} };
+const flush = () => { try { writeAtomic(file, JSON.stringify(mine)); } catch {} };
 
 const valid = (s) =>
   s && typeof s.id === "string" && s.id.startsWith(PREFIX) &&

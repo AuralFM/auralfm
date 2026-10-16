@@ -1152,111 +1152,146 @@ function connect() {
   if (sockets.length) return;
   dialled = relaysFor(here?.geohash);
   covering = coverageRelays(dialled);
-  for (const url of [...dialled, ...covering]) {
-    let w;
-    try { w = new WebSocket(url); } catch { continue; }
-    w.readOnly = !dialled.includes(url);
-    sockets.push(w);
-    w.onopen = () => {
-      // Listen for anyone in any cell, and filter locally. Putting our own
-      // geohash in the filter would tell every relay we connect to roughly where
-      // we are, which is the one thing this design exists to avoid — so the
-      // bandwidth is spent instead.
-      subscribe(w);
-      announce(w);          // this relay only; the others already have it
-    };    /**
-     * Everything in here is a stranger's relay describing an event, so nothing in
-     * here may be trusted to have the shape it claims. A throw used to reach the
-     * main process with no listener above it, which is how a malformed event became
-     * a dialog box with a stack trace in it.
+  for (const url of [...dialled, ...covering]) dial(url);
+}
+
+/** One relay: open it, and say who we are and what we want once it answers. */
+function dial(url) {
+  let w;
+  try { w = new WebSocket(url); } catch { return; }
+  w.readOnly = !dialled.includes(url);
+  w.dialledAs = url;        // WebSocket.url is normalised; heal() needs the name we used
+  sockets.push(w);
+  w.onopen = () => {
+    healing.delete(url);
+    // Listen for anyone in any cell, and filter locally. Putting our own
+    // geohash in the filter would tell every relay we connect to roughly where
+    // we are, which is the one thing this design exists to avoid — so the
+    // bandwidth is spent instead.
+    subscribe(w);
+    announce(w);          // this relay only; the others already have it
+  };    /**
+   * Everything in here is a stranger's relay describing an event, so nothing in
+   * here may be trusted to have the shape it claims. A throw used to reach the
+   * main process with no listener above it, which is how a malformed event became
+   * a dialog box with a stack trace in it.
+   */
+  w.onmessage = (m) => {
+    try {
+    let d;
+    try { d = JSON.parse(m.data); } catch { return; }
+    if (d[0] !== "EVENT" || !d[2]) return;
+    const e = d[2];
+
+    /**
+     * A private envelope, handled before the `g` check below — it has no
+     * geohash and never should. Also before the "ours, echoed back" check: the
+     * gift wrap is signed by a one-time key that is nobody's, so there is
+     * nothing to recognise.
      */
-    w.onmessage = (m) => {
-      try {
-      let d;
-      try { d = JSON.parse(m.data); } catch { return; }
-      if (d[0] !== "EVENT" || !d[2]) return;
-      const e = d[2];
+    if (e.kind === WRAP_KIND) { takeDm(e); return; }
 
-      /**
-       * A private envelope, handled before the `g` check below — it has no
-       * geohash and never should. Also before the "ours, echoed back" check: the
-       * gift wrap is signed by a one-time key that is nobody's, so there is
-       * nothing to recognise.
-       */
-      if (e.kind === WRAP_KIND) { takeDm(e); return; }
+    // A profile we asked for. No geohash, and none expected.
+    if (e.kind === 0) { takeProfile(e); return; }
 
-      // A profile we asked for. No geohash, and none expected.
-      if (e.kind === 0) { takeProfile(e); return; }
+    /**
+     * A hub message, which has no geohash and never should — it belongs to a
+     * room rather than a place. Handled before the `g` gate below, which would
+     * otherwise drop it for the very thing that makes it a hub message.
+     */
+    const h = (e.tags || []).find((t) => t[0] === "h")?.[1];
+    if (h) {
+      if (hub && h === hub.tag && !mineKeys().has(e.pubkey)) takeHub(e);
+      return;
+    }
 
-      /**
-       * A hub message, which has no geohash and never should — it belongs to a
-       * room rather than a place. Handled before the `g` gate below, which would
-       * otherwise drop it for the very thing that makes it a hub message.
-       */
-      const h = (e.tags || []).find((t) => t[0] === "h")?.[1];
-      if (h) {
-        if (hub && h === hub.tag && !mineKeys().has(e.pubkey)) takeHub(e);
-        return;
-      }
+    // Our own, echoed back. Every key this run has used, not one — there is a
+    // key per place now, and comparing against a single `pk` stopped compiling
+    // the moment that changed.
+    if (mineKeys().has(e.pubkey)) return;
+    const g = (e.tags || []).find((t) => t[0] === "g")?.[1];
+    if (!g || !/^[0-9b-hjkmnp-z]{2,9}$/.test(g)) return;
 
-      // Our own, echoed back. Every key this run has used, not one — there is a
-      // key per place now, and comparing against a single `pk` stopped compiling
-      // the moment that changed.
-      if (mineKeys().has(e.pubkey)) return;
-      const g = (e.tags || []).find((t) => t[0] === "g")?.[1];
-      if (!g || !/^[0-9b-hjkmnp-z]{2,9}$/.test(g)) return;
+    // Below the floor the reader set, this never happened. Checked before any
+    // parsing work, since the whole point is to not pay for spam.
+    if (powFloor && (e.kind === NOTE_KIND || e.kind === CHAT_KIND)
+        && powBits(String(e.id || "")) < powFloor) return;
 
-      // Below the floor the reader set, this never happened. Checked before any
-      // parsing work, since the whole point is to not pay for spam.
-      if (powFloor && (e.kind === NOTE_KIND || e.kind === CHAT_KIND)
-          && powBits(String(e.id || "")) < powFloor) return;
+    if (e.kind === NOTE_KIND) {
+      // Only the cell we are standing in, and prefix matching so a bitchat
+      // note pinned to a street inside our cell still counts as here.
+      if (!here || !sameCell(g, here.geohash)) return;
+      if (!e.content || String(e.content).length > MAX_NOTE) return;
+      recordNote(e);
+      return;
+    }
 
-      if (e.kind === NOTE_KIND) {
-        // Only the cell we are standing in, and prefix matching so a bitchat
-        // note pinned to a street inside our cell still counts as here.
-        if (!here || !sameCell(g, here.geohash)) return;
-        if (!e.content || String(e.content).length > MAX_NOTE) return;
-        recordNote(e);
-        return;
-      }
+    if (e.kind === CHAT_KIND) {
+      // The cell being listened to, or the one being looked at. Every other
+      // channel on the network is someone else's conversation.
+      const mine = here && sameCell(g, here.geohash);
+      const seen = viewing && sameCell(g, viewing);
+      if (!mine && !seen) return;
+      if (!e.content || String(e.content).length > MAX_MESSAGE) return;
+      record(e);
+      return;
+    }
 
-      if (e.kind === CHAT_KIND) {
-        // The cell being listened to, or the one being looked at. Every other
-        // channel on the network is someone else's conversation.
-        const mine = here && sameCell(g, here.geohash);
-        const seen = viewing && sameCell(g, viewing);
-        if (!mine && !seen) return;
-        if (!e.content || String(e.content).length > MAX_MESSAGE) return;
-        record(e);
-        return;
-      }
+    // Presence, either flavour. The label only exists in ours; a bitchat peer
+    // is simply present, which is the whole claim being made.
+    let label = null, live = null;
+    if (e.kind === LABEL_KIND) {
+      try { const j = JSON.parse(e.content); label = j?.l ?? null; live = j?.s === 1; } catch { /* optional */ }
+    }
+    const prev = peers.get(e.pubkey);
+    peers.set(e.pubkey, {
+      geohash: g,
+      label: String(label ?? prev?.label ?? "").slice(0, 60),
+      // Only our own label event says whether a show is live; the shared
+      // heartbeat that arrives beside it must not unsay it.
+      live: live ?? !!prev?.live,
+      at: Date.now(),
+    });
+    emit();
+  
+    } catch (err) {
+      // One bad event is not worth a reconnect, let alone a crash.
+      console.error('presence: dropped a malformed relay event —', err.message);
+    }
+  };
 
-      // Presence, either flavour. The label only exists in ours; a bitchat peer
-      // is simply present, which is the whole claim being made.
-      let label = null, live = null;
-      if (e.kind === LABEL_KIND) {
-        try { const j = JSON.parse(e.content); label = j?.l ?? null; live = j?.s === 1; } catch { /* optional */ }
-      }
-      const prev = peers.get(e.pubkey);
-      peers.set(e.pubkey, {
-        geohash: g,
-        label: String(label ?? prev?.label ?? "").slice(0, 60),
-        // Only our own label event says whether a show is live; the shared
-        // heartbeat that arrives beside it must not unsay it.
-        live: live ?? !!prev?.live,
-        at: Date.now(),
-      });
-      emit();
-    
-      } catch (err) {
-        // One bad event is not worth a reconnect, let alone a crash.
-        console.error('presence: dropped a malformed relay event —', err.message);
-      }
-    };
+  w.onerror = () => { /* a relay refusing us is normal, see the note above */ };
+  w.onclose = () => { sockets = sockets.filter((s) => s !== w); };
+}
 
-    w.onerror = () => { /* a relay refusing us is normal, see the note above */ };
-    w.onclose = () => { sockets = sockets.filter((s) => s !== w); };
+/**
+ * Dial again whatever has dropped.
+ *
+ * A socket that closes leaves `sockets` (onclose above), and nothing used to
+ * dial it again: after the Wi-Fi blinked, a laptop slept or a phone put the
+ * page in the background, chat and presence went silent until the place
+ * changed. Each beat calls this, and so does a page coming back into view or
+ * back online. A relay that stays down is tried less and less often: one beat,
+ * then double the wait each time, up to ten minutes; answering resets it.
+ */
+const HEAL_MIN = 20_000, HEAL_MAX = 10 * 60_000;
+const healing = new Map();  // url → { wait, at }: when to try a dropped relay next
+function heal() {
+  const have = new Set(sockets.map((s) => s.dialledAs));
+  const now = Date.now();
+  for (const url of [...dialled, ...covering]) {
+    if (have.has(url)) continue;
+    const h = healing.get(url) || { wait: HEAL_MIN, at: 0 };
+    if (now < h.at) continue;
+    healing.set(url, { wait: Math.min(HEAL_MAX, h.wait * 2), at: now + h.wait });
+    dial(url);
   }
+}
+// In a browser (the web build), coming back is the moment to look, not the next beat.
+if (typeof document !== "undefined" && typeof addEventListener === "function") {
+  const back = () => { if (!document.hidden && (here || beat)) { healing.clear(); heal(); } };
+  document.addEventListener("visibilitychange", back);
+  addEventListener("online", back);
 }
 
 /**
@@ -1350,7 +1385,7 @@ function join(lat, lon, label, live = false) {
   if (moved && sockets.length) subscribe();
   announce();
   clearInterval(beat);
-  beat = setInterval(() => { announce(); prune(); }, here.live ? LIVE_BEAT_MS : BEAT_MS);
+  beat = setInterval(() => { announce(); prune(); heal(); }, here.live ? LIVE_BEAT_MS : BEAT_MS);
 }
 
 /**
@@ -1367,7 +1402,7 @@ function watch() {
   if (here) return;
   connect();
   clearInterval(beat);
-  beat = setInterval(prune, BEAT_MS);
+  beat = setInterval(() => { prune(); heal(); }, BEAT_MS);
 }
 
 function leave() {

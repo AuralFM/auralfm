@@ -209,11 +209,22 @@ const fixture = process.env.MAIL_RECORDS ? JSON.parse(fs.readFileSync(process.en
 async function records(slug, collection) {
   if (fixture) return fixture[collection] || [];
   if (!key) throw new Error("no here.now key in ~/.herenow/credentials");
-  const res = await fetch(`https://here.now/api/v1/publishes/${slug}/data/${collection}`, {
-    headers: { Authorization: `Bearer ${key}`, "X-HereNow-Client": "claude-code/mail" } });
-  if (!res.ok) throw new Error(`here.now answered ${res.status} for ${collection}`);
-  const b = await res.json();
-  return (b.records || b.items || b.data || (Array.isArray(b) ? b : [])).map((r) => ({ id: r.id, ...(r.data || r.fields || r) }));
+  // The list comes a page at a time (nextCursor). Reading only the first page
+  // would leave everyone after it off every send, without a word.
+  const out = [], seen = new Set();
+  let cursor = null;
+  do {
+    const q = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    const res = await fetch(`https://here.now/api/v1/publishes/${slug}/data/${collection}${q}`, {
+      headers: { Authorization: `Bearer ${key}`, "X-HereNow-Client": "claude-code/mail" } });
+    if (!res.ok) throw new Error(`here.now answered ${res.status} for ${collection}`);
+    const b = await res.json();
+    out.push(...(b.records || b.items || b.data || (Array.isArray(b) ? b : [])));
+    seen.add(cursor);
+    cursor = b.nextCursor || null;
+    if (cursor && seen.has(cursor)) throw new Error(`here.now handed back the same page of ${collection} twice`);
+  } while (cursor);
+  return out.map((r) => ({ id: r.id, ...(r.data || r.fields || r) }));
 }
 const sent = fs.existsSync(SENT) ? JSON.parse(fs.readFileSync(SENT, "utf8")) : {};
 const had = (kind, id) => !!sent[kind]?.[id];

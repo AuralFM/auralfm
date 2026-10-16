@@ -116,6 +116,17 @@ const DEFAULTS = {
    */
   hideExplicit: false,
   /**
+   * Send error reports (the web version only; Settings shows it there).
+   *
+   * Off by default, and off means nothing leaves the device: errors.js writes
+   * what it catches to the console and nowhere else. On, the web version sends
+   * what broke and where in the code (web/bridge.js, sendReport) to a list on
+   * here.now only AuralFM can read — never a station, a stream address, a
+   * place, a key or a message. The desktop keeps its errors in a local file
+   * either way, so the switch is not shown there.
+   */
+  errorReports: false,
+  /**
    * Whether the plain warning about what this channel is has been read.
    *
    * Shown once, the first time the chat appears. Not a legal disclaimer and not

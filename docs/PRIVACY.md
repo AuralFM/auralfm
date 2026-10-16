@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 13 October 2026**
+**Last updated: 16 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -45,7 +45,8 @@ you.
 ## What AuralFM does not do
 
 - No user accounts, sign-in, or profiles
-- No analytics, telemetry, crash reporting, or usage tracking
+- No analytics, telemetry or usage tracking. No crash reporting unless you turn
+  on error reports in the web version (below); it is off until you do
 - No advertising, and no advertising or tracking SDKs of any kind
 - No collection of your name, email, location, contacts, or device identifiers
   (the one exception is on the website, not in the app: the waitlists, below)
@@ -201,9 +202,10 @@ someone's antenna, and it is the same bargain the receiver's own web page offers
 
 ## Optional features that are off by default
 
-**Listener presence** is off until you turn it on in Settings. It and favorites
-sync (further down) are the only things in the app that send anything, which is
-why both are off and why this section is the longest one here.
+**Listener presence** is off until you turn it on in Settings. It, favorites
+sync and error reports (further down) are the only things in the app that send
+anything, which is why all three are off and why this section is the longest one
+here.
 
 With it on, and only while you are playing something, AuralFM announces:
 
@@ -255,6 +257,27 @@ account.
   the code nobody can read it. AuralFM cannot delete it for you, because it
   does not run those relays.
 - **Erase everything** turns sync off on that device first.
+
+**Error reports** (the web version only) are off until you turn them on in
+Settings, under Privacy. With them on, when something in the app breaks, it
+sends a short report so we can fix it.
+
+- **What is sent:** what kind of error it was, its message and the lines of
+  AuralFM's code it happened in, the page, the app's version, one word for the
+  kind of device (iPhone, Android, Mac, Windows or other), and whether the app
+  was added to the home screen.
+- **What is taken out first:** every web address that is not AuralFM's own
+  (a stream's address would say what you were playing) and anything shaped
+  like a key. Nothing about the station, your favorites, your chat or your
+  location is added, and your browser's full identification string is not
+  sent.
+- **Where it goes:** to a list kept by here.now, which hosts the web version.
+  Only AuralFM can read it. Like any request, here.now sees your IP address
+  when it arrives; the report itself does not contain it.
+- **How much:** at most ten reports a session, each kind of error at most three
+  times.
+- **Turning it off** stops it at once. The desktop app never sends its errors:
+  they stay in a file on your Mac that you can open and send yourself.
 
 **Notifications** are off until you turn them on in Settings. With them on,
 AuralFM shows a notification when a private message arrives and the app is not

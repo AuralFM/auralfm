@@ -8,6 +8,7 @@
 const { app } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
+const { writeAtomic } = require("../atomic");
 
 const STORE = path.join(app.getPath("userData"), "state.json");
 
@@ -52,7 +53,7 @@ function save(state) {
   }
   try {
     fs.mkdirSync(path.dirname(STORE), { recursive: true });
-    fs.writeFileSync(STORE, json);
+    writeAtomic(STORE, json);
     return true;
   } catch (err) { console.error("save failed:", err.message); return false; }
 }

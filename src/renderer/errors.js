@@ -11,10 +11,12 @@
  *
  * Two rules it follows:
  *
- * **Nothing leaves the machine.** Reports go to the main process and are written
- * to a local file. There is no endpoint, no key, no upload, and no third party.
- * "Nothing that reports back" is on the front page of this project and an
- * exception for crash data would still be an exception.
+ * **Nothing leaves the machine unless the listener says so.** On the desktop,
+ * reports go to the main process and are written to a local file: no endpoint,
+ * no key, no upload, no third party. On the web there is no local file to keep,
+ * so the web version can send them, only with "Send error reports" switched on
+ * (off by default), with every outside address and key taken out first
+ * (web/bridge.js, sendReport; docs/PRIVACY.md says what goes).
  *
  * **The user is told only when it is theirs to know.** Most of what lands here is
  * a developer's problem, and a dialog for every failed background poll would

@@ -4644,6 +4644,201 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── a link the page hands in is not a door to this network ──────────────────
+// The studio's "track from a link" is fetched by the main process and served
+// back to the page as auralfm-track://, readable by it. Neither fetch checked
+// the host: a link to a router's admin page over https, or a redirect to one,
+// came back to the renderer whole. Both now pass validUrl (src/safehost.js),
+// on the link and on where it lands.
+{
+  const name = "a link the page hands in is not a door to this network";
+  console.log(`\n${name}`);
+  const ipc = readSrc("src/main/ipc-app.js");
+  const open = ipc.slice(ipc.indexOf('"studio:openTrack"'), ipc.indexOf('protocol.handle("auralfm-track"'));
+  const serve = ipc.slice(ipc.indexOf('protocol.handle("auralfm-track"'));
+  const gaps = [];
+  if (!/require\("\.\.\/safehost"\)/.test(ipc)) gaps.push("src/main/ipc-app.js does not use src/safehost.js");
+  if (!/validUrl\(url\b/.test(open)) gaps.push("studio:openTrack fetches a link without checking its host");
+  if (!/validUrl\(res\.url\b/.test(open)) gaps.push("studio:openTrack does not check where a redirect landed");
+  if (!/validUrl\(res\.url\b/.test(serve)) gaps.push("auralfm-track:// serves wherever a later redirect lands");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("a track link, and where it redirects, must be a public https host");
+}
+
+// ── pressing play on the web does not wait forever ──────────────────────────
+// On the web and the iPhone, play asks radio-browser for the stream. Both
+// lookups had no timeout and went to one mirror, de1: a server that accepts the
+// connection and never answers left play spinning with no end. The desktop
+// (src/resolver.js) already picks a mirror from the pool and times out.
+{
+  const name = "pressing play on the web does not wait forever";
+  console.log(`\n${name}`);
+  const bridge = readSrc("web/bridge.js");
+  const body = bridge.slice(bridge.indexOf("async function candidates("), bridge.indexOf("return out;", bridge.indexOf("async function candidates(")));
+  const gaps = [];
+  const calls = body.split("\n").filter((l) => /fetch\(`\$\{RB\}/.test(l)).map((l) => [l.trim()]);
+  if (calls.length < 2) gaps.push("the radio-browser lookups in candidates() were not found — this check is blind");
+  for (const [c] of calls) if (!/signal:/.test(c)) gaps.push(`a radio-browser lookup has no timeout: ${c.slice(0, 60)}`);
+  if (!/json\/servers/.test(bridge)) gaps.push("web/bridge.js always uses one radio-browser mirror");
+  gaps.length ? fail(name, gaps.join("; ")) : pass(`${calls.length} radio-browser lookups each time out, on a mirror chosen from the pool`);
+}
+
+// ── a relay that drops is dialled again ─────────────────────────────────────
+// A relay socket that closed left the list and nothing dialled it again: after
+// the Wi-Fi blinked, a laptop slept or iOS put the page in the background,
+// chat and presence were silent until the place changed. The beat now re-dials
+// what is missing (heal() in src/presence-nostr.js), and a relay that stays
+// down is tried less often each time. Fake relays, and the beat fired by hand.
+{
+  const name = "a relay that drops is dialled again";
+  console.log(`\n${name}`);
+  let made = 0, down = false;
+  const live = [];
+  class FakeRelay {
+    constructor(url) {
+      made++; this.url = url; this.readyState = 0; live.push(this);
+      setTimeout(() => { if (down) this.close(); else { this.readyState = 1; this.onopen?.(); } }, 0);
+    }
+    send() {}
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  }
+  const realWs = globalThis.WebSocket, realSet = globalThis.setInterval;
+  const beats = [];
+  globalThis.WebSocket = FakeRelay;
+  // Record each interval instead of running it: the beat is fired by hand.
+  globalThis.setInterval = (fn) => { beats.push(fn); return realSet(() => {}, 2 ** 30); };
+  const tick = () => new Promise((r) => setTimeout(r, 30));
+  let nostr = null;
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    nostr.leave();
+    nostr.join(38.72, -9.14, "test");
+    await tick();
+    const first = made, beat = beats.at(-1);
+    const gaps = [];
+    if (!first || !beat) gaps.push("joining dialled no relay, or set no beat — this check is blind");
+    else {
+      for (const w of [...live]) w.close();            // the network went away
+      beat();
+      await tick();
+      const redialled = made - first;
+      if (redialled < first) gaps.push(`after every relay dropped, the next beat dialled ${redialled} of ${first}`);
+      down = true;                                      // and stays away
+      for (const w of [...live]) w.close();
+      beat(); await tick();
+      const tried = made;
+      beat(); await tick();
+      if (made > tried) gaps.push(`a relay that stays down is dialled again on the very next beat (${made - tried} times)`);
+    }
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`all ${first} relays are dialled again after they drop, and one that stays down waits longer each time`);
+  } catch (e) {
+    fail(name, `the module threw: ${e.message}`);
+  } finally {
+    try { nostr?.leave(); } catch {}
+    globalThis.WebSocket = realWs; globalThis.setInterval = realSet;
+  }
+}
+
+// ── your favourites survive a crash mid-save ────────────────────────────────
+// state.json (favourites, history, preferences) and stations.user.json (the
+// stations someone added) were written over in place. A crash or a dead battery
+// mid-write left a torn file, load() fell back to empty, and the next save made
+// the loss permanent. Both now go through src/atomic.js: a temporary file
+// beside it, renamed into place.
+{
+  const name = "your favourites survive a crash mid-save";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const files = { "src/main/store.js": /writeFileSync\(STORE/, "src/mystations.js": /writeFileSync\(file/ };
+  for (const [f, raw] of Object.entries(files)) {
+    const src = readSrc(f);
+    if (raw.test(src)) gaps.push(`${f} writes its file in place`);
+    if (!/writeAtomic\(/.test(src)) gaps.push(`${f} does not use src/atomic.js`);
+  }
+  // And the helper does what it says: a failed rename leaves the old file whole.
+  try {
+    const { createRequire } = await import("node:module");
+    const req = createRequire(import.meta.url);
+    const fsm = req("node:fs"), os = req("node:os");
+    const { writeAtomic } = req(R("src/atomic.js"));
+    const f = path.join(fsm.mkdtempSync(path.join(os.tmpdir(), "auralfm-atomic-")), "state.json");
+    writeAtomic(f, '{"favourites":[1,2,3]}');
+    const rename = fsm.renameSync;
+    fsm.renameSync = () => { throw new Error("power cut"); };
+    try { writeAtomic(f, '{"favour'); } catch { /* expected */ } finally { fsm.renameSync = rename; }
+    if (fsm.readFileSync(f, "utf8") !== '{"favourites":[1,2,3]}') gaps.push("a failed save damaged the file it was replacing");
+    if (fsm.readdirSync(path.dirname(f)).some((x) => x.endsWith(".tmp"))) gaps.push("a failed save left its temporary file behind");
+  } catch (e) { gaps.push(`src/atomic.js could not be run: ${e.message}`); }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("state.json and stations.user.json are replaced whole, never written over");
+}
+
+// ── the mailing list is read to its last page ───────────────────────────────
+// here.now hands Site Data back a page at a time, with nextCursor. mail.mjs
+// read only the first page: past it, everyone who signed up would have been
+// left off every newsletter without a word. records() is lifted out of the
+// script (which must not run here: it sends mail) and fed two fake pages.
+{
+  const name = "the mailing list is read to its last page";
+  console.log(`\n${name}`);
+  const src = readSrc("scripts/mail.mjs");
+  const at = src.indexOf("async function records(");
+  const fn = at < 0 ? "" : src.slice(at, src.indexOf("\n}\n", at) + 2);
+  const gaps = [];
+  if (!fn) gaps.push("scripts/mail.mjs has no records() — this check is blind");
+  else {
+    const pages = { "": { records: [{ id: "1", data: { email: "a@x" } }, { id: "2", data: { email: "b@x" } }], nextCursor: "p2" },
+                    "p2": { records: [{ id: "3", data: { email: "c@x" } }], nextCursor: null } };
+    const fakeFetch = async (url) => {
+      const c = new URL(url).searchParams.get("cursor") || "";
+      return { ok: true, json: async () => pages[c] || { records: [], nextCursor: null } };
+    };
+    try {
+      const records = new Function("fetch", "fixture", "key", `${fn}; return records;`)(fakeFetch, null, "k");
+      const got = await records("site", "newsletter");
+      if (got.length !== 3) gaps.push(`two pages of three sign-ups came back as ${got.length}`);
+    } catch (e) { gaps.push(`records() could not be run: ${e.message}`); }
+  }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("records() follows nextCursor to the end of a list");
+}
+
+// ── an error report leaves a phone only when asked, and says nothing about anyone ──
+// The web version can send its errors (there is no local file to keep them in)
+// only with "Send error reports" on, which is off by default. What goes is
+// scrubbed: no outside address (a stream's address names the station), no key,
+// nothing a caller adds. This lifts redactReport() out of web/bridge.js and runs it.
+{
+  const name = "an error report leaves a phone only when asked, and says nothing about anyone";
+  console.log(`\n${name}`);
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const gaps = [];
+  if (req(R("src/prefs.js")).DEFAULTS.errorReports !== false) gaps.push("error reports are not off by default");
+  const bridge = readSrc("web/bridge.js");
+  const send = bridge.slice(bridge.indexOf("function sendReport("), bridge.indexOf("function sendReport(") + 400);
+  if (!/getPrefs\(\)\.errorReports !== true\) return|getPrefs\(\)\.errorReports !== true \|\|/.test(send)) gaps.push("sendReport() does not stop when the switch is off");
+  const at = bridge.indexOf("function redactReport(");
+  const fn = at < 0 ? "" : bridge.slice(at, bridge.indexOf("\n  }\n", at) + 4);
+  if (!fn) gaps.push("web/bridge.js has no redactReport() — this check is blind");
+  else {
+    const redact = new Function(`${fn}; return redactReport;`)();
+    const key = "ab".repeat(32);
+    const out = redact({ where: "uncaught", message: `failed to load https://stream.example.com/live.mp3?id=9 for ${key}`,
+      stack: "Error\n at play (https://listen.auralfm.xyz/explore-playback.js?v=abc:12:3)\n at wss://relay.example/:1",
+      page: "index.html", repeat: 2, station: "Secret FM", lat: 51.5 }, "0.1.0", "ios");
+    const all = JSON.stringify(out);
+    if (/stream\.example|relay\.example/.test(all)) gaps.push("an outside address went out in a report");
+    if (all.includes(key)) gaps.push("a key went out in a report");
+    if ("station" in out || "lat" in out) gaps.push("a field the caller added went out in a report");
+    if (!/explore-playback\.js:12:3/.test(out.stack || "")) gaps.push("the app's own line numbers were lost, so a report says nothing useful");
+  }
+  const build = readSrc("scripts/build-web.mjs");
+  const block = build.slice(build.indexOf('"data.json"'), build.indexOf("}, null, 2)", build.indexOf('"data.json"')));
+  if (!/errors:\s*\{/.test(block)) gaps.push("scripts/build-web.mjs does not declare the errors collection");
+  else if (!/read:\s*"owner"/.test(block)) gaps.push("the error reports can be read by someone other than AuralFM");
+  if (!/id="errorReportsCard" hidden/.test(readSrc("src/renderer/settings.html"))) gaps.push("the switch shows on the desktop, which never sends");
+  if (!/\*\*Error reports\*\*/.test(readSrc("docs/PRIVACY.md"))) gaps.push("docs/PRIVACY.md does not say what an error report carries");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("off by default; on, a report carries no outside address, no key and nothing a caller adds, and only AuralFM can read it");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

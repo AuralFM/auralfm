@@ -546,6 +546,17 @@
 
     <p class="hint" data-i18n="set.durableHint">Off: a new key each time, so nobody can keep or verify you. On: one saved key for private messages, and anyone watching the relays can tell it is you each time. Turning it off destroys the key.</p>
 
+    <!-- Error reports: the web and iPhone only (web/settings-web.js shows it).
+         The desktop keeps its errors in a local file and sends nothing. -->
+    <div class="card spaced" id="errorReportsCard" hidden>
+      <div class="row">
+        <span class="name" id="errorReports-lbl" data-i18n="set.errorReports">Send error reports</span>
+        <button class="sw" id="errorReports" role="switch" aria-checked="false"
+                aria-labelledby="errorReports-lbl"></button>
+      </div>
+    </div>
+    <p class="hint" id="errorReportsHint" data-i18n="set.errorReportsHint" hidden>Off unless you turn it on. When something breaks, it sends what broke and where in the code. Never what you play, where you are, or who you are.</p>
+
     <!-- The safety tools. There are no moderators on this network — bitchat has
          none either — so everything here is control over your own window. -->
     <div class="card spaced">

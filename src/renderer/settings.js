@@ -37,6 +37,7 @@ function paint() {
   paintNotify();
   $("#durableIdentity").setAttribute("aria-checked", String(P.durableIdentity === true));
   $("#filterChat").setAttribute("aria-checked", String(P.filterChat !== false));
+  $("#errorReports").setAttribute("aria-checked", String(P.errorReports === true));
   $("#powFloor").value = String(P.powFloor ?? 0);
   $("#onlyKept").setAttribute("aria-checked", String(P.onlyKept === true));
   $("#hideExplicit").setAttribute("aria-checked", String(P.hideExplicit === true));
@@ -369,6 +370,7 @@ $("#filterreset").addEventListener("click", async () => {
   paintFilter();
 });
 $("#filterChat").addEventListener("click", () => set({ filterChat: P.filterChat === false }));
+$("#errorReports").addEventListener("click", () => set({ errorReports: P.errorReports !== true }));
 $("#powFloor").addEventListener("change", (e) => set({ powFloor: Number(e.target.value) || 0 }));
 $("#onlyKept").addEventListener("click", () => set({ onlyKept: P.onlyKept !== true }));
 $("#hideExplicit").addEventListener("click", () => set({ hideExplicit: P.hideExplicit !== true }));
