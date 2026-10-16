@@ -4856,6 +4856,29 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("every script that checks whether it was run compares URLs, not strings");
 }
 
+// ── every country in the catalogue is one the gazetteer knows ───────────────
+// The catalogue writes "Türkiye", "Côte d'Ivoire", "Cape Verde"; GeoNames
+// writes "Turkey", "Ivory Coast", "Cabo Verde". ccOf() returned null for
+// eleven such names, so no station in them could be placed, by its name or by
+// hand: 830 in Türkiye alone, and the first hand-placing sheet's Istanbul rows
+// came back "not found". Read from the catalogue's checkout.
+{
+  const name = "every country in the catalogue is one the gazetteer knows";
+  console.log(`\n${name}`);
+  if (!HAS_CAT || !fs.existsSync(C("data/geonames/countryInfo.txt")) || !fs.existsSync(C("data/stations.json")))
+    skip(name, "no catalogue checkout with its gazetteer and a built list here");
+  else {
+    const { loadGazetteer } = await import(pathToFileURL(C("scripts/lib/gazetteer.mjs")).href);
+    const G = loadGazetteer(C("data/geonames"));
+    const counts = new Map();
+    for (const c of JSON.parse(fs.readFileSync(C("data/stations.json"), "utf8")).channels)
+      if (c.country && c.country !== "Null Island") counts.set(c.country, (counts.get(c.country) || 0) + 1);
+    const lost = [...counts].filter(([c]) => !G.ccOf(c)).sort((a, b) => b[1] - a[1]);
+    lost.length ? fail(name, `no country code for ${lost.map(([c, n]) => `${c} (${n})`).join(", ")}: their stations cannot be placed`)
+      : pass(`all ${counts.size} countries resolve to a code`);
+  }
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
