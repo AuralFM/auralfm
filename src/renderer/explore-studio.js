@@ -66,7 +66,7 @@
   //                └→ speakers, always: the host hears the music they play
   // input → line ───→ mix   (an interface, a DJ program, this computer's sound:
   //                          heard at its source, so never played back here)
-  let ctx = null, micStream = null, micSrc = null, micGain = null, micAn = null, micMon = null;
+  let ctx = null, micStream = null, micSrc = null, micCut = null, micGain = null, micAn = null, micMon = null;
   let lineStream = null, lineSrc = null, lineGain = null, lineAn = null, lineName = "", lineKind = "";
   let musicGain = null, musicAn = null, mix = null, mixAn = null, mixDest = null;
   let raf = 0, micError = "";
@@ -89,6 +89,15 @@
     mixDest = ctx.createMediaStreamDestination();
     mix.connect(mixAn); mix.connect(mixDest);
     micGain = ctx.createGain(); micGain.gain.value = show.micVol;
+    /**
+     * A low cut on the voice, as on any broadcast desk: nothing under 80 Hz.
+     * Mains hum (50 or 60 Hz, from a laptop on its charger, a USB interface, a
+     * cable near a power lead) and handling noise live down there, and a voice
+     * has nothing there worth keeping. The studio had none, and hosts heard a
+     * hum from the first version on.
+     */
+    micCut = ctx.createBiquadFilter(); micCut.type = "highpass"; micCut.frequency.value = 80; micCut.Q.value = 0.707;
+    micCut.connect(micGain);
     micAn = ctx.createAnalyser(); micAn.fftSize = 1024;
     micGain.connect(micAn); micGain.connect(mix);
     musicGain = ctx.createGain(); musicGain.gain.value = show.musicVol;
@@ -155,7 +164,7 @@
         micNote = tt("studio.micFellBack", "Your last microphone is not connected. This is the system default.");
       }
       micSrc = ctx.createMediaStreamSource(micStream);
-      micSrc.connect(micGain);
+      micSrc.connect(micCut);
       /**
        * A microphone can go away mid-show: headphones taken off or out of
        * range, a cable pulled. Its track ends and the stream carries silence,
@@ -347,6 +356,9 @@
       const el = d.t.el, now = $s("stTime");
       if (now) now.textContent = `${mmss(el.currentTime)} / ${mmss(el.duration)}`;
       const left = el.duration - el.currentTime;
+      const bar = $s("stNpBar"), rest = $s("stLeft");
+      if (bar && Number.isFinite(el.duration) && el.duration > 0) bar.style.width = `${Math.min(100, (el.currentTime / el.duration) * 100)}%`;
+      if (rest) rest.textContent = Number.isFinite(left) ? `−${mmss(left)}` : "";
       if (!Number.isFinite(left) || switching) return;
       const n = nextIndex();
       if (n < 0) return;
@@ -517,26 +529,32 @@
   function meters() {
     if (raf || !ctx) return;
     const buf = new Float32Array(1024);
-    let talking = 0;
+    let talking = 0, wanted = null;
     const frame = () => {
       raf = requestAnimationFrame(frame);
       if (panel.hidden && phase === "off") { cancelAnimationFrame(raf); raf = 0; return; }
       const m = micStream ? levelOf(micAn, buf) : 0, u = levelOf(musicAn, buf), o = levelOf(mixAn, buf);
       for (const [id, v] of [["meterMic", m], ["meterMusic", u], ["meterOut", o]]) {
         const el = $s(id); if (!el) continue;
-        el.firstChild.style.width = `${Math.round(v * 100)}%`;
+        el.firstChild.style[el.classList.contains("v") ? "height" : "width"] = `${Math.round(v * 100)}%`;
         el.classList.toggle("hot", v > 0.92);
       }
       // Talk over: down to a quarter while the voice is up, back after a beat.
       // The music's level (and its mute) is applied here too, every frame: with
       // the dip off, moving the music fader used to change only the input.
-      if (show.duck && musicGain) {
-        talking = m > 0.12 ? 18 : Math.max(0, talking - 1);
-        const want = talking ? musicLevel() * 0.25 : musicLevel();
-        musicGain.gain.setTargetAtTime(want, ctx.currentTime, talking ? 0.05 : 0.4);
-        lineGain.gain.setTargetAtTime(want, ctx.currentTime, talking ? 0.05 : 0.4);
-      } else if (musicGain) { musicGain.gain.value = musicLevel(); lineGain.gain.value = musicLevel(); }
-      { const el = $s("meterLine"); if (el) { const v = lineStream ? levelOf(lineAn, buf) : 0; el.firstChild.style.width = `${Math.round(v * 100)}%`; el.classList.toggle("hot", v > 0.92); } }
+      // Scheduled only when the level it wants changes. It was asked for again on
+      // every frame, sixty times a second on two gains, and each request is an
+      // event the audio thread keeps: the studio grew slower the longer it ran.
+      if (musicGain) {
+        talking = show.duck && m > 0.12 ? 18 : Math.max(0, talking - 1);
+        const want = show.duck && talking ? musicLevel() * 0.25 : musicLevel();
+        if (want !== wanted) {
+          const at = ctx.currentTime, tc = want < (wanted ?? want) ? 0.05 : 0.4;
+          for (const g of [musicGain.gain, lineGain.gain]) { try { g.cancelScheduledValues(at); } catch {} g.setTargetAtTime(want, at, tc); }
+          wanted = want;
+        }
+      }
+      { const el = $s("meterLine"); if (el) { const v = lineStream ? levelOf(lineAn, buf) : 0; el.firstChild.style[el.classList.contains("v") ? "height" : "width"] = `${Math.round(v * 100)}%`; el.classList.toggle("hot", v > 0.92); } }
       if (phase !== "off") {
         const s = Math.floor((Date.now() - startedAt) / 1000);
         const el = $s("airclock");
@@ -575,7 +593,8 @@
     if (phase === "live" && show.place && typeof flyTo === "function") flyTo(show.place.lat, show.place.lon);
     // Confirmed again each time: the 18 and over and the rights are asked
     // before every show, not remembered from the last one (docs/TERMS.md).
-    if (phase === "off") { stopTrack(); setMonitor(false); show.rights = false; show.adult = false; }
+    if (phase === "off") { stopTrack(); setMonitor(false); show.rights = false; show.adult = false; setup = false; stage = "go"; }
+    else setup = false;
     paint();
     meters();
   }
@@ -616,7 +635,7 @@
   // slash and an asterisk as the start of a comment, whatever surrounds them.
   const AUDIO_FILES = "audio/\u002A,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm";
   const STAGES = ["sound", "show", "go"];
-  let stage = "sound", adding = false;
+  let stage = "sound", adding = false, setup = false;
   const muted = { voice: false, music: false };
   const voiceGain = () => (muted.voice ? 0 : show.micVol);
   const musicLevel = () => (muted.music ? 0 : show.musicVol);
@@ -629,13 +648,18 @@
   ];
   const toDo = () => checks().filter((c) => !c.ok).length;
   const goStage = (s) => { stage = s; paint(); $s(`stTab-${s}`)?.focus({ preventScroll: true }); };
-  const muteBtn = (key, name) => el("button", { class: "qbtn mute", type: "button", id: `stMute-${key}`, "aria-pressed": String(muted[key]),
-    "aria-label": `${tt("studio.mute", "Mute")}: ${name}`, title: tt("studio.mute", "Mute"),
-    onclick: () => {
-      muted[key] = !muted[key];
-      if (key === "voice" && micGain) micGain.gain.value = voiceGain();
-      paint();
-    } });
+  const muteBtn = (key, name) => {
+    const b = el("button", { class: "qbtn mute", type: "button", id: `stMute-${key}`, "aria-pressed": String(muted[key]),
+      "aria-label": `${tt("studio.mute", "Mute")}: ${name}`, title: tt("studio.mute", "Mute"),
+      onclick: () => {
+        muted[key] = !muted[key];
+        if (key === "voice" && micGain) micGain.gain.value = voiceGain();
+        paint();
+      } });
+    // It was an empty button: there, and invisible.
+    if (typeof Icons !== "undefined") Icons.set(b, muted[key] ? "volumeOff" : "volumeHigh");
+    return b;
+  };
   const strip = (cls, name, detail, after, ...kids) => el("section", { class: `strip ${cls}`, "aria-label": name },
     el("div", { class: "striphead" }, el("b", { text: name }), detail ? el("span", { class: "stripsub", text: detail, dir: "auto" }) : null, after),
     ...kids);
@@ -658,12 +682,13 @@
       live ? el("span", { class: "time", id: "stHeard", role: "status", text: `${heardNow()} ${tt("studio.listening", "listening")}` }) : null);
     if (phase !== "off") {
       const ends = el("div", { class: "btns airbtns" });
+      bar.append(el("button", { class: "linkbtn setupbtn", type: "button", id: "stSetup", "aria-pressed": String(setup),
+        onclick: () => { setup = !setup; paint(); } }, setup ? tt("studio.backConsole", "Back to the console") : tt("studio.showSetup", "Setup")));
       if (phase !== "live") ends.append(el("button", { class: "sheetbtn primary", type: "button", id: "stLive", "aria-describedby": "stWhy", onclick: () => (ready() ? go("live") : goStage("go")) }, tt("studio.goLive", "Go live")));
       ends.append(el("button", { class: `sheetbtn${live ? " onair" : ""}`, type: "button", id: "stEnd", onclick: () => go("off") },
         live ? tt("studio.end", "End the show") : phase === "planned" ? tt("studio.cancel", "Cancel announcement") : tt("studio.stopCheck", "End sound check")));
-      bar.append(ends);
-    }
-    air.append(bar);
+      air.append(bar, ends);
+    } else air.append(bar);
     if (live && heardNote) air.append(el("p", { class: "fine", role: "status", text: heardNote }));
     if (phase !== "off") air.append(el("p", { class: "airnote", id: "stWhy", text:
       live ? tt("studio.liveNote", "You are live. Up to 12 listeners connect direct to this computer.")
@@ -671,6 +696,12 @@
       : ready() ? tt("studio.checkNote", "Only you hear this. Use headphones and turn on Hear yourself.")
       : `${tt("studio.checkNote", "Only you hear this. Use headphones and turn on Hear yourself.")} ${tt("studio.checkLeft", "Before going live:")} ${checks().find((c) => !c.ok)?.todo || checks().find((c) => !c.ok)?.text || ""}` }));
     body.append(air);
+    if (phase !== "off" && !setup) {
+      paintConsole(body, live);
+      if (wasFocus && $s(wasFocus)) $s(wasFocus).focus({ preventScroll: true });
+      syncHost();
+      return;
+    }
 
     // ── the three stages ──
     const left = toDo();
@@ -699,6 +730,99 @@
 
     if (wasFocus && $s(wasFocus)) $s(wasFocus).focus({ preventScroll: true });
     syncHost();
+  }
+
+  // ── on air: the console ──
+  /**
+   * Once a sound check or a show has started, the panel is a console, not the
+   * setup: what is playing and what comes next, the transport, and the faders
+   * side by side as on a mixer, with what is going out beside them. Hosts had
+   * to go back to the first stage to find the controls (17 Oct 2026). Setup is
+   * one press away, and comes back to the console.
+   */
+  function paintConsole(root, live) {
+    const c = el("div", { class: "console" });
+    root.append(c);
+
+    // What is playing.
+    const np = el("section", { class: "np", "aria-label": tt("studio.nowPlaying", "Now playing") });
+    const pick = el("input", { type: "file", multiple: true, accept: AUDIO_FILES, id: "stFile", hidden: true,
+      onchange: (e) => { const fs = [...(e.target.files || [])]; e.target.value = ""; if (fs.length) loadFiles(fs); } });
+    np.append(pick);
+    if (queue.length) {
+      const d = deck, n = nextIndex();
+      const at = d ? d.t.el.currentTime : 0, dur = d ? d.t.el.duration : NaN;
+      np.append(
+        el("div", { class: "nphead" }, el("span", { class: "nplabel", text: playing() ? tt("studio.playingNow", "Playing") : tt("studio.paused", "Paused") }),
+          el("button", { class: "linkbtn", type: "button", id: "stAdd", onclick: () => pick.click() }, tt("studio.addMusic", "Add music"))),
+        el("div", { class: "npname", id: "stNpName", dir: "auto", text: d ? d.item.name : queue[0].name }),
+        el("div", { class: "npbar", role: "presentation" }, el("b", { id: "stNpBar", style: `width:${Number.isFinite(dur) && dur > 0 ? Math.min(100, at / dur * 100) : 0}%` })),
+        el("div", { class: "nptimes" }, el("span", { class: "time", id: "stTime", text: d ? `${mmss(at)} / ${mmss(dur)}` : "" }),
+          el("span", { class: "time", id: "stLeft", text: d && Number.isFinite(dur) ? `−${mmss(dur - at)}` : "" })),
+        el("div", { class: "nptransport" },
+          el("button", { class: "tbtn", type: "button", id: "stPrev", disabled: !d, onclick: prevTrack, "aria-label": tt("studio.prev", "Previous"), title: tt("studio.prev", "Previous") }),
+          el("button", { class: "tbtn big", type: "button", id: "stPlay", "aria-label": playing() ? tt("studio.pause", "Pause") : tt("studio.play", "Play"),
+            onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); setTimeout(paint, 60); } }),
+          el("button", { class: "tbtn", type: "button", id: "stNext", disabled: n < 0 || switching, onclick: nextTrack, "aria-label": tt("studio.next", "Next"), title: tt("studio.next", "Next") })),
+        el("p", { class: "fine npnext", role: "status", text: n >= 0 && d ? `${tt("studio.upNext", "Next")}: ${queue[n].name}` : d ? tt("studio.lastTrack", "Last track in the queue") : "" }));
+    } else {
+      np.append(el("div", { class: "drop" },
+        el("p", { class: "fine", role: "status", text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.dropHint", "Drop audio files here, or add them. They play in order, each fading into the next.") }),
+        el("button", { class: "sheetbtn", type: "button", id: "stAdd", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addMusic", "Add music"))));
+    }
+    // The app's own icons: these characters draw as colour emoji on a Mac.
+    if (typeof Icons !== "undefined") {
+      for (const [id, name] of [["stPrev", "skip"], ["stPlay", playing() ? "pause" : "play"], ["stNext", "skip"]]) { const b = np.querySelector(`#${id}`); if (b) Icons.set(b, name); }
+    }
+    if (trackNote) np.append(el("p", { class: "fine", role: "alert", text: trackNote }));
+    np.addEventListener("dragover", (e) => { if ([...(e.dataTransfer?.types || [])].includes("Files")) { e.preventDefault(); np.classList.add("over"); } });
+    np.addEventListener("dragleave", (e) => { if (!np.contains(e.relatedTarget)) np.classList.remove("over"); });
+    np.addEventListener("drop", (e) => {
+      e.preventDefault(); np.classList.remove("over");
+      const fs = [...(e.dataTransfer?.files || [])].filter((f) => /^audio\//.test(f.type) || /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|webm|aiff?)$/i.test(f.name));
+      if (fs.length) loadFiles(fs); else { trackNote = tt("studio.dropNotAudio", "Those are not audio files."); paint(); }
+    });
+    c.append(np);
+
+    // The mixer: one channel per source, and what goes out.
+    const chan = (name, meterId, fade, mute, extra) => el("div", { class: "chan" },
+      el("div", { class: "chanbody" }, el("div", { class: "meter v", id: meterId, role: "presentation" }, el("b")), fade),
+      mute || el("span", { class: "mutegap", "aria-hidden": "true" }),
+      el("span", { class: "channame", text: name }), extra);
+    const vfader = (label, value, max, onInput) => el("input", { type: "range", class: "vfader", min: "0", max: String(max), step: "0.01", value: String(value), "aria-label": label, oninput: onInput });
+    const mixer = el("section", { class: "mixer", "aria-label": tt("studio.mixer", "Mixer") });
+    mixer.append(micStream
+      ? chan(tt("studio.voice", "Voice"), "meterMic", vfader(tt("studio.voiceLevel", "Voice level"), show.micVol, 2, (e) => { show.micVol = +e.target.value; if (micGain) micGain.gain.value = voiceGain(); keep(); }), muteBtn("voice", tt("studio.voice", "Voice")))
+      : el("div", { class: "chan off" }, el("button", { class: "sheetbtn", type: "button", id: "stMic", disabled: asking || live, onclick: openMic }, tt("studio.micShort", "Mic on")),
+          el("span", { class: "channame", text: tt("studio.voice", "Voice") })));
+    if (queue.length) mixer.append(chan(tt("studio.music", "Music"), "meterMusic", vfader(tt("studio.musicLevel", "Music level"), show.musicVol, 1, (e) => { show.musicVol = +e.target.value; keep(); }), muteBtn("music", tt("studio.music", "Music"))));
+    if (lineStream) mixer.append(chan(lineKind === "computer" ? tt("studio.computerShort", "Computer") : tt("studio.lineShort", "Input"), "meterLine",
+      !queue.length ? vfader(tt("studio.musicLevel", "Music level"), show.musicVol, 1, (e) => { show.musicVol = +e.target.value; keep(); }) : null, null));
+    mixer.append(chan(tt("studio.out", "Going out"), "meterOut", null, null));
+    c.append(mixer);
+    if (micError) c.append(el("p", { class: "fine", role: "alert", text: micError }));
+    c.append(el("div", { class: "consoletoggles" },
+      toggleRow(tt("studio.monitor", "Hear yourself"), show.monitor, () => {
+        if (!show.monitor && lineKind === "computer") { lineNote = tt("studio.monitorLoop", "Hear yourself is off with this computer's sound. Your voice would go out twice."); return paint(); }
+        setMonitor(!show.monitor); paint(); }, tt("studio.monitorHint", "Headphones only")),
+      toggleRow(tt("studio.duck", "Music dips when you talk"), show.duck, () => { show.duck = !show.duck; keep(); paint(); })));
+    if (lineNote) c.append(el("p", { class: "fine", role: "alert", text: lineNote }));
+
+    // The queue, compact: press a name to go to it.
+    if (queue.length > 1) {
+      const on = deck?.item.id;
+      const list = el("ol", { class: "queue", "aria-label": tt("studio.queue", "Queue") });
+      queue.forEach((q, k) => list.append(el("li", { class: q.id === on ? "on" : "", "aria-current": q.id === on ? "true" : false },
+        el("button", { class: "qname", type: "button", title: q.name, onclick: () => { if (q.id !== on) playAt(queue.indexOf(q), Math.min(fadeFor(deck), 3)); },
+          "aria-label": `${tt("studio.playTrack", "Play")} ${q.name}` }, el("span", { text: q.name, dir: "auto" })),
+        el("span", { class: "qdur", id: `stDur-${q.id}`, text: mmss(q.duration) }),
+        el("button", { class: "qbtn", type: "button", id: `stMoveUp-${q.id}`, disabled: k === 0, onclick: () => moveTrack(q.id, -1),
+          "aria-label": `${tt("studio.moveUp", "Move up")}: ${q.name}`, title: tt("studio.moveUp", "Move up") }, "↑"),
+        el("button", { class: "qbtn", type: "button", onclick: () => removeTrack(q.id),
+          "aria-label": `${tt("studio.remove", "Remove")}: ${q.name}`, title: tt("studio.remove", "Remove") }, "×"))));
+      c.append(el("div", { class: "consolequeue" }, el("div", { class: "layhead", text: tt("studio.queue", "Queue") }), list));
+    }
+    meters();
   }
 
   // ── stage 1: the desk ──
@@ -911,9 +1035,9 @@
       const left = toDo();
       pane.append(el("div", { class: "btns gobtns" },
         // Once it is going out, back to the desk: the levels are what to watch.
-        el("button", { class: "sheetbtn", type: "button", id: "stRehearse", onclick: async () => { await go("rehearsal"); stage = "sound"; paint(); } }, tt("studio.soundCheck", "Sound check")),
+        el("button", { class: "sheetbtn", type: "button", id: "stRehearse", onclick: () => go("rehearsal") }, tt("studio.soundCheck", "Sound check")),
         el("button", { class: "sheetbtn primary", type: "button", id: "stLive", "aria-describedby": "stWhy",
-          onclick: async () => { if (ready()) { await go("live"); stage = "sound"; paint(); } else { const first = list.querySelector(".todo .linkbtn, .layrow[aria-pressed=false]"); first?.focus(); } } }, tt("studio.goLive", "Go live"))));
+          onclick: () => { if (ready()) go("live"); else { const first = list.querySelector(".todo .linkbtn, .layrow[aria-pressed=false]"); first?.focus(); } } }, tt("studio.goLive", "Go live"))));
       pane.append(el("p", { class: "airnote", id: "stWhy", role: "status", text: left
         ? `${left} ${left === 1 ? tt("studio.oneLeft", "thing left before going live.") : tt("studio.manyLeft", "things left before going live.")} ${tt("studio.checkFirst", "Sound check works now: only you hear it.")}`
         : tt("studio.goNote", "Sound check: only you hear it. Go live: on the globe, in On air, and in your town's room.") }));
