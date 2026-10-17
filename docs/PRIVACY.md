@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 16 October 2026**
+**Last updated: 17 October 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -75,7 +75,7 @@ differently" below. The rest of this table applies to both.
 | wheretheiss.at / Celestrak | ISS and satellite positions | Your IP address |
 | rx.linkfanel.net | The list of shortwave receivers, refreshed at most twice a day | Your IP address |
 | A shortwave receiver you click | Listening to that antenna | Your IP address, and which frequency you tuned |
-| listen.auralfm.xyz (AuralFM's own site, hosted by here.now) | The list of shows AuralFM no longer lists. Asked for only while a show is on air to be listed, at most every half hour | Your IP address. Nothing about you or what you are hearing |
+| listen.auralfm.xyz (AuralFM's own site, hosted by here.now) | The list of shows AuralFM no longer lists. Asked for only while a show is on air to be listed, at most once a minute | Your IP address. Nothing about you or what you are hearing |
 
 Two points worth stating plainly:
 

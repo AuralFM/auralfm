@@ -3766,6 +3766,13 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const shows = readSrc("src/renderer/explore-shows.js");
   if (!/live = unlistedKnown \? announced\.filter\(listed\) : \[\];/.test(shows)) gaps.push("shows are listed before the hidden list has answered, or without it");
   if (!/if \(!listed\(peer\)\) return;/.test(shows)) gaps.push("a hidden show can still be tuned to");
+  // Measured 17 Oct 2026 with a stand-in host: a show taken down while it was
+  // being listened to stopped, then stayed in On air, Listen button and all,
+  // because the list kept the last show tuned to whatever its state.
+  if (!/if \(show && !listed\(show\.peer\)\) \{\s*end\(\);/.test(shows)) gaps.push("a show taken down while it is listened to is not stopped and let go");
+  const held = /const held = \(\) => ([^;]+);/.exec(shows)?.[1] || "";
+  if (!/listed\(show\.peer\)/.test(held) || /^!!show &&\s*\(/.test(held) || !/told\(show\)/.test(held)) gaps.push("the show tuned to is kept on the list after it ends or is taken down");
+  if ((shows.match(/held\(\) && !rows\.some/g) || []).length < 2 || /if \(show && !rows\.some/.test(shows)) gaps.push("On air or the globe keeps the show tuned to by a rule of its own");
   if (!/if \(Array\.isArray\(keys\)\) unlisted = new Set\(keys\);/.test(shows)) gaps.push("no answer empties the list instead of leaving it");
   if (!/hidden-shows\.json"\)\) return;/.test(readSrc("web/sw.js"))) gaps.push("the web app reads the hidden list from its cache");
   const web = readSrc("scripts/build-web.mjs");
@@ -3773,6 +3780,13 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/listen\.auralfm\.xyz\/data\/hidden-shows\.json/.test(readSrc("src/hidden-shows.js"))) gaps.push("the desktop reads only the copy it shipped with");
   if (!pkg.build.files.includes("data/hidden-shows.json")) gaps.push("the Mac build ships without the list");
   if (!/list of shows AuralFM no longer lists/.test(readSrc("docs/PRIVACY.md"))) gaps.push("the privacy policy does not name the request");
+  // The web asked once a minute and the desktop every half hour, while the
+  // policy said half an hour for both. One interval, and the policy says it.
+  const every = /const EVERY_MS = ([\d\s*_]+);/.exec(readSrc("src/hidden-shows.js"))?.[1];
+  const ms = every ? Function(`return ${every.replace(/_/g, "")}`)() : NaN;
+  if (!(ms <= 60_000)) gaps.push(`the desktop reads the hidden list every ${Math.round(ms / 60000)} minutes, so a takedown waits that long there`);
+  if (!/asking = null; \}, 60_000\)/.test(shows)) gaps.push("the page re-reads the hidden list on an interval other than a minute");
+  if (!/no longer lists\. Asked for only while a show is on air to be listed, at most once a minute/.test(readSrc("docs/PRIVACY.md"))) gaps.push("the privacy policy does not say how often the hidden list is read");
   gaps.length ? fail("AuralFM can take a show off its list", gaps.join("; "))
     : pass("a listed host is off the globe and On air in both apps, read fresh, and a damaged file hides and unhides nobody");
 }

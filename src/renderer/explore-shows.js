@@ -101,17 +101,29 @@
     asking = Promise.resolve(window.auralfm.hiddenShows?.()).catch(() => null).then((keys) => {
       if (Array.isArray(keys)) unlisted = new Set(keys);
       unlistedKnown = true;
-      setTimeout(() => { asking = null; }, 60_000);   // the main process and the bridge keep their own half hour
+      setTimeout(() => { asking = null; }, 60_000);   // at most once a minute, here and in src/hidden-shows.js
       relist();
     });
     return asking;
   }
   function relist() {
     live = unlistedKnown ? announced.filter(listed) : [];
-    // Being listened to when it was taken down: it stops, as if it had ended.
-    if (show && !listed(show.peer)) end("ended");
+    // Being listened to when it was taken down: it stops, as if it had ended,
+    // and leaves the list and the globe with it (held(), below).
+    if (show && !listed(show.peer)) {
+      end();
+      said = WHY().ended;
+      setTimeout(() => { said = ""; paint(); }, 8000);
+    }
     paint();
   }
+  /**
+   * The show being tuned to is drawn even between its heartbeats: while it
+   * connects, while it plays, and for the few seconds a failure is told. Not
+   * after that, and never once AuralFM no longer lists it.
+   */
+  const told = (s) => s?.state === "failed" && Date.now() < s.until;
+  const held = () => !!show && listed(show.peer) && (show.state === "connecting" || show.state === "on" || told(show));
   Promise.resolve(window.auralfm.muteList?.()).then((list) => { for (const k of list || []) gone.add(typeof k === "string" ? k : k?.pubkey); paint(); }).catch(() => {});
   const audio = new Audio();
   audio.autoplay = true;
@@ -294,7 +306,7 @@
     if (!card || !list) return;
     const rows = live.filter((p) => !gone.has(p.pubkey));
     // The show being heard stays listed while its ring is between heartbeats.
-    if (show && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.unshift(show.peer);
+    if (held() && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.unshift(show.peer);
     card.hidden = !(shown() && (rows.length || said));
     list.textContent = "";
     if (card.hidden) return;
@@ -348,8 +360,7 @@
   function pins() {
     if (typeof globe === "undefined" || !globe || !globe.htmlElementsData) return;
     const rows = shown() ? live.filter((p) => !gone.has(p.pubkey)) : [];
-    const told = (s) => s?.state === "failed" && Date.now() < s.until;
-    if (shown() && show && (show.state === "connecting" || show.state === "on" || told(show)) && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.push(show.peer);
+    if (shown() && held() && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.push(show.peer);
     for (const k of [...pinOf.keys()]) if (!rows.some((p) => p.pubkey === k)) pinOf.delete(k);
     for (const p of rows) {
       let b = pinOf.get(p.pubkey);

@@ -5,14 +5,15 @@
  * The list ships with the app and is read again from listen.auralfm.xyz, so a
  * takedown does not wait for a release and a restored show does not either.
  * Asked for only when a show is on air to be listed (explore-shows.js), at
- * most every half hour, and it carries nothing but the request itself. If the
+ * most once a minute, as the web app does: a takedown reaches a listener
+ * within a minute or two. It carries nothing but the request itself. If the
  * address does not answer, the last good list stands.
  */
 const { UA } = require("./useragent");
 const unlisted = require("./unlisted");
 
 const URL = "https://listen.auralfm.xyz/data/hidden-shows.json";
-const EVERY_MS = 30 * 60 * 1000;
+const EVERY_MS = 60 * 1000;
 let keys = unlisted.read(require("../data/hidden-shows.json")) || [];
 let asked = 0;
 
