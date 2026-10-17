@@ -3367,10 +3367,13 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const lite = R("dist-web/vendor/lite");
   if (!fs.existsSync(R("dist-web"))) skip("a phone gets the half-size globe: the build", "dist-web/ is not built");
   else {
-    for (const f of ["earth-blue-marble.jpg", "earth-night.jpg", "earth-lights.jpg", "night-sky.png", "earth-topology.png"]) {
+    // [the phone's copy, the full one it is made from]
+    for (const [f, from = f] of [["earth-blue-marble.jpg"], ["earth-night.jpg"], ["earth-lights.jpg"], ["night-sky.jpg", "night-sky.png"], ["earth-topology.png"]]) {
       const file = path.join(lite, f);
       if (!fs.existsSync(file)) { gaps.push(`dist-web/vendor/lite/${f} is missing`); continue; }
-      const full = path.join(R("dist-web/vendor"), f);
+      const full = path.join(R("dist-web/vendor"), from);
+      // The night sky was a 1.2 MB PNG on every phone's first visit.
+      if (f === "night-sky.jpg" && fs.statSync(file).size > 600 * 1024) gaps.push(`the phone's night sky is ${Math.round(fs.statSync(file).size / 1024)} KB`);
       // A JPEG's or PNG's width, read from its header.
       const width = (p) => {
         const b = fs.readFileSync(p);

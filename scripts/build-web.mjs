@@ -40,7 +40,11 @@ const copy = (from, to = from) => fs.cpSync(R(from), path.join(OUT, to), { recur
 // The phone layout's own question (web/web.css), and its complement.
 const PHONE = "(max-width: 700px), (pointer: coarse) and (max-height: 500px)";
 const NOT_PHONE = "(min-width: 701px) and (min-height: 501px), (min-width: 701px) and (pointer: fine), (min-width: 701px) and (pointer: none)";
-const LITE = [["earth-blue-marble.jpg", 2048], ["earth-night.jpg", 2048], ["earth-lights.jpg", 2048], ["night-sky.png", 2048], ["earth-topology.png", 1024]];
+// [the vendored picture, its width on a phone, and (optionally) the name and
+// JPEG quality it is made as: the night sky has no transparency to keep, and
+// as a PNG it was the heaviest picture a phone fetched (explore-core.js, texUrl).]
+const LITE = [["earth-blue-marble.jpg", 2048], ["earth-night.jpg", 2048], ["earth-lights.jpg", 2048], ["night-sky.png", 2048, "night-sky.jpg", 80], ["earth-topology.png", 1024]];
+const liteName = (file) => LITE.find(([f]) => f === file)?.[2] || file;
 
 // ── the desktop modules, wrapped ─────────────────────────────────────────────
 // Order does not matter (require is lazy), but every module a wrapped one
@@ -350,7 +354,7 @@ ${["earth-blue-marble.jpg crossorigin", "night-sky.png crossorigin", "earth-nigh
   // A phone preloads the half-size pictures it will use (LITE below), a wide
   // screen the full ones: the two media queries are each other's complement.
   const [file, cors = ""] = t.split(" ");
-  return `<link rel="preload" href="vendor/lite/${file}" as="image" media="${PHONE}"${cors && " " + cors}>
+  return `<link rel="preload" href="vendor/lite/${liteName(file)}" as="image" media="${PHONE}"${cors && " " + cors}>
 <link rel="preload" href="vendor/${file}" as="image" media="${NOT_PHONE}"${cors && " " + cors}>`;
 }).join("\n")}
 <link rel="manifest"`);
@@ -426,12 +430,12 @@ copy("src/renderer/vendor", "vendor");
   const cache = R("node_modules", ".cache", "lite");
   fs.mkdirSync(cache, { recursive: true });
   fs.mkdirSync(path.join(OUT, "vendor", "lite"), { recursive: true });
-  for (const [file, width] of LITE) {
-    const src = R("src", "renderer", "vendor", file), made = path.join(cache, file);
+  for (const [file, width, as = file, quality] of LITE) {
+    const src = R("src", "renderer", "vendor", file), made = path.join(cache, as);
     if (!fs.existsSync(made) || fs.statSync(made).mtimeMs < fs.statSync(src).mtimeMs) {
-      resize(src, made, width);
+      resize(src, made, width, quality ? { quality } : {});
     }
-    fs.copyFileSync(made, path.join(OUT, "vendor", "lite", file));
+    fs.copyFileSync(made, path.join(OUT, "vendor", "lite", as));
   }
 }
 copy("src/renderer/fonts", "fonts");        // the share card's type (card.js), nothing else

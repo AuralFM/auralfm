@@ -116,7 +116,10 @@ async function paintDistance() {
  * with their mipmaps, which is what makes iOS throw a web app out and reload
  * it, for detail a 390-point screen cannot show. The desktop never sets it.
  */
-const texUrl = (name) => `vendor/${window.AuralLite ? "lite/" : ""}${name}`;
+// A phone's night sky is a JPEG: the stars on black need no transparency, and
+// as a PNG it was 1.2 MB of a first visit's 6.3 (scripts/build-web.mjs, LITE).
+const LITE_NAME = { "night-sky.png": "night-sky.jpg" };
+const texUrl = (name) => (window.AuralLite ? `vendor/lite/${LITE_NAME[name] || name}` : `vendor/${name}`);
 let favorites = [];
 let playing = null;          // channel currently playing, per the popover
 // What is in the player, playing or not: a paused or cued station can still be
