@@ -357,7 +357,7 @@
       if (now) now.textContent = `${mmss(el.currentTime)} / ${mmss(el.duration)}`;
       const left = el.duration - el.currentTime;
       const bar = $s("stNpBar"), rest = $s("stLeft");
-      if (bar && Number.isFinite(el.duration) && el.duration > 0) bar.style.width = `${Math.min(100, (el.currentTime / el.duration) * 100)}%`;
+      if (bar && Number.isFinite(el.duration) && el.duration > 0) bar.style.transform = `scaleX(${Math.min(1, el.currentTime / el.duration).toFixed(4)})`;
       if (rest) rest.textContent = Number.isFinite(left) ? `−${mmss(left)}` : "";
       if (!Number.isFinite(left) || switching) return;
       const n = nextIndex();
@@ -537,7 +537,7 @@
       const m = micStream ? levelOf(micAn, buf) : 0, u = levelOf(musicAn, buf), o = levelOf(mixAn, buf);
       for (const [id, v] of [["meterMic", m], ["meterMusic", u], ["meterOut", o]]) {
         const el = $s(id); if (!el) continue;
-        el.firstChild.style[el.classList.contains("v") ? "height" : "width"] = `${Math.round(v * 100)}%`;
+        el.firstChild.style.transform = `${el.classList.contains("v") ? "scaleY" : "scaleX"}(${v.toFixed(3)})`;
         el.classList.toggle("hot", v > 0.92);
       }
       // Talk over: down to a quarter while the voice is up, back after a beat.
@@ -555,7 +555,7 @@
           wanted = want;
         }
       }
-      { const el = $s("meterLine"); if (el) { const v = lineStream ? levelOf(lineAn, buf) : 0; el.firstChild.style[el.classList.contains("v") ? "height" : "width"] = `${Math.round(v * 100)}%`; el.classList.toggle("hot", v > 0.92); } }
+      { const el = $s("meterLine"); if (el) { const v = lineStream ? levelOf(lineAn, buf) : 0; el.firstChild.style.transform = `${el.classList.contains("v") ? "scaleY" : "scaleX"}(${v.toFixed(3)})`; el.classList.toggle("hot", v > 0.92); } }
       if (phase !== "off") {
         const s = Math.floor((Date.now() - startedAt) / 1000);
         const el = $s("airclock");
@@ -855,7 +855,7 @@
           el("button", { class: "linkbtn", type: "button", id: "stAdd", "aria-expanded": String(picking), onclick: () => { picking = !picking; paint(); } }, picking ? tt("studio.close", "Close") : tt("studio.addMusic", "Add music"))),
         picking ? clearedPicker(pick) : null,
         el("div", { class: "npname", id: "stNpName", dir: "auto", text: d ? d.item.name : queue[0].name }),
-        el("div", { class: "npbar", role: "presentation" }, el("b", { id: "stNpBar", style: `width:${Number.isFinite(dur) && dur > 0 ? Math.min(100, at / dur * 100) : 0}%` })),
+        el("div", { class: "npbar", role: "presentation" }, el("b", { id: "stNpBar", style: `transform:scaleX(${Number.isFinite(dur) && dur > 0 ? Math.min(1, at / dur).toFixed(4) : 0})` })),
         el("div", { class: "nptimes" }, el("span", { class: "time", id: "stTime", text: d ? `${mmss(at)} / ${mmss(dur)}` : "" }),
           el("span", { class: "time", id: "stLeft", text: d && Number.isFinite(dur) ? `−${mmss(dur - at)}` : "" })),
         el("div", { class: "nptransport" },

@@ -4852,6 +4852,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("the studio's music opens on CC BY, BY-SA and public-domain tracks only; each track joins the tracklist and goes to listeners with the show");
 }
 
+// ── the studio's levels move by transform ───────────────────────────────────
+// Five meters and a progress bar change every frame. Drawn as widths and
+// heights they recalculated the layout sixty times a second; a scale is
+// composited and touches nothing else (Emil Kowalski, animation-performance).
+{
+  const name = "the studio's levels move by transform, not by size";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const st = readSrc("src/renderer/explore-studio.js"), html = readSrc("src/renderer/explore.html");
+  if (/style\[[^\]]*"(height|width)"[^\]]*\]\s*=/.test(st) || /\.style\.(width|height)\s*=/.test(st)) gaps.push("explore-studio.js sets a width or a height on a meter or the progress bar");
+  if (/\.studio \.(meter[^{]*|npbar) b\{[^}]*transition:(width|height)/.test(html)) gaps.push("a meter or the progress bar animates its size");
+  if (!/\.studio \.meter b\{[^}]*transform:scaleX\(0\)/.test(html)) gaps.push("the meters are not drawn as a scale");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("the meters and the progress bar are scaled, so a frame of them recalculates no layout");
+}
+
 // ── your favourites survive a crash mid-save ────────────────────────────────
 // state.json (favourites, history, preferences) and stations.user.json (the
 // stations someone added) were written over in place. A crash or a dead battery
