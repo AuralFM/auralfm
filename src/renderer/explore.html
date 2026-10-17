@@ -1166,28 +1166,74 @@
     }
     .roomwait b{font-size:15px;font-weight:640;letter-spacing:-.01em;color:var(--label)}
     .roomwait p{margin:0;font-size:13px;line-height:1.5;color:var(--label2);max-width:38ch}
-    /* Two columns as a grid, not CSS columns: the body has a fixed height and
-       scrolls, and columns in a fixed height spill sideways into a third the
-       moment the sound section grows (it did, with a music input chosen).
-       On air across the top; the show on the left; where and sound on the
-       right; the two confirmations across the bottom, side by side. They were
-       third down the right column, which made it half as tall again as the
-       left and pushed them off the bottom of a 700px window.
-       Named, not counted: nth-child put a new section in the wrong column. */
-    @container (min-width:500px){
-      .studio .studiobody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;align-content:start}
-      .studio .sec-air{grid-column:1 / -1}
-      .studio .sec-show{grid-column:1;grid-row:2 / span 2}
-      .studio .sec-where{grid-column:2;grid-row:2}
-      .studio .sec-sound{grid-column:2;grid-row:3}
-      .studio .sec-rights{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;align-items:start}
-      .studio .sec-rights > :is(.layhead,.fine){grid-column:1 / -1}
+    /* The desk in two columns once the panel is wide enough: the voice, an
+       input and what goes out on the left, the music and its queue on the
+       right. A grid, not CSS columns: the body scrolls in a fixed height, and
+       columns in a fixed height spill sideways. */
+    @container (min-width:560px){
+      .studio .st-sound .desk{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+      .studio .st-sound .strip-music{grid-column:2;grid-row:1 / span 3}
+      .studio .st-sound .desk > :not(.strip-music){grid-column:1}
     }
   }
   @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
     .roomwait{background:var(--bg) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
   }
   .studio .sec{padding:12px 5px 10px;box-shadow:inset 0 .5px 0 var(--line)}
+  /* The three stages (explore-studio.js, paint): a segmented row of tabs, each
+     with its number, or a tick once it is done; Go live carries what is left. */
+  .studio .sttabs{display:flex;gap:2px;margin:4px 5px 12px;padding:2px;border-radius:var(--r-md);background:var(--fill)}
+  .studio .sttab{flex:1;min-width:0;min-height:30px;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:calc(var(--r-md) - 2px);
+    background:none;padding:4px 8px;font:inherit;font-size:12.5px;font-weight:500;color:var(--label2);cursor:default;white-space:nowrap}
+  .studio .sttab[aria-selected="true"]{background:var(--bg);color:var(--label);font-weight:590;box-shadow:0 0 0 .5px var(--line), 0 1px 3px rgba(0,0,0,.12)}
+  .studio .sttab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .studio .stnum{flex:none;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-variant-numeric:tabular-nums;
+    box-shadow:inset 0 0 0 1px currentColor}
+  .studio .stleft{flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);display:inline-grid;place-items:center;
+    background:var(--label);color:var(--bg);font-size:12px;font-variant-numeric:tabular-nums}
+  @media (hover:hover){.studio .sttab[aria-selected="false"]:hover{color:var(--label)}}
+  @media (pointer:coarse){ .studio .sttab{min-height:44px;font-size:14px} }
+  .studio .ststage{padding:0 5px}
+  /* The desk: one strip per source, all the same shape: a name, what it is,
+     its level and its fader. */
+  .studio .desk{display:flex;flex-direction:column;gap:10px}
+  .studio .strip{padding:10px 12px;border-radius:var(--r-lg, 12px);background:var(--fill);box-shadow:inset 0 0 0 .5px var(--line)}
+  .studio .strip.over{box-shadow:inset 0 0 0 2px var(--accent)}
+  .studio .striphead{display:flex;align-items:center;gap:8px;min-height:24px;margin-bottom:6px}
+  .studio .striphead b{flex:none;font-size:13px;font-weight:590;color:var(--label)}
+  .studio .stripsub{flex:1;min-width:0;font-size:12px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .studio .striphead > :last-child:not(b):not(.stripsub){margin-left:auto}
+  .studio .strip select{margin:0 0 8px}
+  .studio .level{display:flex;align-items:center;gap:10px;margin:4px 0}
+  .studio .level .meter{flex:1;margin:0}
+  .studio .level input[type=range]{flex:none;width:44%;accent-color:var(--accent)}
+  .studio .mute[aria-pressed="true"]{color:var(--err)}
+  .studio .drop{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px 12px;border-radius:var(--r-md);
+    box-shadow:inset 0 0 0 1px var(--line);background:var(--bg)}
+  .studio .drop .fine{margin:0}
+  .studio .strip .queue{max-height:240px}
+  .studio .addsrc{display:flex;align-items:center;min-height:36px;width:100%;padding:8px 12px;border:0;border-radius:var(--r-lg, 12px);background:none;
+    box-shadow:inset 0 0 0 1px var(--line);font:inherit;font-size:12.5px;color:var(--label2);text-align:left;cursor:default}
+  .studio .addsrc .plus{flex:none;width:18px;font-size:15px;color:var(--label)}
+  .studio .addsrc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (hover:hover){.studio .addsrc:hover{color:var(--label);background:var(--fill)}}
+  .studio .out{margin-top:12px;padding:10px 12px;border-radius:var(--r-lg, 12px);background:var(--fill);box-shadow:inset 0 0 0 .5px var(--line)}
+  .studio .out .meter{height:10px;margin:2px 0 6px}
+  .studio .stnext{display:flex;justify-content:flex-end;margin-top:14px}
+  .studio .fieldlabel{display:block;margin-bottom:4px;font-size:12px;color:var(--label2)}
+  /* Go live: what is still missing, with the way to it. */
+  .studio .checks{list-style:none;margin:0 0 6px;padding:0}
+  .studio .checks li{display:flex;align-items:center;gap:8px;min-height:32px;font-size:12.5px;color:var(--label)}
+  .studio .checks li + li{box-shadow:inset 0 .5px 0 var(--line)}
+  .studio .checks .chk{flex:none;width:18px;text-align:center;color:var(--label2)}
+  .studio .checks li.ok .chk{color:var(--accent)}
+  .studio .checks .chktext{flex:1;min-width:0}
+  .studio .checks .layrow{flex:1}
+  .studio .airbtns{margin:0 0 0 auto}
+  .studio .air{flex-wrap:wrap}
+  .studio .gobtns{margin-top:14px}
+  .studio .gobtns .sheetbtn{flex:1}
+  @media (pointer:coarse){ .studio .checks li{min-height:44px} .studio .addsrc{min-height:44px} }
   /* The title takes focus when the panel opens, so a screen reader starts
      there. It is not a control: a ring made it look like a text field. */
   #studiotitle:focus{outline:none}
@@ -1264,7 +1310,10 @@
   @media (hover:hover){.studio .qbtn:hover:not([disabled]){background:var(--fill);color:var(--label)}}
   @media (hover:hover){.studio .qname:hover{color:var(--accent)}}
   .studio .layrow{padding-left:0;padding-right:0}
-  .studio .layrow small{margin-left:auto;font-size:12px;color:var(--label3)}
+  /* A switch here is a thing to read and confirm, not a layer that is off:
+     its words stay full strength when it is off (--label3 is 2.5:1). */
+  .studio .layrow[aria-pressed="false"]{color:var(--label)}
+  .studio .layrow small{margin-left:auto;font-size:12px;color:var(--label2)}
   .studio .fine{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--label2)}
   #studioBtn.onair{color:var(--err)}
   /* On a wide window it is a strip of the layout, above the player: the globe,

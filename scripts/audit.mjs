@@ -3570,8 +3570,12 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (/URLSearchParams|location\.search/.test(fn)) gaps.push("a query string can switch the studio on");
   if (/localStorage\.(setItem|getItem)/.test(fn)) gaps.push("a flag kept in the browser can switch the studio on");
   if (!/location\.protocol === "file:"/.test(fn) || !/v\?\.dev \|\| v\?\.channel/.test(fn)) gaps.push("the desktop's development and beta builds are no longer the way in");
-  gaps.length ? fail("the studio is not on the public web", gaps.join("; "))
-    : pass("the studio opens in the desktop's development and beta builds, and in a preview on this machine, and nowhere else");
+  // Your show is the paid desktop app's: the web build does not carry it at all.
+  if (/location\.hostname/.test(fn)) gaps.push("a page on some host can switch the studio on");
+  const only = /const DESKTOP_ONLY = \[([^\]]*)\]/.exec(readSrc("scripts/build-web.mjs"))?.[1] || "";
+  if (!only.includes('"explore-studio.js"') || !only.includes('"studio-deck.js"')) gaps.push("the web build carries the studio");
+  gaps.length ? fail("the studio is not on the web", gaps.join("; "))
+    : pass("the studio is in the desktop app only, in its development and beta builds; the web build does not carry it");
 }
 
 // ── a tag says something ────────────────────────────────────────────────────
