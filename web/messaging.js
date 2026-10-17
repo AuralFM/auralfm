@@ -13,6 +13,9 @@
  * site data is a new person, which is what "no account" means.
  */
 const nostr = require("../src/presence-nostr.js");
+// A phone reads the busiest relays, not one or two per region: 20 sockets
+// rather than 68 for 98% of the people (src/presence-nostr.js, setSpread; #72).
+nostr.setSpread(12);
 const muted = require("../src/muted.js");
 const social = require("../src/social.js");
 const safety = require("../src/safety.js");

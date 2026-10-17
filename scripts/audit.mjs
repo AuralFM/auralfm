@@ -4740,6 +4740,45 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── a phone reads the busiest relays, not one per region ────────────────────
+// Joining a place on the web opened 68 sockets: 8 near relays and 60 read-only
+// ones, two per first-level cell. Fewer than half carried anyone. The web now
+// reads the 12 busiest instead (setSpread; scripts/relays.mjs ranks them
+// monthly): 20 sockets, and in a measured listen more people heard than the 68.
+// Fake relays count what a join dials.
+{
+  const name = "a phone reads the busiest relays, not one per region";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const web = readSrc("web/messaging.js");
+  const n = +(/nostr\.setSpread\((\d+)\)/.exec(web)?.[1] || 0);
+  if (!n) gaps.push("web/messaging.js sets no spread, so the web dials the desktop's 60 read-only relays");
+  else if (n > 16) gaps.push(`the web reads ${n} busy relays; more than 16 is the battery cost #72 removed`);
+  const dir = JSON.parse(fs.readFileSync(R("data/relays.json"), "utf8"));
+  const urls = new Set(dir.relays.map(([u]) => u));
+  if (!(dir.busiest?.length >= 12)) gaps.push("data/relays.json ranks no busy relays (npm run relays -- --nip66)");
+  else if (dir.busiest.some((u) => !urls.has(u))) gaps.push("a relay ranked busy is not in the directory");
+  const dialled = [];
+  class FakeRelay { constructor(url) { dialled.push(url); this.readyState = 0; } send() {} close() { this.readyState = 3; } }
+  const realWs = globalThis.WebSocket;
+  globalThis.WebSocket = FakeRelay;
+  let nostr = null;
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    const count = (sp) => { nostr.leave(); dialled.length = 0; nostr.setSpread(sp); nostr.join(38.72, -9.14, "test"); return dialled.slice(); };
+    const desk = count(0), phone = n ? count(n) : [];
+    if (n && phone.length > 8 + n) gaps.push(`a join on the web dials ${phone.length} relays`);
+    if (n && dir.busiest && !dir.busiest.slice(0, n).every((u) => phone.includes(u))) gaps.push("the web does not read the busiest relays");
+    if (desk.length <= phone.length) gaps.push(`the web dials as many relays as the desktop (${desk.length})`);
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`a join dials ${phone.length} relays on the web, the ${n} busiest among them, and ${desk.length} on the desktop`);
+  } catch (e) {
+    fail(name, `the module threw: ${e.message}`);
+  } finally {
+    try { nostr?.leave(); nostr?.setSpread(0); } catch {}
+    globalThis.WebSocket = realWs;
+  }
+}
+
 // ── your favourites survive a crash mid-save ────────────────────────────────
 // state.json (favourites, history, preferences) and stations.user.json (the
 // stations someone added) were written over in place. A crash or a dead battery

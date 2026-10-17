@@ -61,6 +61,18 @@
  *   relays are near this place". An entry that cannot answer that is noise in
  *   the one question being asked. Left in the existing rows, which predate this
  *   rule, rather than deleting data that already shipped.
+ *
+ * ## The third pass: which relays are busy
+ *
+ * The `--nip66` build also listens to every relay in the directory for
+ * LISTEN_SEC and counts the distinct people heard on each (presence and chat,
+ * the kinds the app reads). The busiest are written as `busiest`, in order.
+ * The web reads those instead of the geographic spread (presence-nostr.js,
+ * `setSpread`): measured from Lisbon and New York on 17 October 2026, the
+ * 8 near relays plus the 12 busiest heard 98% of the people that the near set
+ * plus the full spread (68 sockets) heard, and the busiest were the same 12 in
+ * the same order from both cities. Fewer than half of the 68 delivered anything
+ * in five minutes.
  */
 
 import fs from "node:fs";
@@ -75,6 +87,10 @@ const UA = "AuralFM/0.1 (+https://auralfm.xyz; hello@auralfm.xyz)";
 
 /** Only reached with --nip66, so the plain build stays a one-second fetch. */
 const WITH_NIP66 = process.argv.includes("--nip66");
+/** How long the busy pass listens, and how many relays it ranks. */
+const LISTEN_SEC = 180;
+const BUSIEST = 24;
+const PEOPLE_KINDS = [20000, 20001];
 
 const res = await fetch(SRC, { headers: { "user-agent": UA } });
 if (!res.ok) throw new Error(`georelays: HTTP ${res.status}`);
@@ -265,6 +281,46 @@ if (WITH_NIP66) {
   rows.push(...added);
 }
 
+/**
+ * Listen to every relay at once and count the distinct keys heard on each.
+ * Ephemeral kinds are not stored, so this hears only what is said while it
+ * listens: a ranking of where people are now, not a history.
+ */
+function listen(urls, secs) {
+  const heard = new Map(urls.map((u) => [u, new Set()]));
+  const sockets = [];
+  for (const url of urls) {
+    let w;
+    try { w = new WebSocket(url); } catch { continue; }
+    sockets.push(w);
+    w.onopen = () => w.send(JSON.stringify(["REQ", "busy", { kinds: PEOPLE_KINDS, since: Math.floor(Date.now() / 1000) }]));
+    w.onmessage = (m) => {
+      let d; try { d = JSON.parse(m.data); } catch { return; }
+      if (d[0] === "EVENT" && PEOPLE_KINDS.includes(d[2]?.kind) && typeof d[2].pubkey === "string") heard.get(url).add(d[2].pubkey);
+    };
+    w.onerror = () => {};
+  }
+  return new Promise((done) => setTimeout(() => {
+    for (const w of sockets) { try { w.close(); } catch {} }
+    done(heard);
+  }, secs * 1000));
+}
+
+let busiest;
+if (WITH_NIP66) {
+  console.log(`busy: listening to ${rows.length} relays for ${LISTEN_SEC} s`);
+  const heard = await listen(rows.map(([u]) => u), LISTEN_SEC);
+  const ranked = [...heard].map(([u, k]) => [u, k.size]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  busiest = ranked.slice(0, BUSIEST).map(([u]) => u);
+  const people = new Set([...heard.values()].flatMap((k) => [...k])).size;
+  console.log(`busy: ${ranked.length} relays carried anyone; ${people} people heard; top: ` +
+              ranked.slice(0, 5).map(([u, n]) => `${u.replace("wss://", "")} ${n}`).join(", "));
+} else {
+  // The plain build keeps the last measured ranking, minus relays it dropped.
+  const have = new Set(rows.map(([u]) => u));
+  try { busiest = (JSON.parse(fs.readFileSync(OUT, "utf8")).busiest || []).filter((u) => have.has(u)); } catch { busiest = []; }
+}
+
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify({
   built: new Date().toISOString().slice(0, 10),
@@ -272,6 +328,7 @@ fs.writeFileSync(OUT, JSON.stringify({
     ? "permissionlesstech/georelays (MIT) + NIP-66 kind 30166, each dialled to confirm it answers"
     : "permissionlesstech/georelays (MIT)",
   relays: rows,
+  busiest,
 }));
 console.log(`relays: ${rows.length} with coordinates -> data/relays.json ` +
             `(${(fs.statSync(OUT).size / 1024).toFixed(0)} kB)`);

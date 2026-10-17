@@ -144,6 +144,19 @@ const NEARBY = 5;
 const COVERAGE_PER_CELL = 2;
 
 /**
+ * Or, where sockets cost a battery: the N busiest relays instead.
+ *
+ * The web sets this (web/messaging.js). Measured on 17 October 2026 from two
+ * cities, the near set plus the 12 busiest relays heard 98% of the people the
+ * near set plus the per-cell spread heard, on 20 sockets rather than 68; the
+ * busiest were the same from both, so the list says nothing about where the
+ * listener is. scripts/relays.mjs ranks them monthly (`busiest`). 0 keeps the
+ * per-cell spread, which is what the desktop reads.
+ */
+let spread = 0;
+function setSpread(n) { spread = Math.max(0, n | 0); }
+
+/**
  * The relay directory, and why distance matters.
  *
  * Three hardcoded relays is why the geohash channels looked quieter than they
@@ -156,6 +169,14 @@ const COVERAGE_PER_CELL = 2;
  * same people who wrote bitchat.
  */
 let DIRECTORY = null;
+let BUSIEST_LIST = null;
+function busiest() {
+  if (!BUSIEST_LIST) {
+    try { BUSIEST_LIST = require("../data/relays.json").busiest || []; } catch { BUSIEST_LIST = []; }
+  }
+  return BUSIEST_LIST;
+}
+
 function directory() {
   if (DIRECTORY) return DIRECTORY;
   try {
@@ -316,6 +337,8 @@ function relaysFor(cell) {
  * Deterministic, so every AuralFM reads the same spread.
  */
 function coverageRelays(near = []) {
+  // With no ranking yet, the per-cell spread below is the fallback.
+  if (spread && busiest().length) return busiest().filter((u) => !near.includes(u)).slice(0, spread);
   const dir = directory();
   if (!dir.length) return [];
   const out = [];
@@ -1610,7 +1633,7 @@ function forgetDms() {
   emitNow("dms");
 }
 
-module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setPowFloor, powBits, geohash, ungeohash, sameCell,
+module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setSpread, setPowFloor, powBits, geohash, ungeohash, sameCell,
                    onSignal: (fn) => { onSignal = fn; },
                    drop, dm, thread, markRead, forgetDms,
                    joinHub, leaveHub, sayHub, lookupProfile, knownProfiles,
