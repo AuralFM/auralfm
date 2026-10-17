@@ -5,6 +5,10 @@
 # `npm run catalogue -- --release`. That needs CATALOGUE_TOKEN, a fine-grained
 # token with read-only Contents on AuralFM/catalogue, stored as this
 # repository's Actions secret. Without it the job says so and stops.
+#
+# The runner is Linux: pictures are resized with ImageMagick instead of sips
+# (scripts/lib/resize.mjs), and the home-screen icons, which only a Mac can
+# draw, are left out with a warning. Publishing is still done from a Mac.
 name: web
 on:
   push:
@@ -32,8 +36,19 @@ jobs:
           cache: npm
       - if: env.HAS_TOKEN == 'true'
         run: npm ci --ignore-scripts
+      - name: ImageMagick, for the resizes sips does on a Mac
+        if: env.HAS_TOKEN == 'true'
+        run: command -v magick || command -v convert || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick)
+      - name: The city-lights source (6.8 MB from NASA), kept between runs
+        if: env.HAS_TOKEN == 'true'
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/blackmarble.tif
+          key: blackmarble-${{ hashFiles('scripts/lights.mjs') }}
       - if: env.HAS_TOKEN == 'true'
-        run: node scripts/vendor.mjs
+        run: npm run vendor
+      - if: env.HAS_TOKEN == 'true'
+        run: npm run sky
       - name: The catalogue, from its latest release
         if: env.HAS_TOKEN == 'true'
         env:

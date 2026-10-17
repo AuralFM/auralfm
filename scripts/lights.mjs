@@ -30,8 +30,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { resize } from "./lib/resize.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, "src", "renderer", "vendor");
@@ -64,12 +64,7 @@ if (!fs.existsSync(TMP)) {
 }
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
-// sips ships with macOS, which is the only platform this app builds for, and it
-// beats adding an image-processing dependency for one resize a year.
-execFileSync("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "72",
-                      "-Z", String(WIDTH), TMP, "--out", OUT], { stdio: "ignore" });
+// sips on macOS, ImageMagick on the CI runner (scripts/lib/resize.mjs).
+resize(TMP, OUT, WIDTH, { quality: 72 });
 
-const dims = execFileSync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", OUT], { encoding: "utf8" });
-const w = /pixelWidth: (\d+)/.exec(dims)?.[1];
-const h = /pixelHeight: (\d+)/.exec(dims)?.[1];
-console.log(`lights: ${w}x${h}, ${(fs.statSync(OUT).size / 1024).toFixed(0)} KB -> src/renderer/vendor/earth-lights.jpg`);
+console.log(`lights: ${WIDTH} across, ${(fs.statSync(OUT).size / 1024).toFixed(0)} KB -> src/renderer/vendor/earth-lights.jpg`);

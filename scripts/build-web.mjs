@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { execFileSync } from "node:child_process";
+import { resize } from "./lib/resize.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (...p) => path.join(ROOT, ...p);
@@ -418,8 +418,8 @@ for (const f of fs.readdirSync(R("src", "renderer"))) {
 }
 copy("src/renderer/vendor", "vendor");
 // Half-size globe pictures for phones (explore-core.js, texUrl): 2048 across
-// instead of 4096, a quarter of the graphics memory. Made with sips, which
-// macOS ships and scripts/lights.mjs already relies on; kept in the cache so a
+// instead of 4096, a quarter of the graphics memory. Made with sips on macOS and
+// ImageMagick on the CI runner (scripts/lib/resize.mjs); kept in the cache so a
 // rebuild does not redo them.
 {
   const cache = R("node_modules", ".cache", "lite");
@@ -428,7 +428,7 @@ copy("src/renderer/vendor", "vendor");
   for (const [file, width] of LITE) {
     const src = R("src", "renderer", "vendor", file), made = path.join(cache, file);
     if (!fs.existsSync(made) || fs.statSync(made).mtimeMs < fs.statSync(src).mtimeMs) {
-      execFileSync("sips", ["--resampleWidth", String(width), src, "--out", made], { stdio: "ignore" });
+      resize(src, made, width);
     }
     fs.copyFileSync(made, path.join(OUT, "vendor", "lite", file));
   }
@@ -530,7 +530,13 @@ for (const f of ["favicon.png", "app-512.png", ...dockIcons]) {
 fs.mkdirSync(path.join(OUT, "assets", "icons"), { recursive: true });
 for (const px of [180, 192, 512]) {
   const src = R("assets", "generated", `ios-${px}.png`);
-  if (!fs.existsSync(src)) throw new Error(`web: missing ${path.relative(ROOT, src)} — run npm run icons`);
+  if (!fs.existsSync(src)) {
+    // The icons are drawn by Electron with macOS tools (scripts/make-icons.js),
+    // so the Linux CI runner has none. Every publish is built on a Mac, where
+    // a missing icon still stops the build.
+    if (process.env.CI) { console.log(`::warning::web: ${path.relative(ROOT, src)} not built here (needs npm run icons on a Mac)`); continue; }
+    throw new Error(`web: missing ${path.relative(ROOT, src)} — run npm run icons`);
+  }
   fs.copyFileSync(src, path.join(OUT, "assets", "icons", `icon-${px}.png`));
 }
 
@@ -549,6 +555,7 @@ for (const px of [180, 192, 512]) {
  */
 for (const name of ["apple-touch-icon.png", "apple-touch-icon-precomposed.png",
                     "apple-touch-icon-120x120.png", "apple-touch-icon-120x120-precomposed.png"]) {
+  if (process.env.CI && !fs.existsSync(path.join(OUT, "assets", "icons", "icon-180.png"))) break;  // see the icons above
   fs.copyFileSync(path.join(OUT, "assets", "icons", "icon-180.png"), path.join(OUT, name));
 }
 for (const f of ["favicon.ico", "favicon.svg", "share.jpg"]) fs.copyFileSync(R("assets", "brand", f), path.join(OUT, f));
