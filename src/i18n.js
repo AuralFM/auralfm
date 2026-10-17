@@ -465,6 +465,8 @@ const en = {
   "shows.room": "The show's town",
   "shows.stop": "Stop",
   "shows.nowPlaying": "Now",
+  "shows.needListeners": "Shows on air are found where the rooms are. Turn on Show other listeners to hear them.",
+  "shows.showListeners": "Show other listeners",
   "shows.onAir": "On air",
   "shows.report": "Report",
   "shows.reported": "Hidden. A report draft opened in your mail app.",

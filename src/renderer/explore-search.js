@@ -34,6 +34,15 @@ async function runSearch(query) {
     + (stations.length ? ` · ${stations.length} station${stations.length === 1 ? "" : "s"}` : "");
 
   placeListEl.innerHTML = "";
+  // Shows on air first: a show is the one result that will not be there later.
+  const shows = window.AuralShows?.find?.(q) || [];
+  if (shows.length) {
+    const h = document.createElement("div");
+    h.className = "sublabel";
+    h.textContent = t("shows.onAir", "On air");
+    placeListEl.appendChild(h);
+    for (const s of shows) placeListEl.appendChild(showResultRow(s));
+  }
   for (const p of places.places) placeListEl.appendChild(placeRow(p));
 
   if (stations.length) {
@@ -65,6 +74,19 @@ function placeRow(p) {
   el.querySelector(".pc").textContent = p.country;
   el.querySelector(".cnt").textContent = p.count;
   return activatable(el, () => goToPlace(p.i));
+}
+
+/** A show on air: fly to its town and listen (explore-shows.js). */
+function showResultRow(s) {
+  const el = document.createElement("div");
+  el.className = "place";
+  el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>`;
+  el.querySelector(".pn").textContent = s.label || t("shows.aShow", "A show");
+  el.querySelector(".pc").textContent = [t("shows.onAir", "On air"), s.np].filter(Boolean).join(" · ");
+  return activatable(el, () => {
+    if (typeof flyTo === "function") flyTo(s.lat, s.lon);
+    window.AuralShows?.listen?.(s);
+  });
 }
 
 /** A station hit: fly to its city, show that city, and play it. */

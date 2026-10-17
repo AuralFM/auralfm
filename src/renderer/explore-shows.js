@@ -30,12 +30,12 @@
  *
  * ## Where it is on
  *
- * Where the studio is: the desktop's development and beta builds, and a
- * preview on this machine. And, for listening only, in a browser that has
- * opened the app once with ?ears (a private link, so a host with one
- * computer can hear their own show on their phone). ?ears=off
- * takes it away again. The studio itself has no such link
- * (explore-studio.js, and the audit holds that).
+ * Listening is on everywhere: the web, the Home Screen app and the desktop.
+ * Anyone with "Show other listeners" on finds shows on the globe, in On air and
+ * in search. Going live is the desktop's alone (explore-studio.js; the web
+ * build does not carry it). The private link ?ears now only shows the way to
+ * turn "Show other listeners" on, for testers sent to hear a show; ?ears=off
+ * takes it away again.
  */
 {
   const $l = (id) => document.getElementById(id);
@@ -80,7 +80,7 @@
     if (q.has("ears")) { if (q.get("ears") === "off") localStorage.removeItem(EARS); else localStorage.setItem(EARS, "1"); }
     ears = localStorage.getItem(EARS) === "1";
   } catch { /* no storage: the link works for this visit only */ ears = new URLSearchParams(location.search).has("ears"); }
-  const on = () => !!window.AuralStudio?.on || ears;
+  const on = () => true;
 
   // ── listening ────────────────────────────────────────────────────────────
   let show = null;                 // { peer, sid, pc, state, why, timer }
@@ -311,9 +311,22 @@
     const rows = live.filter((p) => !gone.has(p.pubkey));
     // The show being heard stays listed while its ring is between heartbeats.
     if (held() && !rows.some((p) => p.pubkey === show.peer.pubkey)) rows.unshift(show.peer);
-    card.hidden = !(shown() && (rows.length || said));
+    // Shows are found on the same public relays as the rooms, so a listener
+    // with "Show other listeners" off sees none, and had no way to know why:
+    // a tester sent the private link saw an empty globe.
+    const unseen = shown() && ears && typeof prefs !== "undefined" && prefs?.presence !== true;
+    card.hidden = !(shown() && (rows.length || said || unseen));
     list.textContent = "";
     if (card.hidden) return;
+    if (unseen) {
+      list.append(el2("p", "livesay", tl("shows.needListeners", "Shows on air are found where the rooms are. Turn on Show other listeners to hear them.")));
+      const on = document.createElement("button");
+      on.type = "button"; on.className = "linkbtn livelisten";
+      on.textContent = tl("shows.showListeners", "Show other listeners");
+      on.onclick = () => window.auralfm.setPrefs?.({ presence: true });
+      list.append(on);
+      return;
+    }
     for (const p of rows) {
       const mine = show?.peer.pubkey === p.pubkey ? show : null;
       const busy = !!mine && (mine.state === "connecting" || mine.state === "on");
@@ -416,6 +429,12 @@
       relist();
     },
     listen, stop, report,
+    /** Shows on air whose name, or what they are playing, matches a search (explore-search.js). */
+    find(q) {
+      const w = String(q || "").toLowerCase().trim();
+      if (!w || !shown()) return [];
+      return live.filter((p) => !gone.has(p.pubkey) && `${p.label || ""} ${p.np || ""}`.toLowerCase().includes(w)).slice(0, 8);
+    },
     /** The On Air layer was switched (explore-view.js), or a preference (explore-chat.js). */
     layer() { paint(); },
     /** The player painted its row (explore-playback.js): a show being heard takes it back. */

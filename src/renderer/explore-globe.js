@@ -248,7 +248,11 @@ async function applyDayNight() {
     shader.uniforms.nightMap = { value: nightTex };
     shader.uniforms.liveMap = { value: nightTex };   // placeholder until imagery lands
     shader.uniforms.hasLive = { value: 0 };
-    shader.uniforms.dayNightOn = { value: 1 };
+    // From the layer, not on by default: the web opens with day/night off, the
+    // setting can arrive before the globe exists (applyLayers returns early
+    // then), and the shader came up shading night anyway, so the Layers
+    // switch read off over a globe that was on, and pressing it changed nothing.
+    shader.uniforms.dayNightOn = { value: typeof layers !== "undefined" && layers.dayNight === false ? 0 : 1 };
     shader.uniforms.sunDirection = { value: sunVector() };
     shader.uniforms.lightsMap = { value: lightsTex || nightTex };
     shader.uniforms.hasLights = { value: lightsTex ? 1 : 0 };

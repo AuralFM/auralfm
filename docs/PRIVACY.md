@@ -318,7 +318,8 @@ between, and keeps nothing about who listened.
   to hello@auralfm.xyz. Nothing is sent unless you send it.
 - **Nothing is recorded** by AuralFM. A host may record their own show.
 
-Shows are in testing and not yet in the public apps.
+Anyone can listen to a show in any of AuralFM's apps, with "Show other listeners"
+on. Going live is in testing, in the Mac app.
 
 ## Children
 

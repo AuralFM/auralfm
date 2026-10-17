@@ -3518,7 +3518,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   // Listening is on where the studio is, or where the private ?ears link has
   // been opened; and that link must never be a way into the studio itself
   // (the check after this one holds the studio's own door).
-  if (!shows.includes("const on = () => !!window.AuralStudio?.on || ears;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && (rows.length || said));")) gaps.push("the Live now list shows where neither the studio nor the private link has switched it on");
+  if (!shows.includes("const on = () => true;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && (rows.length || said || unseen));") || !shows.includes("const unseen = shown() && ")) gaps.push("listening to shows is not on everywhere, or the prompt to see them is not gated by shown()");
   if (/shows\.ears|has\("ears"\)/.test(studio)) gaps.push("the private listening link reaches into the studio");
   if (!/"shows\.note"/.test(shows) || !/network address/.test(shows)) gaps.push("a listener is not told the host can see their address");
   // Looking for shows with nothing playing reads and never announces, and only
@@ -4865,6 +4865,19 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (/\.studio \.(meter[^{]*|npbar) b\{[^}]*transition:(width|height)/.test(html)) gaps.push("a meter or the progress bar animates its size");
   if (!/\.studio \.meter b\{[^}]*transform:scaleX\(0\)/.test(html)) gaps.push("the meters are not drawn as a scale");
   gaps.length ? fail(name, gaps.join("; ")) : pass("the meters and the progress bar are scaled, so a frame of them recalculates no layout");
+}
+
+// ── the day/night switch and the globe agree ────────────────────────────────
+// The web opens with day/night off. The shader was compiled with it on, and
+// the setting, arriving before the globe existed, never reached it: the switch
+// read off over a globe shading night, and pressing it changed nothing.
+{
+  const name = "the day and night switch and the globe agree from the first frame";
+  console.log(`\n${name}`);
+  const g = readSrc("src/renderer/explore-globe.js");
+  /shader\.uniforms\.dayNightOn = \{ value: [^}]*layers\.dayNight/.test(g)
+    ? pass("the shader starts from the layer's own setting")
+    : fail(name, "explore-globe.js compiles day/night on whatever the layer says");
 }
 
 // ── your favourites survive a crash mid-save ────────────────────────────────

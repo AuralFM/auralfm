@@ -114,8 +114,10 @@ function paintRings() {
     .ringLat("lat").ringLng("lng")
     // Listeners pulse wider and slower than the ISS — it is overhead and moving,
     // they are a place on the ground where somebody is sitting.
-    .ringMaxRadius((d) => (d.kind === "live" ? 5 : d.kind === "peer" ? 3.6 : 2.4))
-    .ringPropagationSpeed((d) => (d.kind === "live" ? 1.2 : d.kind === "peer" ? 0.8 : 1.6))
+    // A show's ring was 5 degrees across, about 550 km: louder than the town it
+    // marks. 3, spreading at the same pace.
+    .ringMaxRadius((d) => (d.kind === "live" ? 3 : d.kind === "peer" ? 3.6 : 2.4))
+    .ringPropagationSpeed((d) => (d.kind === "live" ? 0.72 : d.kind === "peer" ? 0.8 : 1.6))
     .ringRepeatPeriod((d) => (d.kind === "live" ? 900 : d.kind === "peer" ? 2600 : 1400))
     .ringAltitude(0.055)
     .ringColor((d) => d.kind === "live"

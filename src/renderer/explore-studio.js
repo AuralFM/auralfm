@@ -653,7 +653,7 @@
     const words = el("input", { type: "search", id: "stClearedWords", value: cleared.words, placeholder: tt("studio.clearedPh", "Dub, cumbia, ambient, Lagos…"),
       "aria-label": tt("studio.clearedLabel", "Search music cleared for shows") });
     box.append(el("form", { class: "srcrow linkrow", role: "search", onsubmit: (e) => { e.preventDefault(); if (words.value.trim()) searchCleared(words.value.trim()); } },
-      words, el("button", { class: "linkbtn", type: "submit", disabled: cleared.busy }, cleared.busy ? tt("studio.clearedBusy", "Searching…") : tt("studio.clearedGo", "Search"))));
+      words, el("button", { class: "sheetbtn", type: "submit", disabled: cleared.busy }, cleared.busy ? tt("studio.clearedBusy", "Searching…") : tt("studio.clearedGo", "Search"))));
     if (cleared.note) box.append(el("p", { class: "fine", role: "status", text: cleared.note }));
     if (cleared.tracks.length) {
       const list = el("ul", { class: "clearedlist", id: "stClearedList", "aria-label": tt("studio.clearedResults", "Music cleared for shows") });
@@ -1124,7 +1124,7 @@
     pane.append(list);
     const conduct = el("p", { class: "fine" });
     conduct.append(tt("studio.conduct", "Talk, your own music and music you are licensed to play. Shows follow the "),
-      el("a", { href: "https://docs.auralfm.xyz/conduct/", target: "_blank", rel: "noopener noreferrer", class: "linkbtn" }, tt("studio.conductLink", "Code of Conduct")), ".");
+      el("a", { href: "https://docs.auralfm.xyz/conduct/", target: "_blank", rel: "noopener noreferrer", class: "inlink" }, tt("studio.conductLink", "Code of Conduct")), ".");
     pane.append(conduct);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (isIOS) pane.append(el("p", { class: "fine", text: tt("studio.iosWarning", "On an iPhone, the show stops when you leave the app or the screen turns off.") }));
