@@ -424,6 +424,7 @@
       if (old) { fadeTo(old.gain, 0, at, dur); closeDeck(old, dur); }
       deck = next;
       watch(next);
+      if (phase !== "off") logTrack(next.item);
     } finally {
       switching = false; trackLoading = false;
       meters();
@@ -472,7 +473,7 @@
     trackNote = "";
     // A file's name without its ending: ".wav" tells a host nothing and costs the row five letters.
     const bare = (n) => String(n || "").replace(/\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|webm|aiff?|wma|mp2)$/i, "") || String(n || "");
-    const added = [...list].map((src) => ({ id: `q${++queueSeq}`, name: bare(src.name), source: src.source, duration: null }));
+    const added = [...list].map((src) => ({ id: `q${++queueSeq}`, name: src.meta ? src.name : bare(src.name), source: src.source, duration: src.meta?.duration ?? null, meta: src.meta || null }));
     if (!added.length) return;
     const idle = !deck && !switching;
     queue.push(...added);
@@ -484,7 +485,7 @@
     else paint();
   }
   const loadFiles = (files) => addTracks([...files].map((f) => ({ name: f.name, source: f })));
-  async function loadBlob(name, source) { const before = queue.length; await addTracks([{ name, source }]); return queue.length > before; }
+  async function loadBlob(name, source, meta = null) { const before = queue.length; await addTracks([{ name, source, meta }]); return queue.length > before; }
   function clearQueue() { dropPre(); const old = deck; deck = null; closeDeck(old); queue = []; trackNote = ""; }
   /**
    * A track from a link (desktop: main opens it and passes it through as it
@@ -584,10 +585,11 @@
     // One sound at a time: the station you were playing would go out under
     // your voice through the microphone.
     if (to !== "off" && document.body.classList.contains("playing")) window.auralfm.transport?.({ action: "toggle" });
-    if (to !== "off" && phase === "off") startedAt = Date.now();
+    if (to !== "off" && phase === "off") { startedAt = Date.now(); tracklist = []; if (deck && playing()) setTimeout(() => logTrack(deck.item), 0); }
     // Leaving the air: the people listening are told, and let go.
     if (phase === "live" && to !== "live") { closeListeners(); heardNote = ""; }
     phase = to;
+    window.auralfm.studioNowPlaying?.(phase === "live" ? (tracklist.at(-1)?.text || "") : "");
     window.AuralStudio.live = phase === "live" && show.place ? { lat: show.place.lat, lon: show.place.lon, title: show.title } : null;
     if (typeof paintRings === "function") paintRings();
     if (phase === "live" && show.place && typeof flyTo === "function") flyTo(show.place.lat, show.place.lon);
@@ -597,6 +599,102 @@
     else setup = false;
     paint();
     meters();
+  }
+
+  // ── the tracklist ────────────────────────────────────────────────────────
+  /**
+   * Every show keeps a tracklist: each track as it starts, and any record the
+   * host adds by hand (a vinyl played through the microphone or an input). It
+   * is the honest record of what was played, it credits the artists, as the
+   * cleared music's licences require, and its latest line goes to listeners
+   * with the show (presence-nostr.js, setNowPlaying).
+   */
+  let tracklist = [];          // [{ at (s from the start), text, licence, page }]
+  const credit = (item) => item.meta ? `${item.meta.artist ? `${item.meta.artist} — ` : ""}${item.meta.title}` : item.name;
+  function logTrack(item, manual = "") {
+    const text = String(manual || credit(item) || "").replace(/\s+/g, " ").trim().slice(0, 100);
+    if (!text) return;
+    const last = tracklist.at(-1);
+    if (last && last.text === text && !manual) return;
+    const entry = { at: Math.floor((Date.now() - startedAt) / 1000), text, licence: item?.meta?.licence || "", page: item?.meta?.page || "" };
+    tracklist.push(entry);
+    if (phase === "live") window.auralfm.studioNowPlaying?.(entry.licence ? `${text} (${entry.licence})` : text);
+    paint();
+  }
+  const hhmmss = (s) => `${Math.floor(s / 3600) ? `${Math.floor(s / 3600)}:` : ""}${String(Math.floor(s / 60) % 60).padStart(Math.floor(s / 3600) ? 2 : 1, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const tracklistText = () => tracklist.map((t) => [hhmmss(t.at), t.text, t.licence && `(${t.licence}${t.page ? `, ${t.page}` : ""})`].filter(Boolean).join("  ")).join("\n");
+
+  // ── music cleared for shows ──────────────────────────────────────────────
+  /**
+   * The studio's music starts here, not with "add files": a host is somebody
+   * who loves music, not a broadcaster with licences, so the first music on
+   * offer is music whose licence already lets anyone play it on the air
+   * (src/main/ipc-cleared.js: CC BY, CC BY-SA, CC0, the public-domain mark).
+   * The host's own files come second, for music they made or hold the rights to.
+   */
+  let picking = false, cleared = { words: "", tracks: [], busy: false, note: "" }, adding1 = "";
+  async function searchCleared(words) {
+    cleared = { words, tracks: [], busy: true, note: "" }; paint();
+    const r = await Promise.resolve(window.auralfm.studioCleared?.(words)).catch(() => null);
+    cleared = { words, tracks: r?.tracks || [], busy: false,
+      note: !r || r.failed ? tt("studio.clearedFailed", "The music libraries did not answer. Try again.") : !r.tracks.length ? tt("studio.clearedNone", "Nothing cleared for shows matched. Try another word: a genre, a place, a mood.") : "" };
+    paint();
+    $s("stClearedList")?.querySelector("button")?.focus({ preventScroll: true });
+  }
+  async function addCleared(t) {
+    adding1 = t.src; paint();
+    const r = await window.auralfm.studioOpenTrack?.(t.src);
+    adding1 = "";
+    if (r?.src) await loadBlob(`${t.artist ? `${t.artist} — ` : ""}${t.title}`, r.src, t);
+    else { trackNote = tt("studio.linkFailed", "The link did not open. Check it in a browser, then try again."); paint(); }
+  }
+  function clearedPicker(pick) {
+    const box = el("div", { class: "cleared" });
+    const words = el("input", { type: "search", id: "stClearedWords", value: cleared.words, placeholder: tt("studio.clearedPh", "Dub, cumbia, ambient, Lagos…"),
+      "aria-label": tt("studio.clearedLabel", "Search music cleared for shows") });
+    box.append(el("form", { class: "srcrow linkrow", role: "search", onsubmit: (e) => { e.preventDefault(); if (words.value.trim()) searchCleared(words.value.trim()); } },
+      words, el("button", { class: "linkbtn", type: "submit", disabled: cleared.busy }, cleared.busy ? tt("studio.clearedBusy", "Searching…") : tt("studio.clearedGo", "Search"))));
+    if (cleared.note) box.append(el("p", { class: "fine", role: "status", text: cleared.note }));
+    if (cleared.tracks.length) {
+      const list = el("ul", { class: "clearedlist", id: "stClearedList", "aria-label": tt("studio.clearedResults", "Music cleared for shows") });
+      for (const t of cleared.tracks) {
+        const inQueue = queue.some((q) => q.meta?.src === t.src);
+        list.append(el("li", {},
+          el("div", { class: "clname" }, el("b", { text: t.title, dir: "auto" }), el("span", { text: [t.artist, t.licence, Number.isFinite(t.duration) ? mmss(t.duration) : ""].filter(Boolean).join(" · "), dir: "auto" })),
+          el("button", { class: "linkbtn", type: "button", disabled: inQueue || adding1 === t.src, "aria-label": `${tt("studio.clearedAdd", "Add")}: ${t.title}`,
+            onclick: () => addCleared(t) }, inQueue ? tt("studio.clearedIn", "Added") : adding1 === t.src ? tt("studio.linkFetching", "Fetching…") : tt("studio.clearedAdd", "Add"))));
+      }
+      box.append(list);
+      box.append(el("p", { class: "fine", text: tt("studio.clearedCredit", "From ccMixter and the Internet Archive's netlabels. Each one is credited in your tracklist, as its license asks.") }));
+    } else if (!cleared.note && !cleared.busy) {
+      box.append(el("p", { class: "fine", text: tt("studio.clearedHint", "Music whose license lets anyone play it on a show, with credit. Search a genre, a place or a mood.") }));
+    }
+    const own = el("p", { class: "fine ownfiles" });
+    own.append(el("button", { class: "linkbtn", type: "button", id: "stAddOwn", onclick: () => pick.click() }, tt("studio.addOwn", "Add your own files")), " ",
+      tt("studio.ownNote", "Only music you made, or have the rights to play."));
+    box.append(own);
+    return box;
+  }
+  /** The tracklist on screen: what has played, when, and the way to copy it. */
+  function tracklistBox() {
+    const box = el("section", { class: "tracklist", "aria-label": tt("studio.tracklist", "Tracklist") });
+    box.append(el("div", { class: "striphead" }, el("b", { text: tt("studio.tracklist", "Tracklist") }),
+      tracklist.length ? el("button", { class: "linkbtn", type: "button", id: "stCopyList", onclick: async () => {
+        try { await navigator.clipboard.writeText(tracklistText()); trackNote = tt("studio.tracklistCopied", "Tracklist copied."); }
+        catch { trackNote = tt("studio.tracklistNoCopy", "The tracklist could not be copied."); }
+        paint(); setTimeout(() => { if (trackNote) { trackNote = ""; paint(); } }, 3000);
+      } }, tt("studio.tracklistCopy", "Copy")) : null));
+    if (tracklist.length) {
+      const ol = el("ol", { class: "tl" });
+      for (const t of tracklist) ol.append(el("li", {}, el("span", { class: "time", text: hhmmss(t.at) }), el("span", { class: "tltext", text: t.text, dir: "auto" }),
+        t.licence ? el("span", { class: "tllic", text: t.licence }) : null));
+      box.append(ol);
+    } else box.append(el("p", { class: "fine", text: tt("studio.tracklistEmpty", "Each track goes here as it starts. Listeners see the latest one.") }));
+    const rec = el("input", { type: "text", id: "stRecord", maxlength: "100", placeholder: tt("studio.recordPh", "Artist — Title"),
+      "aria-label": tt("studio.recordLabel", "Playing a record? Add it to the tracklist") });
+    box.append(el("form", { class: "srcrow linkrow", onsubmit: (e) => { e.preventDefault(); const v = rec.value.trim(); if (v) { logTrack(null, v); } } },
+      rec, el("button", { class: "linkbtn", type: "submit" }, tt("studio.recordAdd", "Add a record"))));
+    return box;
   }
 
   // ── the panel ────────────────────────────────────────────────────────────
@@ -754,7 +852,8 @@
       const at = d ? d.t.el.currentTime : 0, dur = d ? d.t.el.duration : NaN;
       np.append(
         el("div", { class: "nphead" }, el("span", { class: "nplabel", text: playing() ? tt("studio.playingNow", "Playing") : tt("studio.paused", "Paused") }),
-          el("button", { class: "linkbtn", type: "button", id: "stAdd", onclick: () => pick.click() }, tt("studio.addMusic", "Add music"))),
+          el("button", { class: "linkbtn", type: "button", id: "stAdd", "aria-expanded": String(picking), onclick: () => { picking = !picking; paint(); } }, picking ? tt("studio.close", "Close") : tt("studio.addMusic", "Add music"))),
+        picking ? clearedPicker(pick) : null,
         el("div", { class: "npname", id: "stNpName", dir: "auto", text: d ? d.item.name : queue[0].name }),
         el("div", { class: "npbar", role: "presentation" }, el("b", { id: "stNpBar", style: `width:${Number.isFinite(dur) && dur > 0 ? Math.min(100, at / dur * 100) : 0}%` })),
         el("div", { class: "nptimes" }, el("span", { class: "time", id: "stTime", text: d ? `${mmss(at)} / ${mmss(dur)}` : "" }),
@@ -764,11 +863,9 @@
           el("button", { class: "tbtn big", type: "button", id: "stPlay", "aria-label": playing() ? tt("studio.pause", "Pause") : tt("studio.play", "Play"),
             onclick: async () => { await ctx.resume(); playing() ? stopTrack() : playTrack(); meters(); setTimeout(paint, 60); } }),
           el("button", { class: "tbtn", type: "button", id: "stNext", disabled: n < 0 || switching, onclick: nextTrack, "aria-label": tt("studio.next", "Next"), title: tt("studio.next", "Next") })),
-        el("p", { class: "fine npnext", role: "status", text: n >= 0 && d ? `${tt("studio.upNext", "Next")}: ${queue[n].name}` : d ? tt("studio.lastTrack", "Last track in the queue") : "" }));
+        el("p", { class: "fine npnext", role: "status", text: !d ? "" : n >= 0 && queue[n].id === d.item.id ? tt("studio.repeatsOne", "Plays again when it ends") : n >= 0 ? `${tt("studio.upNext", "Next")}: ${queue[n].name}` : tt("studio.lastTrack", "Last track in the queue") }));
     } else {
-      np.append(el("div", { class: "drop" },
-        el("p", { class: "fine", role: "status", text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.dropHint", "Drop audio files here, or add them. They play in order, each fading into the next.") }),
-        el("button", { class: "sheetbtn", type: "button", id: "stAdd", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addMusic", "Add music"))));
+      np.append(el("div", { class: "nphead" }, el("span", { class: "nplabel", text: tt("studio.clearedHead", "Music cleared for shows") })), clearedPicker(pick));
     }
     // The app's own icons: these characters draw as colour emoji on a Mac.
     if (typeof Icons !== "undefined") {
@@ -808,6 +905,7 @@
       toggleRow(tt("studio.duck", "Music dips when you talk"), show.duck, () => { show.duck = !show.duck; keep(); paint(); })));
     if (lineNote) c.append(el("p", { class: "fine", role: "alert", text: lineNote }));
 
+    c.append(tracklistBox());
     // The queue, compact: press a name to go to it.
     if (queue.length > 1) {
       const on = deck?.item.id;
@@ -873,9 +971,7 @@
     const sub = queue.length ? [`${queue.length} ${count}`, total ? mmss(total) : ""].filter(Boolean).join(" · ") : "";
     const music = strip("strip-music", tt("studio.music", "Music"), sub, queue.length ? muteBtn("music", tt("studio.music", "Music")) : null, pick);
     if (!queue.length) {
-      music.append(el("div", { class: "drop" },
-        el("p", { class: "fine", role: "status", text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.dropHint", "Drop audio files here, or add them. They play in order, each fading into the next.") }),
-        el("button", { class: "sheetbtn", type: "button", id: "stAdd", disabled: trackLoading, onclick: () => pick.click() }, tt("studio.addMusic", "Add music"))));
+      music.append(el("p", { class: "fine cleartitle", text: trackLoading ? tt("studio.trackLoading", "Opening the track…") : tt("studio.clearedHead", "Music cleared for shows") }), clearedPicker(pick));
     } else {
       const on = deck?.item.id;
       music.append(el("div", { class: "deck transport" },
@@ -898,8 +994,9 @@
       music.append(list);
       const n = nextIndex(), at = curIndex();
       music.append(el("div", { class: "deck" }, el("span", { class: "name", role: "status",
-        text: at >= 0 && n >= 0 ? `${tt("studio.upNext", "Next")}: ${queue[n].name}` : (at >= 0 ? tt("studio.lastTrack", "Last track in the queue") : "") }),
-        el("button", { class: "linkbtn", type: "button", id: "stAdd", onclick: () => pick.click() }, tt("studio.addMusic", "Add music"))));
+        text: at >= 0 && n === at ? tt("studio.repeatsOne", "Plays again when it ends") : at >= 0 && n >= 0 ? `${tt("studio.upNext", "Next")}: ${queue[n].name}` : (at >= 0 ? tt("studio.lastTrack", "Last track in the queue") : "") }),
+        el("button", { class: "linkbtn", type: "button", id: "stAdd", "aria-expanded": String(picking), onclick: () => { picking = !picking; paint(); } }, picking ? tt("studio.close", "Close") : tt("studio.addMusic", "Add music"))));
+      if (picking) music.append(clearedPicker(pick));
       music.append(el("div", { class: "level" }, meter("meterMusic"),
         fader(tt("studio.musicLevel", "Music level"), show.musicVol, 1, (e) => { show.musicVol = +e.target.value; keep(); })));
       const secs = el("span", { class: "time", id: "stFadeSay", text: `${show.xfade} s` });

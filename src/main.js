@@ -806,6 +806,9 @@ ipcMain.on("studio:host", (_e, lat, lon, live, title) => {
   hosting = next;
   syncNostrPresence();
 });
+// What the show is playing, for its listeners: the tracklist's latest line,
+// carried with the show's own heartbeat (presence-nostr.js, setNowPlaying).
+ipcMain.on("studio:nowPlaying", (_e, text) => nostr.setNowPlaying(typeof text === "string" ? text : ""));
 // A show's handshake, between a listener's device and a host's (explore-shows.js).
 ipcMain.handle("rtc:signal", (_e, to, payload) => nostr.signal(String(to || ""), payload));
 
@@ -951,7 +954,7 @@ const ctx = {
   get win() { return win; },
   POPOVER, broadcast, getPrefs, getStrings, hide, hydrateMine, layerState, load, maxPopoverHeight, openExplore, openOutside, openSettings, refreshChat, save, setLayer, setPrefs, visible,
 };
-for (const mod of ["errors","app","catalog","player","chat","globe","card"]) require(`./main/ipc-${mod}`)(ctx);
+for (const mod of ["errors","app","catalog","player","chat","globe","card","cleared"]) require(`./main/ipc-${mod}`)(ctx);
 
 
 /** Repaint every chat channel from main's copy, after a rule changed. */

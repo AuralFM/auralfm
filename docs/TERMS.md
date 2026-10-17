@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 13 October 2026**
+**Last updated: 17 October 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -109,8 +109,29 @@ or anything AuralFM shows infringes your copyright, send a notice to
    penalty of perjury, that you are the owner or authorised to act for them;
 6. your physical or electronic signature.
 
-We remove or disable what the notice identifies, tell the station where we can,
-and restore it if a valid counter-notice follows and no court action is filed.
+We remove or disable what the notice identifies, tell the station or the host
+where we can, and restore it if a valid counter-notice follows and no court
+action is filed.
+
+**Counter-notice.** If you believe something was removed by mistake or
+misidentified, send a counter-notice to the same address, including:
+
+1. what was removed, and where it appeared before;
+2. a statement, under penalty of perjury, that you believe in good faith it was
+   removed by mistake or misidentification;
+3. your name, address and telephone number, and a statement that you consent
+   to the jurisdiction of the federal court for your district (or, outside the
+   United States, any judicial district in which AuralFM may be found), and
+   that you will accept service from the person who sent the notice;
+4. your physical or electronic signature.
+
+We send the counter-notice to the person who sent the notice, and restore what
+was removed in 10 to 14 business days unless they tell us they have filed a
+court action.
+
+**Repeat infringement.** A station, or a show's host, that is the subject of
+three valid notices in twelve months that were not answered by a valid
+counter-notice is no longer listed in AuralFM's apps.
 
 **Designated agent.** Notices of claimed infringement go to AuralFM's agent,
 registered with the U.S. Copyright Office (registration DMCA-1081921):
@@ -130,11 +151,18 @@ the people listening, a small number at a time. These terms apply to it.
 
 - **You must be 18 or over to go live or to announce a show.** Listening stays
   open to everyone 13 and over.
-- **Play only what you have the right to play:** your own voice and music, and
-  music you are licensed to broadcast. Playing other people's recordings to the
-  public needs licences (in the US from SoundExchange and the songwriters' bodies,
-  in the UK from PPL and PRS); when the sound goes from your device to listeners,
-  **you are the broadcaster** and those licences are yours to hold.
+- **Play only what you have the right to play:** your own voice and music,
+  music cleared for shows, and music you are licensed to broadcast. The studio
+  offers music cleared for shows first: tracks whose licence lets anyone play
+  them on the air with credit (Creative Commons Attribution and
+  Attribution-ShareAlike, CC0 and the public-domain mark). Playing other
+  people's recordings to the public otherwise needs licences (in the US from
+  SoundExchange and the songwriters' bodies, in the UK from PPL and PRS); when
+  the sound goes from your device to listeners, **you are the broadcaster** and
+  those licences are yours to hold.
+- **Every show keeps a tracklist,** which credits what was played as its
+  licence asks, and shows listeners what is on. If you play a record through
+  the microphone or an input, add it to the tracklist.
 - The [Code of Conduct](https://docs.auralfm.xyz/conduct/) applies to shows as
   it does to the chat.
 - **If someone pays you to play something, say so on the air.** AuralFM sells no

@@ -88,6 +88,8 @@ contextBridge.exposeInMainWorld("auralfm", {
   micSettings: () => ipcRenderer.send("mic:settings"),
   studioOpenTrack: (url) => ipcRenderer.invoke("studio:openTrack", url),
   studioHost: (lat, lon, live, title) => ipcRenderer.send("studio:host", lat, lon, live, title),
+  studioNowPlaying: (text) => ipcRenderer.send("studio:nowPlaying", text),
+  studioCleared: (words) => ipcRenderer.invoke("studio:cleared", words),
   showsWatch: (on) => ipcRenderer.send("shows:watch", on === true),
   /** Keys of the hosts AuralFM no longer lists, fresh from listen.auralfm.xyz. */
   hiddenShows: () => ipcRenderer.invoke("shows:hidden"),

@@ -307,8 +307,13 @@ between, and keeps nothing about who listened.
 - **To find its own public address,** each device asks a STUN server
   (Cloudflare's or Google's). That server sees the device's address and
   nothing about the show.
-- **A show is listed** while its host is live: its name and its town, on the
-  same public relays the chat uses. It needs "Show other listeners" on.
+- **A show is listed** while its host is live: its name, its town, and the
+  track it is playing (the latest line of its tracklist), on the same public
+  relays the chat uses. It needs "Show other listeners" on.
+- **Finding music for a show,** the studio searches ccMixter and the Internet
+  Archive with the words the host types, only when they search. Those services
+  see the host's IP address and the search words; a track the host adds is
+  then fetched from them.
 - **Reporting a show** hides its host on your device and opens an email draft
   to hello@auralfm.xyz. Nothing is sent unless you send it.
 - **Nothing is recorded** by AuralFM. A host may record their own show.

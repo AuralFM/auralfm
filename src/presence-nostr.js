@@ -157,6 +157,19 @@ let spread = 0;
 function setSpread(n) { spread = Math.max(0, n | 0); }
 
 /**
+ * What a live show is playing: the latest line of its tracklist, sent with the
+ * show's label event so listeners see it (explore-shows.js). Changing it
+ * announces at once rather than waiting for the next heartbeat.
+ */
+let nowPlaying = "";
+function setNowPlaying(text) {
+  const next = String(text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (next === nowPlaying) return;
+  nowPlaying = next;
+  if (here?.live) announce();
+}
+
+/**
  * The relay directory, and why distance matters.
  *
  * Three hardcoded relays is why the geohash channels looked quieter than they
@@ -726,7 +739,7 @@ function peerList() {
     // is not a leak — this key was announced to every relay we are connected
     // to, by them, which is how we know they are here at all.
     if (c) list.push({ id: pubkey.slice(0, 8), pubkey, lat: c.lat, lon: c.lon,
-                       label: v.label, geohash: v.geohash, live: !!v.live });
+                       label: v.label, geohash: v.geohash, live: !!v.live, np: v.live ? v.np || "" : "" });
   }
   return list;
 }
@@ -873,10 +886,10 @@ function announce(only) {
    * so one pair is mined and handed to each socket as it arrives.
    */
   const stale = !beacon || beacon.cell !== here.geohash || beacon.label !== here.label
-    || beacon.live !== !!here.live || at - beacon.at >= (here.live ? LIVE_BEAT_MS : BEAT_MS) / 1000;
+    || beacon.live !== !!here.live || beacon.np !== nowPlaying || at - beacon.at >= (here.live ? LIVE_BEAT_MS : BEAT_MS) / 1000;
   if (stale) {
     beacon = {
-      cell: here.geohash, label: here.label, live: !!here.live, at,
+      cell: here.geohash, label: here.label, live: !!here.live, np: nowPlaying, at,
       // The shared heartbeat. Empty content and a `g` tag, nothing else — the
       // convention says so and other clients read it.
       events: [
@@ -885,9 +898,10 @@ function announce(only) {
         sign({
           kind: LABEL_KIND, created_at: at,
           tags: [["g", here.geohash]],
-          // `s: 1` is a show going out live from this key, and `l` its name
-          // (explore-studio.js). Ours alone, like the rest of this event.
-          content: JSON.stringify(here.live ? { l: here.label, s: 1 } : { l: here.label }),
+          // `s: 1` is a show going out live from this key, `l` its name and
+          // `n` what it is playing, from its tracklist (explore-studio.js).
+          // Ours alone, like the rest of this event.
+          content: JSON.stringify(here.live ? (nowPlaying ? { l: here.label, s: 1, n: nowPlaying } : { l: here.label, s: 1 }) : { l: here.label }),
         }),
       ],
     };
@@ -1262,9 +1276,9 @@ function dial(url) {
 
     // Presence, either flavour. The label only exists in ours; a bitchat peer
     // is simply present, which is the whole claim being made.
-    let label = null, live = null;
+    let label = null, live = null, np = null;
     if (e.kind === LABEL_KIND) {
-      try { const j = JSON.parse(e.content); label = j?.l ?? null; live = j?.s === 1; } catch { /* optional */ }
+      try { const j = JSON.parse(e.content); label = j?.l ?? null; live = j?.s === 1; np = live && typeof j?.n === "string" ? j.n : (live ? "" : null); } catch { /* optional */ }
     }
     const prev = peers.get(e.pubkey);
     peers.set(e.pubkey, {
@@ -1273,6 +1287,9 @@ function dial(url) {
       // Only our own label event says whether a show is live; the shared
       // heartbeat that arrives beside it must not unsay it.
       live: live ?? !!prev?.live,
+      // What a live show says it is playing. A stranger's text, so a line of it
+      // and no more; never markup (the renderers set it as text).
+      np: String(np ?? prev?.np ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 120),
       at: Date.now(),
     });
     emit();
@@ -1633,7 +1650,7 @@ function forgetDms() {
   emitNow("dms");
 }
 
-module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setSpread, setPowFloor, powBits, geohash, ungeohash, sameCell,
+module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setSpread, setNowPlaying, setPowFloor, powBits, geohash, ungeohash, sameCell,
                    onSignal: (fn) => { onSignal = fn; },
                    drop, dm, thread, markRead, forgetDms,
                    joinHub, leaveHub, sayHub, lookupProfile, knownProfiles,

@@ -4797,6 +4797,58 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── a host never needs a licence ───────────────────────────────────────────
+// Hosts are people who love music, not broadcasters with licences. So the
+// studio's music opens on music whose licence already lets anyone play it on
+// the air (src/main/ipc-cleared.js), the host's own files come second, and
+// every show keeps a tracklist that credits what it played and tells listeners
+// what is on (presence-nostr.js, setNowPlaying).
+{
+  const name = "a host never needs a licence: cleared music first, and a tracklist";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  let allowed = null;
+  try {
+    const Module = req("node:module");
+    const load = Module._load;
+    Module._load = function (r, ...a) { return r === "electron" ? { ipcMain: { handle() {} }, net: { fetch } } : load.call(this, r, ...a); };
+    try { allowed = req(R("src/main/ipc-cleared.js")).allowed; } finally { Module._load = load; }
+  } catch (e) { gaps.push(`ipc-cleared.js did not load: ${e.message}`); }
+  if (allowed) {
+    const yes = ["https://creativecommons.org/licenses/by/4.0/", "http://creativecommons.org/licenses/by-sa/3.0/", "https://creativecommons.org/licenses/by/3.0/us/", "https://creativecommons.org/publicdomain/zero/1.0/", "http://creativecommons.org/publicdomain/mark/1.0/"];
+    const no = ["https://creativecommons.org/licenses/by-nc/4.0/", "https://creativecommons.org/licenses/by-nd/4.0/", "https://creativecommons.org/licenses/by-nc-sa/3.0/", "https://creativecommons.org/licenses/by-nc-nd/2.5/", "https://example.com/licenses/by/4.0/", ""];
+    const missed = yes.filter((u) => !allowed(u)), let_in = no.filter((u) => allowed(u));
+    if (missed.length) gaps.push(`a licence that may go on air is refused: ${missed[0]}`);
+    if (let_in.length) gaps.push(`a licence that may not go on air is let in: ${let_in[0] || "(none)"}`);
+  }
+  const st = readSrc("src/renderer/explore-studio.js");
+  if (!/if \(!queue\.length\) \{\s*music\.append\([^;]*clearedPicker\(pick\)\);/.test(st)) gaps.push("the studio's music does not open on cleared music");
+  if (!/if \(phase !== "off"\) logTrack\(next\.item\);/.test(st)) gaps.push("a track that starts during a show is not on its tracklist");
+  if (!/if \(phase === "live"\) window\.auralfm\.studioNowPlaying\?\.\(/.test(st)) gaps.push("listeners are not told what the show is playing");
+  // The heartbeat carries it: a live show's label event says what is on.
+  const sent = [];
+  class FakeRelay { constructor() { this.readyState = 0; setTimeout(() => { this.readyState = 1; this.onopen?.(); }, 0); } send(m) { sent.push(m); } close() { this.readyState = 3; } }
+  const realWs = globalThis.WebSocket;
+  globalThis.WebSocket = FakeRelay;
+  let nostr = null;
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    nostr.leave(); nostr.setNowPlaying("");
+    nostr.join(-12.05, -77.04, "Test show", true);
+    await new Promise((r) => setTimeout(r, 40));
+    sent.length = 0;
+    nostr.setNowPlaying("Artist — A record (CC BY 4.0)");
+    await new Promise((r) => setTimeout(r, 40));
+    const labels = sent.map((m) => { try { return JSON.parse(m); } catch { return null; } }).filter((m) => m?.[0] === "EVENT" && m[1]?.kind === 20808).map((m) => { try { return JSON.parse(m[1].content); } catch { return {}; } });
+    if (!labels.some((c) => c.s === 1 && c.n === "Artist — A record (CC BY 4.0)")) gaps.push("a live show's heartbeat does not carry what it is playing");
+  } catch (e) { gaps.push(`presence threw: ${e.message}`); }
+  finally { try { nostr?.setNowPlaying(""); nostr?.leave(); } catch {} globalThis.WebSocket = realWs; }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the studio's music opens on CC BY, BY-SA and public-domain tracks only; each track joins the tracklist and goes to listeners with the show");
+}
+
 // ── your favourites survive a crash mid-save ────────────────────────────────
 // state.json (favourites, history, preferences) and stations.user.json (the
 // stations someone added) were written over in place. A crash or a dead battery

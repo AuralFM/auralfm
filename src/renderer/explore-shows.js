@@ -108,6 +108,8 @@
   }
   function relist() {
     live = unlistedKnown ? announced.filter(listed) : [];
+    // The show being heard keeps what it says it is playing up to date.
+    if (show) { const fresh = announced.find((p) => p.pubkey === show.peer.pubkey); if (fresh) show.peer = { ...show.peer, np: fresh.np || "" }; }
     // Being listened to when it was taken down: it stops, as if it had ended,
     // and leaves the list and the globe with it (held(), below).
     if (show && !listed(show.peer)) {
@@ -258,7 +260,8 @@
       if (!rowWas) rowWas = { hidden: bar.hidden };
       bar.hidden = false;
       name.textContent = show.peer.label || tl("shows.aShow", "A show");
-      status.textContent = show.state === "on" ? tl("shows.onAir", "On air") : tl("shows.connecting", "Connecting…");
+      // What the show says it is playing (its tracklist), beside On air.
+      status.textContent = show.state === "on" ? [tl("shows.onAir", "On air"), show.peer.np].filter(Boolean).join(" · ") : tl("shows.connecting", "Connecting…");
       status.classList.remove("err");
       const spoken = `${name.textContent}, ${status.textContent}`;
       if ($l("nowSpoken") && $l("nowSpoken").textContent !== spoken) $l("nowSpoken").textContent = spoken;
@@ -286,6 +289,7 @@
   }, true);
 
   // ── the list, and the beacons ────────────────────────────────────────────
+  const el2 = (tag, cls, text) => { const n = document.createElement(tag); n.className = cls; n.textContent = text; n.dir = "auto"; return n; };
   const shown = () => on() && (typeof layers === "undefined" || layers.onAir !== false);
   const WORDS = () => ({
     connecting: tl("shows.connecting", "Connecting…"),
@@ -329,6 +333,8 @@
       act.onclick = () => { if (busy) return stop(); prime(); listen(p); };
       row.append(name, act);
       list.append(row);
+      // What it is playing now, from the show's own tracklist: a stranger's line, set as text.
+      if (p.np) list.append(el2("p", "livesay livenp", `${tl("shows.nowPlaying", "Now")}: ${p.np}`));
       if (mine) {
         const say = document.createElement("p");
         say.className = "livesay";
