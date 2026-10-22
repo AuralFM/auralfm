@@ -5085,6 +5085,26 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── what a tool or a screen reader finds is what is on screen ───────────────
+// A Rams review of the web player (22 Oct 2026) read the launch screen's name
+// as grey on white, 2.2:1: the screen is a gradient, which has no colour of its
+// own, so anything that asks what is behind the text found the white body
+// under the veil. The gradient now sits on a solid onyx. The same review found
+// --ride registered twice in web/web.css (the second copy does nothing until
+// someone edits only one), and the ticker's dots were read aloud as "black
+// circle" between items.
+{
+  const name = "what a tool or a screen reader finds is what is on screen";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const css = fs.readFileSync(R("web/web.css"), "utf8");
+  for (const [, p] of css.matchAll(/@property\s+(--[\w-]+)/g)) if ((css.match(new RegExp(`@property\\s+${p}\\b`, "g")) || []).length > 1) gaps.push(`web/web.css registers ${p} more than once`);
+  if (!/\.ticker li::before\s*\{[^}]*content:\s*"[^"]*"\s*\/\s*""/.test(css)) gaps.push("the ticker's dots have no empty alternative text, so they are read aloud");
+  const launch = fs.readFileSync(R("scripts/build-web.mjs"), "utf8").match(/#launch\{[^}]*\}/)?.[0] || "";
+  if (!/background:#[0-9A-Fa-f]{6}\s+radial-gradient/.test(launch)) gaps.push("the launch screen's gradient has no solid colour under it");
+  gaps.length ? fail(name, [...new Set(gaps)].join("; ")) : pass("the launch screen has a solid ground, each @property is registered once, the ticker's dots are silent");
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);

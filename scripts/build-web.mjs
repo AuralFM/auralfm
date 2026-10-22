@@ -274,7 +274,7 @@ function launchScreen() {
   body:has(#launch){opacity:1 !important;transform:none !important}
   #launch{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
     padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
-    background:radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);color:#F7F4EE;
+    background:#0C0B0B radial-gradient(125% 125% at 26% 20%, #2A2622 0%, #171514 45%, #0C0B0B 100%);color:#F7F4EE;
     font:590 12px/1 -apple-system, system-ui, sans-serif;-webkit-user-select:none;user-select:none;
     transition:opacity .5s cubic-bezier(.32,.72,0,1)}
   #launch.gone{opacity:0;pointer-events:none}
