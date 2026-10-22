@@ -1,9 +1,9 @@
 # The rule for `main`
 
 `main.json` is the branch rule, kept here so it is read and changed like code.
-It is **not applied yet**: GitHub does not enforce rules on a private
-repository on the free plan. It applies once the repository is public, or the
-organisation is on a paid plan.
+It is applied to this repository (ruleset `main`, id 25677610) since the
+repository became public. A change to the rule is a change to this file,
+then the same import again (below), so the file and GitHub never disagree.
 
 What it does:
 
@@ -14,9 +14,12 @@ What it does:
   second reviewer, set `required_approving_review_count` to 1 and turn on
   `require_code_owner_review`.
 
-To apply it: Settings, Rules, Rulesets, New ruleset, Import a ruleset, and
-choose this file. Or:
+To apply a changed file: Settings, Rules, Rulesets, the `main` ruleset, and
+import this file over it. Or:
 
 ```bash
-gh api repos/AuralFM/auralfm/rulesets --method POST --input .github/rulesets/main.json
+gh api repos/AuralFM/auralfm/rulesets/25677610 --method PUT --input .github/rulesets/main.json
 ```
+
+With `required_linear_history`, a pull request is merged by squash or rebase;
+a merge commit is refused.
