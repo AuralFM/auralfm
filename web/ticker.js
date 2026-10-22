@@ -21,7 +21,7 @@
   const SITE_PUBLIC = false;
   const ITEMS = [
     { text: "Listen in." },
-    { label: "Human curated", text: "Less algorithms, more humans. Human curated radio > algorithmic playlists." },
+    { label: "Human curated", text: "Less algorithms. More humans. Human curated radio > algorithmic playlists." },
     { label: "New", text: "Vibes: pick one and every place that plays it lights up", href: "https://auralfm.xyz/vibes/", site: true },
     { label: "Journal", text: "Listening through someone else's antenna", href: "https://blog.auralfm.xyz/listening-through-someone-elses-antenna/", site: true },
     { label: "Desktop", text: "The fullest version is in private beta — join the waitlist", href: "https://auralfm.xyz/beta/", site: true },

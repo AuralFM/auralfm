@@ -5111,6 +5111,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   gaps.length ? fail(name, gaps.join("; ")) : pass("state.json is saved with its version; an older one is brought up to date on load, a newer one is left as it is");
 }
 
+// ── the line is written one way ─────────────────────────────────────────────
+// "Less algorithms. More humans." is two sentences on the cards, the decks and
+// the site's band. The web app's splash and its ticker said "Less algorithms,
+// more humans." (#59): one line, two spellings, and the splash is the first
+// thing a listener reads.
+{
+  const name = "the line is written one way";
+  console.log(`\n${name}`);
+  const files = ["scripts/build-web.mjs", ...fs.readdirSync(R("web")).filter((f) => f.endsWith(".js")).map((f) => `web/${f}`),
+    ...fs.readdirSync(R("src/renderer")).filter((f) => /\.(js|html)$/.test(f)).map((f) => `src/renderer/${f}`)];
+  const off = files.filter((f) => /less algorithms,\s*more humans/i.test(fs.readFileSync(R(f), "utf8")));
+  off.length ? fail(name, `"Less algorithms, more humans" in ${off.join(", ")}; it is "Less algorithms. More humans."`)
+    : pass(`${files.length} files say "Less algorithms. More humans." or nothing`);
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
