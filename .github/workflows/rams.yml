@@ -1,0 +1,41 @@
+# A Rams design review of the UI files a pull request changes (rams.ai).
+#
+# The action sends those changed files, and nothing else, to Rams, scores
+# them, and fails on a critical finding. It is pinned to the commit v1 points
+# to, so a change on their side does not reach this repository unseen.
+#
+# It needs the RAMS_API_KEY secret (Settings > Secrets and variables >
+# Actions). Until it is set, the review is skipped rather than failing every
+# pull request. Each review uses one of the account's Rams credits.
+name: rams
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rams:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RAMS_API_KEY: ${{ secrets.RAMS_API_KEY }}
+    steps:
+      - if: env.RAMS_API_KEY == ''
+        run: echo "RAMS_API_KEY is not set, so there is no design review on this pull request."
+      - if: env.RAMS_API_KEY != ''
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - if: env.RAMS_API_KEY != ''
+        uses: rams-design/rams-action@34ce30e1ab4b6e1568004d2b5e58f80e75066c39 # v1
+        with:
+          api-key: ${{ secrets.RAMS_API_KEY }}
+          fail-on: critical
+        # The action reads INPUT_API_KEY, but GitHub passes the input as
+        # INPUT_API-KEY (the hyphen kept), so it never sees the key and stops
+        # with "api-key is required". Setting the name it reads makes it work.
+        env:
+          INPUT_API_KEY: ${{ secrets.RAMS_API_KEY }}
+          INPUT_FAIL_ON: critical
