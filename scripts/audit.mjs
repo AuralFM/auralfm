@@ -4053,7 +4053,6 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const NOT_WORDS = {
     "src/renderer/popover.html": { "#toggle": "the play icon, an SVG drawn at 1em" },
     "web/web.css": {
-      ".ticker li::before": "the dot between two ticker items",
       "body.phonebar .now #play": "the play icon, an SVG drawn at 1em",
     },
   };
@@ -5083,6 +5082,27 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (away.length) gaps.push(`${away.length} places lie in another country: ${away.slice(0, 5).map(([, t]) => t).join("; ")}`);
     gaps.length ? fail(name, gaps.join("; ")) : pass(`${looked.toLocaleString("en-US")} places, each within 100 km of a town of its own country`);
   }
+}
+
+// ── what a tool or a screen reader finds is what is on screen ───────────────
+// A Rams review of the web player (22 Oct 2026) read the launch screen's name
+// as grey on white, 2.2:1: the screen is a gradient, which has no colour of its
+// own, so anything that asks what is behind the text found the white body
+// under the veil. The gradient now sits on a solid onyx. The same review found
+// --ride registered twice in web/web.css (the second copy does nothing until
+// someone edits only one), and the ticker's dots were read aloud as "black
+// circle" between items.
+{
+  const name = "what a tool or a screen reader finds is what is on screen";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const css = fs.readFileSync(R("web/web.css"), "utf8");
+  for (const [, p] of css.matchAll(/@property\s+(--[\w-]+)/g)) if ((css.match(new RegExp(`@property\\s+${p}\\b`, "g")) || []).length > 1) gaps.push(`web/web.css registers ${p} more than once`);
+  const dot = css.match(/\.ticker li::before\s*\{[^}]*\}/)?.[0] || "";
+  if (!/content:\s*""\s*;/.test(dot) && !/content:\s*"[^"]*"\s*\/\s*""/.test(dot)) gaps.push("the ticker's dots are characters with something to read aloud");
+  const launch = fs.readFileSync(R("scripts/build-web.mjs"), "utf8").match(/#launch\{[^}]*\}/)?.[0] || "";
+  if (!/background:#[0-9A-Fa-f]{6}\s+radial-gradient/.test(launch)) gaps.push("the launch screen's gradient has no solid colour under it");
+  gaps.length ? fail(name, [...new Set(gaps)].join("; ")) : pass("the launch screen has a solid ground, each @property is registered once, the ticker's dots are silent");
 }
 
 // ── the state file says which version it is ─────────────────────────────────
