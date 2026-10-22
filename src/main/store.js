@@ -9,12 +9,17 @@ const { app } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const { writeAtomic } = require("../atomic");
+const { migrate, stamp } = require("../state-schema");
 
 const STORE = path.join(app.getPath("userData"), "state.json");
 
 // ── tiny JSON store ───────────────────────────────────────────────────────────
+// Read, and brought up to today's shape (src/state-schema.js).
 function load() {
-  try { return JSON.parse(fs.readFileSync(STORE, "utf8")); } catch { return {}; }
+  try {
+    const s = JSON.parse(fs.readFileSync(STORE, "utf8"));
+    return s && typeof s === "object" && !Array.isArray(s) ? migrate(s) : {};
+  } catch { return {}; }
 }
 /**
  * Write the state file, with a ceiling.
@@ -41,7 +46,7 @@ function save(state) {
   }
   let json;
   try {
-    json = JSON.stringify(state);
+    json = JSON.stringify({ ...state, v: stamp(state) });
   } catch (err) {
     // Circular structures and BigInt both land here.
     console.error("save refused: not serialisable —", err.message);

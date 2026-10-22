@@ -298,7 +298,7 @@ function launchScreen() {
   const markup = `<div id="launch" role="status" aria-live="polite">
   <div class="launch-mark">${mark.trim()}</div>
   <div class="launch-name">AuralFM</div>
-  <p class="launch-line">Less algorithms, more humans.</p>
+  <p class="launch-line">Less algorithms. More humans.</p>
   <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
   <p class="launch-say" data-i18n="launch.stations">Fetching the stations</p>
   <p class="launch-slow" data-i18n="launch.slow" aria-hidden="true">The first visit brings the whole globe to this device. After that it opens at once.</p>
