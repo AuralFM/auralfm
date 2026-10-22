@@ -5019,6 +5019,72 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── every place is on the globe ─────────────────────────────────────────────
+// radio-browser gave Bangkok Community Radio its position with latitude and
+// longitude swapped (100.5, 13.76). The build made a place "Bangkok" there,
+// at a latitude no globe has, and the station sat off the map. A position is
+// a latitude within ±90° and a longitude within ±180°, or it is no position.
+// Read from the catalogue's built list, and from the copy here when there is one.
+{
+  const name = "every place is on the globe";
+  console.log(`\n${name}`);
+  const lists = [];
+  if (HAS_CAT && fs.existsSync(C("data/stations.json")))
+    lists.push(["the catalogue's list", JSON.parse(fs.readFileSync(C("data/stations.json"), "utf8")).places.map((p) => [p.title, p.country, p.geo[0], p.geo[1]])]);
+  if (fs.existsSync(R("data/stations.min.json")))
+    lists.push(["the list here", JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8")).p]);
+  if (!lists.length) skip(name, "no built list here or in the catalogue's checkout");
+  else {
+    const gaps = [];
+    for (const [where, places] of lists) {
+      if (places.length < 5000) gaps.push(`${where} has only ${places.length} places — this check is blind`);
+      const off = places.filter(([, , lng, lat]) => !Number.isFinite(lng) || !Number.isFinite(lat) || Math.abs(lat) > 90 || Math.abs(lng) > 180);
+      if (off.length) gaps.push(`${where}: ${off.length} off the globe: ${off.slice(0, 4).map(([t, c, lng, lat]) => `"${t}", ${c} (lat ${lat}, lng ${lng})`).join("; ")}`);
+    }
+    if (HAS_CAT && !/function onGlobe\(/.test(fs.readFileSync(C("scripts/expand.mjs"), "utf8"))) gaps.push("the catalogue's build takes radio-browser's position without asking whether it is one");
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`${lists.map(([w, p]) => `${p.length.toLocaleString("en-US")} places in ${w}`).join(", ")}, each within ±90° and ±180°`);
+  }
+}
+
+// ── a place lies in the country it names ────────────────────────────────────
+// radio-browser listed GD Dubai in Honduras, with the region "Just Dubai" and
+// a position in San Francisco. The build made a place "Just Dubai", Honduras,
+// in San Francisco, and then put KQED, RetroStrange and seven TuneIn channels
+// in it, because a station joined the nearest place the build had made within
+// 10 km whatever country either said. Sixty-two places in all lay in another
+// country than their own: "Roma", Italy, in Brooklyn; "Seoul", South Korea, in
+// Québec; "Somewhere in Guinea" off Papua New Guinea. A place is in its
+// country when a town of that country (GeoNames, 1,000 people or more) is
+// within 100 km; it is in another when only towns of other countries are.
+{
+  const name = "a place lies in the country it names";
+  console.log(`\n${name}`);
+  if (!HAS_CAT || !fs.existsSync(C("data/geonames/cities1000.txt")) || !fs.existsSync(C("data/stations.json")))
+    skip(name, "no catalogue checkout with its gazetteer and a built list here");
+  else {
+    const { loadGazetteer } = await import(pathToFileURL(C("scripts/lib/gazetteer.mjs")).href);
+    const G = loadGazetteer(C("data/geonames"));
+    const { places, channels } = JSON.parse(fs.readFileSync(C("data/stations.json"), "utf8"));
+    const held = new Map();
+    for (const c of channels) held.set(c.p, (held.get(c.p) || 0) + 1);
+    const gaps = [], away = [];
+    let looked = 0;
+    places.forEach((p, i) => {
+      if (p.country === "Null Island") return;               // "Online only", where maps put what has no place
+      const cc = G.ccOf(p.country), [lng, lat] = p.geo;
+      if (!cc || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;   // the two checks above say so
+      looked++;
+      const other = G.nearest(lat, lng, null, 100);
+      if (other && other.cc !== cc && !G.nearest(lat, lng, cc, 100))
+        away.push([held.get(i) || 0, `"${p.title}", ${p.country}, by ${other.name} (${other.cc}) with ${held.get(i) || 0} station${held.get(i) === 1 ? "" : "s"}`]);
+    });
+    away.sort((a, b) => b[0] - a[0]);
+    if (looked < 5000) gaps.push(`only ${looked} places looked at — this check is blind`);
+    if (away.length) gaps.push(`${away.length} places lie in another country: ${away.slice(0, 5).map(([, t]) => t).join("; ")}`);
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`${looked.toLocaleString("en-US")} places, each within 100 km of a town of its own country`);
+  }
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
