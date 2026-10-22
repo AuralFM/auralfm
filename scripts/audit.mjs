@@ -5085,6 +5085,32 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
 }
 
+// ── the state file says which version it is ─────────────────────────────────
+// Every change to state.json so far added a field. The first one that renames
+// or reshapes one needs to know what it is reading (#77): the file carries a
+// version, and an older file is brought up to today's shape on load, step by
+// step (src/state-schema.js). A file from a newer build is never stamped down.
+{
+  const name = "the state file says which version it is";
+  console.log(`\n${name}`);
+  const gaps = [];
+  if (!fs.existsSync(R("src/state-schema.js"))) gaps.push("src/state-schema.js is not here: the state file has no version");
+  else {
+    const { createRequire } = await import("node:module");
+    const S = createRequire(import.meta.url)(R("src/state-schema.js"));
+    const old = S.migrate({ favorites: ["af-12345678"] });
+    if (old.v !== S.STATE_VERSION) gaps.push(`a file with no version comes out as version ${old.v}, not ${S.STATE_VERSION}`);
+    if (old.favorites?.[0] !== "af-12345678") gaps.push("bringing a file up to date loses what was in it");
+    const ahead = S.STATE_VERSION + 3;
+    if (S.migrate({ v: ahead }).v !== ahead || S.stamp({ v: ahead }) !== ahead) gaps.push("a file from a newer build is stamped down");
+    for (let k = 2; k <= S.STATE_VERSION; k++) if (typeof S.MIGRATIONS[k] !== "function") gaps.push(`there is no step up to version ${k}`);
+  }
+  const store = fs.readFileSync(R("src/main/store.js"), "utf8");
+  if (!/migrate\(s\)/.test(store)) gaps.push("src/main/store.js loads the file without bringing it up to date");
+  if (!/v: stamp\(state\)/.test(store)) gaps.push("src/main/store.js saves the file without its version");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("state.json is saved with its version; an older one is brought up to date on load, a newer one is left as it is");
+}
+
 // ── the line is written one way ─────────────────────────────────────────────
 // "Less algorithms. More humans." is two sentences on the cards, the decks and
 // the site's band. The web app's splash and its ticker said "Less algorithms,
