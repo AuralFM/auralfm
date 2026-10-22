@@ -33,3 +33,9 @@ jobs:
         with:
           api-key: ${{ secrets.RAMS_API_KEY }}
           fail-on: critical
+        # The action reads INPUT_API_KEY, but GitHub passes the input as
+        # INPUT_API-KEY (the hyphen kept), so it never sees the key and stops
+        # with "api-key is required". Setting the name it reads makes it work.
+        env:
+          INPUT_API_KEY: ${{ secrets.RAMS_API_KEY }}
+          INPUT_FAIL_ON: critical
