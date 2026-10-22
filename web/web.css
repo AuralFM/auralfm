@@ -96,9 +96,8 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
 .ticker ul { display: flex; flex: none; margin: 0; padding: 0; list-style: none; }
 .ticker li { flex: none; padding: 0 22px; white-space: nowrap; }
 /* A dot before every item, the first of each copy included, so the join of the loop reads like every other gap.
-   A drawing, not a word: its alternative text is empty, so a screen reader does not say "black circle".
-   The plain declaration first, for a browser that does not know the second (Safari before 17.4). */
-.ticker li::before { content: "●"; content: "●" / ""; font-size: 5px; vertical-align: 2px; margin: 0 22px 0 -22px; opacity: .55; }
+   Drawn, not typed: a 5px circle has no text to read aloud and no glyph too small to read. */
+.ticker li::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; vertical-align: 2px; margin: 0 22px 0 -22px; opacity: .55; }
 .ticker a, .ticker span { color: inherit; text-decoration: none; }
 @media (hover:hover){.ticker a:hover{ text-decoration: underline; text-underline-offset: 3px; }}
 .ticker a:focus-visible { outline: 2px solid #0C0B0B; outline-offset: -2px; }

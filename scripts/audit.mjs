@@ -4053,7 +4053,6 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const NOT_WORDS = {
     "src/renderer/popover.html": { "#toggle": "the play icon, an SVG drawn at 1em" },
     "web/web.css": {
-      ".ticker li::before": "the dot between two ticker items",
       "body.phonebar .now #play": "the play icon, an SVG drawn at 1em",
     },
   };
@@ -5099,7 +5098,8 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   const gaps = [];
   const css = fs.readFileSync(R("web/web.css"), "utf8");
   for (const [, p] of css.matchAll(/@property\s+(--[\w-]+)/g)) if ((css.match(new RegExp(`@property\\s+${p}\\b`, "g")) || []).length > 1) gaps.push(`web/web.css registers ${p} more than once`);
-  if (!/\.ticker li::before\s*\{[^}]*content:\s*"[^"]*"\s*\/\s*""/.test(css)) gaps.push("the ticker's dots have no empty alternative text, so they are read aloud");
+  const dot = css.match(/\.ticker li::before\s*\{[^}]*\}/)?.[0] || "";
+  if (!/content:\s*""\s*;/.test(dot) && !/content:\s*"[^"]*"\s*\/\s*""/.test(dot)) gaps.push("the ticker's dots are characters with something to read aloud");
   const launch = fs.readFileSync(R("scripts/build-web.mjs"), "utf8").match(/#launch\{[^}]*\}/)?.[0] || "";
   if (!/background:#[0-9A-Fa-f]{6}\s+radial-gradient/.test(launch)) gaps.push("the launch screen's gradient has no solid colour under it");
   gaps.length ? fail(name, [...new Set(gaps)].join("; ")) : pass("the launch screen has a solid ground, each @property is registered once, the ticker's dots are silent");
