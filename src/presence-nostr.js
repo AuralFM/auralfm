@@ -282,7 +282,7 @@ function takeProfile(evt) {
   if (!prev || p.at >= prev.at) profiles.set(evt.pubkey, p);
   while (profiles.size > MAX_PROFILES) profiles.delete(profiles.keys().next().value);
   const resolve = pendingProfiles.get(evt.pubkey);
-  if (resolve) { pendingProfiles.delete(evt.pubkey); resolve(profiles.get(evt.pubkey)); }
+  if (typeof resolve === "function") { pendingProfiles.delete(evt.pubkey); resolve(profiles.get(evt.pubkey)); }
 }
 
 /** Ask the relays about one person. Resolves with what came back, or null. */

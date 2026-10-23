@@ -130,7 +130,7 @@ function readLicence(name, override) {
   const dir = pkgDir(name);
   for (const f of LICENSE_NAMES) {
     const p = path.join(dir, f);
-    try { if (fs.statSync(p).isFile()) return { text: fs.readFileSync(p, "utf8").trim() }; } catch {}
+    try { return { text: fs.readFileSync(p, "utf8").trim() }; } catch { /* not this name */ }
   }
   return null;
 }

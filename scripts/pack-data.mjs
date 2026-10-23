@@ -29,7 +29,8 @@ for (const rel of files) {
   if (!fs.existsSync(src)) { console.error(`pack: data/${rel} is missing — run the catalogue first`); process.exit(1); }
   const raw = fs.readFileSync(src);
   plain += raw.length;
-  const same = fs.existsSync(out) && zlib.gunzipSync(fs.readFileSync(out)).equals(raw);
+  let same = false;
+  try { same = zlib.gunzipSync(fs.readFileSync(out)).equals(raw); } catch { /* not packed yet */ }
   if (check) { if (!same) behind.push(rel); continue; }
   if (!same) { fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, zlib.gzipSync(raw, { level: 9 })); }
   packed += fs.statSync(out).size;

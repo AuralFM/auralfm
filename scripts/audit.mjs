@@ -2766,9 +2766,9 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       let world = null; try { world = await news.get(null); } catch { /* reported below */ }
       if (!world?.length) gaps.push("a country's newsrooms failing stopped World headlines too");
       // the desktop, every newsroom down: Google's edition, as before
-      news = fresh(); asked = []; answer = (u) => (/news\.google\.com/.test(u) ? new Response(rss, { status: 200 }) : new Response("no", { status: 503 }));
+      news = fresh(); asked = []; answer = (u) => (/^https:\/\/news\.google\.com\//.test(u) ? new Response(rss, { status: 200 }) : new Response("no", { status: 503 }));
       let fell = null; try { fell = await news.get(country); } catch { /* reported below */ }
-      if (!fell?.length || !asked.some((u) => /news\.google\.com/.test(u))) gaps.push("with every newsroom down, the desktop did not fall back to Google's edition");
+      if (!fell?.length || !asked.some((u) => /^https:\/\/news\.google\.com\//.test(u))) gaps.push("with every newsroom down, the desktop did not fall back to Google's edition");
     } catch (e) { gaps.push(`the check itself failed: ${e.message}`); }
     finally { globalThis.fetch = realFetch; console.log = realLog; console.warn = realWarn; }
   }
@@ -2823,6 +2823,29 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   }
   gaps.length ? fail("world headlines read in the web app, and nothing pretends to", gaps.join("; "))
     : pass(`${feeds.length} newsrooms' stories read through their own routes; Google links open out`);
+}
+
+// ── the reader decodes an entity once ──────────────────────────────────────
+// news.js decoded &amp; before &lt;, so an article that wrote "&amp;lt;" (a
+// story about HTML, say) showed "<" where its author wrote "&lt;". Found by
+// CodeQL (js/double-escaping, alert 6).
+{
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const file = req.resolve(R("src/news.js"));
+  delete req.cache[file];
+  const news = req(file);
+  delete req.cache[file];
+  const site = (news.WORLD_FEEDS || []).find((x) => x.site);
+  const realFetch = globalThis.fetch;
+  const prose = "Write &amp;lt;b&amp;gt; to make a word bold, said the station's web editor, Tom &amp; Jerry's producer.";
+  globalThis.fetch = async () => new Response(`<title>T</title><article><p>${prose}</p><p>${prose}</p></article>`, { status: 200 });
+  let got = "";
+  try { news.setReadBase("/api/read"); got = (await news.read(`${site.site}/news/story-2`))?.paragraphs?.[0] || ""; }
+  finally { globalThis.fetch = realFetch; }
+  got.includes("&lt;b&gt;") && got.includes("Tom & Jerry")
+    ? pass("the reader decodes \"&amp;lt;\" to \"&lt;\" and \"&amp;\" to \"&\", once each")
+    : fail("the reader decodes an entity once", `read "${got.slice(0, 80)}"`);
 }
 
 // ── the taxonomy reads a station the way a listener would ──────────────────

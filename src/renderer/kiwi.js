@@ -87,11 +87,14 @@
   /** MSG frames are "MSG" + space-separated key=value, values percent-encoded. */
   function parseMsg(buf) {
     const text = new TextDecoder().decode(new Uint8Array(buf).subarray(4));
-    const out = {};
+    // A receiver names the keys, so the object has no prototype to reach and
+    // the names that would reach one are skipped.
+    const out = Object.create(null);
     for (const kv of text.split(" ")) {
       const i = kv.indexOf("=");
-      if (i < 0) { if (kv) out[kv] = true; continue; }
-      const k = kv.slice(0, i);
+      const k = i < 0 ? kv : kv.slice(0, i);
+      if (!k || k === "__proto__" || k === "constructor" || k === "prototype") continue;
+      if (i < 0) { out[k] = true; continue; }
       try { out[k] = decodeURIComponent(kv.slice(i + 1)); }
       catch { out[k] = kv.slice(i + 1); }
     }
