@@ -84,19 +84,21 @@
     };
   }
 
-  /** MSG frames are "MSG" + space-separated key=value, values percent-encoded. */
+  /**
+   * MSG frames are "MSG" + space-separated key=value, values percent-encoded.
+   * A Map, because the receiver names the keys: no name it sends can reach an
+   * object's prototype.
+   */
   function parseMsg(buf) {
     const text = new TextDecoder().decode(new Uint8Array(buf).subarray(4));
-    // A receiver names the keys, so the object has no prototype to reach and
-    // the names that would reach one are skipped.
-    const out = Object.create(null);
+    const out = new Map();
     for (const kv of text.split(" ")) {
       const i = kv.indexOf("=");
       const k = i < 0 ? kv : kv.slice(0, i);
-      if (!k || k === "__proto__" || k === "constructor" || k === "prototype") continue;
-      if (i < 0) { out[k] = true; continue; }
-      try { out[k] = decodeURIComponent(kv.slice(i + 1)); }
-      catch { out[k] = kv.slice(i + 1); }
+      if (!k) continue;
+      if (i < 0) { out.set(k, true); continue; }
+      try { out.set(k, decodeURIComponent(kv.slice(i + 1))); }
+      catch { out.set(k, kv.slice(i + 1)); }
     }
     return out;
   }
@@ -521,12 +523,12 @@
     onMsg(kv) {
       // Refine the playback rate if the receiver volunteers its true one. Not
       // every firmware does, and nothing depends on it — see the constructor.
-      const r = parseFloat(kv.sample_rate || kv.audio_rate);
+      const r = parseFloat(kv.get("sample_rate") || kv.get("audio_rate"));
       if (r > 1000) this.rate = r;
-      if (kv.too_busy || kv.badp === "1") this.fail("receiver full");
+      if (kv.get("too_busy") || kv.get("badp") === "1") this.fail("receiver full");
       // Operators can close a session with a reason; surface it rather than
       // silently reconnecting.
-      if (kv.status === "config_failed") this.fail("receiver unavailable");
+      if (kv.get("status") === "config_failed") this.fail("receiver unavailable");
     }
 
     /**
