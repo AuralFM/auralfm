@@ -81,11 +81,13 @@ const decode = (s) => s
   .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
   // Hex as well: the BBC writes an apostrophe as &#x27;, and a title showed it.
   .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-  .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+  .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
   .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
   .replace(/&nbsp;/g, " ")
   .replace(/&lsquo;|&rsquo;/g, "'").replace(/&ldquo;|&rdquo;/g, '"')
   .replace(/&mdash;/g, "\u2014").replace(/&ndash;/g, "\u2013").replace(/&hellip;/g, "\u2026")
+  // Last, so "&amp;lt;" reads as "&lt;", not "<".
+  .replace(/&amp;/g, "&")
   .trim();
 
 // The opening tag may carry attributes: Atom writes `<title type="html">`.
@@ -369,10 +371,13 @@ function viaRoute(url) {
 
 const canRead = (url) => validUrl(url) && (!READ || !!viaRoute(url));
 
-const stripTags = (html) => html
+// Repeated until nothing changes: one pass leaves "<scr<script></script>ipt>"
+// as a fresh <script>.
+const untilSame = (s, f) => { for (let prev; prev !== s;) { prev = s; s = f(s); } return s; };
+const stripTags = (html) => untilSame(html, (s) => s
   .replace(/<!--[\s\S]*?-->/g, "")
   .replace(/<(script|style|noscript|svg|iframe|form)\b[\s\S]*?<\/\1>/gi, "")
-  .replace(/<(nav|header|footer|aside)\b[\s\S]*?<\/\1>/gi, "");
+  .replace(/<(nav|header|footer|aside)\b[\s\S]*?<\/\1>/gi, ""));
 
 async function read(url) {
   // A scheme test is not a host check. This URL comes out of somebody else's RSS
@@ -417,7 +422,7 @@ async function read(url) {
   // take the winner. Nesting means a parent always beats its child on raw total,
   // so the deepest container above the threshold is preferred.
   const paras = [...clean.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
-    .map((m) => decode(m[1].replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim())
+    .map((m) => decode(untilSame(m[1], (s) => s.replace(/<[^>]+>/g, ""))).replace(/\s+/g, " ").trim())
     // Navigation, captions and cookie notices are short; prose is not.
     .filter((t) => t.length > 60);
 

@@ -152,10 +152,8 @@ for (const file of fs.readdirSync(dest).sort()) {
   if (!file.endsWith(".md") || file === hubFile) continue;
   const full = path.join(dest, file);
   let text;
-  try {
-    if (!fs.statSync(full).isFile()) continue;
-    text = fs.readFileSync(full, "utf8");
-  } catch { continue; }
+  // A directory or a vanished file throws here, and is skipped.
+  try { text = fs.readFileSync(full, "utf8"); } catch { continue; }
 
   const name = file.replace(/\.md$/, "");
   if (!text.startsWith(STAMP)) { notes.native.push({ name }); continue; }
@@ -265,7 +263,9 @@ nothing hand-written is ever overwritten.*
 `;
 
 const hubPath = path.join(dest, `${PROJECT} — Command Center.md`);
-if (fs.existsSync(hubPath) && !fs.readFileSync(hubPath, "utf8").startsWith(STAMP)) {
+let hubNow = null;
+try { hubNow = fs.readFileSync(hubPath, "utf8"); } catch { /* not there yet */ }
+if (hubNow !== null && !hubNow.startsWith(STAMP)) {
   console.log(`  keep  ${path.basename(hubPath)} (hand-written, not overwritten)`);
   protectedCount++;
 } else {

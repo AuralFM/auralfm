@@ -205,7 +205,10 @@ function dial(url, pk) {
       if (f[0] === "EVENT" && f[2]?.pubkey === pk && f[2].kind === KIND && typeof f[2].content === "string") {
         if (!newest || f[2].created_at > newest.created_at) newest = f[2];
       } else if (f[0] === "EOSE") { clearTimeout(timer); done(true); }
-      else if (f[0] === "OK") waits.get(f[1])?.(f[2] === true);
+      else if (f[0] === "OK" && typeof f[1] === "string") {
+        const w = waits.get(f[1]);
+        if (typeof w === "function") w(f[2] === true);
+      }
     };
   });
   return {

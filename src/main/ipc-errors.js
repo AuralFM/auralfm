@@ -47,6 +47,16 @@ module.exports = function register(ctx) {
    */
   const ERR_LOG = path.join(app.getPath("userData"), "errors.log");
   const ERR_LOG_MAX = 256 * 1024;
+  // One open file for the size check, the truncate and the write, so nothing
+  // can swap the file between them. Truncate rather than rotate: nobody is
+  // going to read errors.log.1, and a second file is a second thing to forget.
+  const appendCapped = (line) => {
+    const fd = fs.openSync(ERR_LOG, "a+");
+    try {
+      if (fs.fstatSync(fd).size > ERR_LOG_MAX) fs.ftruncateSync(fd, 0);
+      fs.writeSync(fd, line);
+    } finally { fs.closeSync(fd); }
+  };
 
   ipcMain.on("app:error", (_e, r) => {
     const line = JSON.stringify({
@@ -57,12 +67,7 @@ module.exports = function register(ctx) {
       version: app.getVersion(),
     }) + "\n";
     try {
-      // Truncate rather than rotate. Nobody is going to read errors.log.1, and a
-      // second file is a second thing to forget to clean up.
-      if (fs.existsSync(ERR_LOG) && fs.statSync(ERR_LOG).size > ERR_LOG_MAX) {
-        fs.writeFileSync(ERR_LOG, "");
-      }
-      fs.appendFileSync(ERR_LOG, line);
+      appendCapped(line);
     } catch { /* logging must never be the thing that breaks */ }
     if (!app.isPackaged) console.error("renderer error:", r?.where, r?.message);
   });
@@ -77,8 +82,7 @@ module.exports = function register(ctx) {
       if (n > 10) return;                       // looping, not glitching
       console.error(`main ${where}:`, err?.stack || err);
       try {
-        if (fs.existsSync(ERR_LOG) && fs.statSync(ERR_LOG).size > ERR_LOG_MAX) fs.writeFileSync(ERR_LOG, "");
-        fs.appendFileSync(ERR_LOG, JSON.stringify({
+        appendCapped(JSON.stringify({
           at: new Date().toISOString(), page: "main", where,
           message: String(err?.message || err).slice(0, 500),
           stack: String(err?.stack || "").slice(0, 2000),
