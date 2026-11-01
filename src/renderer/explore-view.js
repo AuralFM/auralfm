@@ -111,6 +111,7 @@ async function initGlobe() {
     // the entire data array rather than the dot under the cursor. Wiring it up
     // meant every click on the globe selected an arbitrary place.
     ;
+  styleRings();
 
   // Before setupDayNight: the read-outs are global facts about the sun, the moon
   // and the ISS, and none of them needs the Earth texture to have arrived.
@@ -320,10 +321,6 @@ function applyLod(force = false) {
   const tier = idx < 0 ? LOD_TIERS.length - 1 : idx;
 
   const rad = Math.PI / 180;
-  const angFrom = (lat, lng, lat0, lng0) =>
-    Math.acos(Math.max(-1, Math.min(1,
-      Math.sin(lat * rad) * Math.sin(lat0 * rad) +
-      Math.cos(lat * rad) * Math.cos(lat0 * rad) * Math.cos((lng - lng0) * rad)))) / rad;
 
   // The true horizon half-angle for this camera height, plus a small margin so
   // dots do not pop in at the edge of the disc. Guessed at first, which drew
@@ -387,6 +384,7 @@ function applyLod(force = false) {
     if (sdrSel && !shown.includes(sdrSel)) shown.push(sdrSel);
   }
   globe.pointsData(shown);
+  if (ringsCut) paintRings();            // the budget follows the camera too
   // No place-count read-out: it told you nothing you could act on, and it was
   // the longest thing in the status bar.
 }
@@ -656,7 +654,7 @@ function applyLayers(next) {
   // Shows on air: their beacons, their rings and their list go together.
   if (layers.onAir !== prev.onAir) { paintRings(); window.AuralShows?.layer(); }
   if (layers.iss !== prev.iss) {
-    if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
+    if (!layers.iss) { globe.pathsData([]).labelsData([]); orbitsOf = null; issAt = null; paintRings(); }
     else paintOrbits();
   }
 
