@@ -5169,6 +5169,100 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass(`${files.length} files say "Less algorithms. More humans." or nothing`);
 }
 
+// ── a heartbeat heard again changes nothing ─────────────────────────────────
+// The same heartbeat arrives once per relay, and every copy marked the list
+// dirty, so "Show other listeners" flushed the whole world every 90 ms for as
+// long as a relay was talking. Fake relays deliver the copies; the heartbeat
+// still has to keep the peer alive, because the prune reads `at`.
+{
+  const name = "a heartbeat heard again changes nothing";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const made = [], beats = [];
+  class FakeRelay {
+    constructor(url) { this.url = url; this.readyState = 1; made.push(this); queueMicrotask(() => this.onopen?.()); }
+    send() {} close() { this.readyState = 3; }
+  }
+  const realWs = globalThis.WebSocket, realSet = globalThis.setInterval, realNow = Date.now;
+  globalThis.WebSocket = FakeRelay;
+  globalThis.setInterval = (fn) => { beats.push(fn); return realSet(() => {}, 2 ** 30); };
+  const settle = () => new Promise((r) => setTimeout(r, 130));
+  let nostr = null;
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    nostr.leave();
+    let calls = 0, last = [];
+    nostr.onPeers((list) => { calls++; last = list; });
+    nostr.join(38.72, -9.14, "test");
+    await settle();
+    const pubkey = "ab".repeat(32);
+    const hear = (e, relays = made) => { for (const w of relays) w.onmessage?.({ data: JSON.stringify(["EVENT", "s", { pubkey, ...e }]) }); };
+    const beat = { kind: 20001, tags: [["g", "eyckr"]], content: "" };
+    if (!made.length) gaps.push("joining dialled no relay, so this check is blind");
+    hear(beat);
+    await settle();
+    if (last.length !== 1) gaps.push(`a stranger's heartbeat gave a list of ${last.length}`);
+    const before = calls;
+    hear(beat); hear(beat);
+    await settle();
+    if (calls !== before) gaps.push(`the same heartbeat again redrew the listeners ${calls - before} more time(s)`);
+    hear({ ...beat, tags: [["g", "gcpvj"]] }, made.slice(0, 1));
+    await settle();
+    if (calls === before || last[0]?.geohash !== "gcpvj") gaps.push("a listener who moved cell was not redrawn");
+    const moved = calls;
+    hear({ kind: 20808, tags: [["g", "gcpvj"]], content: JSON.stringify({ l: "Night show", s: 1, n: "A record" }) }, made.slice(0, 1));
+    await settle();
+    if (calls === moved || !last[0]?.live) gaps.push("a listener going live was not redrawn");
+    // Three minutes apart, twice: the second is the only thing keeping them here.
+    const t0 = realNow();
+    Date.now = () => t0 + 3 * 60_000;
+    hear({ ...beat, tags: [["g", "gcpvj"]] });
+    Date.now = () => t0 + 6 * 60_000;
+    beats.at(-1)?.();
+    await settle();
+    if (last.length !== 1) gaps.push("a listener still sending heartbeats was dropped as stale");
+    gaps.length ? fail(name, gaps.join("; ")) : pass("copies of a heartbeat are silent; a move or a show going live is not, and a heartbeat still keeps a listener here");
+  } catch (e) {
+    fail(name, `the module threw: ${e.message}`);
+  } finally {
+    try { nostr?.leave(); nostr?.onPeers(() => {}); } catch {}
+    globalThis.WebSocket = realWs; globalThis.setInterval = realSet; Date.now = realNow;
+  }
+}
+
+// ── a ring stays the same ring ──────────────────────────────────────────────
+// three-globe keys a ring by its object, gives a new object a ring at once and
+// keeps a dropped one in the scene for 30 s. Fresh objects on each flush held
+// the scene above 90,000 objects with about 1,200 listeners on live relays.
+{
+  const name = "a ring stays the same ring";
+  console.log(`\n${name}`);
+  const gaps = [];
+  try {
+    const drawn = [];
+    const globe = new Proxy({}, { get: (_, k) => (k === "pointOfView" ? () => ({ lat: 0, lng: 0, altitude: 2.5 })
+      : k === "ringsData" ? (d) => { drawn.push(d); return globe; } : () => globe) });
+    const box = { globe, layers: { listeners: true }, peers: [], window: {}, palette: null, document: {}, hexA: () => "" };
+    vm.runInNewContext(readSrc("src/renderer/explore-trackers.js"), box);
+    const paint = (list) => { box.peers = list; vm.runInNewContext("paintRings()", box); return drawn.at(-1); };
+    const peer = (i, geohash, lat, lon) => ({ pubkey: String(i), lat, lon, geohash, live: false, label: "" });
+    const three = () => [peer(1, "eyck", 10, 10), peer(2, "gcpv", 20, 20), peer(3, "9q8y", 30, 30)];
+    const a = paint(three()), b = paint(three());
+    if (a.length !== 3 || b.some((r) => !a.includes(r))) gaps.push("the same listeners were handed to the globe as new objects");
+    const town = paint([1, 2, 3, 4, 5].map((i) => peer(i, "eyck", 10, 10)));
+    if (town.length !== 1) gaps.push(`five listeners in one town drew ${town.length} rings`);
+    const base32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+    const world = Array.from({ length: 1000 }, (_, i) => peer(i, `${base32[i % 32]}${base32[(i >> 5) & 31]}zz`, 80 - i * 0.16, 160 - i * 0.32));
+    world[900] = peer(900, "s000", 0, 0);
+    const cut = paint(world);
+    if (cut.length > 200) gaps.push(`a thousand towns drew ${cut.length} rings`);
+    if (!cut.some((r) => r.lat === 0 && r.lng === 0)) gaps.push("the town under the camera lost its ring to the budget");
+    gaps.length ? fail(name, gaps.join("; ")) : pass("a listener keeps their ring between flushes, a town draws one, the world draws 200 at most");
+  } catch (e) {
+    fail(name, `could not run paintRings: ${e.message}`);
+  }
+}
+
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
