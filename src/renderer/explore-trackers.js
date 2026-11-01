@@ -125,7 +125,7 @@ function styleRings() {
  * a single ring that spreads and is gone. Particles are one Points object for
  * each kind, so the 200 towns are one draw call and nothing runs between paints.
  */
-const stillRings = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const stillMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const STILL_LOOK = {
   peer: { size: 9, colour: () => palette?.star || "#F5F0E4" },
   live: { size: 14, colour: () => css("--err") || "#E5484D", centre: true },
@@ -238,7 +238,7 @@ function paintRings() {
   if (live) put("mine", "live", live.lat, live.lon);
 
   rings = next;
-  const list = [...next.values()], still = stillRings();
+  const list = [...next.values()], still = stillMotion();
   globe.ringsData(still ? [] : list);
   holdRings(still ? list : []);
 }
@@ -525,9 +525,9 @@ function flyTo(lat, lng, altitude = 0.62) {
   // Suppress follow-the-centre for the duration: the fly emits change events the
   // whole way, and following mid-flight snaps the selection to whatever city the
   // camera happens to pass over. That is how picking Los Angeles landed on
-  // Brownsville TX.
+  // Brownsville TX. A jump keeps the guard too: the damping still settles after it.
   flying = true;
-  globe.pointOfView({ lat, lng, altitude }, 800);
+  globe.pointOfView({ lat, lng, altitude }, stillMotion() ? 0 : 800);
   clearTimeout(flyDone);
   flyDone = setTimeout(() => { flying = false; applyLod(); }, 1100);
 }
@@ -558,5 +558,7 @@ function wireTrackers() {
     // A dropped ring stays in the scene, spreading, until its tween ends.
     if (e.matches) globe.scene().traverse((o) => { if (o.__globeObjType === "ring") o.visible = false; });
     paintRings();
+    if (e.matches) driftChosen = false;
+    globe.controls().autoRotate = mayDrift() && !flying;
   });
 }

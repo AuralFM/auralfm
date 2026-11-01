@@ -5304,7 +5304,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       : k === "particlesData" ? (d) => { marked = d; return globe; } : () => globe) });
     const pen = new Proxy({}, { get: () => () => {}, set: () => true });
     const box = {
-      globe, peers: [], palette: null, hexA: () => "", css: () => "#E5484D",
+      globe, peers: [], palette: null, hexA: () => "", css: () => "#E5484D", mayDrift: () => false,
       layers: { listeners: true, iss: true, onAir: true },
       window: { AuralShows: { on: true }, AuralStudio: { live: { lat: 5, lon: 6 } }, addEventListener() {} },
       document: { addEventListener() {}, createElement: () => ({ getContext: () => pen }) },
@@ -5356,6 +5356,92 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
       : pass("reduced motion draws every listener, show and the ISS as marks that stay, on the same objects, beside a vibe, and follows the setting live");
   } catch (e) {
     fail(name, `could not run paintRings: ${e.message}`);
+  }
+}
+
+// ── a still camera stays where it is put ────────────────────────────────────
+// The rings stood still and the camera did not: every pick flew for 800ms, the
+// layers panel swung the planet for 420ms, and the drift came back by itself
+// after a touch. Slow Rotation is switched by hand and starts off at every
+// launch, so reduced motion holds it only until somebody turns it on after that.
+{
+  const name = "with reduced motion on, the camera does not travel";
+  console.log(`\n${name}`);
+  const gaps = [];
+  try {
+    let still = true, durations = [], timers = [];
+    const changed = [];
+    const controls = { autoRotate: false };
+    const globe = new Proxy({}, { get: (_, k) => (k === "controls" ? () => controls
+      : k === "pointOfView" ? (at, ms) => { if (at) durations.push(ms); return { lat: 0, lng: 0, altitude: 2.5 }; }
+      : k === "scene" ? () => ({ traverse() {} }) : () => globe) });
+    const box = {
+      globe, peers: [], palette: null, hexA: () => "", css: () => "", console,
+      $: () => null, t: (k) => k, globePts: null, syncWsprTimer() {}, withShader() {}, drawSky() {},
+      startLiveImagery() {}, paintOrbits() {}, fitMarkets() {}, sizeGlobe() {},
+      setTimeout: (fn) => { timers.push(fn); return timers.length; }, clearTimeout() {},
+      window: { addEventListener() {}, auralfm: {} },
+      document: { addEventListener() {}, createElement: () => ({ getContext: () => new Proxy({}, { get: () => () => {}, set: () => true }) }) },
+      matchMedia: (q) => ({
+        matches: q.includes("reduced-motion") && still,
+        addEventListener: (_, fn) => { if (q.includes("reduced-motion")) changed.push(fn); },
+      }),
+    };
+    for (const f of ["explore-layers", "explore-trackers", "explore-view"]) vm.runInNewContext(readSrc(`src/renderer/${f}.js`), box);
+    vm.runInNewContext("wireTrackers(); applyLod = () => {}", box);
+    const run = (code) => vm.runInNewContext(code, box);
+    const settle = () => { const due = timers; timers = []; due.forEach((fn) => fn()); };
+
+    run("flyTo(10, 20)");
+    if (durations.join() !== "0") gaps.push(`a fly-to took ${durations.join()}ms, not 0`);
+    if (!run("flying")) gaps.push("a jump dropped the flying guard, so the list would follow the camera mid-move");
+    settle();
+    if (run("flying")) gaps.push("the flying guard never came down after a jump");
+
+    durations = [];
+    run("shiftForPanel(true)");
+    if (durations.join() !== "0") gaps.push(`opening the layers panel swung the planet for ${durations.join()}ms`);
+
+    // Slow Rotation already on when the window opened: the read at start-up, not a hand.
+    run("layers = { ...layers, drift: true }");
+    run("pauseDrift()");
+    settle();
+    if (controls.autoRotate) gaps.push("a touch started a drift nobody asked for after reduced motion was on");
+    run("applyLayers({ clouds: false })");
+    if (controls.autoRotate) gaps.push("changing another layer started the drift");
+
+    run("applyLayers({ drift: false })");
+    run("applyLayers({ drift: true })");
+    if (!controls.autoRotate) gaps.push("switching Slow Rotation on by hand was ignored");
+    controls.autoRotate = false;
+    run("pauseDrift()");
+    settle();
+    if (!controls.autoRotate) gaps.push("a drift switched on by hand did not resume after a touch");
+
+    changed[0]?.({ matches: true });
+    if (!changed.length) gaps.push("nothing listens for the setting changing");
+    if (controls.autoRotate) gaps.push("turning reduced motion on left the globe drifting");
+    still = false;
+    changed[0]?.({ matches: false });
+    if (!controls.autoRotate) gaps.push("turning reduced motion off did not give the drift back");
+
+    durations = []; settle();
+    run("flyTo(10, 20)");
+    if (durations.join() !== "800") gaps.push(`without reduced motion a fly-to took ${durations.join()}ms, not 800`);
+    durations = []; settle();
+    run("shiftForPanel(false)");
+    if (durations.join() !== "420") gaps.push(`without reduced motion the panel shift took ${durations.join()}ms, not 420`);
+
+    const view = readSrc("src/renderer/explore-view.js");
+    const rogue = view.match(/autoRotate\s*=(?!\s*(?:false\b|mayDrift\(\)))[^;]*/g) || [];
+    if (rogue.length) gaps.push(`the drift is started without mayDrift(): ${rogue.join(" | ")}`);
+    if (!/layers = \(await window\.auralfm\.layers\(\)\) \|\| layers;\s*driftChosen = false;/.test(view)) {
+      gaps.push("the layers read at start-up can pass for a hand on the switch");
+    }
+    gaps.length ? fail(name, gaps.join("; "))
+      : pass("reduced motion makes a fly-to and the panel shift a jump, keeps the flying guard, and holds the drift until it is switched on by hand");
+  } catch (e) {
+    fail(name, `could not run the camera: ${e.message}`);
   }
 }
 
