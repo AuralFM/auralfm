@@ -136,6 +136,7 @@ async function initGlobe() {
   // The globe coasts on after the finger lifts; the list follows it to rest.
   globe.controls().addEventListener("end", () => { handOn = false; handUntil = Date.now() + HAND_COAST_MS; restSoon(); });
   applyLod(true);
+  paintRings();                          // the still rings wait for the Earth's texture
 
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
   // is the fastest way to make a globe feel broken.
