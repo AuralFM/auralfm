@@ -95,7 +95,8 @@ function stationResultRow(ch) {
   el.className = "place";
   el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>`;
   el.querySelector(".pn").textContent = ch.title;
-  el.querySelector(".pc").textContent = [ch.place, ch.country].filter(Boolean).join(" · ");
+  el.querySelector(".pc").textContent =
+    [...(ch.held ? [t("st.held", "Not available where you are yet")] : []), ch.place, ch.country].filter(Boolean).join(" · ");
   activatable(el, async () => {
     // Leaving the favourites view is part of picking from it. `showingFavorites`
     // gates globe-follow and the chat panel, so a click that tuned a station but
