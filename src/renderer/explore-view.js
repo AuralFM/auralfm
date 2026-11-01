@@ -125,7 +125,7 @@ async function initGlobe() {
   // span on launch no matter what Slow Rotation was set to, and the only thing
   // that could stop it was toggling the layer *on* and then off again — so the
   // control appeared to work backwards.
-  globe.controls().autoRotate = !!layers.drift;
+  globe.controls().autoRotate = mayDrift();
   globe.controls().autoRotateSpeed = 0.18;
   globe.controls().enableDamping = true;
   globe.controls().dampingFactor = 0.08;
@@ -226,6 +226,7 @@ async function initGlobe() {
   watchGlobeSize();
   updateSun();
   layers = (await window.auralfm.layers()) || layers;
+  driftChosen = false;                   // what was read is not a hand on the switch
   if (layers.clouds) startLiveImagery();
   syncWsprTimer();
   drawSky();
@@ -392,6 +393,18 @@ function applyLod(force = false) {
 
 let driftTimer = null;
 /**
+ * Slow Rotation, unless reduced motion holds it.
+ *
+ * The layer starts off at every launch, so when it is on somebody turned it on,
+ * and a switch that did nothing would read as the setting being ignored. So the
+ * later word wins: reduced motion stops the drift and keeps it stopped, and
+ * switching the layer on after that starts it. A window reopened with the layer
+ * already on has not been asked, so it holds still.
+ */
+let driftChosen = false;
+const mayDrift = () => !!layers.drift && (driftChosen || !stillMotion());
+
+/**
  * Resume the idle drift a few seconds after you stop handling the globe.
  *
  * The `layers.drift` check is the whole point: without it, turning Slow Rotation
@@ -402,7 +415,7 @@ let driftTimer = null;
 function pauseDrift(ms = 6000) {
   clearTimeout(driftTimer);
   driftTimer = setTimeout(() => {
-    if (globe && !flying && layers.drift) globe.controls().autoRotate = true;
+    if (globe && !flying) globe.controls().autoRotate = mayDrift();
   }, ms);
 }
 
@@ -623,6 +636,7 @@ function layersDifferBeyondBoth(prev) {
 function applyLayers(next) {
   const prev = layers;
   layers = { ...layers, ...next };
+  if (layers.drift && !prev.drift) driftChosen = true;
 
   const bar = $("globehint");
   if (bar) bar.hidden = !layers.statusBar;
@@ -659,7 +673,7 @@ function applyLayers(next) {
     else paintOrbits();
   }
 
-  globe.controls().autoRotate = layers.drift && !flying;
+  globe.controls().autoRotate = mayDrift() && !flying;
 
   // Not `!== prev.wspr`: the poll has to start when the layer is already on at
   // launch, too. Keyed on the transition, quitting with a polled layer switched
