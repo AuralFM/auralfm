@@ -15,10 +15,10 @@
     "then update electron/chromium/fetched/sha256 here. npm run audit fails until the",
     "electron version recorded here matches the installed one."
   ],
-  "electron": "43.8.0",
+  "electron": "43.8.1",
   "chromium": "150.0.7871.250",
   "source": "https://chromium.googlesource.com/chromium/src/+/refs/tags/150.0.7871.250/LICENSE",
-  "verified": "Electron 43.8.0 ships the same Chromium (150.0.7871.250) as 43.7.2, so the notice is the one fetched for it; byte-identical to the 150.0.7871.212 notice it replaced",
+  "verified": "Electron 43.8.1 ships the same Chromium (150.0.7871.250) as 43.8.0 and 43.7.2, so the notice is the one fetched for it; byte-identical to the 150.0.7871.212 notice it replaced",
   "fetched": "2026-09-17",
   "sha256": "368cca1106be99d39ecd32a38d8305585d802a475effb66380b91ffc9bcf709b",
   "fullCredits": {
