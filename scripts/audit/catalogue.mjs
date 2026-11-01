@@ -711,3 +711,80 @@ import { R, rel, fail, pass, skip, HAS_CAT, C, NO_CAT, main, EXPLORE, readSrc, c
     gaps.length ? fail(name, gaps.join("; ")) : pass(`${looked.toLocaleString("en-US")} places, each within 100 km of a town of its own country`);
   }
 }
+
+// ── a station that keeps failing leaves the web's lists ─────────────────────
+// A sample of 500 listed stations found 27% silent, while the `ok` flag marked
+// 50 of about 61,800 dead: it remembered one old check, and nothing read it.
+// Hiding a good station is worse than listing a dead one, so a refusal, which
+// may be about the asker, must not count, and neither may a run where too much
+// failed. Fake servers give each answer.
+{
+  const name = "a station that keeps failing leaves the web's lists";
+  console.log(`\n${name}`);
+  const gaps = [];
+  if (!fs.existsSync(R("data/stations.min.json"))) skip(`${name}: the web's lists`, "no built catalogue here (npm run catalogue)");
+  else {
+    const { createRequire } = await import("node:module");
+    const req = createRequire(import.meta.url);
+    const file = req.resolve(R("src/catalog.js"));
+    delete req.cache[file];
+    const log = console.log; console.log = () => {};
+    const cat = req(file); cat.load();
+    console.log = log;
+    const list = JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8"));
+    const dead = list.c.find((c) => c[3] === 1 && c[6] === 0);
+    if (!dead) skip(`${name}: the web's lists`, "no station marked dead in this list");
+    else {
+      const has = () => cat.placeChannels(dead[2]).channels.some((c) => c.id === dead[0]);
+      if (!has()) gaps.push("the desktop lost a station that failed a check");
+      cat.setPlayableOnly(true);
+      if (has()) gaps.push("the web still lists a station that keeps failing");
+      if (cat.byId?.(dead[0])?.id !== dead[0]) gaps.push("a saved station that failed a check can no longer be opened");
+      cat.setPlayableOnly(false);
+    }
+    delete req.cache[file];
+  }
+  if (!HAS_CAT) skip(`${name}: the weekly check`, NO_CAT);
+  else {
+    const http = await import("node:http");
+    const server = http.createServer((q, s) => {
+      if (q.url === "/audio") { s.writeHead(200, { "content-type": "audio/mpeg" }); s.end("ID3"); }
+      else if (q.url === "/page") { s.writeHead(200, { "content-type": "text/html" }); s.end("<html>"); }
+      else if (q.url === "/hang") { /* never answers */ }
+      else { s.writeHead(+q.url.slice(1)); s.end(); }
+    });
+    await new Promise((r) => server.listen(0, "127.0.0.1", r));
+    const at = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const { verdict, tally, STRIKES } = await import(pathToFileURL(C("scripts/reach.mjs")).href);
+      for (const [p, want] of [["/audio", "on"], ["/page", "off"], ["/404", "off"], ["/410", "off"], ["/500", "off"],
+        ["/403", "unsure"], ["/429", "unsure"], ["/451", "unsure"], ["/hang", "off"]]) {
+        const got = await verdict(at + p, 300);
+        if (got !== want) gaps.push(`${p} reads as ${got}, not ${want}`);
+      }
+      const answers = (o) => new Map(Object.entries(o));
+      const a = tally({ x: 1, y: 1, z: 1 }, answers({ x: "off", y: "unsure", z: "on", b: "on", c: "on" }));
+      if (a?.x !== 2 || a?.y !== 1 || a?.z !== undefined) gaps.push(`a run counted wrongly: ${JSON.stringify(a)}`);
+      if (STRIKES < 2) gaps.push("one bad night hides a station");
+      if (tally({}, answers({ a: "off", b: "off", c: "on" })) !== null) gaps.push("a run where most things failed still counted");
+      if (!/reach\[c\.id\] >= 2\) c\.ok = 0/.test(fs.readFileSync(C("scripts/profiles.mjs"), "utf8"))) gaps.push("profiles.mjs does not fold the count in");
+      if (!/scripts\/reach\.mjs/.test(fs.readFileSync(C(".github/workflows/refresh.yml"), "utf8"))) gaps.push("the weekly build does not run the check");
+    } catch (e) {
+      gaps.push(`the weekly check did not run: ${e.message}`);
+    } finally { server.closeAllConnections(); server.close(); }
+  }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("the web hides what fails, the desktop and saved stations keep it, and only a definite failure, two runs running, counts");
+}
+
+// ── a held station says so wherever it is found ─────────────────────────────
+// Foreign music stations are held back in the UK and the EU, and the station
+// list said why before anyone pressed play. Search did not, so a listener there
+// found a station by name, pressed it, and only then heard it would not play.
+{
+  const name = "a held station says so wherever it is found";
+  console.log(`\n${name}`);
+  const gaps = [];
+  for (const [f, label] of [["src/renderer/explore-stations.js", "the station list"], ["src/renderer/explore-search.js", "search"], ["src/renderer/popover.js", "the Mac player's list"]])
+    if (!/ch\.held \? \[t\("st\.held"/.test(readSrc(f))) gaps.push(`${label} does not say a station is held back`);
+  gaps.length ? fail(name, gaps.join("; ")) : pass("the list, search and the Mac player all say why before anyone presses play");
+}
