@@ -25,7 +25,7 @@ jobs:
       - if: env.RAMS_API_KEY == ''
         run: echo "RAMS_API_KEY is not set, so there is no design review on this pull request."
       - if: env.RAMS_API_KEY != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - if: env.RAMS_API_KEY != ''
