@@ -722,25 +722,28 @@ import { R, rel, fail, pass, skip, HAS_CAT, C, NO_CAT, main, EXPLORE, readSrc, c
   const name = "a station that keeps failing leaves the web's lists";
   console.log(`\n${name}`);
   const gaps = [];
-  const { createRequire } = await import("node:module");
-  const req = createRequire(import.meta.url);
-  const file = req.resolve(R("src/catalog.js"));
-  delete req.cache[file];
-  const log = console.log; console.log = () => {};
-  const cat = req(file); cat.load();
-  console.log = log;
-  const list = JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8"));
-  const dead = list.c.find((c) => c[3] === 1 && c[6] === 0);
-  if (!dead) skip(name, "no station marked dead in this list");
+  if (!fs.existsSync(R("data/stations.min.json"))) skip(`${name}: the web's lists`, "no built catalogue here (npm run catalogue)");
   else {
-    const has = () => cat.placeChannels(dead[2]).channels.some((c) => c.id === dead[0]);
-    if (!has()) gaps.push("the desktop lost a station that failed a check");
-    cat.setPlayableOnly(true);
-    if (has()) gaps.push("the web still lists a station that keeps failing");
-    if (cat.byId?.(dead[0])?.id !== dead[0]) gaps.push("a saved station that failed a check can no longer be opened");
-    cat.setPlayableOnly(false);
+    const { createRequire } = await import("node:module");
+    const req = createRequire(import.meta.url);
+    const file = req.resolve(R("src/catalog.js"));
+    delete req.cache[file];
+    const log = console.log; console.log = () => {};
+    const cat = req(file); cat.load();
+    console.log = log;
+    const list = JSON.parse(fs.readFileSync(R("data/stations.min.json"), "utf8"));
+    const dead = list.c.find((c) => c[3] === 1 && c[6] === 0);
+    if (!dead) skip(`${name}: the web's lists`, "no station marked dead in this list");
+    else {
+      const has = () => cat.placeChannels(dead[2]).channels.some((c) => c.id === dead[0]);
+      if (!has()) gaps.push("the desktop lost a station that failed a check");
+      cat.setPlayableOnly(true);
+      if (has()) gaps.push("the web still lists a station that keeps failing");
+      if (cat.byId?.(dead[0])?.id !== dead[0]) gaps.push("a saved station that failed a check can no longer be opened");
+      cat.setPlayableOnly(false);
+    }
+    delete req.cache[file];
   }
-  delete req.cache[file];
   if (!HAS_CAT) skip(`${name}: the weekly check`, NO_CAT);
   else {
     const http = await import("node:http");
