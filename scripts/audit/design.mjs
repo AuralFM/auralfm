@@ -186,7 +186,7 @@ import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES
     const [, attrs, inner] = m;
     // An entity is a glyph (&laquo; is «), not nothing — deleting it made the
     // dial's arrows look like empty icon buttons and pass unnamed.
-    const text = inner.replace(/<[^>]+>/g, "").replace(/&#?\w+;/g, "\u2022").trim();
+    const text = inner.split(/<[^>]+>/).join("").replace(/&#?\w+;/g, "\u2022").trim();
     if (/\p{L}/u.test(text)) continue;                              // has words
     // Empty buttons get an icon at runtime, so the name has to be an attribute.
     // Privacy, Terms and Licences in Settings were empty with none.
