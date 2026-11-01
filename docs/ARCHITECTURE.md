@@ -65,7 +65,7 @@ the same reason.
 | `src/*.js` | Modules with no window: the catalogue (`catalog.js`), messaging (`presence-nostr.js`, `nostr-private.js`), headlines, weather, satellites, preferences, strings. Most run in the browser too. |
 | `src/renderer/` | The pages. `explore.html` holds the markup and the whole stylesheet; `explore-*.js` are plain scripts that share one scope, loaded in the order the page lists them. |
 | `web/` | What a browser needs on top: the bridge, the service worker, the phone layout (`web.css`), the sheets and the tab bar. |
-| `scripts/` | Builds (`build-web.mjs`), the audit (`audit.mjs`), the capture script, and small tools. |
+| `scripts/` | Builds (`build-web.mjs`), the audit (`audit.mjs`, with its checks by area in `audit/`), the capture script, and small tools. |
 | `data/` | The built station list and profiles (not in git; `npm run catalogue` brings them), the shortwave schedule, the relay list. |
 | `docs/` | This page, and the public documents the app and the site show. |
 

@@ -120,8 +120,6 @@ import { failures, skipped } from "./audit/lib.mjs";
 // at the same time, and several checks replace WebSocket, Date.now or console.log.
 for (const area of ["foundations", "app-core", "chat", "playback", "catalogue", "web-and-phone", "globe", "design", "build-and-release"]) await import(`./audit/${area}.mjs`);
 
-
-
 const tail = skipped ? ` (${skipped} not checkable here)` : "";
 console.log(failures ? `\n${failures} check(s) failed${tail}\n`
                      : `\nall checks passed${tail}\n`);
