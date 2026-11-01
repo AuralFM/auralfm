@@ -111,6 +111,7 @@ async function initGlobe() {
     // the entire data array rather than the dot under the cursor. Wiring it up
     // meant every click on the globe selected an arbitrary place.
     ;
+  styleRings();
 
   // Before setupDayNight: the read-outs are global facts about the sun, the moon
   // and the ISS, and none of them needs the Earth texture to have arrived.
@@ -124,7 +125,7 @@ async function initGlobe() {
   // span on launch no matter what Slow Rotation was set to, and the only thing
   // that could stop it was toggling the layer *on* and then off again — so the
   // control appeared to work backwards.
-  globe.controls().autoRotate = !!layers.drift;
+  globe.controls().autoRotate = mayDrift();
   globe.controls().autoRotateSpeed = 0.18;
   globe.controls().enableDamping = true;
   globe.controls().dampingFactor = 0.08;
@@ -135,6 +136,7 @@ async function initGlobe() {
   // The globe coasts on after the finger lifts; the list follows it to rest.
   globe.controls().addEventListener("end", () => { handOn = false; handUntil = Date.now() + HAND_COAST_MS; restSoon(); });
   applyLod(true);
+  paintRings();                          // the still rings wait for the Earth's texture
 
   // Stop the idle spin as soon as the user grabs it — autorotate fighting a drag
   // is the fastest way to make a globe feel broken.
@@ -224,6 +226,7 @@ async function initGlobe() {
   watchGlobeSize();
   updateSun();
   layers = (await window.auralfm.layers()) || layers;
+  driftChosen = false;                   // what was read is not a hand on the switch
   if (layers.clouds) startLiveImagery();
   syncWsprTimer();
   drawSky();
@@ -320,10 +323,6 @@ function applyLod(force = false) {
   const tier = idx < 0 ? LOD_TIERS.length - 1 : idx;
 
   const rad = Math.PI / 180;
-  const angFrom = (lat, lng, lat0, lng0) =>
-    Math.acos(Math.max(-1, Math.min(1,
-      Math.sin(lat * rad) * Math.sin(lat0 * rad) +
-      Math.cos(lat * rad) * Math.cos(lat0 * rad) * Math.cos((lng - lng0) * rad)))) / rad;
 
   // The true horizon half-angle for this camera height, plus a small margin so
   // dots do not pop in at the edge of the disc. Guessed at first, which drew
@@ -387,11 +386,24 @@ function applyLod(force = false) {
     if (sdrSel && !shown.includes(sdrSel)) shown.push(sdrSel);
   }
   globe.pointsData(shown);
+  if (ringsCut) paintRings();            // the budget follows the camera too
   // No place-count read-out: it told you nothing you could act on, and it was
   // the longest thing in the status bar.
 }
 
 let driftTimer = null;
+/**
+ * Slow Rotation, unless reduced motion holds it.
+ *
+ * The layer starts off at every launch, so when it is on somebody turned it on,
+ * and a switch that did nothing would read as the setting being ignored. So the
+ * later word wins: reduced motion stops the drift and keeps it stopped, and
+ * switching the layer on after that starts it. A window reopened with the layer
+ * already on has not been asked, so it holds still.
+ */
+let driftChosen = false;
+const mayDrift = () => !!layers.drift && (driftChosen || !stillMotion());
+
 /**
  * Resume the idle drift a few seconds after you stop handling the globe.
  *
@@ -403,7 +415,7 @@ let driftTimer = null;
 function pauseDrift(ms = 6000) {
   clearTimeout(driftTimer);
   driftTimer = setTimeout(() => {
-    if (globe && !flying && layers.drift) globe.controls().autoRotate = true;
+    if (globe && !flying) globe.controls().autoRotate = mayDrift();
   }, ms);
 }
 
@@ -624,6 +636,7 @@ function layersDifferBeyondBoth(prev) {
 function applyLayers(next) {
   const prev = layers;
   layers = { ...layers, ...next };
+  if (layers.drift && !prev.drift) driftChosen = true;
 
   const bar = $("globehint");
   if (bar) bar.hidden = !layers.statusBar;
@@ -656,11 +669,11 @@ function applyLayers(next) {
   // Shows on air: their beacons, their rings and their list go together.
   if (layers.onAir !== prev.onAir) { paintRings(); window.AuralShows?.layer(); }
   if (layers.iss !== prev.iss) {
-    if (!layers.iss) { globe.pathsData([]).labelsData([]); issAt = null; paintRings(); }
+    if (!layers.iss) { globe.pathsData([]).labelsData([]); orbitsOf = null; issAt = null; paintRings(); }
     else paintOrbits();
   }
 
-  globe.controls().autoRotate = layers.drift && !flying;
+  globe.controls().autoRotate = mayDrift() && !flying;
 
   // Not `!== prev.wspr`: the poll has to start when the layer is already on at
   // launch, too. Keyed on the transition, quitting with a polled layer switched

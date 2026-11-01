@@ -264,7 +264,8 @@ const isExplicit = (i) => channels[i]?.[7] === 1;
  */
 let playableOnly = false;
 function setPlayableOnly(on) { playableOnly = !!on; indexPlaces(); open = null; }
-const unplayable = (i) => playableOnly && !channels[i]?.[3];
+// A station that went silent two weeks running goes the same way (scripts/reach.mjs).
+const unplayable = (i) => playableOnly && (!channels[i]?.[3] || channels[i]?.[6] === 0);
 function indexPlaces() {
   byPlace = places.map(() => []);
   channels.forEach((c, i) => { if (!unplayable(i)) byPlace[c[2]]?.push(i); });

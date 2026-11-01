@@ -77,40 +77,26 @@ function syncWsprTimer() {
  */
 async function tickSatellites() {
   if (!globe || !layers.iss) return;
-  const list = await window.auralfm.satellites();
-  if (Array.isArray(list) && list.length) sats = list;
-  paintOrbits();
+  try {
+    const list = await window.auralfm.satellites();
+    if (Array.isArray(list) && list.length) sats = list;
+    paintOrbits();
+  } catch { /* keep the last */ }
 }
 
 let issAt = null;
 
-/**
- * One rings layer, two tenants. globe.gl rebuilds a layer wholesale on update,
- * so the ISS and the listeners share it and branch on `kind` rather than
- * fighting over which one drew last.
- */
-function paintRings() {
-  if (!globe) return;
-  const data = [];
-  if (layers.iss && issAt) data.push({ ...issAt, kind: "iss" });
-  // Gated like every other thing drawn on this globe. It was not, so somebody
-  // who turned all the layers off still had rings pulsing at them with nothing
-  // in the panel to explain what they were.
-  // A show on air is its own layer (On Air), drawn by explore-shows.js as a
-  // beacon with a ring under it. With that layer off, its host is one more
-  // listener in that town.
-  const shows = !!layers.onAir && !!window.AuralShows?.on;
-  for (const p of peers) {
-    if (p.live && shows) data.push({ lat: p.lat, lng: p.lon, kind: "live", label: p.label });
-    else if (layers.listeners) data.push({ lat: p.lat, lng: p.lon, kind: "peer", label: p.label });
-  }
-  // Your show, live (explore-studio.js): your town, in the accent, and always —
-  // it is you, not a layer.
-  const live = window.AuralStudio?.live;
-  if (live) data.push({ lat: live.lat, lng: live.lon, kind: "live" });
+/** Degrees between two points on the sphere. */
+function angFrom(lat, lng, lat0, lng0) {
+  const rad = Math.PI / 180;
+  return Math.acos(Math.max(-1, Math.min(1,
+    Math.sin(lat * rad) * Math.sin(lat0 * rad) +
+    Math.cos(lat * rad) * Math.cos(lat0 * rad) * Math.cos((lng - lng0) * rad)))) / rad;
+}
 
+/** How the rings look. Set once: paintRings() only changes which rings exist. */
+function styleRings() {
   globe
-    .ringsData(data)
     .ringLat("lat").ringLng("lng")
     // Listeners pulse wider and slower than the ISS — it is overhead and moving,
     // they are a place on the ground where somebody is sitting.
@@ -120,17 +106,147 @@ function paintRings() {
     .ringPropagationSpeed((d) => (d.kind === "live" ? 0.72 : d.kind === "peer" ? 0.8 : 1.6))
     .ringRepeatPeriod((d) => (d.kind === "live" ? 900 : d.kind === "peer" ? 2600 : 1400))
     .ringAltitude(0.055)
-    .ringColor((d) => d.kind === "live"
-      ? (t) => hexA(getComputedStyle(document.documentElement).getPropertyValue("--err").trim() || "#E5484D", 0.85 * (1 - t))
-      : d.kind === "peer"
-      ? (t) => hexA(palette?.star || "#F5F0E4", 0.5 * (1 - t))
-      : (t) => `rgba(255,255,255,${0.55 * (1 - t)})`);
+    .ringColor((d) => {
+      if (d.kind === "live") {
+        const err = css("--err") || "#E5484D";
+        return (t) => hexA(err, 0.85 * (1 - t));
+      }
+      return d.kind === "peer"
+        ? (t) => hexA(palette?.star || "#F5F0E4", 0.5 * (1 - t))
+        : (t) => `rgba(255,255,255,${0.55 * (1 - t)})`;
+    });
 }
+
+/**
+ * With reduced motion on, a ring is held still and drawn on the particles layer.
+ *
+ * The rings layer has no still mode. In three-globe 2.45.2 a speed of 0 adds a
+ * line of radius 0 every period and never removes one, and a period of 0 fires
+ * a single ring that spreads and is gone. Particles are one Points object for
+ * each kind, so the 200 towns are one draw call and nothing runs between paints.
+ */
+const stillMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const STILL_LOOK = {
+  peer: { size: 9, colour: () => palette?.star || "#F5F0E4" },
+  live: { size: 14, colour: () => css("--err") || "#E5484D", centre: true },
+  iss: { size: 11, colour: () => "#FFFFFF" },
+};
+const stillSets = Object.fromEntries(Object.entries(STILL_LOOK).map(([kind, look]) => [kind, Object.assign([], { size: look.size })]));
+let vibeMarks = null;
+
+/**
+ * A ring on a dark edge, so it holds on cloud and desert as well as on the sea.
+ * The particles layer takes its colour from the picture and cuts it at half
+ * alpha, and globe.gl does not expose three.js: see dotTexture().
+ */
+function stillTexture(kind) {
+  const set = stillSets[kind], look = STILL_LOOK[kind], colour = look.colour();
+  if (set.tex && set.colour === colour) return set.tex;
+  const Tex = globe.globeMaterial?.().map?.constructor;
+  if (!Tex) return null;
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  const ring = (stroke, width) => {
+    g.strokeStyle = stroke; g.lineWidth = width;
+    g.beginPath(); g.arc(32, 32, 24, 0, Math.PI * 2); g.stroke();
+  };
+  ring("#05070A", 16);
+  ring(colour, 9);
+  if (look.centre) { g.fillStyle = colour; g.beginPath(); g.arc(32, 32, 9, 0, Math.PI * 2); g.fill(); }
+  set.tex?.dispose?.();
+  set.tex = new Tex(c);
+  set.tex.needsUpdate = true;
+  set.colour = colour;
+  return set.tex;
+}
+
+/** The particles layer's two tenants, the vibes and the still rings. Each set says how it looks. */
+function paintMarks() {
+  if (!globe) return;
+  const sets = Object.values(stillSets).filter((set) => set.length && set.tex);
+  if (vibeMarks) sets.push(vibeMarks);
+  // Accessors before the data: set after it, they are not applied.
+  globe.particleLat("lat").particleLng("lng")
+    .particleAltitude((p) => (p.kind === "iss" ? 0.055 : 0.014))
+    .particlesSize((set) => set.size).particlesSizeAttenuation(false)
+    .particlesTexture((set) => set.tex)
+    .particlesData(sets);
+}
+
+/** The same places in the same sets: a flush moves points and builds nothing. */
+function holdRings(list) {
+  for (const set of Object.values(stillSets)) set.length = 0;
+  for (const r of list) stillSets[r.kind].push(r);
+  for (const kind in stillSets) if (stillSets[kind].length) stillTexture(kind);
+  paintMarks();
+}
+
+/**
+ * Listener rings on the globe at once. Each one is about two lines being
+ * animated and rebuilt on the main thread, and the relays report the whole
+ * world, so the towns nearest the camera get them.
+ */
+const RING_BUDGET = 200;
+let rings = new Map(), ringsCut = false;
+
+/**
+ * One rings layer, two tenants, so the ISS and the listeners share it and
+ * branch on `kind` rather than fighting over which one drew last.
+ *
+ * A ring keeps its object from one paint to the next. three-globe keys rings
+ * by object: a new one fires a ring at once and a dropped one stays in the
+ * scene for 30 s, so fresh objects on every flush held the scene above 90,000
+ * objects with about 1,200 listeners on live relays. Keeping them, about 500.
+ * Listeners are keyed by town,
+ * since everyone in a cell is drawn at one point and N rings there look like one.
+ */
+function paintRings() {
+  if (!globe) return;
+  const next = new Map();
+  const put = (key, kind, lat, lng) => {
+    if (next.has(key)) return;
+    next.set(key, Object.assign(rings.get(key) || { kind }, { lat, lng }));
+  };
+  if (layers.iss && issAt) put("iss", "iss", issAt.lat, issAt.lng);
+  // Gated like every other thing drawn on this globe. It was not, so somebody
+  // who turned all the layers off still had rings pulsing at them with nothing
+  // in the panel to explain what they were.
+  // A show on air is its own layer (On Air), drawn by explore-shows.js as a
+  // beacon with a ring under it. With that layer off, its host is one more
+  // listener in that town.
+  const shows = !!layers.onAir && !!window.AuralShows?.on;
+  const towns = new Map();
+  for (const p of peers) {
+    if (p.live && shows) put(`live ${p.pubkey}`, "live", p.lat, p.lon);
+    else if (layers.listeners) {
+      const town = p.geohash.slice(0, 4);
+      if (!towns.has(town)) towns.set(town, p);
+    }
+  }
+  let near = [...towns];
+  ringsCut = near.length > RING_BUDGET;
+  if (ringsCut) {
+    const pov = globe.pointOfView();
+    near = near.map(([town, p]) => ({ town, p, d: angFrom(p.lat, p.lon, pov.lat, pov.lng) }))
+      .sort((a, b) => a.d - b.d).slice(0, RING_BUDGET).map(({ town, p }) => [town, p]);
+  }
+  for (const [town, p] of near) put(`peer ${town}`, "peer", p.lat, p.lon);
+  // Your show, live (explore-studio.js): your town, in the accent, and always —
+  // it is you, not a layer.
+  const live = window.AuralStudio?.live;
+  if (live) put("mine", "live", live.lat, live.lon);
+
+  rings = next;
+  const list = [...next.values()], still = stillMotion();
+  globe.ringsData(still ? [] : list);
+  holdRings(still ? list : []);
+}
+
+let orbitsOf = null, orbitPaths = [], wsprOf = null, prop = [];
 
 function paintOrbits() {
   if (!globe) return;
-  const orbitPaths = sats.flatMap((s) =>
-    s.path.map((seg) => ({ pts: seg, orbit: true })));
   const issPaths = issTrail.length > 1 ? splitTrail(issTrail).map((seg) => ({ pts: seg })) : [];
 
   /**
@@ -141,13 +257,21 @@ function paintOrbits() {
    * Split at the antimeridian, because a path from Rome to New Zealand crosses
    * it and would otherwise draw straight back across the map.
    */
-  const prop = [];
-  if (layers.wspr) {
+  if (wsprOf !== wsprData) {
+    wsprOf = wsprData;
+    prop = [];
     for (const w of wsprData) {
       let lon2 = w.rxLon;
       if (Math.abs(lon2 - w.txLon) > 180) lon2 += lon2 < w.txLon ? 360 : -360;
       prop.push({ pts: [[w.txLat, w.txLon], [w.rxLat, lon2]], wspr: true, spot: w });
     }
+  }
+  // The ISS moves every 4 s and these every 30: its tick keeps their objects,
+  // so the layer does not reallocate every satellite's line to move one trail.
+  const fresh = orbitsOf !== sats;
+  if (fresh) {
+    orbitsOf = sats;
+    orbitPaths = sats.flatMap((s) => s.path.map((seg) => ({ pts: seg, orbit: true })));
   }
 
   globe
@@ -178,6 +302,7 @@ function paintOrbits() {
       : "")
     .pathTransitionDuration(0);
 
+  if (!fresh) return;
   globe
     .labelsData(sats.map((s) => ({ lat: s.lat, lng: s.lng, name: s.name })))
     .labelLat("lat").labelLng("lng").labelText("name")
@@ -203,7 +328,8 @@ function splitTrail(trail) {
 
 async function tickISS() {
   if (!globe || !layers.iss) return;
-  const p = await window.auralfm.iss();
+  let p = null;
+  try { p = await window.auralfm.iss(); } catch { /* keep the last */ }
   if (!p) return;
 
   issTrail.push([p.lat, p.lng]);
@@ -399,9 +525,9 @@ function flyTo(lat, lng, altitude = 0.62) {
   // Suppress follow-the-centre for the duration: the fly emits change events the
   // whole way, and following mid-flight snaps the selection to whatever city the
   // camera happens to pass over. That is how picking Los Angeles landed on
-  // Brownsville TX.
+  // Brownsville TX. A jump keeps the guard too: the damping still settles after it.
   flying = true;
-  globe.pointOfView({ lat, lng, altitude }, 800);
+  globe.pointOfView({ lat, lng, altitude }, stillMotion() ? 0 : 800);
   clearTimeout(flyDone);
   flyDone = setTimeout(() => { flying = false; applyLod(); }, 1100);
 }
@@ -426,5 +552,13 @@ function wireTrackers() {
   window.addEventListener("resize", () => { sizeGlobe(); fitMarkets(); });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     if (globe) refreshGlobeSelection();
+  });
+  matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", (e) => {
+    if (!globe) return;
+    // A dropped ring stays in the scene, spreading, until its tween ends.
+    if (e.matches) globe.scene().traverse((o) => { if (o.__globeObjType === "ring") o.visible = false; });
+    paintRings();
+    if (e.matches) driftChosen = false;
+    globe.controls().autoRotate = mayDrift() && !flying;
   });
 }

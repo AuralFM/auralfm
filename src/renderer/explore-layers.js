@@ -119,7 +119,7 @@ function shiftForPanel(open) {
     lat: pov.lat,
     lng: pov.lng + dLng,
     altitude: Math.max(0.32, Math.min(4, pov.altitude + dAlt)),
-  }, 420);
+  }, stillMotion() ? 0 : 420);
 }
 
 function wireLayers() {

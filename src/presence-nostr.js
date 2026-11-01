@@ -1281,7 +1281,7 @@ function dial(url) {
       try { const j = JSON.parse(e.content); label = j?.l ?? null; live = j?.s === 1; np = live && typeof j?.n === "string" ? j.n : (live ? "" : null); } catch { /* optional */ }
     }
     const prev = peers.get(e.pubkey);
-    peers.set(e.pubkey, {
+    const next = {
       geohash: g,
       label: String(label ?? prev?.label ?? "").slice(0, 60),
       // Only our own label event says whether a show is live; the shared
@@ -1291,9 +1291,13 @@ function dial(url) {
       // and no more; never markup (the renderers set it as text).
       np: String(np ?? prev?.np ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 120),
       at: Date.now(),
-    });
-    emit();
-  
+    };
+    peers.set(e.pubkey, next);
+    // The same heartbeat arrives once per relay. A copy keeps the peer alive
+    // (`at`, read by prune) and tells the renderer nothing.
+    if (!prev || prev.geohash !== next.geohash || prev.label !== next.label
+        || prev.live !== next.live || prev.np !== next.np) emit();
+
     } catch (err) {
       // One bad event is not worth a reconnect, let alone a crash.
       console.error('presence: dropped a malformed relay event —', err.message);

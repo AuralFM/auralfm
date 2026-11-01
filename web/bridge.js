@@ -316,6 +316,10 @@
   const asPlayer = () => { try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { /* older Safari */ } };
   let current = null, previous = null, live = false, status = "", isError = false, isNotice = false;
   let gen = 0, tried = [], watchdog = null;
+  // What one station may cost a listener: seconds per address, and addresses.
+  // The first address gets longer: on a phone still opening the app, a good station is slow, not dead.
+  const FIRST_MS = 12000, TRY_MS = 7000, MAX_TRIES = 3, STALL_MS = 10000, LOOKUP_MS = 9000;
+  let spent = [], asked = false, stall = null, rescued = 0;
   /**
    * What is kept while the network is away: the URL that was playing and the
    * generation it belonged to. Non-null means a hold is in effect and `online`
@@ -375,7 +379,10 @@
     return async (id) => {
       id = String(id || ""); if (!id) return null;
       const s = shardOf(id);
-      if (!shards.has(s)) shards.set(s, fetch(`data/profiles/${s}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+      if (!shards.has(s)) shards.set(s, fetch(`data/profiles/${s}.json`, { signal: within(5000) }).then((r) => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).catch(() => { shards.delete(s); return {}; }));
       return (await shards.get(s))[id] || null;
     };
   })();
@@ -407,9 +414,10 @@
     if (s && s.lastcheckok !== 0) add(s.url_resolved || s.url);
     if (profile.status === "fulfilled") add(profile.value?.stream);
     if (named.status === "fulfilled" && Array.isArray(named.value)) {
-      const list = named.value;
-      const same = (x) => !ch.country || (x.country || "").toLowerCase() === String(ch.country).toLowerCase();
-      for (const x of [...list.filter(same), ...list.filter((x) => !same(x))]) add(x.url_resolved || x.url);
+      // The same name in the same country, or nothing: a namesake elsewhere is another station.
+      const name = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+      const same = (x) => (!ch.country || (x.country || "").toLowerCase() === String(ch.country).toLowerCase()) && name(x.name) === name(ch.title);
+      for (const x of named.value.filter(same)) add(x.url_resolved || x.url);
     }
     return out;
   }
@@ -434,13 +442,30 @@
     if (M.catalog.held(ch)) return setStatus(heldText(), true);
     setStatus("Finding stream…");
     reportClick(ch.rbuuid);
-    const urls = await candidates(ch);
+    // The address the station shipped with, so a play waits on no outside server.
+    const recorded = (await profileOf(ch.id))?.stream;
+    if (my !== gen) return;
+    const stored = recorded?.startsWith("https://") ? recorded : null;
+    spent = [];
+    // A stand-in for a dead station gets its stored address only: the listener is already waiting.
+    asked = chained && !!stored;
+    if (stored) return tryNext([stored], my);
+    asked = true;
+    fromDirectory(my);
+  }
+
+  /** The directory, only once what the station shipped with has failed. */
+  async function fromDirectory(my) {
+    setStatus("Finding stream…");
+    // Nothing here may hold play open: a lookup that does not end counts as no answer.
+    const found = await Promise.race([candidates(current), new Promise((ok) => setTimeout(ok, LOOKUP_MS, []))]);
+    const urls = found.filter((u) => !spent.includes(u));
     if (my !== gen) return;
     // candidates() just failed every fetch it made; that is the network, not
     // the station, and the messages below would both be wrong about it.
     if (!navigator.onLine) return hold(my);
     // Say why, when the reason is the browser rather than the station.
-    if (!urls.length && ch.secure === false) return fail("Only an insecure stream — browsers block it here");
+    if (!urls.length && current.secure === false) return fail("Only an insecure stream — browsers block it here");
     tryNext(urls, my);
   }
 
@@ -466,7 +491,7 @@
   function viaHls(url, urls, my) {
     playingUrl = url;
     setStatus("Connecting…");
-    watchdog = setTimeout(() => { if (my === gen && !live) tryNext(urls, my); }, 12000);
+    watchdog = setTimeout(() => { if (my === gen && !live) tryNext(urls, my); }, TRY_MS);
     audio.onerror = () => { if (my === gen) tryNext(urls, my); };
     loadHls().then((Hls) => {
       if (my !== gen) return;
@@ -491,8 +516,13 @@
     // A blip is not a broken station. Spending the list here is how walking out
     // of wifi used to end on "Stream unavailable here".
     if (!navigator.onLine) return hold(my);
-    const url = urls.shift();
-    if (!url) return fail("Stream unavailable here");
+    const url = spent.length < MAX_TRIES ? urls.shift() : null;
+    if (!url) {
+      if (asked || spent.length >= MAX_TRIES) return fail("Stream unavailable here");
+      asked = true;
+      return fromDirectory(my);
+    }
+    spent.push(url);
     if (isHls(url) && !nativeHls) return viaHls(url, urls, my);
     audio.src = url;
     playingUrl = url;                 // the card's waveform samples a copy of it
@@ -505,9 +535,14 @@
       tryNext(urls, my);
     });
     audio.onerror = () => { if (my === gen) tryNext(urls, my); };
-    watchdog = setTimeout(() => {
-      if (my === gen && !live) tryNext(urls, my);
-    }, 12000);
+    // Sound that has started to arrive on a slow connection gets one more turn.
+    let graced = false;
+    const wait = () => { watchdog = setTimeout(() => {
+      if (my !== gen || live) return;
+      if (!graced && audio.readyState >= 1) { graced = true; return wait(); }
+      tryNext(urls, my);
+    }, spent.length === 1 ? FIRST_MS : TRY_MS); };
+    wait();
   }
 
   let playingUrl = null;
@@ -549,7 +584,7 @@
     audio.src = url;
     playingUrl = url;
     // The network says it is back; this says whether the stream actually is.
-    watchdog = setTimeout(() => { if (!live) tune(current); }, 12000);
+    watchdog = setTimeout(() => { if (!live) tune(current); }, TRY_MS);
     audio.play().catch(() => tune(current));
   });
 
@@ -566,6 +601,8 @@
   // Three tries in the same place, as the desktop panel does, before giving up.
   async function fail(reason) {
     live = false;
+    // The last address may still be connecting: it must not come back as "Live" after this.
+    audio.removeAttribute("src"); audio.load();
     setStatus(reason, true);
     if (!current || tried.length >= 3) return;
     tried.push(current.id);
@@ -577,7 +614,7 @@
   }
 
   audio.addEventListener("playing", () => {
-    clearTimeout(watchdog);
+    clearTimeout(watchdog); clearTimeout(stall);
     live = true;
     setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live");
     if ("mediaSession" in navigator && current) {
@@ -594,7 +631,31 @@
       navigator.mediaSession.playbackState = "playing";
     }
   });
-  audio.addEventListener("waiting", () => { if (live) setStatus("Buffering…"); });
+  audio.addEventListener("waiting", () => {
+    if (!live) return;
+    setStatus("Buffering…");
+    clearTimeout(stall); stall = setTimeout(rescue, STALL_MS);
+  });
+
+  /**
+   * A live stream that stopped arriving. It gets its own address back once; a
+   * second stop within the minute means the address is the trouble, so the
+   * search goes on from the directory, and from there to the next in town.
+   */
+  function rescue() {
+    clearTimeout(stall);
+    const url = playingUrl;
+    if (!live || !url) return;
+    live = false;
+    if (!navigator.onLine) return hold(gen);
+    const again = Date.now() - rescued < 60000;
+    rescued = Date.now();
+    spent = again ? [url] : [];
+    asked = false;
+    setStatus("Reconnecting…");
+    tryNext(again ? [] : [url], gen);
+  }
+  audio.addEventListener("ended", rescue);
 
   /**
    * A pause nobody here asked for.

@@ -376,7 +376,7 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
     el.querySelector(".nm").textContent = ch.title;
     const tags = showTags && ch.tags?.length ? ch.tags.slice(0, 2).join(", ") : null;
     el.querySelector(".sub").textContent =
-      [ch.place, tags || ch.country].filter(Boolean).join(" · ");
+      [...(ch.held ? [t("st.held", "Not available where you are yet")] : []), ch.place, tags || ch.country].filter(Boolean).join(" · ");
     // Reachable by Tab as well as by 1-9: the digits stop at nine and search
     // only ever played the first result. The name area takes focus because the
     // row holds the star button; see activatable.js.
