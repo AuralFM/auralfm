@@ -146,15 +146,10 @@
   /** Every place in the vibe, lit on the globe: one layer, drawn above the dots. */
   function lightGlobe(list) {
     if (typeof globe === "undefined" || !globe) return;
-    globe.particlesData([]);
-    if (!list.length) return;
-    const tex = dotTexture();
-    // Accessors before the data: set after it, they are not applied.
-    globe.particleLat("lat").particleLng("lng").particleAltitude(0.014)
-      .particlesSize(11).particlesSizeAttenuation(false)
-      .particlesColor(() => accent());
-    if (tex) globe.particlesTexture(() => tex);
-    globe.particlesData([list.map((p) => ({ lat: p.lat, lng: p.lon }))]);
+    vibeMarks = list.length
+      ? Object.assign(list.map((p) => ({ lat: p.lat, lng: p.lon })), { size: 11, tex: dotTexture() })
+      : null;
+    paintMarks();
   }
 
   function renderVibeList() {

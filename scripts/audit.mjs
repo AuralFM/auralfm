@@ -5242,7 +5242,7 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     const drawn = [];
     const globe = new Proxy({}, { get: (_, k) => (k === "pointOfView" ? () => ({ lat: 0, lng: 0, altitude: 2.5 })
       : k === "ringsData" ? (d) => { drawn.push(d); return globe; } : () => globe) });
-    const box = { globe, layers: { listeners: true }, peers: [], window: {}, palette: null, document: {}, hexA: () => "" };
+    const box = { globe, layers: { listeners: true }, peers: [], window: {}, palette: null, document: {}, hexA: () => "", matchMedia: () => ({ matches: false }) };
     vm.runInNewContext(readSrc("src/renderer/explore-trackers.js"), box);
     const paint = (list) => { box.peers = list; vm.runInNewContext("paintRings()", box); return drawn.at(-1); };
     const peer = (i, geohash, lat, lon) => ({ pubkey: String(i), lat, lon, geohash, live: false, label: "" });
@@ -5258,6 +5258,81 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (cut.length > 200) gaps.push(`a thousand towns drew ${cut.length} rings`);
     if (!cut.some((r) => r.lat === 0 && r.lng === 0)) gaps.push("the town under the camera lost its ring to the budget");
     gaps.length ? fail(name, gaps.join("; ")) : pass("a listener keeps their ring between flushes, a town draws one, the world draws 200 at most");
+  } catch (e) {
+    fail(name, `could not run paintRings: ${e.message}`);
+  }
+}
+
+// ── a still ring stands still ───────────────────────────────────────────────
+// Nothing in the globe code read prefers-reduced-motion, so the rings pulsed for
+// everybody. The rings layer has no still mode: in three-globe 2.45.2 a speed of
+// 0 adds a line of radius 0 every period and never removes one, and a period of
+// 0 fires a single ring that spreads and is gone. So the same places are drawn
+// on the particles layer, which the vibes also use, and neither may wipe the other.
+{
+  const name = "with reduced motion on, the rings stand still";
+  console.log(`\n${name}`);
+  const gaps = [];
+  try {
+    let still = true, ringed = [], marked = [];
+    const changed = [], groups = [{ __globeObjType: "ring", visible: true }, { __globeObjType: "path", visible: true }];
+    const globe = new Proxy({}, { get: (_, k) => (k === "pointOfView" ? () => ({ lat: 0, lng: 0, altitude: 2.5 })
+      : k === "globeMaterial" ? () => ({ map: new (class Tex {})() })
+      : k === "scene" ? () => ({ traverse: (fn) => groups.forEach(fn) })
+      : k === "ringsData" ? (d) => { ringed = d; return globe; }
+      : k === "particlesData" ? (d) => { marked = d; return globe; } : () => globe) });
+    const pen = new Proxy({}, { get: () => () => {}, set: () => true });
+    const box = {
+      globe, peers: [], palette: null, hexA: () => "", css: () => "#E5484D",
+      layers: { listeners: true, iss: true, onAir: true },
+      window: { AuralShows: { on: true }, AuralStudio: { live: { lat: 5, lon: 6 } }, addEventListener() {} },
+      document: { addEventListener() {}, createElement: () => ({ getContext: () => pen }) },
+      matchMedia: (q) => ({
+        matches: q.includes("reduced-motion") && still,
+        addEventListener: (_, fn) => { if (q.includes("reduced-motion")) changed.push(fn); },
+      }),
+    };
+    vm.runInNewContext(readSrc("src/renderer/explore-trackers.js"), box);
+    vm.runInNewContext("issAt = { lat: 40, lng: 50 }", box);
+    const peer = (i, geohash, lat, lon, live = false) => ({ pubkey: String(i), lat, lon, geohash, live, label: "" });
+    box.peers = [peer(1, "eyck", 10, 20), peer(2, "gcpv", 30, 40), peer(3, "9q8y", -30, -40, true)];
+    const paint = () => vm.runInNewContext("paintRings()", box);
+    const held = () => marked.flat().filter((p) => p.kind);
+    const kinds = () => held().map((p) => p.kind).sort().join();
+
+    paint();
+    if (ringed.length) gaps.push(`${ringed.length} rings still pulse with reduced motion on`);
+    if (kinds() !== "iss,live,live,peer,peer") gaps.push(`the still marks are [${kinds()}], not the listeners, the shows and the ISS`);
+    if (marked.some((set) => !(set.size > 0) || !set.tex)) gaps.push("a set of still marks has no size or no picture");
+    const first = [...marked];
+    paint();
+    if (marked.some((set, i) => set !== first[i])) gaps.push("a flush handed the globe new sets of marks, which builds new objects");
+
+    box.layers.listeners = false;
+    paint();
+    if (kinds() !== "iss,live,live") gaps.push("the Listeners layer turned off left its marks up");
+    box.layers.listeners = true;
+
+    vm.runInNewContext("vibeMarks = [{ lat: 1, lng: 2 }]", box);
+    paint();
+    if (!marked.some((set) => set[0]?.lat === 1 && !set[0].kind)) gaps.push("the still marks wiped a vibe off the globe");
+    if (held().length !== 5) gaps.push("a vibe wiped the still marks off the globe");
+    if (/globe\s*\.\s*particlesData/.test(readSrc("src/renderer/explore-brand.js"))) gaps.push("explore-brand.js writes the shared particles layer itself");
+
+    still = false;
+    vm.runInNewContext("wireTrackers()", box);
+    if (!changed.length) throw new Error("nothing listens for the setting changing");
+    changed[0]({ matches: false });
+    if (ringed.length !== 5) gaps.push("turning reduced motion off did not bring the rings back");
+    if (held().length) gaps.push("turning reduced motion off left the still marks up");
+    if (!marked.some((set) => set[0]?.lat === 1)) gaps.push("the rings coming back wiped a vibe off the globe");
+
+    still = true;
+    changed[0]({ matches: true });
+    if (ringed.length || held().length !== 5) gaps.push("turning reduced motion on while running did not stand the rings still");
+    if (groups[0].visible || !groups[1].visible) gaps.push("rings already spreading were left to finish");
+    gaps.length ? fail(name, gaps.join("; "))
+      : pass("reduced motion draws every listener, show and the ISS as marks that stay, on the same objects, beside a vibe, and follows the setting live");
   } catch (e) {
     fail(name, `could not run paintRings: ${e.message}`);
   }

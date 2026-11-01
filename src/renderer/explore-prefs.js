@@ -58,6 +58,7 @@ async function applyPalette() {
   if (globe) {
     globe.atmosphereColor(palette.atmosphere);
     applyLod(true);                       // merged geometry: colour means rebuild
+    paintRings();                         // a still ring's colour is in its picture
     drawSky();
   }
 }

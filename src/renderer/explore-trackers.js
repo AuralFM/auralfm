@@ -118,6 +118,71 @@ function styleRings() {
 }
 
 /**
+ * With reduced motion on, a ring is held still and drawn on the particles layer.
+ *
+ * The rings layer has no still mode. In three-globe 2.45.2 a speed of 0 adds a
+ * line of radius 0 every period and never removes one, and a period of 0 fires
+ * a single ring that spreads and is gone. Particles are one Points object for
+ * each kind, so the 200 towns are one draw call and nothing runs between paints.
+ */
+const stillRings = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const STILL_LOOK = {
+  peer: { size: 9, colour: () => palette?.star || "#F5F0E4" },
+  live: { size: 14, colour: () => css("--err") || "#E5484D", centre: true },
+  iss: { size: 11, colour: () => "#FFFFFF" },
+};
+const stillSets = Object.fromEntries(Object.entries(STILL_LOOK).map(([kind, look]) => [kind, Object.assign([], { size: look.size })]));
+let vibeMarks = null;
+
+/**
+ * A ring on a dark edge, so it holds on cloud and desert as well as on the sea.
+ * The particles layer takes its colour from the picture and cuts it at half
+ * alpha, and globe.gl does not expose three.js: see dotTexture().
+ */
+function stillTexture(kind) {
+  const set = stillSets[kind], look = STILL_LOOK[kind], colour = look.colour();
+  if (set.tex && set.colour === colour) return set.tex;
+  const Tex = globe.globeMaterial?.().map?.constructor;
+  if (!Tex) return null;
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  const ring = (stroke, width) => {
+    g.strokeStyle = stroke; g.lineWidth = width;
+    g.beginPath(); g.arc(32, 32, 24, 0, Math.PI * 2); g.stroke();
+  };
+  ring("#05070A", 16);
+  ring(colour, 9);
+  if (look.centre) { g.fillStyle = colour; g.beginPath(); g.arc(32, 32, 9, 0, Math.PI * 2); g.fill(); }
+  set.tex?.dispose?.();
+  set.tex = new Tex(c);
+  set.tex.needsUpdate = true;
+  set.colour = colour;
+  return set.tex;
+}
+
+/** The particles layer's two tenants, the vibes and the still rings. Each set says how it looks. */
+function paintMarks() {
+  if (!globe) return;
+  const sets = Object.values(stillSets).filter((set) => set.length && set.tex);
+  if (vibeMarks) sets.push(vibeMarks);
+  // Accessors before the data: set after it, they are not applied.
+  globe.particleLat("lat").particleLng("lng")
+    .particleAltitude((p) => (p.kind === "iss" ? 0.055 : 0.014))
+    .particlesSize((set) => set.size).particlesSizeAttenuation(false)
+    .particlesTexture((set) => set.tex)
+    .particlesData(sets);
+}
+
+/** The same places in the same sets: a flush moves points and builds nothing. */
+function holdRings(list) {
+  for (const set of Object.values(stillSets)) set.length = 0;
+  for (const r of list) stillSets[r.kind].push(r);
+  for (const kind in stillSets) if (stillSets[kind].length) stillTexture(kind);
+  paintMarks();
+}
+
+/**
  * Listener rings on the globe at once. Each one is about two lines being
  * animated and rebuilt on the main thread, and the relays report the whole
  * world, so the towns nearest the camera get them.
@@ -173,7 +238,9 @@ function paintRings() {
   if (live) put("mine", "live", live.lat, live.lon);
 
   rings = next;
-  globe.ringsData([...next.values()]);
+  const list = [...next.values()], still = stillRings();
+  globe.ringsData(still ? [] : list);
+  holdRings(still ? list : []);
 }
 
 let orbitsOf = null, orbitPaths = [], wsprOf = null, prop = [];
@@ -485,5 +552,11 @@ function wireTrackers() {
   window.addEventListener("resize", () => { sizeGlobe(); fitMarkets(); });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     if (globe) refreshGlobeSelection();
+  });
+  matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", (e) => {
+    if (!globe) return;
+    // A dropped ring stays in the scene, spreading, until its tween ends.
+    if (e.matches) globe.scene().traverse((o) => { if (o.__globeObjType === "ring") o.visible = false; });
+    paintRings();
   });
 }
