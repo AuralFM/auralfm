@@ -4059,6 +4059,27 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     : pass("hls.js is shipped and credited, fetched only when needed and only where the browser cannot, dropped on every change, and allowed to reach the station");
 }
 
+{
+  const name = "a web station plays from its stored address, and silence always ends";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const bridge = readSrc("web/bridge.js");
+  const body = (fn) => { const i = bridge.indexOf(fn); return i < 0 ? "" : bridge.slice(i, bridge.indexOf("\n  }\n", i)); };
+  const tune = body("async function tune(");
+  if (!/profileOf\(ch\.id\)/.test(tune)) gaps.push("a play does not start from the stored address");
+  if (/await candidates\(/.test(tune)) gaps.push("a play still waits on the directory before trying anything");
+  const look = body("async function candidates(");
+  if (/list\.filter\(\(x\) => !same\(x\)\)/.test(look)) gaps.push("a station of the same name elsewhere can play in place of the one chosen");
+  const ms = +(bridge.match(/\bTRY_MS = (\d+)/) || [])[1];
+  if (!(ms > 0 && ms <= 8000)) gaps.push("a dead address may hold the listener for more than 8 seconds");
+  if (!/MAX_TRIES/.test(body("function tryNext("))) gaps.push("the addresses tried for one station are not capped");
+  if (!/Promise\.race\(\[candidates\(current\)/.test(bridge)) gaps.push("a directory lookup that never ends can hold play open");
+  if (!/addEventListener\("waiting"[\s\S]{0,200}STALL_MS/.test(bridge)) gaps.push("a stream that stalls while live is never reconnected");
+  if (!/addEventListener\("ended"/.test(bridge)) gaps.push("a stream the server closes leaves the player saying it is live");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("the recorded address plays first, the directory is a fallback with a limit, no other station stands in by name, and a dead or stalled stream moves on");
+}
+
 // ── nothing is written under 12px ───────────────────────────────────────────
 // 10 Oct 2026. The profile is WCAG 2.2 AA with A11Y.md's floor on top: no text
 // under 12px (docs/a11y/A11Y.md §4). A count found 52 sizes under it: 43 in
