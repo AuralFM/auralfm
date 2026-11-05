@@ -31,7 +31,7 @@ been seen to go red has not been tested — it has been written.
 When developing any interface here (the app's pages in `src/renderer/`, the web
 layer in `web/`), follow
 the accessibility rules in [`docs/a11y/A11Y.md`](docs/a11y/A11Y.md): A11Y.md
-v2.2.0 by Fernando Carriço (MIT), kept in the repo so it is read offline and
+v2.2.0 by Felipe Carriço (MIT), kept in the repo so it is read offline and
 does not move under us. The profile is **Standard (WCAG 2.2 AA)**: text 4.5:1,
 controls 3:1, targets 24px at the least and 44px on touch, nothing under 12px.
 Its per-component guides are upstream
