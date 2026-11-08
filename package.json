@@ -34,7 +34,7 @@
     "test:app-inbound": "node scripts/relay-test/app-inbound.mjs"
   },
   "devDependencies": {
-    "electron": "^43.8.4",
+    "electron": "^43.8.7",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "globe.gl": "^2.46.2",
