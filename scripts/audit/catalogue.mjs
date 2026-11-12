@@ -767,6 +767,12 @@ import { R, rel, fail, pass, skip, HAS_CAT, C, NO_CAT, main, EXPLORE, readSrc, c
       if (a?.x !== 2 || a?.y !== 1 || a?.z !== undefined) gaps.push(`a run counted wrongly: ${JSON.stringify(a)}`);
       if (STRIKES < 2) gaps.push("one bad night hides a station");
       if (tally({}, answers({ a: "off", b: "off", c: "on" })) !== null) gaps.push("a run where most things failed still counted");
+      // A merge started a build 17 hours before the Monday one, and the two
+      // counted as two weeks: 2,827 stations hidden after one bad day.
+      const day = tally({ _at: "2026-11-01T22:00:00Z", x: 1, z: 1 }, answers({ x: "off", y: "off", z: "on", b: "on", c: "on", d: "on", e: "on" }), Date.parse("2026-11-02T15:00:00Z"));
+      if (day?.x !== 1 || day?.y !== 1 || day?.z !== undefined) gaps.push(`two runs a day apart counted as two weeks: ${JSON.stringify(day)}`);
+      const week = tally({ _at: "2026-11-02T15:00:00Z", x: 1 }, answers({ x: "off", b: "on", c: "on" }), Date.parse("2026-11-09T15:00:00Z"));
+      if (week?.x !== 2) gaps.push("a run a week later did not count");
       if (!/reach\[c\.id\] >= 2\) c\.ok = 0/.test(fs.readFileSync(C("scripts/profiles.mjs"), "utf8"))) gaps.push("profiles.mjs does not fold the count in");
       if (!/scripts\/reach\.mjs/.test(fs.readFileSync(C(".github/workflows/refresh.yml"), "utf8"))) gaps.push("the weekly build does not run the check");
     } catch (e) {
