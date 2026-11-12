@@ -341,7 +341,7 @@
     padding:3px 11px;border-radius:var(--r-sm);cursor:default;
     transition:background var(--dur-control) var(--ease-out),color var(--dur-control) var(--ease-out);
   }
-  .seg button[aria-selected="true"]{background:var(--pane);color:var(--label);box-shadow:0 .5px 1.5px rgba(0,0,0,.18)}
+  .seg button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--pane);color:var(--label);box-shadow:0 .5px 1.5px rgba(0,0,0,.18)}
   .seg button:disabled{opacity:.4}
 
   /* The globe is the whole window below the toolbar and the rail floats on it,
@@ -1732,8 +1732,11 @@
     padding:20px;border-radius:var(--r-xl);background:var(--pane);
     border:1px solid var(--line);max-height:92vh;
   }
+  .sheetshape button{min-height:28px;padding:4px 12px}
+  .sheetshape button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  @media (pointer:coarse){.sheetshape button{min-height:44px;padding:4px 16px}}
   #sheetimg{
-    max-height:64vh;width:auto;border-radius:var(--r-lg);display:block;
+    max-height:64vh;max-width:min(86vw,720px);width:auto;height:auto;border-radius:var(--r-lg);display:block;
     box-shadow:0 18px 60px rgba(0,0,0,.5);
   }
   /* The card's place while it is being made: its 4:5 shape, so the buttons
@@ -2237,6 +2240,14 @@
     <!-- While the card is drawn. It listens to the station for about three
          seconds to draw its wave, and an empty panel for that long read as
          broken. The card's own shape, the wave, and why. -->
+    <!-- The card's shape. A story, a square and a link preview each crop the
+         post's 4:5, so each has its own drawing (card.js, SHAPES). -->
+    <div id="sheetshape" class="seg sheetshape" role="group" aria-label="Card shape">
+      <button data-shape="post" aria-pressed="true" data-i18n="card.post">Post</button>
+      <button data-shape="story" aria-pressed="false" data-i18n="card.story">Story</button>
+      <button data-shape="square" aria-pressed="false" data-i18n="card.square">Square</button>
+      <button data-shape="wide" aria-pressed="false" data-i18n="card.wide">Wide</button>
+    </div>
     <div id="sheetwait" class="sheetwait" role="status" aria-live="polite" hidden>
       <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       <b id="sheetwaitline"></b>

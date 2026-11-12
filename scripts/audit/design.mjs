@@ -1,6 +1,7 @@
 /** The audit: Tokens, type, spacing, keyboard use and what can be read. */
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
 import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES, exploreSrc, readSrc, strings, en } from "./lib.mjs";
 
 // ── one English, not two ─────────────────────────────────────────────────────
@@ -580,3 +581,46 @@ import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES
   if (!/background:#[0-9A-Fa-f]{6}\s+radial-gradient/.test(launch)) gaps.push("the launch screen's gradient has no solid colour under it");
   gaps.length ? fail(name, [...new Set(gaps)].join("; ")) : pass("the launch screen has a solid ground, each @property is registered once, the ticker's dots are silent");
 }
+
+// ── the share card comes in the shape of the place it is posted ─────────────
+// The card had one shape, 1080 by 1350. A story crops that to its middle and a
+// link preview letterboxes it, so the station's name or the code was cut off
+// wherever the card was not a feed post. Each shape is drawn at its own size,
+// and the sheet offers every shape the card can draw.
+// The card wears the site's colours wherever it is made, so it may not read
+// the app's palette, and it draws the towns it is handed.
+{
+  const name = "the share card comes in the shape of the place it is posted";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const want = { post: "1080x1350", story: "1080x1920", square: "1080x1080", wide: "1200x630" };
+  try {
+    const pen = new Proxy({}, { get: (_, k) => (k === "measureText" ? (t) => ({ width: String(t).length * 9 }) : () => pen), set: () => true });
+    const box = {
+      window: {}, console, Date, Math,
+      getComputedStyle: () => ({ getPropertyValue: () => "" }),
+      Image: class { set src(_) { queueMicrotask(() => this.onerror?.()); } },
+      document: {
+        documentElement: {}, fonts: { ready: Promise.resolve(), add() {} },
+        createElement: () => ({ width: 0, height: 0, getContext: () => pen, toDataURL() { return `${this.width}x${this.height}`; } }),
+      },
+    };
+    vm.runInNewContext(readSrc("src/renderer/card.js"), box);
+    const now = { title: "Radio Alhara", place: "Bethlehem", country: "Palestine", when: new Date(0), tags: ["community"], levels: [0.2, 0.6, 0.4] };
+    for (const [shape, size] of Object.entries(want)) {
+      const got = await box.window.Card.make(now, shape);
+      if (got !== size) gaps.push(`the ${shape} card is drawn ${got}, not ${size}`);
+    }
+    if (await box.window.Card.make(now) !== want.post) gaps.push("a card asked for with no shape is not the post");
+    if (await box.window.Card.make(now, "banner") !== want.post) gaps.push("a shape the card does not know is not drawn as the post");
+  } catch (e) { gaps.push(`card.js did not run: ${e.message}`); }
+  const card = readSrc("src/renderer/card.js");
+  if (/getComputedStyle|--accent|--bg\b/.test(card)) gaps.push("the card reads the app's palette, so it changes colour with the theme");
+  if (!/now\.towns/.test(card) || !/towns:/.test(readSrc("src/renderer/explore-playback.js"))) gaps.push("the card's Earth has no towns on it");
+  const page = readSrc("src/renderer/explore.html");
+  for (const shape of Object.keys(want)) if (!new RegExp(`data-shape="${shape}"`).test(page)) gaps.push(`the share sheet does not offer the ${shape} card`);
+  // The four buttons were drawn and did nothing: no listener read them.
+  if (!/\$\("sheetshape"\)\.addEventListener\("click"/.test(readSrc("src/renderer/explore-playback.js"))) gaps.push("pressing a shape in the share sheet does nothing");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("post, story, square and wide are each drawn at their own size, and the sheet offers all four");
+}
+
