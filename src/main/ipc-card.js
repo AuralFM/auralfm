@@ -6,7 +6,7 @@
  * — getters, because the windows are created and destroyed after registration.
  */
 
-const { clipboard, dialog, ipcMain, nativeImage } = require("electron");
+const { clipboard, ClipboardItem, dialog, ipcMain, nativeImage } = require("electron");
 const fs = require("node:fs");
 
 module.exports = function register(ctx) {
@@ -55,13 +55,16 @@ module.exports = function register(ctx) {
     levelsWaiting?.done(Array.isArray(levels) ? levels.slice(0, 256).map(Number) : null);
   });
 
-  ipcMain.handle("card:copy", (_e, dataUrl) => {
+  ipcMain.handle("card:copy", async (_e, dataUrl) => {
     const s = String(dataUrl || "");
     if (!/^data:image\/png;base64,/.test(s) || s.length > 12 * 1024 * 1024) return false;
     const img = nativeImage.createFromDataURL(s);
     if (img.isEmpty()) return false;
-    clipboard.writeImage(img);
-    return true;
+    // Electron 44 removed writeImage; a failed write now says so.
+    try {
+      await clipboard.write([new ClipboardItem({ "image/png": new Blob([new Uint8Array(img.toPNG())], { type: "image/png" }) })]);
+      return true;
+    } catch { return false; }
   });
 
   /** The deep link for what is playing, so it can be pasted beside the card. */
@@ -86,14 +89,14 @@ module.exports = function register(ctx) {
    * browser (web/bridge.js, ?station=). It was auralfm://, which opened nothing
    * for anyone without the desktop app — most of the people a link is sent to.
    */
-  ipcMain.handle("card:link", (_e, title, id) => {
+  ipcMain.handle("card:link", async (_e, title, id) => {
     const sid = String(id || "").trim().slice(0, 80);
     const t = String(title || "").trim();
     if (!sid && !t) return null;
     const link = sid && !sid.startsWith("my:")
       ? `https://listen.auralfm.xyz/?station=${encodeURIComponent(sid)}`
       : "https://listen.auralfm.xyz/";
-    clipboard.writeText(link);
+    try { await clipboard.writeText(link); } catch { return null; }
     return link;
   });
 };

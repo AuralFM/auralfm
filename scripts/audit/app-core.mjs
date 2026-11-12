@@ -365,3 +365,21 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   if (!/v: stamp\(state\)/.test(store)) gaps.push("src/main/store.js saves the file without its version");
   gaps.length ? fail(name, gaps.join("; ")) : pass("state.json is saved with its version; an older one is brought up to date on load, a newer one is left as it is");
 }
+
+// ── the clipboard is written the way Electron 44 and later expect ───────────
+// Electron 44 removed clipboard.writeImage and made clipboard.writeText return
+// a promise. The share card used the first, and the sync code and the link the
+// second without waiting, so a failed copy would have gone unreported.
+{
+  const name = "the clipboard is written the way Electron 44 and later expect";
+  console.log(`\n${name}`);
+  const gaps = [];
+  for (const f of ["src/main.js", ...fs.readdirSync(R("src/main")).filter((x) => x.endsWith(".js")).map((x) => `src/main/${x}`)]) {
+    const src = readSrc(f);
+    if (/clipboard\.writeImage\(/.test(src)) gaps.push(`${f} calls clipboard.writeImage, which Electron 44 removed`);
+    for (const m of src.matchAll(/(.{0,12})clipboard\.(writeText|write)\(/g))
+      if (!/await\s+$|return\s+$/.test(m[1])) gaps.push(`${f} does not wait for clipboard.${m[2]}`);
+  }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("every clipboard write in the main process is the promise form, and waited for");
+}
+
