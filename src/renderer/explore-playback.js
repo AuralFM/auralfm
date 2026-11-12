@@ -262,6 +262,10 @@ function closeOutMenu({ refocus = false } = {}) {
  * under your own name should be looked at first.
  */
 let sheetPng = null;
+// What the card is drawn from, kept while the sheet is open so another shape
+// is a redraw, not three more seconds of listening. The shape is kept longer:
+// whoever posts stories wants a story next time too.
+let sheetNow = null, sheetShape = "post", sheetTurn = 0;
 
 // Everything under the sheet. aria-modal only tells a screen reader; Tab walked
 // straight out of the card into the toolbar behind it.
@@ -311,7 +315,7 @@ async function buildCard() {
         || (await guard("cardPlace", () => window.auralfm.places(ch.place, 1), null))?.places?.[0];
       if (hit) { lat = hit.lat; lon = hit.lon; }
     }
-    sheetPng = await window.Card.make({
+    sheetNow = {
       title: ch.title || "",
       place: ch.place || "",
       country: ch.country || "",
@@ -326,6 +330,8 @@ async function buildCard() {
       // the Earth as it was at the moment somebody was listening.
       sun: subsolarPoint(),
       levels,
+      // Every town on the globe, for the dots on the card's Earth.
+      towns: typeof globePts !== "undefined" && Array.isArray(globePts) ? globePts : null,
       /**
        * What the code points at: the station itself, on listen.auralfm.xyz,
        * which opens it cued and paused (web/bridge.js, ?station=). A receiver
@@ -335,9 +341,32 @@ async function buildCard() {
       qr: ch.sdr || String(ch.id || "").startsWith("my:") || !ch.id
         ? "https://listen.auralfm.xyz/"
         : `https://listen.auralfm.xyz/?station=${encodeURIComponent(ch.id)}`,
-    });
-    return sheetPng;
+    };
+    return drawCard();
   }
+}
+
+/** The card in the chosen shape. A slower drawing never replaces a newer one. */
+async function drawCard() {
+  const turn = ++sheetTurn;
+  const png = await window.Card.make(sheetNow, sheetShape);
+  if (turn === sheetTurn) sheetPng = png;
+  return sheetPng;
+}
+
+function paintShape() {
+  for (const b of $("sheetshape").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.shape === sheetShape));
+  const [w, h] = window.Card.SHAPES[sheetShape];
+  $("sheetwait").style.aspectRatio = `${w} / ${h}`;
+}
+
+async function chooseShape(shape) {
+  if (!window.Card.SHAPES[shape] || shape === sheetShape) return;
+  sheetShape = shape;
+  paintShape();
+  if (!sheetNow) return;                      // still listening: it is drawn in this shape when ready
+  const png = await drawCard();
+  if (!$("sheet").hidden && png) $("sheetimg").src = png;
 }
 
 async function openShareSheet() {
@@ -350,6 +379,8 @@ async function openShareSheet() {
   // Say what is happening for the seconds it takes: with a station playing the
   // card listens to it first, to draw the wave from the real sound.
   wait.hidden = false;
+  $("sheetshape").setAttribute("aria-label", t("ctl.cardShape", "Card shape"));
+  paintShape();
   $("sheetwaitline").textContent = t("ctl.cardMaking", "Making your card");
   $("sheetwaitnote").textContent = playing
     ? t("ctl.cardListening", "One moment: it is listening to the station for a few seconds, to draw its sound.")
@@ -381,6 +412,7 @@ function closeShareSheet() {
   $("sheet").hidden = true;
   for (const el of behindSheet()) if (el) el.inert = false;
   sheetPng = null;
+  sheetNow = null;
   $("nowShare")?.focus();
 }
 
@@ -574,6 +606,10 @@ function wirePlayback() {
     if (e.key === "Escape" && !$("sheet").hidden) { e.preventDefault(); closeShareSheet(); }
   }, true);
 
+  $("sheetshape").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-shape]");
+    if (b) chooseShape(b.dataset.shape);
+  });
   $("sheetcopy").onclick = async () => {
     if (!sheetPng) return;
     const ok = await guard("cardCopy", () => window.auralfm.cardCopy(sheetPng), false);

@@ -249,7 +249,7 @@ const SHARE_TAGS = `
 <meta property="og:image" content="${SITE}share.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The AuralFM globe on a field of stars">
+<meta property="og:image:alt" content="The Earth with a dot on every town that broadcasts, and the words: Listen in.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="google-site-verification" content="2IcCGX_pbV5DlqsjmujbqdVQev_B_AsVGf9U-ksmU3Q">`;
 
