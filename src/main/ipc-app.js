@@ -85,14 +85,18 @@ module.exports = function register(ctx) {
    * the same call (web/bridge.js). The code is the whole of the access to the
    * list, so it is handed over only when asked for, never in a status.
    */
-  ipcMain.handle("favsync", (_e, op, arg) => {
+  ipcMain.handle("favsync", async (_e, op, arg) => {
     if (op === "start") return favsync.start();
     if (op === "join") return favsync.join(String(arg || "").slice(0, 400));
     if (op === "stop") return favsync.stop();
     if (op === "code") return favsync.code();
     // Copied here, not in the page: a window may only write the clipboard while
     // it has the focus, and the code is too long to ask anyone to select.
-    if (op === "copy") { const c = favsync.code(); if (c) clipboard.writeText(c); return !!c; }
+    if (op === "copy") {
+      const c = favsync.code();
+      if (!c) return false;
+      try { await clipboard.writeText(c); return true; } catch { return false; }
+    }
     if (op === "now") return favsync.sync();
     return favsync.status();
   });

@@ -34,7 +34,7 @@
     "test:app-inbound": "node scripts/relay-test/app-inbound.mjs"
   },
   "devDependencies": {
-    "electron": "^43.8.4",
+    "electron": "^45.3.0",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "globe.gl": "^2.46.2",
@@ -92,6 +92,7 @@
       "!src/renderer/vendor/lite/**"
     ],
     "mac": {
+      "minimumSystemVersion": "13.0",
       "electronLanguages": [
         "en",
         "en_GB",

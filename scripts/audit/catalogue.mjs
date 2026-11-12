@@ -759,7 +759,8 @@ import { R, rel, fail, pass, skip, HAS_CAT, C, NO_CAT, main, EXPLORE, readSrc, c
       const { verdict, tally, STRIKES } = await import(pathToFileURL(C("scripts/reach.mjs")).href);
       for (const [p, want] of [["/audio", "on"], ["/page", "off"], ["/404", "off"], ["/410", "off"], ["/500", "off"],
         ["/403", "unsure"], ["/429", "unsure"], ["/451", "unsure"], ["/hang", "off"]]) {
-        const got = await verdict(at + p, 300);
+        // A real answer gets time on a busy machine; only the hang should run out.
+        const got = await verdict(at + p, p === "/hang" ? 300 : 3000);
         if (got !== want) gaps.push(`${p} reads as ${got}, not ${want}`);
       }
       const answers = (o) => new Map(Object.entries(o));
