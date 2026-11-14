@@ -394,3 +394,26 @@ import { fail, pass, readSrc } from "./lib.mjs";
     fail(name, `could not run the governor: ${e.message}`);
   }
 }
+
+// ── the same dots are not built twice ───────────────────────────────────────
+// The dots are one merged mesh, and building it blocked the page for 0.4 s to
+// 1.2 s (700 dots, a 2019 Intel laptop under load). The globe's start asked
+// for it twice with nothing changed between, and any caller may force it to
+// be safe. applyLod() now compares what the dots would be built from with
+// what they were built from, and what a dot looks like is its place and
+// count, the selection, the dot size and the palette: leave one of those out
+// and a change of it never reaches the globe.
+{
+  const name = "the same dots are not built twice";
+  console.log(`\n${name}`);
+  const v = readSrc("src/renderer/explore-view.js");
+  const gaps = [];
+  const look = v.match(/const look = ([\s\S]*?);\n  if \(look !== lodLook\) \{\n    lodLook = look;\n    globe\.pointsData\(shown\);/);
+  if (!look) gaps.push("applyLod hands the globe its dots without asking whether they changed");
+  else for (const [part, what] of [["selection.placeIndex", "the selected place"], ["sdrSel", "the selected receiver"], ["dotRadius(", "the dot size"],
+                                   ["palette?.dot", "the stations' colour"], ["palette?.rx", "the receivers' colour"], ["d.count", "each place's count, which sizes its dot"]])
+    if (!look[1].includes(part)) gaps.push(`the comparison leaves out ${what}`);
+  if ((v.match(/globe\.pointsData\(shown\)/g) || []).length !== 1) gaps.push("the dots are set somewhere the comparison does not cover");
+  if (!/globe\.pointsData\(\[\]\); lodLook = null;/.test(v)) gaps.push("emptying the dots does not forget what they were built from, so the same set would never come back");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("a rebuild is skipped only when the places, their counts, the selection, the dot size and the palette are all as they were");
+}
