@@ -709,3 +709,64 @@ import { ROOT, R, fail, pass, skip, EXPLORE_FILES, readSrc, pkg } from "./lib.mj
   gaps.length ? fail(name, gaps.join("; "))
     : pass("language, category, screenshots for a phone and a wide screen, and one window for a link into the app");
 }
+
+// ── the player's scripts arrive in a few files, in their order ──────────────
+// index.html named 43 scripts: 43 requests and 469 KB compressed before the
+// page could start. They are plain scripts that share one global scope, so
+// the build joins each run of them into one file, minified part by part, and
+// what it must not do is as much the check as what it does: reorder a part,
+// wrap one (the others would lose its names), swallow web/launch.js (the
+// launch screen's first line would wait for the megabyte behind it), or ship
+// the parts as well as the bundle (the service worker would put both on every
+// phone).
+{
+  const name = "the player's scripts arrive in a few files, in their order";
+  console.log(`\n${name}`);
+  const out = R("dist-web");
+  if (!fs.existsSync(path.join(out, "index.html"))) skip(name, "dist-web/ is not built");
+  else {
+    const gaps = [];
+    const named = (file) => [...fs.readFileSync(path.join(out, file), "utf8").matchAll(/<script src="([^"?]+)(?:\?v=[^"]*)?"/g)].map((m) => m[1]);
+    const page = named("index.html"), settings = new Set(named("settings.html"));
+    if (page.length > 4) gaps.push(`index.html names ${page.length} scripts`);
+    if (page[0] !== "web/launch.js") gaps.push(`the first script is ${page[0]}, not web/launch.js on its own`);
+    const bundles = page.filter((s) => /^app\.\d+\.js$/.test(s));
+    if (!bundles.length) gaps.push("index.html names no bundle");
+    const parts = [];
+    for (const b of bundles) {
+      const mapFile = path.join(out, `${b}.map`);
+      if (!fs.existsSync(path.join(out, b)) || !fs.existsSync(mapFile)) { gaps.push(`${b} or its map is not in the build`); continue; }
+      const map = JSON.parse(fs.readFileSync(mapFile, "utf8"));
+      let at = -1;
+      for (const s of map.sections || []) {
+        const from = s.map.sources?.[0];
+        // A part that minifies to nothing has no source to name: it was emptied.
+        if (!from) { gaps.push(`${b}.map has a part with no source: a script came out empty`); continue; }
+        if (!(s.offset.line > at)) gaps.push(`${b}.map: ${from} does not start after the part before it`);
+        at = s.offset.line;
+        if (!s.map.sourcesContent?.[0]) gaps.push(`${b}.map does not hold the source of ${from}`);
+        parts.push(from);
+      }
+      if (!new RegExp(`sourceMappingURL=${b.replaceAll(".", "\\.")}\\.map`).test(fs.readFileSync(path.join(out, b), "utf8").slice(-200))) gaps.push(`${b} does not name its map`);
+    }
+    if (parts.includes("web/launch.js")) gaps.push("web/launch.js is inside a bundle");
+    // The order the page gives them, which the build must keep: the page's own
+    // list, with what build-web.mjs puts before and after.
+    const own = [...readSrc("src/renderer/explore.html").matchAll(/<script src="([\w./-]+)"/g)].map((m) => m[1]);
+    const order = parts.filter((s) => own.includes(s));
+    if (order.join() !== own.filter((s) => parts.includes(s)).join()) gaps.push("the parts are not in the order explore.html lists them");
+    if (parts.length < 30) gaps.push(`the bundles hold ${parts.length} scripts, and the page has over forty`);
+    if (parts.at(-1) !== "explore.js") gaps.push(`the last part is ${parts.at(-1)}, and explore.js starts the page, so it runs last`);
+    const left = parts.filter((s) => !settings.has(s) && fs.existsSync(path.join(out, s)));
+    if (left.length) gaps.push(`${left.length} scripts are in the build twice, in a bundle and on their own (${left.slice(0, 3).join(", ")})`);
+    for (const s of settings) if (!fs.existsSync(path.join(out, s))) gaps.push(`settings.html names ${s}, and the build removed it`);
+    // A name declared at the top of one part is used by the others.
+    const all = bundles.map((b) => fs.existsSync(path.join(out, b)) ? fs.readFileSync(path.join(out, b), "utf8") : "").join("\n");
+    for (const fn of ["governDraws", "paintRings", "initGlobe", "sizeGlobe"]) if (!new RegExp(`function ${fn}\\(`).test(all)) gaps.push(`${fn} lost its name: a part was wrapped or renamed`);
+    const sw = fs.existsSync(path.join(out, "sw.js")) ? fs.readFileSync(path.join(out, "sw.js"), "utf8") : "";
+    for (const b of bundles) if (!sw.includes(`"${b}?v=`)) gaps.push(`the service worker does not keep ${b}`);
+    if (/"app\.\d+\.js\.map/.test(sw)) gaps.push("the service worker puts the maps on every phone");
+    gaps.length ? fail(name, gaps.join("; "))
+      : pass(`${parts.length} scripts in ${bundles.length} files, in the page's order, web/launch.js first and apart, each part named in a map, nothing shipped twice`);
+  }
+}
