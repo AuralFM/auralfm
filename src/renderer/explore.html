@@ -890,9 +890,16 @@
      the label and buttons at 10.5px. One set now, nothing under 12px, and
      every button at least 24px, 44 under a finger.) */
   .tourring,.tourarrow,.tourcard,.helptag{--rule:color-mix(in srgb,var(--label) 34%,transparent)}
+  /* The tour's three pieces glide from one control to the next by transform
+     (tour.js, move): left and top lay the page out again on every frame, and
+     the tour runs while the globe is still arriving. The ring's size is the
+     one thing transform cannot give without thinning its border, and it has
+     no children to lay out. A tip (tipcard.js) is placed once and does not
+     glide, so it still sets left and top over the zeros here. */
+  .tourring,.tourarrow,.tourcard{left:0;top:0}
   .tourring{
     position:fixed;z-index:8990;pointer-events:none;border:2px solid var(--accent);
-    transition:left var(--dur-panel) var(--ease-drawer),top var(--dur-panel) var(--ease-drawer),
+    transition:transform var(--dur-panel) var(--ease-drawer),
                width var(--dur-panel) var(--ease-drawer),height var(--dur-panel) var(--ease-drawer);
   }
   /* A rotated square in the card's own fill and rule, so only the two outward
@@ -900,7 +907,7 @@
   .tourarrow{
     position:fixed;z-index:9002;pointer-events:none;width:10px;height:10px;
     background:var(--bg);transform:rotate(45deg);
-    transition:left var(--dur-panel) var(--ease-drawer),top var(--dur-panel) var(--ease-drawer);
+    transition:transform var(--dur-panel) var(--ease-drawer);
   }
   .tourarrow.up{border-left:1px solid var(--rule);border-top:1px solid var(--rule)}
   .tourarrow.down{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
@@ -908,8 +915,7 @@
     position:fixed;z-index:9001;width:264px;padding:13px 14px 10px;
     background:var(--bg);border:1px solid var(--rule);
     box-shadow:0 14px 44px rgba(0,0,0,.42);
-    transition:left var(--dur-panel) var(--ease-drawer),
-               top var(--dur-panel) var(--ease-drawer);
+    transition:transform var(--dur-panel) var(--ease-drawer);
   }
   .helptag{border-radius:0;background:var(--bg);border:1px solid var(--rule);-webkit-backdrop-filter:none;backdrop-filter:none}
   .tourcard.welcome{width:300px;text-align:center}
@@ -1125,7 +1131,7 @@
   body.onshow .now :is(#lock,#nowStar,#nowShare,#nowInfo,#nowGrab,.outwrap){visibility:hidden}
   body.onshow .now .dot{display:inline-block;background:var(--err)}
   @media (pointer:coarse){ .liverow{min-height:52px} .livename{font-size:15px;min-height:44px} .livenow .linkbtn{min-height:44px;padding:0 18px;font-size:14px} }
-  .onair-at{position:relative;width:0;height:0;pointer-events:none;transition:opacity .2s linear}
+  .onair-at{position:relative;width:0;height:0;pointer-events:none;transition:opacity .2s var(--ease-out)}
   .onair-pin{
     position:absolute;left:-12.5px;top:0;translate:0 -50%;display:inline-flex;align-items:center;gap:8px;max-width:190px;padding:5px 11px 5px 9px;
     border:0;border-radius:var(--r-pill);background:var(--err);color:var(--on-err);
