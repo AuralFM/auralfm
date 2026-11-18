@@ -349,7 +349,9 @@ async function buildCard() {
 /** The card in the chosen shape. A slower drawing never replaces a newer one. */
 async function drawCard() {
   const turn = ++sheetTurn;
-  const png = await window.Card.make(sheetNow, sheetShape);
+  // In the listener's own theme (explore-prefs.js, palette): the card is a
+  // picture of their app, so it is the colour their app is.
+  const png = await window.Card.make(sheetNow, sheetShape, typeof palette === "undefined" ? null : palette);
   if (turn === sheetTurn) sheetPng = png;
   return sheetPng;
 }
@@ -447,7 +449,9 @@ function setLocked(on) {
   const b = $("lock");
   b.setAttribute("aria-pressed", on);
   Icons.set(b, on ? "lock" : "unlock");
-  b.title = on ? "Locked while you browse" : "Lock this station";
+  // Through the strings, as the markup's own title is (data-i18n-title): a
+  // bare English title here replaced the translated one on the first press.
+  b.title = on ? t("ctl.lockedBrowse", "Locked while you browse") : t("ctl.lockStation", "Lock this station");
   window.auralfm.getState().then((st) => window.auralfm.setState({ ...(st || {}), locked: on }));
 }
 
