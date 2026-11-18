@@ -37,6 +37,7 @@
   const INK = "#0C0B0B";          // onyx, the same stop the icon and splash use
   const BONE = "#F7F4EE";          // the site's bone, and its aqua, soft bone and hairline
   const AQUA = "#02E8CD", SOFT = "rgba(247,244,238,.72)", HAIR = "rgba(247,244,238,.26)";
+  const GLOW = "#78AAFF";             // the haze round the Earth when no theme gives one
 
   /**
    * The colours that change with the theme.
@@ -60,8 +61,40 @@
       accent,
       dot: pick(look?.dot, accent),
       star: rgbOf(pick(look?.star, BONE)),
-      glow: rgbOf(pick(look?.atmosphere, "#78AAFF")),
+      glow: rgbOf(pick(look?.atmosphere, GLOW)),
     };
+  }
+
+  /**
+   * The station's name in two lines, with no word left alone.
+   *
+   * A frequency and its band are one unit ("106.3 FM", "AM 900"), so they never
+   * part. The second line holds at least two words, so "FM" or any single word
+   * is never stranded under the rest; of the breaks that allow that, the one
+   * with the most even lines wins. Null when there is no such break (a name of
+   * one or two words), and the caller sets it smaller on one line instead.
+   */
+  const BAND = /^(FM|AM|MW|LW|SW|DAB\+?|HD\d?|MHz|kHz)$/i, FREQ = /^\d{2,5}([.,]\d{1,2})?$/;
+  function nameUnits(text) {
+    const words = String(text).split(/\s+/).filter(Boolean), units = [];
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i], next = words[i + 1];
+      if (next && ((FREQ.test(w) && BAND.test(next)) || (BAND.test(w) && FREQ.test(next)))) { units.push([w, next]); i++; }
+      else units.push([w]);
+    }
+    return units;
+  }
+  function twoLines(ctx, text) {
+    const units = nameUnits(text);
+    let best = null;
+    for (let i = 1; i < units.length; i++) {
+      const tail = units.slice(i).flat();
+      if (tail.length < 2) continue;                       // a word alone on the last line
+      const a = units.slice(0, i).flat().join(" "), b = tail.join(" ");
+      const wider = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+      if (!best || wider < best.wider) best = { lines: [a, b], wider };
+    }
+    return best && best.lines;
   }
 
   /** Wrap to at most `lines` lines, ellipsing only if it truly will not fit. */
@@ -319,17 +352,33 @@
     const hasWave = Array.isArray(now.levels) && now.levels.length > 0;
 
     const NAME_W = wide ? 600 : inner, NAME_MAX = wide ? 84 : story ? 170 : square ? 120 : 150;
-    const fits = (line) => ctx.measureText(line).width <= NAME_W;
+    // The name stops a full margin short of the words' right edge, so it never
+    // runs to the edge of the card: on the tall and square cards it ends at
+    // least twice the margin (128 px) from the edge. The wide card's name
+    // column already stops short of the planet.
+    const NAME_FIT = wide ? NAME_W : inner - M;
+    const fits = (line) => ctx.measureText(line).width <= NAME_FIT;
     let size = NAME_MAX, lines = [title];
     for (; size > NAME_MAX * 0.56; size -= 2) { sans(500, size); if (fits(title)) break; }
     if (!fits(title)) {
-      // Too long for one line at a size worth reading: two, as large as they fit.
+      // Too long for one line at a size worth reading: two, as large as they
+      // fit, broken where no word is left alone (twoLines).
+      let split = null;
       for (size = Math.round(NAME_MAX * 0.7); size >= NAME_MAX * 0.36; size -= 2) {
         sans(500, size);
-        lines = wrap(ctx, title, NAME_W, 2);
-        if (lines.every(fits) && !lines.at(-1).endsWith("…")) break;
+        split = twoLines(ctx, title);
+        if (!split || split.every(fits)) break;
       }
-      lines = lines.map((line) => { let cut = line; while (cut.length > 4 && !fits(cut)) cut = cut.slice(0, -2).trimEnd() + "…"; return cut; });
+      if (split && split.every(fits)) lines = split;
+      else {
+        // One or two words, or no clean break that fits: one line, smaller.
+        for (size = Math.round(NAME_MAX * 0.56); size > NAME_MAX * 0.3; size -= 2) { sans(500, size); if (fits(title)) break; }
+        lines = [title];
+        if (!fits(title)) {
+          lines = wrap(ctx, title, NAME_FIT, 2);
+          lines = lines.map((line) => { let cut = line; while (cut.length > 4 && !fits(cut)) cut = cut.slice(0, -2).trimEnd() + "…"; return cut; });
+        }
+      }
     }
     const LEAD = size * 1.02, SUB = Math.round(34 * K), WAVE_H = Math.round(28 * K);
     const blockH = 26 * K + 18 * K + lines.length * LEAD + 14 * K + SUB * 1.3 + (hasWave ? 26 * K + WAVE_H : 0);
