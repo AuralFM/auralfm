@@ -188,7 +188,7 @@ function holdRings(list) {
  * world, so the towns nearest the camera get them.
  */
 const RING_BUDGET = 200;
-let rings = new Map(), ringsCut = false;
+let rings = new Map(), ringsCut = false, ringsDrawn = "";
 
 /**
  * One rings layer, two tenants, so the ISS and the listeners share it and
@@ -241,12 +241,17 @@ function paintRings() {
   const list = [...next.values()], still = stillMotion();
   globe.ringsData(still ? [] : list);
   holdRings(still ? list : []);
+  // Listeners are flushed several times a second, mostly with nobody new. Only
+  // a different set of rings is a different picture.
+  const drawn = `${still}|` + [...next].map(([key, r]) => `${key}@${r.lat},${r.lng}`).join("|");
+  if (drawn !== ringsDrawn) { ringsDrawn = drawn; wakeGlobe(); }
 }
 
 let orbitsOf = null, orbitPaths = [], wsprOf = null, prop = [];
 
 function paintOrbits() {
   if (!globe) return;
+  wakeGlobe();
   const issPaths = issTrail.length > 1 ? splitTrail(issTrail).map((seg) => ({ pts: seg })) : [];
 
   /**
@@ -362,6 +367,71 @@ async function tickISS() {
 const TARGET_PIXELS = 3.5e6;
 
 /**
+ * The most device pixels per CSS pixel the web player draws.
+ *
+ * A phone reports 3 and a laptop 2. At 2 the web player's canvas measured
+ * 2048x1368 and 14.9 ms a draw on a 2019 Intel laptop; a phone at 3 fills
+ * nine pixels where 1.5 fills a little over two. The Mac app keeps the
+ * screen's own ratio, under the budget above.
+ */
+const WEB_MAX_RATIO = 1.5;
+
+/**
+ * Draw the globe when the picture can have changed, not sixty times a second.
+ *
+ * globe.gl draws on every animation frame for as long as the page is open.
+ * With nothing moving that was 60 identical draws a second (measured on the
+ * web player, drift off, no rings). Its loop is left running, since it also
+ * moves the camera and the rings; only the draw is held back:
+ *
+ *   awake     every frame: a hand on the globe, a flight, a resize, new dots
+ *   steady    every other frame: the idle drift, rings spreading
+ *   at rest   IDLE_MS apart, so a change nobody announced (a texture arriving,
+ *             the sun's minute) is still on screen within a fifth of a second
+ */
+const AWAKE_MS = 500, STEADY_MS = 25, IDLE_MS = 200, RING_TAIL_MS = 30000;
+let awakeUntil = 0;
+
+/** Draw every frame for a while. Called by whatever has changed the picture. */
+function wakeGlobe(ms = AWAKE_MS) {
+  awakeUntil = Math.max(awakeUntil, Date.now() + ms);
+}
+
+/** Whether a frame is drawn. No state of its own, so the audit can run it. */
+function drawDue(now, last, awake, steady) {
+  if (now < awake) return true;
+  return now - last >= (steady ? STEADY_MS : IDLE_MS);
+}
+
+function governDraws() {
+  // globe.gl draws through a composer, whose one pass clears the canvas and
+  // then draws the scene. Holding back the draw alone left the clear: a black
+  // globe on every frame that was skipped. So the pass is held back whole.
+  // With no composer there is no one place to hold, and every frame is drawn.
+  const stage = globe.postProcessingComposer?.();
+  if (!stage) return;
+  const draw = stage.render.bind(stage);
+  let last = -Infinity, ringsUntil = 0;
+  stage.render = (...args) => {
+    const now = Date.now();
+    // A dropped ring goes on spreading until its tween ends.
+    if (globe.ringsData().length) ringsUntil = now + RING_TAIL_MS;
+    const steady = globe.controls().autoRotate || now < ringsUntil;
+    if (!drawDue(now, last, awakeUntil, steady)) return;
+    last = now;
+    return draw(...args);
+  };
+  // The drift moves the camera on every frame and is paced as steady; any
+  // other move of the camera is a hand, a flight or the coast after one.
+  globe.controls().addEventListener("change", () => { if (!globe.controls().autoRotate) wakeGlobe(); });
+  for (const ev of ["pointerdown", "pointermove", "wheel"]) {
+    $("globe").addEventListener(ev, () => { if (ev !== "pointermove" || handOn) wakeGlobe(); }, { passive: true });
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) wakeGlobe(); });
+  wakeGlobe(3000);                       // the launch: textures and dots are still arriving
+}
+
+/**
  * How much shorter than its canvas the pane may get before the canvas is
  * rebuilt to match.
  *
@@ -404,9 +474,13 @@ function sizeGlobe() {
   // From the canvas, not the pane: on a large window the bar's strip alone
   // moved this by more than its tolerance, which rebuilt the canvas after all.
   const css = globe.width() * globe.height();
-  const ratio = Math.max(0.75, Math.min(window.devicePixelRatio || 1,
+  // web/bridge.js sets AuralLite, true or false, and nothing on the Mac does.
+  const most = "AuralLite" in window ? WEB_MAX_RATIO : Infinity;
+  const ratio = Math.max(0.75, Math.min(window.devicePixelRatio || 1, most,
                                         Math.sqrt(TARGET_PIXELS / Math.max(css, 1))));
   if (Math.abs(r.getPixelRatio() - ratio) > 0.02) r.setPixelRatio(ratio);
+  // A resized canvas is cleared, and a cleared canvas left undrawn is a blank globe.
+  wakeGlobe();
 }
 
 /**
