@@ -100,13 +100,37 @@
     if (e.key === "Escape") { e.preventDefault(); teardown(true); }
     else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); go(1); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    else if (e.key === "Tab") {
+      // Focus stays in the card. The tour takes Enter and the arrow keys
+      // wherever focus is, so tabbed out to a button behind it, Enter moved
+      // the tour on and never pressed the button.
+      const stops = [...card.querySelectorAll("button:not(:disabled)")];
+      if (!stops.length) return;
+      e.preventDefault();
+      const at = stops.indexOf(document.activeElement);
+      const to = at < 0 ? (e.shiftKey ? stops.length - 1 : 0) : (at + (e.shiftKey ? -1 : 1) + stops.length) % stops.length;
+      stops[to].focus();
+    }
+  }
+
+  /**
+   * Put a piece of the tour at a point in the window, by transform.
+   *
+   * Its first placement is a jump. A transform has somewhere to glide from
+   * even before the piece has been anywhere (the corner of the window), which
+   * left and top did not.
+   */
+  function move(el, x, y, turn = "") {
+    const first = !el.dataset.placed;
+    if (first) el.style.transition = "none";
+    el.style.transform = `translate3d(${Math.round(x)}px,${Math.round(y)}px,0)${turn}`;
+    if (first) { el.dataset.placed = "1"; void el.offsetWidth; el.style.transition = ""; }
   }
 
   /** Centre the welcome card; park everything else off-screen. */
   function centre() {
     const c = card.getBoundingClientRect();
-    card.style.left = `${Math.round((innerWidth - c.width) / 2)}px`;
-    card.style.top = `${Math.round((innerHeight - c.height) / 2 - 20)}px`;
+    move(card, (innerWidth - c.width) / 2, (innerHeight - c.height) / 2 - 20);
     ring.hidden = true;
     arrow.hidden = true;
   }
@@ -128,20 +152,17 @@
     let left = r.left + r.width / 2 - c.width / 2;
     left = Math.max(12, Math.min(left, innerWidth - c.width - 12));
 
-    card.style.left = `${Math.round(left)}px`;
-    card.style.top = `${Math.round(top)}px`;
+    move(card, left, top);
 
     ring.hidden = false;
-    ring.style.left = `${Math.round(r.left - 5)}px`;
-    ring.style.top = `${Math.round(r.top - 5)}px`;
+    move(ring, r.left - 5, r.top - 5);
     ring.style.width = `${Math.round(r.width + 10)}px`;
     ring.style.height = `${Math.round(r.height + 10)}px`;
 
     // The arrow is a rotated square, so half its diagonal is what sticks out.
     arrow.hidden = false;
     arrow.className = `tourarrow ${below ? "up" : "down"}`;
-    arrow.style.left = `${Math.round(r.left + r.width / 2 - 5)}px`;
-    arrow.style.top = `${Math.round(below ? top - 5 : top + c.height - 5)}px`;
+    move(arrow, r.left + r.width / 2 - 5, below ? top - 5 : top + c.height - 5, " rotate(45deg)");
   }
 
   function position() {
@@ -163,8 +184,13 @@
     h.setAttribute("role", "heading");
     h.setAttribute("aria-level", "2");
     h.textContent = step.title;
+    h.id = "tourh";
     const p = document.createElement("p");
     p.textContent = step.body;
+    p.id = "tourp";
+    // The card is named by its heading. "Introduction" said the same thing on
+    // every step.
+    card.setAttribute("aria-labelledby", "tourh");
 
     const row = document.createElement("div");
     row.className = "tourrow";
@@ -204,6 +230,10 @@
     next.textContent = i === STEPS.length - 1 ? "Done"
                      : (step.welcome ? "Show me" : "Next");
     next.onclick = () => go(1);
+    // Focus lands here on every step, and the card it is in does not change,
+    // so a screen reader said only "Next". Described by the step, it says the
+    // step too.
+    next.setAttribute("aria-describedby", "tourh tourp");
 
     // The step as the website labels things: "[ 02 / 05 ]" in the accent, above
     // the title. Hidden from assistive technology, which already hears the step
@@ -242,6 +272,9 @@
     card.className = "tourcard";
     card.setAttribute("role", "dialog");
     card.setAttribute("aria-label", "Introduction");
+    // Modal to a screen reader as it is to the keyboard: while the tour is up
+    // its keys are the tour's, so the page behind is not offered.
+    card.setAttribute("aria-modal", "true");
     document.body.append(ring, arrow, card);
     addEventListener("keydown", onKey, true);
     addEventListener("resize", position);
