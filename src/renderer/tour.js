@@ -87,7 +87,23 @@
 
   let i = 0, card = null, ring = null, arrow = null, pending = false;
 
+  /**
+   * The page behind the tour, out of reach while it is up.
+   *
+   * aria-modal tells a screen reader the card is a dialog, and Tab is kept in
+   * it (onKey), but a reader's own cursor could still walk into the page
+   * behind. Each of the page's top-level parts goes inert while the tour runs
+   * and comes back when it ends; one that was inert already is left as it was.
+   */
+  let held = [];
+  function holdPage(on) {
+    if (on) {
+      for (const n of document.body.children) if (![card, ring, arrow].includes(n) && !n.inert) { n.inert = true; held.push(n); }
+    } else { for (const n of held) n.inert = false; held = []; }
+  }
+
   function teardown(seen) {
+    holdPage(false);
     for (const n of [card, ring, arrow]) n?.remove();
     card = ring = arrow = null;
     pending = false;
@@ -276,6 +292,7 @@
     // its keys are the tour's, so the page behind is not offered.
     card.setAttribute("aria-modal", "true");
     document.body.append(ring, arrow, card);
+    holdPage(true);
     addEventListener("keydown", onKey, true);
     addEventListener("resize", position);
     render();
