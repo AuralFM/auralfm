@@ -650,3 +650,52 @@ import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES
   gaps.length ? fail(name, gaps.join("; ")) : pass("post, story, square and wide are each drawn at their own size, the sheet offers all four, and the card wears each of the app's themes");
 }
 
+
+// ── a station's name keeps its distance and leaves no word alone ────────────
+// Names ran to the right edge of the card: a name was allowed the whole width
+// of the words, so a long one ended at the margin, and in another face it ran
+// past it. The name now stops a full margin short of that (twice the margin
+// from the card's edge on the tall and square cards). A long name breaks onto
+// two lines with at least two words on the second, so "FM" or any one word is
+// never stranded, and a frequency stays with its band.
+{
+  const name = "a station's name keeps its distance from the edge and leaves no word alone";
+  console.log(`\n${name}`);
+  const gaps = [];
+  try {
+    let drawn = [];
+    const state = { font: "10px sans-serif" };
+    const sizeOf = () => +(state.font.match(/(\d+(?:\.\d+)?)px/) || [0, 10])[1];
+    const pen = new Proxy({}, {
+      get: (_, k) => k === "measureText" ? (t) => ({ width: String(t).length * sizeOf() * 0.56 })
+        : k === "fillText" ? (t, x) => { if (/^500 /.test(state.font)) drawn.push({ t: String(t), x, w: String(t).length * sizeOf() * 0.56 }); }
+        : k in state ? state[k] : () => pen,
+      set: (_, k, v) => { state[k] = v; return true; },
+    });
+    const box = {
+      window: {}, console, Date, Math,
+      getComputedStyle: () => ({ getPropertyValue: () => "" }),
+      Image: class { set src(_) { queueMicrotask(() => this.onerror?.()); } },
+      document: { documentElement: {}, fonts: { ready: Promise.resolve(), add() {} }, createElement: () => ({ width: 0, height: 0, getContext: () => pen, toDataURL() { return ""; } }) },
+    };
+    vm.runInNewContext(readSrc("src/renderer/card.js"), box);
+    const SIZES = { post: [1080, 1350], story: [1080, 1920], square: [1080, 1080] };
+    const names = ["Radiomar 106.3 FM", "Heart South Coast", "Radyo Mars FM 94.0", "Radio LT7 AM 900", "Rádio Comunitária Nova Esperança 104.9 FM",
+                   "The Voice of the Arctic Circle Community Radio FM", "Hortêncio 87.5 FM", "Radiostationmitdemlängstennamen", "X", "Deutschlandfunk Kultur", "Radio Ciudad 104.9 FM Stereo", "Radio Sol 99.1 FM Tropicalísima"];
+    for (const [shape, [W]] of Object.entries(SIZES)) {
+      for (const title of names) {
+        drawn = [];
+        await box.window.Card.make({ title, place: "Lima", country: "Peru", when: new Date(0), tags: [] }, shape);
+        const lines = drawn;
+        for (const l of lines) if (l.x + l.w > W - 128 + 0.5) gaps.push(`${shape}: "${l.t}" ends ${Math.round(W - l.x - l.w)} px from the edge`);
+        if (lines.length === 2) {
+          if (lines[1].t.split(/\s+/).length < 2) gaps.push(`${shape}: "${lines[1].t}" is left alone under "${lines[0].t}"`);
+          const tail = lines[0].t.split(/\s+/).at(-1), head = lines[1].t.split(/\s+/)[0];
+          if ((/^\d{2,5}([.,]\d{1,2})?$/.test(tail) && /^(FM|AM)$/i.test(head)) || (/^(FM|AM)$/i.test(tail) && /^\d/.test(head))) gaps.push(`${shape}: "${tail} ${head}" is split across the lines`);
+        }
+        if (!lines.length) gaps.push(`${shape}: "${title}" was not drawn`);
+      }
+    }
+  } catch (e) { gaps.push(`card.js did not run: ${e.message}`); }
+  gaps.length ? fail(name, [...new Set(gaps)].slice(0, 8).join("; ")) : pass("every name ends at least 128 px from the edge, and no word or band is left alone on a second line");
+}
