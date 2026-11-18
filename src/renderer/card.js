@@ -38,6 +38,32 @@
   const BONE = "#F7F4EE";          // the site's bone, and its aqua, soft bone and hairline
   const AQUA = "#02E8CD", SOFT = "rgba(247,244,238,.72)", HAIR = "rgba(247,244,238,.26)";
 
+  /**
+   * The colours that change with the theme.
+   *
+   * In the app the card wears the theme the listener chose: that palette's
+   * accent for the labels and the wave, its dots for the towns, its stars and
+   * its glow round the Earth. Handed no theme, as the site's own pictures are
+   * made, it wears the site's. The ground stays onyx and the words bone in
+   * every theme: the palettes are accents on a dark globe, and the name has to
+   * be read on all of them.
+   *
+   * Only a six-digit hex colour is taken. Anything else falls back, so a
+   * palette that ever held a name or a variable could not blank the card.
+   */
+  const HEX = /^#[0-9a-f]{6}$/i;
+  const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(",");
+  function lookOf(look) {
+    const pick = (v, d) => (HEX.test(v || "") ? v : d);
+    const accent = pick(look?.accent, AQUA);
+    return {
+      accent,
+      dot: pick(look?.dot, accent),
+      star: rgbOf(pick(look?.star, BONE)),
+      glow: rgbOf(pick(look?.atmosphere, "#78AAFF")),
+    };
+  }
+
   /** Wrap to at most `lines` lines, ellipsing only if it truly will not fit. */
   function wrap(ctx, text, maxWidth, lines) {
     const words = String(text).split(/\s+/).filter(Boolean);
@@ -210,10 +236,11 @@
    * own town ringed, and the words set over it. It is the picture the posts
    * and the homepage use, so a card in a timeline reads as AuralFM at a glance.
    *
-   * The colours are the site's and do not follow the app's palette: a card
-   * leaves the app, and outside it there is one AuralFM.
+   * The colours follow the theme it is handed (lookOf), and are the site's
+   * when it is handed none.
    */
-  function draw(now, shape) {
+  function draw(now, shape, look) {
+    const C = lookOf(look);
     const [W, H] = SHAPES[shape] || SHAPES.post;
     const wide = W > H, story = H > 1500, square = W === H;
     const cv = document.createElement("canvas");
@@ -235,7 +262,7 @@
     for (let i = 0; i < seedFrom.length; i++) seed = (seed * 31 + seedFrom.charCodeAt(i)) >>> 0;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
     for (let i = 0, n = Math.round(W * H / 2400); i < n; i++) {
-      ctx.fillStyle = `rgba(247,244,238,${(0.1 + rnd() * 0.6).toFixed(3)})`;
+      ctx.fillStyle = `rgba(${C.star},${(0.1 + rnd() * 0.6).toFixed(3)})`;
       ctx.beginPath(); ctx.arc(rnd() * W, rnd() * H, rnd() * 1.3 + 0.3, 0, Math.PI * 2); ctx.fill();
     }
 
@@ -247,8 +274,8 @@
     const R = wide ? 430 : story ? 750 : square ? 560 : 650;
     const CX = Math.round(wide ? W - 300 : W * 0.62), CY = Math.round(wide ? 300 : TOP + (END - TOP) * (square ? 0.32 : 0.34));
     const glow = ctx.createRadialGradient(CX, CY, R * 0.96, CX, CY, R * 1.14);
-    glow.addColorStop(0, "rgba(120,170,255,.30)");
-    glow.addColorStop(1, "rgba(120,170,255,0)");
+    glow.addColorStop(0, `rgba(${C.glow},.30)`);
+    glow.addColorStop(1, `rgba(${C.glow},0)`);
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(CX, CY, R * 1.14, 0, Math.PI * 2); ctx.fill();
     drawGlobe(ctx, CX, CY, R, lat0, lon0, now.sun || { lat: 0, lng: 0 });
@@ -256,7 +283,7 @@
     // Every town that broadcasts, where it is on this side of the planet.
     if (Array.isArray(now.towns)) {
       const rad = Math.PI / 180, sinφ0 = Math.sin(lat0 * rad), cosφ0 = Math.cos(lat0 * rad);
-      ctx.fillStyle = AQUA;
+      ctx.fillStyle = C.dot;
       for (const t of now.towns) {
         const φ = t.lat * rad, dλ = (t.lng - lon0) * rad;
         const facing = sinφ0 * Math.sin(φ) + cosφ0 * Math.cos(φ) * Math.cos(dλ);
@@ -270,7 +297,7 @@
     }
     if (placed) {
       for (const [rr, a, w] of [[26, 0.95, 3], [64, 0.6, 2], [114, 0.32, 2]]) {
-        ctx.strokeStyle = `rgba(247,244,238,${a})`;
+        ctx.strokeStyle = `rgba(${rgbOf(BONE)},${a})`;
         ctx.lineWidth = w;
         ctx.beginPath(); ctx.arc(CX, CY, rr * K, 0, Math.PI * 2); ctx.stroke();
       }
@@ -312,8 +339,8 @@
 
     // The ground comes back up under the words, so they read over land or sea.
     const veil = wide ? ctx.createLinearGradient(M + NAME_W - 80, 0, M + NAME_W + 240, 0) : ctx.createLinearGradient(0, top - 200, 0, top + 80);
-    veil.addColorStop(wide ? 1 : 0, "rgba(12,11,11,0)");
-    veil.addColorStop(wide ? 0 : 1, "rgba(12,11,11,.86)");
+    veil.addColorStop(wide ? 1 : 0, `rgba(${rgbOf(INK)},0)`);
+    veil.addColorStop(wide ? 0 : 1, `rgba(${rgbOf(INK)},.86)`);
     ctx.fillStyle = veil;
     if (wide) ctx.fillRect(0, 0, M + NAME_W + 240, H); else ctx.fillRect(0, top - 200, W, H - top + 200);
 
@@ -323,7 +350,7 @@
     ctx.fillStyle = BONE;
     mono(700, 20);
     ctx.fillText("AURAL.FM", M, HEAD);
-    ctx.fillStyle = AQUA;
+    ctx.fillStyle = C.accent;
     mono(400, 20);
     ctx.textAlign = "right";
     ctx.fillText(now.sdr ? "SHORTWAVE · LIVE" : "ON AIR · LIVE", W - M, HEAD);
@@ -331,7 +358,7 @@
 
     // ── where, the name, what it sounds like, and its sound ─────────────────
     let y = top + 20 * K;
-    ctx.fillStyle = AQUA;
+    ctx.fillStyle = C.accent;
     mono(700, 20);
     const label = (where ? `In ${where}, right now` : "On air right now").toUpperCase();
     ctx.fillText(fits(label) ? label : (city || now.country || "On air").toUpperCase(), M, y);
@@ -347,7 +374,7 @@
       y += 26 * K + SUB * 0.3;
       const bars = now.levels, loudest = Math.max(0.15, ...bars), gap = 4 * K, width = wide ? NAME_W - 150 : inner;
       const bw = (width + gap) / bars.length - gap;
-      ctx.fillStyle = AQUA;
+      ctx.fillStyle = C.accent;
       for (let i = 0; i < bars.length; i++) {
         const h = Math.max(3, Math.max(0.04, Math.min(1, bars[i] / loudest)) * WAVE_H);
         ctx.fillRect(M + i * (bw + gap), y + (WAVE_H - h) / 2, Math.max(1.5, bw), h);
@@ -362,7 +389,7 @@
     }
     const room = (wide ? NAME_W : inner - QR - 24);
     const foot = [
-      [AQUA, city ? `Listen with ${city} →` : "Listen live →"],
+      [C.accent, city ? `Listen with ${city} →` : "Listen live →"],
       [SOFT, `Heard ${stamp} · ${signal}`],
       [SOFT, "Less algorithms. More humans. · auralfm.xyz"],
     ];
@@ -427,7 +454,7 @@
      * Make the card. Waits for the font, because a card drawn before Inter
      * loads is drawn in the system fallback and looks like somebody else's app.
      */
-    async make(now, shape) {
+    async make(now, shape, look) {
       try { await loadFonts(); await document.fonts.ready; } catch { /* draw in whatever we have */ }
       // Loaded once and kept: two megabytes of texture decoded per card would be
       // felt, and these are the same files the globe already has in memory.
@@ -437,7 +464,7 @@
           loadTexture(`vendor/${window.AuralLite ? "lite/" : ""}earth-night.jpg`),
         ]);
       }
-      return draw(now, shape);
+      return draw(now, shape, look);
     },
   };
 })();
