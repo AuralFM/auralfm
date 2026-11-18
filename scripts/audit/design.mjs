@@ -2,6 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES, exploreSrc, readSrc, strings, en } from "./lib.mjs";
 
 // ── one English, not two ─────────────────────────────────────────────────────
@@ -587,15 +589,21 @@ import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES
 // link preview letterboxes it, so the station's name or the code was cut off
 // wherever the card was not a feed post. Each shape is drawn at its own size,
 // and the sheet offers every shape the card can draw.
-// The card wears the site's colours wherever it is made, so it may not read
-// the app's palette, and it draws the towns it is handed.
+// The card wears the theme it is handed: in the app, the listener's own, so a
+// card from Ember is Ember's colours and not the site's aqua. Handed none, it
+// wears the site's. The ground and the name stay onyx and bone in every theme.
+// It draws the towns it is handed.
 {
   const name = "the share card comes in the shape of the place it is posted";
   console.log(`\n${name}`);
   const gaps = [];
   const want = { post: "1080x1350", story: "1080x1920", square: "1080x1080", wide: "1200x630" };
   try {
-    const pen = new Proxy({}, { get: (_, k) => (k === "measureText" ? (t) => ({ width: String(t).length * 9 }) : () => pen), set: () => true });
+    let painted = new Set();
+    const pen = new Proxy({}, {
+      get: (_, k) => (k === "measureText" ? (t) => ({ width: String(t).length * 9 }) : () => pen),
+      set: (_, k, v) => { if (k === "fillStyle" && typeof v === "string") painted.add(v.toUpperCase()); return true; },
+    });
     const box = {
       window: {}, console, Date, Math,
       getComputedStyle: () => ({ getPropertyValue: () => "" }),
@@ -613,14 +621,32 @@ import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES
     }
     if (await box.window.Card.make(now) !== want.post) gaps.push("a card asked for with no shape is not the post");
     if (await box.window.Card.make(now, "banner") !== want.post) gaps.push("a shape the card does not know is not drawn as the post");
+    // Every theme the app has, and none.
+    const { PALETTES } = require(R("src/palettes.js"));
+    const towns = [{ lat: 31.7, lng: 35.2 }];
+    for (const p of PALETTES) {
+      painted = new Set();
+      await box.window.Card.make({ ...now, lat: 31.7, lon: 35.2, towns }, "post", p);
+      if (!painted.has(p.accent.toUpperCase())) gaps.push(`a card made in ${p.name} does not use its accent`);
+      if (!painted.has(p.dot.toUpperCase())) gaps.push(`a card made in ${p.name} does not draw its towns in its dot colour`);
+      if (p.accent.toUpperCase() !== "#02E8CD" && p.dot.toUpperCase() !== "#02E8CD" && painted.has("#02E8CD")) gaps.push(`a card made in ${p.name} still carries the site's aqua`);
+      if (!painted.has("#0C0B0B") || !painted.has("#F7F4EE")) gaps.push(`a card made in ${p.name} lost its onyx ground or its bone name`);
+    }
+    painted = new Set();
+    await box.window.Card.make(now, "post");
+    if (!painted.has("#02E8CD")) gaps.push("a card handed no theme is not in the site's aqua");
+    painted = new Set();
+    await box.window.Card.make(now, "post", { accent: "var(--accent)", dot: "red" });
+    if (!painted.has("#02E8CD")) gaps.push("a theme colour that is not a hex colour reached the card");
   } catch (e) { gaps.push(`card.js did not run: ${e.message}`); }
   const card = readSrc("src/renderer/card.js");
-  if (/getComputedStyle|--accent|--bg\b/.test(card)) gaps.push("the card reads the app's palette, so it changes colour with the theme");
+  if (/getComputedStyle|--accent|--bg\b/.test(card)) gaps.push("the card reads the page's styles, and not the theme it is handed");
+  if (!/Card\.make\(sheetNow, sheetShape, [^)]*palette/.test(readSrc("src/renderer/explore-playback.js"))) gaps.push("the share sheet does not hand the card the listener's theme");
   if (!/now\.towns/.test(card) || !/towns:/.test(readSrc("src/renderer/explore-playback.js"))) gaps.push("the card's Earth has no towns on it");
   const page = readSrc("src/renderer/explore.html");
   for (const shape of Object.keys(want)) if (!new RegExp(`data-shape="${shape}"`).test(page)) gaps.push(`the share sheet does not offer the ${shape} card`);
   // The four buttons were drawn and did nothing: no listener read them.
   if (!/\$\("sheetshape"\)\.addEventListener\("click"/.test(readSrc("src/renderer/explore-playback.js"))) gaps.push("pressing a shape in the share sheet does nothing");
-  gaps.length ? fail(name, gaps.join("; ")) : pass("post, story, square and wide are each drawn at their own size, and the sheet offers all four");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("post, story, square and wide are each drawn at their own size, the sheet offers all four, and the card wears each of the app's themes");
 }
 

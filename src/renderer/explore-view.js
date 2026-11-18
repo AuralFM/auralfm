@@ -48,8 +48,17 @@ function paintGlobeReadout(sunLat, sunLng, m, phase, glyph) {
   el.innerHTML = bits.join(" &nbsp;·&nbsp; ");
 }
 
+/**
+ * A mark on the browser's own timeline for each step of the globe's start
+ * (Performance panel in Chrome, Timelines in Safari's Web Inspector), so what
+ * is slow on a phone is read there and not guessed at from a laptop.
+ */
+const lap = (step) => { try { performance.mark(`globe:${step}`); } catch { /* no User Timing here */ } };
+
 async function initGlobe() {
+  lap("start");
   await loadGlobeLib();
+  lap("library");
   const raw = await window.auralfm.globePoints();      // [i, lon, lat, count]
   globePts = raw.map(([i, lng, lat, count]) => ({ i, lng, lat, count }));
 
@@ -111,6 +120,7 @@ async function initGlobe() {
     // the entire data array rather than the dot under the cursor. Wiring it up
     // meant every click on the globe selected an arbitrary place.
     ;
+  lap("built");
   styleRings();
 
   // Before setupDayNight: the read-outs are global facts about the sun, the moon
@@ -118,6 +128,7 @@ async function initGlobe() {
   mountReadouts();
   updateSun();
   await setupDayNight();
+  lap("day and night");
   // A slow drift — the Earth is never truly still, and a dead-static globe reads
   // as a screenshot. Slow enough not to fight you while you aim.
   //
@@ -135,6 +146,7 @@ async function initGlobe() {
   globe.controls().addEventListener("start", () => { holdCentre = false; handOn = true; handFrom = globe.pointOfView(); });
   // The globe coasts on after the finger lifts; the list follows it to rest.
   globe.controls().addEventListener("end", () => { handOn = false; handUntil = Date.now() + HAND_COAST_MS; restSoon(); });
+  governDraws();
   applyLod(true);
   paintRings();                          // the still rings wait for the Earth's texture
 
@@ -229,7 +241,9 @@ async function initGlobe() {
   driftChosen = false;                   // what was read is not a hand on the switch
   if (layers.clouds) startLiveImagery();
   syncWsprTimer();
+  lap("layers");
   drawSky();
+  lap("sky");
   tickISS();
   tickSatellites();
   clearInterval(issTimer);
@@ -257,6 +271,7 @@ async function initGlobe() {
    * someone staring at a logo.
    */
   requestAnimationFrame(() => requestAnimationFrame(() => {
+    lap("ready");
     window.auralfm.exploreReady?.();
   }));
 }
@@ -297,6 +312,8 @@ const LOD_TIERS = [
 let lodTier = -1;
 
 let lodCentre = null;
+// What the dots on the globe were built from: which, and how each is drawn.
+let lodLook = null;
 
 /**
  * Which dots to draw.
@@ -385,7 +402,23 @@ function applyLod(force = false) {
     for (const n of near) shown.push(n.r);
     if (sdrSel && !shown.includes(sdrSel)) shown.push(sdrSel);
   }
-  globe.pointsData(shown);
+  /**
+   * The same dots drawn the same way are not built again.
+   *
+   * A rebuild is one merged mesh of every dot, and it is not cheap: 0.4 s to
+   * 1.2 s of blocked page on a 2019 Intel laptop under load, for 700 dots. The
+   * globe's start asked for it twice with nothing changed between, and so does
+   * any caller that forces a rebuild to be safe. What a dot looks like is its
+   * place and count, the selection, the dot size and the palette, so those
+   * are what is compared.
+   */
+  const look = `${selection.placeIndex}|${sdrSel?.host || ""}|${dotRadius({ count: 1 })}|${palette?.dot || ""}|${palette?.rx || ""}|`
+             + shown.map((d) => (d.kind === "sdr" ? `r${d.host}` : `${d.i}:${d.count}`)).join(",");
+  if (look !== lodLook) {
+    lodLook = look;
+    globe.pointsData(shown);
+    wakeGlobe();
+  }
   if (ringsCut) paintRings();            // the budget follows the camera too
   // No place-count read-out: it told you nothing you could act on, and it was
   // the longest thing in the status bar.
@@ -618,7 +651,7 @@ function applyPointVisibility(prev) {
     // Hide, keep the geometry. Falls back to emptying if the group could not be
     // found, which is correct but slower — never wrong, just not the fast path.
     if (grp) grp.visible = false;
-    else globe.pointsData([]);
+    else { globe.pointsData([]); lodLook = null; }
     return;
   }
   if (grp) grp.visible = true;
@@ -642,6 +675,7 @@ function applyLayers(next) {
   if (bar) bar.hidden = !layers.statusBar;
   paintLayers();          // the inspector reflects whatever main just confirmed
   if (!globe) return;
+  wakeGlobe();
 
   if (layers.clouds) startLiveImagery();
   withShader((sh) => {

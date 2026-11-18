@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "auralfm-web",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeExecutable": "/Users/meltonbell/.local/node/bin/node",
       "runtimeArgs": [
         "scripts/serve-web.mjs",
         "8765"
@@ -14,7 +14,7 @@
       "name": "auralfm-halftone",
       "runtimeExecutable": "/usr/bin/env",
       "runtimeArgs": [
-        "PATH=/Users/mb3/.local/node/bin:/usr/bin:/bin",
+        "PATH=/Users/meltonbell/.local/node/bin:/usr/bin:/bin",
         "TOOLCRAFT_DEV_PORT=8790",
         "npm",
         "--prefix",
@@ -26,7 +26,7 @@
     },
     {
       "name": "auralfm-home",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeExecutable": "/Users/meltonbell/.local/node/bin/node",
       "runtimeArgs": [
         "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
         "8766",
@@ -36,7 +36,7 @@
     },
     {
       "name": "auralfm-docs",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeExecutable": "/Users/meltonbell/.local/node/bin/node",
       "runtimeArgs": [
         "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
         "8768",
@@ -46,7 +46,7 @@
     },
     {
       "name": "auralfm-blog",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeExecutable": "/Users/meltonbell/.local/node/bin/node",
       "runtimeArgs": [
         "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
         "8767",
@@ -56,7 +56,7 @@
     },
     {
       "name": "auralfm-learn",
-      "runtimeExecutable": "/Users/mb3/.local/node/bin/node",
+      "runtimeExecutable": "/Users/meltonbell/.local/node/bin/node",
       "runtimeArgs": [
         "/Volumes/HARD DRIVE #2/auralfm-site/scripts/serve-web.mjs",
         "8769",

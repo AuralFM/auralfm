@@ -55,6 +55,7 @@ const en = {
   "ctl.close": "Close",
   "ctl.changeSource": "Local or world news",
   "ctl.lockStation": "Lock this station",
+  "ctl.lockedBrowse": "Locked while you browse",
   "ctl.localHeadlines": "Headlines",
 
   // menus
@@ -630,6 +631,7 @@ const es = {
   "ctl.close": "Cerrar",
   "ctl.changeSource": "Cambiar fuente",
   "ctl.lockStation": "Fijar esta emisora mientras exploras",
+  "ctl.lockedBrowse": "Fijada mientras exploras",
   "ctl.localHeadlines": "Titulares locales",
 
   "menu.about": "Acerca de AuralFM",
@@ -934,6 +936,7 @@ const fr = {
   "ctl.close": "Fermer",
   "ctl.changeSource": "Changer de source",
   "ctl.lockStation": "Garder cette station pendant la navigation",
+  "ctl.lockedBrowse": "Gardée pendant la navigation",
   "ctl.localHeadlines": "Actualités locales",
 
   "menu.about": "À propos de AuralFM",
@@ -1238,6 +1241,7 @@ const de = {
   "ctl.close": "Schließen",
   "ctl.changeSource": "Quelle wechseln",
   "ctl.lockStation": "Diesen Sender beim Stöbern beibehalten",
+  "ctl.lockedBrowse": "Beim Stöbern beibehalten",
   "ctl.localHeadlines": "Lokale Schlagzeilen",
 
   "menu.about": "Über AuralFM",
@@ -1542,6 +1546,7 @@ const pt = {
   "ctl.close": "Fechar",
   "ctl.changeSource": "Trocar fonte",
   "ctl.lockStation": "Manter esta estação enquanto você navega",
+  "ctl.lockedBrowse": "Fixada enquanto você navega",
   "ctl.localHeadlines": "Manchetes locais",
 
   "menu.about": "Sobre o AuralFM",
