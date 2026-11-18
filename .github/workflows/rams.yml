@@ -29,6 +29,12 @@ jobs:
         with:
           fetch-depth: 0
       - if: env.RAMS_API_KEY != ''
+        # The action is part of Rams' Team plan, and the key here is on a Solo
+        # plan: it stops with "The CI Action is part of the Team plan" before
+        # it reviews anything. That is the account, not the pull request, so it
+        # does not fail the check. Reviews are run through the Rams MCP server
+        # before a commit (CLAUDE.md). Take this line out if the plan changes.
+        continue-on-error: true
         uses: rams-design/rams-action@34ce30e1ab4b6e1568004d2b5e58f80e75066c39 # v1
         with:
           api-key: ${{ secrets.RAMS_API_KEY }}
