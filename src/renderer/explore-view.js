@@ -135,6 +135,7 @@ async function initGlobe() {
   globe.controls().addEventListener("start", () => { holdCentre = false; handOn = true; handFrom = globe.pointOfView(); });
   // The globe coasts on after the finger lifts; the list follows it to rest.
   globe.controls().addEventListener("end", () => { handOn = false; handUntil = Date.now() + HAND_COAST_MS; restSoon(); });
+  governDraws();
   applyLod(true);
   paintRings();                          // the still rings wait for the Earth's texture
 
@@ -386,6 +387,7 @@ function applyLod(force = false) {
     if (sdrSel && !shown.includes(sdrSel)) shown.push(sdrSel);
   }
   globe.pointsData(shown);
+  wakeGlobe();
   if (ringsCut) paintRings();            // the budget follows the camera too
   // No place-count read-out: it told you nothing you could act on, and it was
   // the longest thing in the status bar.
@@ -642,6 +644,7 @@ function applyLayers(next) {
   if (bar) bar.hidden = !layers.statusBar;
   paintLayers();          // the inspector reflects whatever main just confirmed
   if (!globe) return;
+  wakeGlobe();
 
   if (layers.clouds) startLiveImagery();
   withShader((sh) => {

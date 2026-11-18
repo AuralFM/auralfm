@@ -300,3 +300,97 @@ import { fail, pass, readSrc } from "./lib.mjs";
     fail(name, `could not run the camera: ${e.message}`);
   }
 }
+
+// ── a globe at rest is not drawn on every frame ─────────────────────────────
+// globe.gl draws on every animation frame for as long as the page is open. On
+// the web player, with the drift off and no rings, that was 60 identical draws
+// a second, on a canvas of 2048x1368 for a 1024x684 window. The draw is now
+// held back unless the picture can have changed, and the web player draws at
+// most 1.5 device pixels to a CSS pixel. The first version of this woke on
+// every flush of the listeners, eight times a second, and so never rested.
+// The second held back the draw and not the clear before it, and showed a
+// black globe at rest.
+{
+  const name = "a globe at rest is not drawn on every frame";
+  console.log(`\n${name}`);
+  const gaps = [];
+  try {
+    let clock = 1e6, draws = 0, clears = 0, others = 0, auto = false, ringsNow = [];
+    const scene = {}, camera = {}, heard = {};
+    const renderer = { clear: () => { clears++; }, render: (s) => { s === scene ? draws++ : others++; } };
+    // As three-render-objects sets it up: one pass, which clears and then draws.
+    const composer = { render: () => { renderer.clear(); renderer.render(scene, camera); } };
+    const controls = { get autoRotate() { return auto; }, addEventListener: (ev, fn) => { heard[ev] = fn; } };
+    const globe = new Proxy({}, { get: (_, k) => (k === "renderer" ? () => renderer : k === "scene" ? () => scene
+      : k === "camera" ? () => camera : k === "controls" ? () => controls
+      : k === "postProcessingComposer" ? () => composer
+      : k === "pointOfView" ? () => ({ lat: 0, lng: 0, altitude: 2.5 })
+      : k === "ringsData" ? (d) => { if (d === undefined) return ringsNow; ringsNow = d; return globe; } : () => globe) });
+    const box = {
+      globe, layers: { listeners: true }, peers: [], window: {}, palette: null, hexA: () => "", handOn: false,
+      Date: { now: () => clock }, $: () => ({ addEventListener() {} }), document: { addEventListener() {} },
+      matchMedia: () => ({ matches: false }),
+    };
+    vm.runInNewContext(readSrc("src/renderer/explore-trackers.js"), box);
+    vm.runInNewContext("governDraws()", box);
+    /** Draws a second over `secs` of a 60 Hz screen, with `each` run before every frame. */
+    const run = (secs, each) => {
+      const from = draws;
+      for (let i = 0; i < secs * 60; i++) { clock += 1000 / 60; each?.(i); composer.render(); }
+      return (draws - from) / secs;
+    };
+    const launch = run(1);
+    if (launch < 59) gaps.push(`the launch drew ${launch} frames a second, and textures are still arriving then`);
+    clock += 10000;
+    const rest = run(10);
+    if (rest > 6) gaps.push(`at rest it drew ${rest} frames a second`);
+    if (rest < 2) gaps.push(`at rest it drew ${rest} frames a second, too few to show a change nobody announced`);
+
+    heard.change();
+    const hand = run(0.4);
+    if (hand < 59) gaps.push(`with the camera moved by hand it drew ${hand} frames a second`);
+    clock += 5000;
+
+    auto = true;
+    const drift = run(5, () => heard.change());
+    if (drift > 36 || drift < 24) gaps.push(`the idle drift drew ${drift} frames a second, not every other frame`);
+    auto = false;
+    clock += 5000;
+
+    const peer = (i, geohash, lat, lon) => ({ pubkey: String(i), lat, lon, geohash, live: false, label: "" });
+    const three = () => [peer(1, "eyck", 10, 10), peer(2, "gcpv", 20, 20), peer(3, "9q8y", 30, 30)];
+    box.peers = three();
+    vm.runInNewContext("paintRings()", box);
+    if (ringsNow.length !== 3) throw new Error("paintRings drew no rings to pace");
+    clock += 5000;
+    // The same listeners, flushed eight times a second.
+    const rings = run(5, (i) => { if (i % 8 === 0) { box.peers = three(); vm.runInNewContext("paintRings()", box); } });
+    if (rings > 36) gaps.push(`listeners flushed with nobody new kept it at ${rings} frames a second`);
+    if (rings < 24) gaps.push(`rings spreading drew ${rings} frames a second`);
+    box.peers = [];
+    vm.runInNewContext("paintRings()", box);
+    clock += 2000;
+    if (run(2) < 24) gaps.push("a dropped ring, still spreading, was left undrawn");
+    clock += 60000;
+    if (run(5) > 6) gaps.push("it never came back to rest after the last ring had gone");
+
+    // The canvas is cleared before each draw. A frame held back after its
+    // clear is a black globe, which is what the first version showed at rest.
+    if (clears !== draws) gaps.push(`the canvas was cleared ${clears} times and drawn ${draws}: a frame held back was left black`);
+    const before = others;
+    for (let i = 0; i < 10; i++) renderer.render({}, camera);
+    if (others - before !== 10) gaps.push("a picture that is not the globe's own was held back too");
+
+    const t = readSrc("src/renderer/explore-trackers.js");
+    const cap = Number(t.match(/const WEB_MAX_RATIO = ([\d.]+);/)?.[1]);
+    if (!(cap <= 1.5)) gaps.push(`the web player draws up to ${cap} device pixels to a CSS pixel`);
+    if (!/"AuralLite" in window \? WEB_MAX_RATIO : Infinity/.test(t) || !/Math\.min\(window\.devicePixelRatio \|\| 1, most,/.test(t))
+      gaps.push("sizeGlobe no longer holds the web player's pixel ratio to the cap");
+    const v = readSrc("src/renderer/explore-view.js");
+    if (!/async function initGlobe\(\)[\s\S]*?\n  governDraws\(\);[\s\S]*?\n}\n/.test(v)) gaps.push("initGlobe never starts the governor");
+    gaps.length ? fail(name, gaps.join("; "))
+      : pass(`at rest ${rest} draws a second, the drift and the rings every other frame, a hand every frame; the web draws ${cap} pixels to one at most`);
+  } catch (e) {
+    fail(name, `could not run the governor: ${e.message}`);
+  }
+}
