@@ -40,9 +40,16 @@ const D = "auralfm:favorites";
  * Three relays that take a write from a key they have never seen. Not the chat's
  * anchors: one of those is paid, and a list that only two relays hold is a list
  * one outage away from being unreadable.
+ *
+ * relay.damus.io is not one of them: AT&T's home network protection lists it as
+ * malware, resets the connection and warns the account holder each time. Two of
+ * the three are unchanged, so a device on an older version still meets this one.
  */
-const RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://relay.damus.io"];
+const RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://offchain.pub"];
 const WAIT_MS = 7000;
+/** A relay that failed while another answered is left alone: this long, doubling. */
+const REST_MS = 10 * 60e3;
+const REST_MAX = 6 * 3600e3;
 /** Relays refuse an event much past 64 KB; this is the sealed text, base64. */
 const MAX_CONTENT = 60000;
 /** How long an un-star is remembered, so a device away for a season still hears of it. */
@@ -231,6 +238,25 @@ const status = () => {
   return { on: !!j, at: j?.at || null, error: j?.error || null, count: j ? Object.keys(j.seen || {}).length : 0 };
 };
 
+/**
+ * Relays that failed while another answered: url -> { until, ms }.
+ *
+ * A network that refuses one relay refuses it every round, and some say so to
+ * the person who pays for it. Only a relay that failed *alone* is rested: when
+ * nothing answers, the device is offline and no relay is to blame. Nor is the
+ * list ever rested down to nothing.
+ */
+const resting = new Map();
+function awake(now) {
+  const up = relays.filter((url) => !(resting.get(url)?.until > now));
+  return up.length ? up : relays;
+}
+function note(url, ok, now) {
+  if (ok) return void resting.delete(url);
+  const ms = Math.min(REST_MAX, (resting.get(url)?.ms || REST_MS / 2) * 2);
+  resting.set(url, { until: now + ms, ms });
+}
+
 async function round() {
   const j = read();
   if (!j) return status();
@@ -238,11 +264,13 @@ async function round() {
   // No list at all is not an empty list: nothing is decided from a failed read.
   if (!Array.isArray(local)) return status();
   const k = keys(j.secret);
-  const lines = relays.map((url) => dial(url, k.pk));
+  const lines = awake(Date.now()).map((url) => dial(url, k.pk));
   const fail = (error) => { const now = read(); if (now) write({ ...now, error }); return status(); };
   try {
     const reached = (await Promise.all(lines.map((l) => l.got.then((ok) => (ok ? l : null))))).filter(Boolean);
-    if (!reached.length) return fail("offline");
+    // Nothing answered: the next round tries every relay, the rested ones too.
+    if (!reached.length) { resting.clear(); return fail("offline"); }
+    for (const l of lines) note(l.url, reached.includes(l), Date.now());
 
     // The newest copy any relay holds that this secret opens.
     let top = null, items = null;

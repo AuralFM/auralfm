@@ -224,10 +224,11 @@
   function setState(patch) {
     if (!patch || typeof patch !== "object") return false;
     const merged = { ...getState() };
+    const starred = "favorites" in patch && JSON.stringify(patch.favorites) !== JSON.stringify(merged.favorites);
     for (const k of STATE_KEYS) if (k in patch) merged[k] = patch[k];
     write("state", merged);
     emit("state", merged);
-    if ("favorites" in patch) favsync?.touch();
+    if (starred) favsync?.touch();       // sent is not changed (src/main/ipc-app.js)
     return true;
   }
 

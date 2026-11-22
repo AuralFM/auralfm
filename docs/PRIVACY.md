@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 17 October 2026**
+**Last updated: 22 November 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -241,8 +241,10 @@ account.
   and position, and when you starred or un-starred it). Nothing else: no
   listening history, no settings, no chat.
 - **Where it goes:** to three public relays (nos.lol, relay.primal.net and
-  relay.damus.io), as one note that replaces itself each time. A relay keeps
-  the newest copy, not a history.
+  offchain.pub), as one note that replaces itself each time. A relay keeps
+  the newest copy, not a history. Versions before 22 November 2026 used
+  relay.damus.io in place of offchain.pub; a sealed note written there stays
+  until that relay drops it.
 - **What a relay can see:** your network address (IP address) when a device
   syncs, the time, the size of the note, and a key made only for this. It
   cannot read the list: the list is sealed on your device before it leaves,

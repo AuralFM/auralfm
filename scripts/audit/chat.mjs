@@ -621,6 +621,83 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
     : pass("an empty list fills and never erases, a joining device keeps its stars, an un-star travels, the relay's copy is unreadable, and Erase turns it off");
 }
 
+// ── a relay a network blocks is left alone ──────────────────────────────────
+// 22 Nov 2026. AT&T's home network protection resets relay.damus.io as malware
+// and warns the account holder each time. It was one of the three relays that
+// hold the favorites, every round dialled it again, and a round ran on every
+// station picked while Lock was on: setLocked sent the whole state back, so the
+// favorites counted as changed. Fake relays, and the real rounds over them.
+{
+  const name = "a relay a network blocks is left alone";
+  console.log(`\n${name}`);
+  const { createRequire } = await import("node:module");
+  const os = await import("node:os");
+  const sync = createRequire(import.meta.url)(R("src/favsync.js"));
+  const gaps = [], BLOCKED = "relay.damus.io";
+  const hosts = sync.RELAYS.map((u) => new URL(u).host);
+  if (hosts.includes(BLOCKED)) gaps.push(`favorites sync still dials ${BLOCKED}`);
+  if (fs.readFileSync(R("data/relays.json"), "utf8").includes(BLOCKED)) gaps.push(`the chat's directory still offers ${BLOCKED}`);
+  if (hosts.length < 3) gaps.push(`the list is held by ${hosts.length} relays, not three`);
+  const said = (readSrc("docs/PRIVACY.md").match(/to three public relays \(([\s\S]*?)\)/) || ["", ""])[1].split(/,|\band\b/).map((x) => x.trim()).filter(Boolean);
+  if ([...said].sort().join() !== [...hosts].sort().join()) gaps.push(`PRIVACY.md names ${said.join(", ") || "none"}; the app dials ${hosts.join(", ")}`);
+  if (!/const starred =[\s\S]{0,800}if \(ok && starred\) favsync\.touch\(\)/.test(readSrc("src/main/ipc-app.js"))) gaps.push("the desktop syncs when the favorites are sent, changed or not");
+  if (!/const starred =[\s\S]{0,300}if \(starred\) favsync\?\.touch\(\)/.test(readSrc("web/bridge.js"))) gaps.push("the web app syncs when the favorites are sent, changed or not");
+
+  const refuse = new Set(), dialled = [];
+  class FakeRelay {
+    constructor(url) {
+      dialled.push(url); this.readyState = 0;
+      setTimeout(() => { if (refuse.has(url)) { this.readyState = 3; this.onerror?.(); this.onclose?.(); } else { this.readyState = 1; this.onopen?.(); } }, 0);
+    }
+    send(text) {
+      const m = JSON.parse(text);
+      setTimeout(() => this.onmessage?.({ data: JSON.stringify(m[0] === "REQ" ? ["EOSE", m[1]] : ["OK", m[1].id, true, ""]) }), 0);
+    }
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  }
+  const realWs = globalThis.WebSocket, realNow = Date.now;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "auralfm-sync-"));
+  let skew = 0;
+  globalThis.WebSocket = FakeRelay;
+  Date.now = () => realNow() + skew;
+  const three = ["wss://a.test", "wss://b.test", "wss://blocked.test"];
+  const pass1 = async () => { dialled.length = 0; await sync.sync(); return dialled.map((u) => new URL(u).hostname.split(".")[0]).sort().join(","); };
+  try {
+    sync.init(dir, { get: () => [], set: () => {}, changed: () => {} }, { relays: three });
+    await sync.start();
+    if (dialled.length !== 3) gaps.push(`the first round dialled ${dialled.length} of 3 relays: this check is blind`);
+    refuse.add("wss://blocked.test");
+    await pass1();
+    const next = await pass1();
+    if (next !== "a,b") gaps.push(`the round after a refusal dialled ${next}`);
+    skew += 11 * 60e3;
+    if (await pass1() !== "a,b,blocked") gaps.push("a relay that was refused is never tried again");
+    skew += 11 * 60e3;
+    if (await pass1() !== "a,b") gaps.push("a relay refused twice is not left alone for longer");
+    skew += 24 * 3600e3;
+    refuse.clear();
+    await pass1();
+    if (await pass1() !== "a,b,blocked") gaps.push("a relay that answers again is still left alone");
+    refuse.add("wss://blocked.test");
+    await pass1();
+    skew += 11 * 60e3;
+    if (await pass1() !== "a,b,blocked") gaps.push("a relay that answered again is still held to its old wait");
+    // Offline: nothing answers, and no relay is to blame.
+    for (const u of three) refuse.add(u);
+    await pass1();
+    refuse.clear();
+    if (await pass1() !== "a,b,blocked") gaps.push("a device that was offline comes back to fewer relays");
+  } catch (e) {
+    gaps.push(`the module threw: ${e.message}`);
+  } finally {
+    try { sync.stop(); } catch {}
+    globalThis.WebSocket = realWs; Date.now = realNow;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass(`the list is held by ${hosts.join(", ")}, as PRIVACY.md says; a relay refused alone waits 10 minutes, then longer; being offline blames none`);
+}
+
 // ── the chat counts who is here, not who is listening ───────────────────────
 // 13 Oct 2026. The rail read "3 listening". The number is everyone the public
 // relays show in that cell, and a relay carries other apps: the count never
