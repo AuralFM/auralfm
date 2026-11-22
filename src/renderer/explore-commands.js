@@ -48,7 +48,7 @@ function describeMode() {
     }
 
     if (cmd.needsName) {
-      const frag = rest.split(" ")[0] || "";
+      const frag = splitName(rest)[0];
       const one = matchOne(frag);
       if (one) {
         hideNames();
@@ -197,11 +197,10 @@ const COMMANDS = {
     needsName: true,
     privately: true,
     run: async (rest) => {
-      const [first, ...words] = (rest || "").trim().split(" ");
+      const [first, body] = splitName(rest);
       const who = findPerson(first, "/msg");
       if (!who) return;
       await enterDm(who);
-      const body = words.join(" ").trim();
       if (!body) {
         return systemLine(`Private with ${name(who)}. Esc leaves.`);
       }
@@ -531,9 +530,10 @@ function wireCommands() {
       // this composer could fail, and the one that happened most.
       if (!cmd) { describeMode(); return systemLine(`${word} is not a command. Try /help.`); }
       // The name is the part that fails, so it is checked before anything is lost.
-      if (cmd.needsName && !matchOne((rest[0] || ""))) {
+      const called = cmd.needsName ? splitName(rest.join(" "))[0] : "";
+      if (cmd.needsName && !matchOne(called)) {
         describeMode();                    // the mode line and picker already say why
-        return findPerson(rest[0] || "", word) && undefined;
+        return findPerson(called, word) && undefined;
       }
       const out = await cmd.run(rest.join(" "));
       if (!out || !out.send) { input.value = ""; describeMode(); return; }

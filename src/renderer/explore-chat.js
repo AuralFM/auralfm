@@ -323,6 +323,24 @@ function badge(glyph, label) {
  */
 let viewingCell = null;      // set while browsing a cell we are not listening to
 
+/**
+ * The way in, while chat is off.
+ *
+ * It is off by default and stays off until this, or Settings, says otherwise:
+ * the button is the asking, and the card says what others will see first. "Not
+ * now" is kept on this device, so the card asks once and not on every station.
+ * Only where a room could open: something playing, somewhere.
+ */
+const CHATOFF_KEY = "auralfm.chatoff.notnow";
+function paintChatOff(prefs, at) {
+  const card = $("chatoff");
+  if (!card) return;
+  let declined = false;
+  try { declined = localStorage.getItem(CHATOFF_KEY) === "1"; } catch { /* no storage: ask again */ }
+  card.hidden = !(prefs && prefs.presence !== true && !declined
+                  && at && typeof at.lat === "number" && typeof at.lon === "number");
+}
+
 let chatHost = false;        // the room on screen is a show's town, not a station's
 async function syncChat(prefs) {
   // A host is in their show's town (explore-studio.js), whatever was playing.
@@ -331,6 +349,7 @@ async function syncChat(prefs) {
   const want = !!(prefs?.presence === true && at
                   && typeof at.lat === "number" && typeof at.lon === "number");
   $("chat").hidden = !want;
+  paintChatOff(prefs, at);
   window.AuralStudio?.room?.();
   window.AuralShows?.layer();   // "Show other listeners" decides whether shows are looked for
   // Moving between a station's room and the show's is a new room even though
@@ -429,6 +448,15 @@ function paintComposer() {
 }
 
 function wireChat() {
+  $("chatoffgo").onclick = async () => {
+    await window.auralfm.setPrefs({ presence: true });
+    $("chatinput")?.focus({ preventScroll: true });   // the card that was pressed has gone
+  };
+  $("chatoffno").onclick = () => {
+    try { localStorage.setItem(CHATOFF_KEY, "1"); } catch { /* asked again next time */ }
+    $("chatoff").hidden = true;
+    $("q")?.focus({ preventScroll: true });
+  };
   window.auralfm.onPeers((list) => {
     peers = Array.isArray(list) ? list : [];
     window.AuralShows?.peers(peers);
