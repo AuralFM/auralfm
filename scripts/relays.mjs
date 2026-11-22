@@ -98,10 +98,18 @@ const csv = await res.text();
 
 const rows = [];
 /**
- * Never offered to a listener: home networks block it and warn about it.
- * relay.damus.io is listed as malware by AT&T's home network protection.
+ * Never offered to a listener: a network blocks it, and some warn the person
+ * who pays for the line each time it is dialled.
+ *
+ * The first four are reset by AT&T's home network protection, by name: the same
+ * server answers a handshake that asks for any other name. The last two are
+ * refused as malware by Cloudflare's filtering resolver (1.1.1.2). Found by
+ * dialling all 619 once; nothing here says a relay is in fact harmful.
  */
-const BLOCKED = new Set(["relay.damus.io"]);
+const BLOCKED = new Set([
+  "relay.damus.io", "relay.bulbasaur.fun", "nostr.mom", "relay.nostr.com",
+  "relay.beginningend.com", "groups.beginningend.com",
+]);
 
 const seen = new Set();
 for (const line of csv.split(/\r?\n/).slice(1)) {
