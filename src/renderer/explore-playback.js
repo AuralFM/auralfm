@@ -452,7 +452,9 @@ function setLocked(on) {
   // Through the strings, as the markup's own title is (data-i18n-title): a
   // bare English title here replaced the translated one on the first press.
   b.title = on ? t("ctl.lockedBrowse", "Locked while you browse") : t("ctl.lockStation", "Lock this station");
-  window.auralfm.getState().then((st) => window.auralfm.setState({ ...(st || {}), locked: on }));
+  // Only what changed. Sending the whole state back sent the favorites with it,
+  // and picking a station while locked started a favorites sync every time.
+  window.auralfm.setState({ locked: on });
 }
 
 /**

@@ -60,9 +60,11 @@ import { R, rel, fail, pass, skip, renderers, main, readSrc, strings } from "./l
     const js = fs.readFileSync(R(`src/renderer/${f}`), "utf8");
     for (const m of js.matchAll(/setState\(\s*([^)]{0,40})/g)) {
       const arg = m[1].trim();
-      // An object literal, and not one that just re-spreads the window's own
-      // state — `{...state}` is the same snapshot wearing braces.
-      if (!arg.startsWith("{") || /\.\.\.\s*state\b/.test(arg)) {
+      // An object literal, and not one that spreads another object into it:
+      // `{...state}` is the same snapshot wearing braces, and so is
+      // `{...(st || {}), locked}`, which named it something else and went by.
+      // The popover's persist(patch) is the one spread of something already a patch.
+      if (!arg.startsWith("{") || /\.\.\.(?!patch\b)/.test(arg)) {
         problems.push(`${f} calls setState(${arg.slice(0, 20)}…) — send a patch, not a snapshot`);
       }
     }

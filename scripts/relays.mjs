@@ -97,6 +97,12 @@ if (!res.ok) throw new Error(`georelays: HTTP ${res.status}`);
 const csv = await res.text();
 
 const rows = [];
+/**
+ * Never offered to a listener: home networks block it and warn about it.
+ * relay.damus.io is listed as malware by AT&T's home network protection.
+ */
+const BLOCKED = new Set(["relay.damus.io"]);
+
 const seen = new Set();
 for (const line of csv.split(/\r?\n/).slice(1)) {
   const [host, lat, lon] = line.split(",");
@@ -112,7 +118,7 @@ for (const line of csv.split(/\r?\n/).slice(1)) {
   if (!bare || bare.includes(" ")) continue;
   // Skip anything that is not a plausible hostname — a few rows are junk.
   if (!/^[a-z0-9.-]+(:\d+)?$/i.test(bare)) continue;
-  if (seen.has(bare)) continue;
+  if (seen.has(bare) || BLOCKED.has(bare.toLowerCase())) continue;
   seen.add(bare);
 
   rows.push([`wss://${bare}`, +la.toFixed(3), +lo.toFixed(3)]);
@@ -235,6 +241,7 @@ if (WITH_NIP66) {
 
   for (const [url, e] of latest) {
     if (!BARE_HOST.test(url) || NOT_A_RELAY.test(url)) continue;
+    if (BLOCKED.has(url.replace(/^wss:\/\//, "").replace(/[:/].*$/, ""))) continue;
     if (have.has(url)) continue;
     if ((now - e.created_at) / 86400 > MAX_REPORT_AGE_DAYS) continue;
 

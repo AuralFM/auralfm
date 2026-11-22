@@ -68,13 +68,17 @@ module.exports = function register(ctx) {
     const current = load();
     const merged = { ...current };
     const touched = [];
+    // Sent is not changed: a window that sends the list it already had must not
+    // start a round of favorites sync (relays opened, for nothing to say).
+    const starred = "favorites" in incoming
+      && JSON.stringify(incoming.favorites) !== JSON.stringify(current.favorites);
     for (const k of RENDERER_KEYS) {
       if (k in incoming) { merged[k] = incoming[k]; touched.push(k); }
     }
     const ok = save(merged);
     // Tell every window what the truth is now, so the next patch is built on it.
     if (ok && touched.length) broadcast("state:changed", merged);
-    if (ok && touched.includes("favorites")) favsync.touch();
+    if (ok && starred) favsync.touch();
     return ok;
   });
 
