@@ -606,6 +606,8 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
   .chatpanel .chatnone { display: none; margin: 0; padding: 30px 20px; text-align: center;
     color: var(--label2); font-size: 14px; line-height: 1.5; }
   .chatpanel #chat[hidden] + .chatnone { display: block; }
+  /* On a phone the Chat tab says it, and the rail is the station sheet. */
+  .chatoff { display: none; }
 
   /**
    * Settings is a card like the others.

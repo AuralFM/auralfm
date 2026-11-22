@@ -1003,7 +1003,9 @@ window.auralfm.onShown(() => {
   if (!Array.isArray(state.favorites)) state.favorites = [];
   applyVolume(state.vol ?? 0.8);
 
-  if (state.lastChannel) {
+  // Not over something already tuned: Explore can ask before this window is ready,
+  // and "Press play" then sat beside a station that was playing.
+  if (state.lastChannel && !current) {
     current = state.lastChannel;
     nowName.textContent = current.title;
     toggle.disabled = false;

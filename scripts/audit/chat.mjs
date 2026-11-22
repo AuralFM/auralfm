@@ -621,6 +621,85 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
     : pass("an empty list fills and never erases, a joining device keeps its stars, an un-star travels, the relay's copy is unreadable, and Erase turns it off");
 }
 
+// ── chat can be found, and what it says is so ───────────────────────────────
+// 22 Nov 2026. The desktop's chat is off until it is turned on, behind a switch
+// named for something else ("Show other listeners"): with it off there was no
+// sign that the app had a chat. Two more, from driving two copies of the app
+// against a relay of their own: a room read "nobody else yet" over a message
+// until its author's next heartbeat, and a nickname with a space could not be
+// addressed ("/msg Night Owl hello" found nobody, or sent "Owl hello").
+{
+  const name = "chat can be found, and what it says is so";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const chat = readSrc("src/renderer/explore-chat.js"), html = readSrc("src/renderer/explore.html"), rooms = readSrc("src/renderer/explore-rooms.js");
+  const req = (await import("node:module")).createRequire(import.meta.url);
+
+  // The card: off stays the default, and only the button turns it on.
+  if (req(R("src/prefs.js")).DEFAULTS.presence !== false) gaps.push("the desktop's chat is on without being asked");
+  if (!/id="chatoff"[\s\S]{0,900}?id="chatoffgo"[\s\S]{0,300}?id="chatoffno"/.test(html)) gaps.push("there is no way into chat on the page while it is off");
+  if (!/\.chatoff\[hidden\]/.test(html)) gaps.push("the card cannot be hidden: its display beats the attribute");
+  const fn = (chat.match(/function paintChatOff\(prefs, at\) \{[\s\S]*?\n\}/) || [""])[0];
+  if (!fn || !/paintChatOff\(prefs, at\);/.test(chat)) gaps.push("the card is never painted");
+  else {
+    const run = (prefs, at, no) => {
+      const card = { hidden: null };
+      new Function("$", "localStorage", "CHATOFF_KEY", `${fn}; return paintChatOff;`)(() => card, { getItem: () => (no ? "1" : null) }, "k")(prefs, at);
+      return !card.hidden;
+    };
+    const at = { lat: 1, lon: 2 };
+    if (!run({ presence: false }, at)) gaps.push("with chat off and a station playing, nothing says so");
+    if (run({ presence: true }, at)) gaps.push("the card shows over a chat that is on");
+    if (run({ presence: false }, null) || run({ presence: false }, { title: "x" })) gaps.push("the card shows where no room could open");
+    if (run({ presence: false }, at, true)) gaps.push("“Not now” is asked again");
+    if (run(null, at)) gaps.push("the card shows before the preferences are known");
+  }
+
+  // The name and the words.
+  const split = (rooms.match(/function splitName\(rest\) \{[\s\S]*?\n\}/) || [""])[0];
+  if (!split) gaps.push("a nickname with a space cannot be addressed");
+  else {
+    const f = new Function("roster", `${split}; return splitName;`)(() => [{ nick: "Night" }, { nick: "Night Owl" }, { nick: null }, { nick: "Zoë" }]);
+    for (const [t, want] of [["Night Owl hello there", "Night Owl|hello there"], ["@night owl", "night owl|"], ["Night Owls", "Night|Owls"], ["Zoë hi", "Zoë|hi"], ["a1b2c3d4 hi", "a1b2c3d4|hi"], ["", "|"]]) {
+      if (f(t).join("|") !== want) gaps.push(`"${t}" reads as ${f(t).join(" | ")}`);
+    }
+  }
+  const cmds = readSrc("src/renderer/explore-commands.js");
+  if ((cmds.match(/splitName\(/g) || []).length < 3 || /matchOne\(\(rest\[0\]/.test(cmds)) gaps.push("the composer still takes the first word for the name");
+
+  // Speaking is being here.
+  const realWs = globalThis.WebSocket;
+  let nostr = null;
+  const live = [];
+  globalThis.WebSocket = class {
+    constructor(url) { this.url = url; this.readyState = 0; live.push(this); setTimeout(() => { this.readyState = 1; this.onopen?.(); }, 0); }
+    send() {}
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 30));
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    nostr.leave(); nostr.join(38.72, -9.14, "test"); await tick();
+    const cell = nostr.stats().cell, now = Math.floor(Date.now() / 1000);
+    const said = (n, at) => live[0].onmessage({ data: JSON.stringify(["EVENT", "auralfm", { id: n.repeat(64), pubkey: n.repeat(64), kind: 20000, created_at: at, tags: [["g", cell]], content: "hello" }]) });
+    said("a", now);
+    if (nostr.stats().peers !== 1) gaps.push("somebody who has just spoken here is not counted as here");
+    said("b", now - 3600);
+    if (nostr.stats().peers !== 1) gaps.push("somebody who spoke an hour ago is counted as here");
+    if (nostr.stats().messages !== 2) gaps.push("a message was lost: this check is blind");
+  } catch (e) { gaps.push(`the module threw: ${e.message}`); } finally { try { nostr?.leave(); } catch {} globalThis.WebSocket = realWs; }
+
+  // A station asked for before the player is ready is not talked over by the last one.
+  if (!/if \(state\.lastChannel && !current\) \{\s*current = state\.lastChannel;/.test(readSrc("src/renderer/popover.js"))) gaps.push("the player's start-up says “Press play” over a station already playing");
+
+  // One number on each step of Your show.
+  const studio = readSrc("src/renderer/explore-studio.js");
+  const tab = studio.slice(studio.indexOf('class: "sttab"'), studio.indexOf("body.append(tabs)"));
+  if (!tab || (tab.match(/String\(/g) || []).filter(Boolean).length !== 2 || /stleft/.test(studio)) gaps.push("a step of Your show carries a second number (“3 Go live 3”)");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass("off by default with a way in on the page, asked once; names with spaces work; a speaker is counted; one number a step");
+}
+
 // ── a relay a network blocks is left alone ──────────────────────────────────
 // 22 Nov 2026. AT&T's home network protection resets relay.damus.io as malware
 // and warns the account holder each time. It was one of the three relays that

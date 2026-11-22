@@ -79,6 +79,27 @@ function matchPeople(want) {
                         || p.pubkey.toLowerCase().startsWith(w));
 }
 
+/**
+ * Where the name ends and the words begin: "/msg Night Owl hello".
+ *
+ * A nickname may have spaces, and the name picker writes it out in full. Taking
+ * the first word found nobody, or found them and sent the rest of the name as
+ * the message. The longest name here that the text starts with wins; otherwise
+ * the first word, as typed.
+ */
+function splitName(rest) {
+  const text = String(rest || "").replace(/^\s+/, "");
+  const bare = text.replace(/^@/, ""), low = bare.toLowerCase();
+  let best = "";
+  for (const p of roster()) {
+    const n = (p.nick || "").toLowerCase();
+    if (n.length > best.length && (low === n || low.startsWith(n + " "))) best = n;
+  }
+  if (best) return [bare.slice(0, best.length), bare.slice(best.length).trim()];
+  const [first, ...words] = text.split(" ");
+  return [first || "", words.join(" ").trim()];
+}
+
 /** Exactly one person, or nothing. Ambiguity is not a match. */
 const matchOne = (want) => {
   const hits = matchPeople(want);
@@ -170,6 +191,7 @@ function paintConvos() {
     if (c.unread) {
       const d = document.createElement("span");
       d.className = "dot";
+      d.setAttribute("role", "img");      // a bare span's label is not read out
       d.setAttribute("aria-label", `${c.unread} ${t("chat.newPrivate", "new")}`);
       row.append(d);
     }
@@ -284,6 +306,8 @@ function showNames(word, fragment) {
     k.className = "k";
     k.textContent = p.from;
     b.append(k);
+    // Three spans with nothing between them were read as one word.
+    b.setAttribute("aria-label", [...b.children].map((x) => x.textContent).join(", "));
     b.onclick = () => {
       const input = $("chatinput");
       input.value = `${word} ${p.nick || p.from} `;

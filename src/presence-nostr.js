@@ -1271,6 +1271,14 @@ function dial(url) {
       if (!mine && !seen) return;
       if (!e.content || String(e.content).length > MAX_MESSAGE) return;
       record(e);
+      // Speaking here is being here. The heartbeat that says so can be a minute
+      // away, and until it came the room read "nobody else yet" over a message.
+      // Only what was said lately: the six hours asked for on arrival are history.
+      const said = Number(e.created_at) * 1000;
+      if (Math.abs(Date.now() - said) < STALE_MS && !peers.has(e.pubkey)) {
+        peers.set(e.pubkey, { geohash: g, label: "", live: false, np: "", at: said });
+        emit();
+      }
       return;
     }
 

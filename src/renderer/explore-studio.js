@@ -815,8 +815,7 @@
           if (j === -2) return;
           e.preventDefault(); goStage(STAGES[(j + STAGES.length) % STAGES.length]);
         } },
-        el("span", { class: "stnum", "aria-hidden": "true", text: done ? "✓" : String(STAGES.indexOf(s) + 1) }), el("span", { text: names[s] }),
-        s === "go" && left ? el("span", { class: "stleft", text: String(left), "aria-label": `, ${left} ${tt("studio.toDo", "to do")}` }) : null));
+        el("span", { class: "stnum", "aria-hidden": "true", text: done ? "✓" : String(STAGES.indexOf(s) + 1) }), el("span", { text: names[s] })));   // one number a tab: what is left is said on the stage
     }
     body.append(tabs);
     const pane = el("div", { class: `ststage st-${stage}`, id: "stStage", role: "tabpanel", "aria-labelledby": `stTab-${stage}` });
@@ -1064,7 +1063,7 @@
         el("button", { class: "qbtn", type: "button", id: "stAddClose", "aria-label": tt("studio.close", "Close"), title: tt("studio.close", "Close"), onclick: () => { adding = false; lineNote = ""; paint(); } }, "×"), ...kids));
     } else if (!live) {
       desk.append(el("button", { class: "addsrc", type: "button", id: "stAddSource", onclick: () => { adding = true; paint(); $s("stLine")?.focus() || $s("stLineFind")?.focus(); } },
-        el("span", { class: "plus", "aria-hidden": "true", text: "+" }), tt("studio.addSource", "Add a source: an input, or this computer's sound")));
+        el("span", { class: "plus", "aria-hidden": "true", text: "+" }), tt("studio.addSource", "Add a source: an input, or this computer's\u00a0sound")));
     }
     if (live) pane.append(el("p", { class: "fine", text: tt("studio.locked", "The microphone and the input are locked while you are live.") }));
 

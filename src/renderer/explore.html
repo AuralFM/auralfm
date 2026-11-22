@@ -1213,7 +1213,8 @@
   }
   .studio .sec{padding:12px 5px 10px;box-shadow:inset 0 .5px 0 var(--line)}
   /* The three stages (explore-studio.js, paint): a segmented row of tabs, each
-     with its number, or a tick once it is done; Go live carries what is left. */
+     with its number, or a tick once it is done. One number each: Go live carried
+     what was left beside it, and read "3 Go live 3". */
   .studio .sttabs{display:flex;gap:2px;margin:4px 5px 12px;padding:2px;border-radius:var(--r-md);background:var(--fill)}
   .studio .sttab{flex:1;min-width:0;min-height:30px;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:calc(var(--r-md) - 2px);
     background:none;padding:4px 8px;font:inherit;font-size:12.5px;font-weight:500;color:var(--label2);cursor:default;white-space:nowrap}
@@ -1221,8 +1222,6 @@
   .studio .sttab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .studio .stnum{flex:none;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-variant-numeric:tabular-nums;
     box-shadow:inset 0 0 0 1px currentColor}
-  .studio .stleft{flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);display:inline-grid;place-items:center;
-    background:var(--label);color:var(--bg);font-size:12px;font-variant-numeric:tabular-nums}
   @media (hover:hover){.studio .sttab[aria-selected="false"]:hover{color:var(--label)}}
   @media (pointer:coarse){ .studio .sttab{min-height:44px;font-size:14px} }
   .studio .ststage{padding:0 5px}
@@ -1679,6 +1678,24 @@
      window: this is ambient, and it should never be the thing you are looking
      at when you came here to listen. */
   #chat{flex:none;display:flex;flex-direction:column;max-height:246px}
+  /* Where the chat will be, while it is off: what it is, and the way in. The
+     same card as the chat, so turning it on changes what is inside it. */
+  .chatoff{
+    flex:none;display:flex;flex-direction:column;gap:8px;padding:14px 17px 15px;border-radius:var(--r-xl);
+    background:color-mix(in srgb, var(--bg) 94%, transparent);
+    -webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 18px 48px rgba(0,0,0,.38);
+  }
+  .chatoff[hidden],body.studio-open .chatoff{display:none}
+  .chatoff b{font-size:13px;font-weight:590;color:var(--label)}
+  .chatoff p{margin:0;font-size:13px;line-height:1.45;color:var(--label2);text-wrap:pretty}
+  .chatoff .btns{display:flex;gap:8px;margin-top:2px}
+  .chatoff .sheetbtn{min-height:30px}
+  .chatoff .sheetbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (pointer:coarse){.chatoff .sheetbtn{min-height:44px;padding:0 18px;font-size:14px}}
+  @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
+    .chatoff{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
+  }
   /* 17px, matching the station names: the list insets rows 7px and each row
      pads its text another 10px. The chat was on 15 and its input on 13, which
      is close enough to read as a mistake rather than as a variation. */
@@ -2129,6 +2146,17 @@
       <p id="roomwaitsay"></p>
       <button type="button" class="sheetbtn" id="roomwaitgo" data-i18n="studio.roomOn" hidden>Show other listeners</button>
     </div>
+
+    <!-- Chat is off until it is turned on, and the switch is in Settings under
+         another name: without this there was no sign of it (explore-chat.js). -->
+    <section class="chatoff" id="chatoff" aria-labelledby="chatoffhead" hidden>
+      <b id="chatoffhead" data-i18n="chatoff.head">Chat is off</b>
+      <p data-i18n="chatoff.say">Talk with people tuned in here. It is public. They see that someone is listening, never who or where you&nbsp;are.</p>
+      <div class="btns">
+        <button type="button" class="sheetbtn primary" id="chatoffgo" data-i18n="chatoff.go">Turn on chat</button>
+        <button type="button" class="sheetbtn" id="chatoffno" data-i18n="chatoff.no">Not now</button>
+      </div>
+    </section>
 
     <!-- Only ever visible when presence is on and something is playing. -->
     <div id="chat" hidden>
