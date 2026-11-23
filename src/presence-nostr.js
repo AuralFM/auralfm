@@ -144,14 +144,19 @@ const NEARBY = 5;
 const COVERAGE_PER_CELL = 2;
 
 /**
- * Or, where sockets cost a battery: the N busiest relays instead.
+ * Or the N busiest relays instead, which is what both builds read: 12 on the
+ * web (web/messaging.js), where sockets cost a battery, and 24 on the desktop
+ * (src/main.js).
  *
- * The web sets this (web/messaging.js). Measured on 17 October 2026 from two
- * cities, the near set plus the 12 busiest relays heard 98% of the people the
- * near set plus the per-cell spread heard, on 20 sockets rather than 68; the
- * busiest were the same from both, so the list says nothing about where the
- * listener is. scripts/relays.mjs ranks them monthly (`busiest`). 0 keeps the
- * per-cell spread, which is what the desktop reads.
+ * Measured on 17 October 2026 from two cities, the near set plus the 12 busiest
+ * relays heard 98% of the people the near set plus the per-cell spread heard, on
+ * 20 sockets rather than 68; the busiest were the same from both, so the list
+ * says nothing about where the listener is. Measured again on 22 November from
+ * three, the 24 busiest heard 49 to 58% more people than the spread and as many
+ * messages, on 30 sockets. The spread also dialled sixty small servers nobody
+ * had asked for, and a network that blocks one of them warns its owner.
+ * scripts/relays.mjs ranks them monthly (`busiest`). 0 keeps the spread, which
+ * is also the fallback when nothing is ranked.
  */
 let spread = 0;
 function setSpread(n) { spread = Math.max(0, n | 0); }
@@ -319,8 +324,7 @@ function setExtraRelays(urls) {
   // Reconnect only if the set actually moved; this is called on every prefs
   // change, most of which are palettes.
   if (changed && here) {
-    for (const w of sockets) { try { w.close(); } catch {} }
-    sockets = [];
+    hangUp();
     connect();
   }
   return extraRelays.slice();
@@ -1189,7 +1193,41 @@ function connect() {
   if (sockets.length) return;
   dialled = relaysFor(here?.geohash);
   covering = coverageRelays(dialled);
-  for (const url of [...dialled, ...covering]) dial(url);
+  const now = Date.now();
+  batch++;
+  for (const url of [...dialled, ...covering]) if (!refused(url, now)) dial(url);
+}
+
+/**
+ * Relays this network will not let us reach: url → { wait, at }.
+ *
+ * A home network that blocks a relay resets it every time, and some send the
+ * account holder a warning each time. A change of station dials afresh, so a
+ * blocked relay was dialled, and warned about, on every station played. One
+ * that never opened while others dialled with it did is left alone for half an
+ * hour, then twice as long each time, up to a week. Nothing is held against a
+ * relay when none opens (that is being offline), nor against one the listener
+ * added. A block answers faster than a relay does, so it is judged a little
+ * later, once the others have had time to open.
+ */
+const REFUSED_MIN = 30 * 60_000, REFUSED_MAX = 7 * 24 * 3600_000, JUDGE_MS = 4000;
+let batch = 0;             // which dialling a socket belongs to
+let answered = new Set();  // the diallings any relay opened in, kept after we hang up
+const refusals = new Map();
+const refused = (url, now) => !extraRelays.includes(url) && now < (refusals.get(url)?.at || 0);
+function judge(w, url) {
+  const t = setTimeout(() => {
+    if (!answered.has(w.batch)) return;
+    const wait = Math.min(REFUSED_MAX, (refusals.get(url)?.wait || REFUSED_MIN / 2) * 2);
+    refusals.set(url, { wait, at: Date.now() + wait });
+  }, JUDGE_MS);
+  t.unref?.();             // never what keeps the app alive
+}
+
+/** Close them ourselves, which is not a relay refusing us. */
+function hangUp() {
+  for (const w of sockets) { w.ours = true; try { w.close(); } catch {} }
+  sockets = [];
 }
 
 /** One relay: open it, and say who we are and what we want once it answers. */
@@ -1197,10 +1235,14 @@ function dial(url) {
   let w;
   try { w = new WebSocket(url); } catch { return; }
   w.readOnly = !dialled.includes(url);
+  w.batch = batch;
   w.dialledAs = url;        // WebSocket.url is normalised; heal() needs the name we used
   sockets.push(w);
   w.onopen = () => {
+    w.opened = true;
+    answered.add(w.batch);
     healing.delete(url);
+    refusals.delete(url);
     // Listen for anyone in any cell, and filter locally. Putting our own
     // geohash in the filter would tell every relay we connect to roughly where
     // we are, which is the one thing this design exists to avoid — so the
@@ -1313,7 +1355,10 @@ function dial(url) {
   };
 
   w.onerror = () => { /* a relay refusing us is normal, see the note above */ };
-  w.onclose = () => { sockets = sockets.filter((s) => s !== w); };
+  w.onclose = () => {
+    sockets = sockets.filter((s) => s !== w);
+    if (!w.opened && !w.ours) judge(w, url);
+  };
 }
 
 /**
@@ -1331,8 +1376,9 @@ const healing = new Map();  // url → { wait, at }: when to try a dropped relay
 function heal() {
   const have = new Set(sockets.map((s) => s.dialledAs));
   const now = Date.now();
+  batch++;                // its own: what opened before the network went says nothing about now
   for (const url of [...dialled, ...covering]) {
-    if (have.has(url)) continue;
+    if (have.has(url) || refused(url, now)) continue;
     const h = healing.get(url) || { wait: HEAL_MIN, at: 0 };
     if (now < h.at) continue;
     healing.set(url, { wait: Math.min(HEAL_MAX, h.wait * 2), at: now + h.wait });
@@ -1428,8 +1474,7 @@ function join(lat, lon, label, live = false) {
   // The same when arriving from only looking (watch): those sockets were
   // dialled for nowhere in particular, and this room has relays of its own.
   if ((moved || !was) && sockets.length && dialled.join() !== relaysFor(cell).join()) {
-    for (const w of sockets) { try { w.close(); } catch {} }
-    sockets = [];
+    hangUp();
   }
   connect();
   // Same relays, different room: the sockets are already up, so nothing would
@@ -1462,8 +1507,7 @@ function leave() {
   viewing = null;
   clearInterval(beat);
   beat = null;
-  for (const w of sockets) { try { w.close(); } catch {} }
-  sockets = [];
+  hangUp();
   peers.clear();
   // The log belongs to the cell, not to the session. Carrying a Lisbon
   // conversation into a Tokyo one would be worse than losing it.

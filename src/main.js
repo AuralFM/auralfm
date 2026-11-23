@@ -1096,6 +1096,7 @@ if (!app.requestSingleInstanceLock()) {
     sdr.init(app.getPath("userData"));
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
     markets.start();        // live crypto feed; falls back to polling on its own
+    nostr.setSpread(24);    // the busiest relays, read only (src/presence-nostr.js)
     nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
     // Filtered here, not in the renderer. A muted message never crosses the
     // bridge, so there is nothing in the DOM to hide and nothing to render by

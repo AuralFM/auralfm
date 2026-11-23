@@ -715,7 +715,15 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   const gaps = [], BLOCKED = "relay.damus.io";
   const hosts = sync.RELAYS.map((u) => new URL(u).host);
   if (hosts.includes(BLOCKED)) gaps.push(`favorites sync still dials ${BLOCKED}`);
-  if (fs.readFileSync(R("data/relays.json"), "utf8").includes(BLOCKED)) gaps.push(`the chat's directory still offers ${BLOCKED}`);
+  // Every relay found blocked, where the directory is made and in what ships.
+  const listed = [...((readSrc("scripts/relays.mjs").match(/const BLOCKED = new Set\(\[([\s\S]*?)\]\)/) || ["", ""])[1]).matchAll(/"([a-z0-9.-]+)"/g)].map((m) => m[1]);
+  const dirNow = JSON.parse(fs.readFileSync(R("data/relays.json"), "utf8"));
+  const offered = new Set([...dirNow.relays.map(([u]) => u), ...(dirNow.busiest || [])].map((u) => new URL(u.replace(/^ws/, "http")).hostname));
+  for (const h of [BLOCKED, "relay.bulbasaur.fun", "nostr.mom", "relay.nostr.com"]) if (!listed.includes(h)) gaps.push(`${h} is not on the directory builder's blocked list`);
+  for (const h of listed) {
+    if (offered.has(h)) gaps.push(`the chat's directory still offers ${h}`);
+    if (hosts.includes(h) || readSrc("src/presence-nostr.js").includes(`"wss://${h}"`)) gaps.push(`${h} is dialled by name`);
+  }
   if (hosts.length < 3) gaps.push(`the list is held by ${hosts.length} relays, not three`);
   const said = (readSrc("docs/PRIVACY.md").match(/to three public relays \(([\s\S]*?)\)/) || ["", ""])[1].split(/,|\band\b/).map((x) => x.trim()).filter(Boolean);
   if ([...said].sort().join() !== [...hosts].sort().join()) gaps.push(`PRIVACY.md names ${said.join(", ") || "none"}; the app dials ${hosts.join(", ")}`);
@@ -898,6 +906,93 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   }
 }
 
+// ── chat leaves a refused relay alone ───────────────────────────────────────
+// 22 Nov 2026. A home network that blocks a relay resets it every time it is
+// dialled, and AT&T's warns the account holder. Changing station dials afresh
+// and took no notice of what had failed, so a blocked relay was dialled on
+// every station. Fake relays; one resets at once, as a block does, and the
+// clock is moved on by hand.
+{
+  const name = "chat leaves a refused relay alone";
+  console.log(`\n${name}`);
+  const realWs = globalThis.WebSocket, realNow = Date.now, realTimer = globalThis.setTimeout;
+  let skew = 0, offline = false, made = [];
+  const block = new Set(), hang = new Set(), live = [], beats = [], realEvery = globalThis.setInterval;
+  globalThis.setInterval = (fn) => { beats.push(fn); return realEvery(() => {}, 2 ** 30); };
+  // The judging wait is run at once; the fakes' own ticks are real.
+  globalThis.setTimeout = (fn, ms, ...a) => realTimer(fn, ms >= 1000 ? 60 : ms, ...a);
+  Date.now = () => realNow() + skew;
+  globalThis.WebSocket = class {
+    constructor(url) {
+      made.push(url); live.push(this); this.readyState = 0;
+      const bad = offline || block.has(url);
+      realTimer(() => { if (this.readyState !== 0) return; if (bad) { this.readyState = 3; this.onerror?.(); this.onclose?.(); } else if (!hang.has(url)) { this.readyState = 1; this.onopen?.(); } }, bad ? 0 : 20);
+    }
+    send() {}
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  };
+  const wait = (ms) => new Promise((r) => realTimer(r, ms));
+  let nostr = null;
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    const gaps = [];
+    const visit = async (lat, lon) => { nostr.leave(); made = []; nostr.join(lat, lon, "t"); await wait(140); return made.slice(); };
+    nostr.setSpread(0);
+    const first = await visit(-33.87, 151.2);
+    const victim = first[4];
+    if (!victim) gaps.push("a join dialled too few relays: this check is blind");
+    block.add(victim);
+    if (!(await visit(-33.87, 151.2)).includes(victim)) gaps.push("a relay that had opened is not dialled: this check is blind");
+    if ((await visit(-33.87, 151.2)).includes(victim)) gaps.push("a blocked relay is dialled again on the next station");
+    if ((await visit(-33.87, 151.2)).length !== first.length - 1) gaps.push("relays other than the blocked one are left alone too");
+    skew += 31 * 60e3;
+    if (!(await visit(-33.87, 151.2)).includes(victim)) gaps.push("a refused relay is never tried again");
+    skew += 31 * 60e3;
+    if ((await visit(-33.87, 151.2)).includes(victim)) gaps.push("a relay refused twice is not left alone for longer");
+    skew += 8 * 24 * 3600e3; block.clear();
+    if (!(await visit(-33.87, 151.2)).includes(victim)) gaps.push("a relay is left alone for more than a week");
+    if ((await visit(-33.87, 151.2)).length !== first.length) gaps.push("a relay that answers again is still left alone");
+    // Offline: none open, none to blame.
+    offline = true; await visit(-33.87, 151.2); offline = false;
+    if ((await visit(-33.87, 151.2)).length !== first.length) gaps.push("being offline is held against the relays");
+    // Leaving while they are still opening is us hanging up, not a refusal.
+    hang.add(victim); await visit(-33.87, 151.2); nostr.leave(); await wait(100); hang.clear();
+    if ((await visit(-33.87, 151.2)).length !== first.length) gaps.push("hanging up is held against the relays");
+    // The network goes and comes back: every retry failed, and none is to blame.
+    const beat = beats.at(-1);
+    offline = true; for (const w of [...live]) if (w.readyState === 1) w.close();
+    skew += 21e3; beat(); await wait(140);
+    offline = false; skew += 11 * 60e3; made = []; beat(); await wait(140);
+    if (made.length !== first.length) gaps.push(`after the network came back, ${made.length} of ${first.length} relays were dialled`);
+    // A blocked one is left alone by the beat too, not only by a change of station.
+    block.add(victim); await visit(-33.87, 151.2); skew += 21e3; made = []; beats.at(-1)(); await wait(140);
+    if (made.includes(victim)) gaps.push("the beat dials a relay that was refused");
+    // Once it has answered, a new refusal starts from the beginning.
+    block.clear(); skew += 8 * 24 * 3600e3; await visit(-33.87, 151.2);
+    block.add(victim); await visit(-33.87, 151.2); skew += 31 * 60e3;
+    if (!(await visit(-33.87, 151.2)).includes(victim)) gaps.push("a relay that answered is still held to its old wait");
+    // However many times, a week at the most.
+    for (let i = 0; i < 14; i++) { skew += 8 * 24 * 3600e3; await visit(-33.87, 151.2); }
+    skew += 8 * 24 * 3600e3;
+    if (!(await visit(-33.87, 151.2)).includes(victim)) gaps.push("a relay refused many times is left alone for more than a week");
+    block.clear(); skew += 8 * 24 * 3600e3; await visit(-33.87, 151.2);
+    // Changing station again before the wait is up is how people listen.
+    block.add(victim); nostr.leave(); nostr.join(-33.87, 151.2, "t"); await wait(35); nostr.leave(); await wait(100);
+    if ((await visit(-33.87, 151.2)).includes(victim)) gaps.push("a quick change of station forgets that a relay was refused");
+    block.clear(); skew += 8 * 24 * 3600e3; await visit(-33.87, 151.2);
+    // One the listener added is theirs to decide about.
+    nostr.setExtraRelays(["wss://mine.example"]); block.add("wss://mine.example");
+    await visit(-33.87, 151.2);
+    if (!(await visit(-33.87, 151.2)).includes("wss://mine.example")) gaps.push("a relay the listener added is dropped without asking");
+    gaps.length ? fail(name, gaps.join("; ")) : pass("a relay a network blocks is dialled once, then left half an hour and longer; being offline and hanging up are not held against any");
+  } catch (e) {
+    fail(name, `the module threw: ${e.message}`);
+  } finally {
+    try { nostr?.leave(); nostr?.setExtraRelays([]); nostr?.setSpread(0); } catch {}
+    globalThis.WebSocket = realWs; Date.now = realNow; globalThis.setTimeout = realTimer; globalThis.setInterval = realEvery;
+  }
+}
+
 // ── a phone reads the busiest relays, not one per region ────────────────────
 // Joining a place on the web opened 68 sockets: 8 near relays and 60 read-only
 // ones, two per first-level cell. Fewer than half carried anyone. The web now
@@ -924,7 +1019,10 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   try {
     nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
     const count = (sp) => { nostr.leave(); dialled.length = 0; nostr.setSpread(sp); nostr.join(38.72, -9.14, "test"); return dialled.slice(); };
-    const desk = count(0), phone = n ? count(n) : [];
+    const d = +(/nostr\.setSpread\((\d+)\)/.exec(readSrc("src/main.js"))?.[1] || 0);
+    if (!d || d > dir.busiest.length) gaps.push("the desktop dials a spread of small servers rather than the busiest (src/main.js, setSpread)");
+    const desk = count(d), phone = n ? count(n) : [];
+    if (desk.length > 40) gaps.push(`a join on the desktop dials ${desk.length} relays`);
     if (n && phone.length > 8 + n) gaps.push(`a join on the web dials ${phone.length} relays`);
     if (n && dir.busiest && !dir.busiest.slice(0, n).every((u) => phone.includes(u))) gaps.push("the web does not read the busiest relays");
     if (desk.length <= phone.length) gaps.push(`the web dials as many relays as the desktop (${desk.length})`);
