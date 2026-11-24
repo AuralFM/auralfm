@@ -19,7 +19,7 @@
 (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function sample(url, { ms = 3200, bars = 48 } = {}) {
+  async function sample(url, { ms = 1600, bars = 48 } = {}) {
     if (!url || typeof AudioContext === "undefined") return null;
     const copy = new Audio();
     copy.crossOrigin = "anonymous";
@@ -36,7 +36,7 @@
       await new Promise((ok, no) => {
         copy.addEventListener("playing", ok, { once: true });
         copy.addEventListener("error", no, { once: true });
-        setTimeout(no, 4000);
+        setTimeout(no, 1500);                // a stream this slow to start gets no wave, not a long wait
         copy.play().catch(no);
       });
       const buf = new Float32Array(meter.fftSize);

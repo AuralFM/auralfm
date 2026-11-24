@@ -279,11 +279,56 @@ const behindSheet = () => [document.querySelector(".toolbar"), document.querySel
  * web/phone-bar.js), where copying and saving are the operating system's job
  * rather than four buttons of our own.
  */
-async function buildCard() {
+/**
+ * The station's sound, asked for once and kept a little while.
+ *
+ * Listening is the slow part of a card: a second copy of the stream has to
+ * open and play before anything can be measured. So it starts as soon as the
+ * pointer reaches the share button (or the button takes focus), and a card
+ * made, closed and made again inside half a minute reuses the same sound
+ * rather than listening again.
+ */
+let levelsAhead = null;
+const LEVELS_KEEP = 30000;
+function levelsFor(ch) {
+  const key = ch && !ch.sdr ? String(ch.id || ch.url || ch.title || "") : "";
+  if (!key || !playing) return Promise.resolve(null);
+  if (levelsAhead && levelsAhead.key === key && Date.now() - levelsAhead.at < LEVELS_KEEP) return levelsAhead.p;
+  const p = guard("cardLevels", () => window.auralfm.cardLevels(), null);
+  levelsAhead = { key, at: Date.now(), p };
+  // A copy that heard nothing is not worth keeping: the next card asks again.
+  p.then((v) => { if (!v && levelsAhead?.p === p) levelsAhead = null; });
+  return p;
+}
+function warmCard() {
+  if (inPlayer) levelsFor(inPlayer);
+  window.Card?.ready?.().catch(() => {});
+}
+
+// However the stream behaves, the card is finished in this long. The draft
+// (dim dots) is up well before; this is when the dots light, or go.
+const LISTEN_MAX = 2600;
+const later = (ms, v) => new Promise((r) => setTimeout(() => r(v), ms));
+
+/**
+ * Draw the card for whatever is playing, and hand back the PNG.
+ *
+ * Separate from the sheet because the sheet is one way of offering it: on a
+ * phone the card goes straight into the system's own share sheet (see
+ * web/phone-bar.js), where copying and saving are the operating system's job
+ * rather than four buttons of our own.
+ *
+ * `draft` is handed the card as soon as it can be drawn, with the wave's dots
+ * dim while the station is still being listened to; the promise settles with
+ * the finished card. It used to listen first and draw after, and a slow stream
+ * held the sheet empty for seven seconds.
+ */
+async function buildCard(draft) {
   const ch = inPlayer;
   if (!ch) return null;
   {
-    const levels = await guard("cardLevels", () => window.auralfm.cardLevels(), null);
+    const started = Date.now();
+    const heard = levelsFor(ch);
     /**
      * Find the coordinates if what is playing does not carry them.
      *
@@ -329,7 +374,9 @@ async function buildCard() {
       // The same subsolar point the globe's terminator uses, so the card shows
       // the Earth as it was at the moment somebody was listening.
       sun: subsolarPoint(),
-      levels,
+      levels: null,
+      // Still listening: the card keeps the wave's place, its dots unlit.
+      listening: !!playing && !ch.sdr,
       // Every town on the globe, for the dots on the card's Earth.
       towns: typeof globePts !== "undefined" && Array.isArray(globePts) ? globePts : null,
       /**
@@ -342,6 +389,21 @@ async function buildCard() {
         ? "https://listen.auralfm.xyz/"
         : `https://listen.auralfm.xyz/?station=${encodeURIComponent(ch.id)}`,
     };
+    const now = sheetNow;
+    // Heard already (the pointer reached the button first): one drawing.
+    const quick = await Promise.race([heard, later(0, undefined)]);
+    if (quick !== undefined || !now.listening) {
+      now.levels = quick ?? null;
+      now.listening = false;
+      return drawCard();
+    }
+    const first = await drawCard();
+    if (sheetNow !== now) return first;
+    draft?.(first);
+    const levels = await Promise.race([heard, later(Math.max(0, LISTEN_MAX - (Date.now() - started)), null)]);
+    if (sheetNow !== now) return first;
+    now.levels = levels;
+    now.listening = false;
     return drawCard();
   }
 }
@@ -357,9 +419,18 @@ async function drawCard() {
 }
 
 function paintShape() {
-  for (const b of $("sheetshape").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.shape === sheetShape));
+  // One stop on Tab for the four shapes, the chosen one; arrows move between
+  // them (the group's keydown, below).
+  for (const b of $("sheetshape").querySelectorAll("button")) {
+    const on = b.dataset.shape === sheetShape;
+    b.setAttribute("aria-pressed", String(on));
+    b.tabIndex = on ? 0 : -1;
+  }
   const [w, h] = window.Card.SHAPES[sheetShape];
   $("sheetwait").style.aspectRatio = `${w} / ${h}`;
+  // The card's own size, so the sheet is laid out once when the picture lands.
+  $("sheetimg").width = w;
+  $("sheetimg").height = h;
 }
 
 async function chooseShape(shape) {
@@ -385,7 +456,7 @@ async function openShareSheet() {
   paintShape();
   $("sheetwaitline").textContent = t("ctl.cardMaking", "Making your card");
   $("sheetwaitnote").textContent = playing
-    ? t("ctl.cardListening", "One moment: it is listening to the station for a few seconds, to draw its sound.")
+    ? t("ctl.cardListening", "One moment: it listens to the station for a second or two, to draw its sound.")
     : t("ctl.cardDrawing", "One moment.");
   for (const id of ["sheetcopy", "sheetsave"]) $(id).disabled = true;
   sheet.hidden = false;
@@ -398,11 +469,21 @@ async function openShareSheet() {
   for (const el of behindSheet()) if (el) el.inert = true;
   $("sheetclose").focus();
   try {
-    const png = await buildCard();
+    // The draft goes up at once; Copy and Save wait for the finished card, a
+    // second or two later, so nobody posts a card whose wave was still unlit.
+    const show = (png) => {
+      if (sheet.hidden || !png) return;
+      img.src = png;
+      img.hidden = false;
+      wait.hidden = true;
+    };
+    const png = await buildCard((draft) => {
+      show(draft);
+      said.textContent = t("ctl.cardListening2", "Listening to the station, to draw its sound…");
+    });
     if (sheet.hidden) return;                 // closed while it was being made
-    img.src = png;
-    img.hidden = false;
-    wait.hidden = true;
+    show(png);
+    said.textContent = "";
     for (const id of ["sheetcopy", "sheetsave"]) $(id).disabled = false;
   } catch {
     wait.hidden = true;
@@ -606,6 +687,8 @@ function wirePlayback() {
   navigator.mediaDevices.addEventListener?.("devicechange", () => renderOutputs());
 
   $("nowShare").onclick = openShareSheet;
+  // The pointer on its way to the button is a second's head start on listening.
+  for (const ev of ["pointerenter", "focus"]) $("nowShare").addEventListener(ev, warmCard);
   $("sheetclose").onclick = closeShareSheet;
   $("sheet").addEventListener("click", (e) => { if (e.target === $("sheet")) closeShareSheet(); });
   document.addEventListener("keydown", (e) => {
@@ -615,6 +698,16 @@ function wirePlayback() {
   $("sheetshape").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-shape]");
     if (b) chooseShape(b.dataset.shape);
+  });
+  $("sheetshape").addEventListener("keydown", (e) => {
+    const all = [...$("sheetshape").querySelectorAll("button[data-shape]")];
+    const at = all.findIndex((b) => b.dataset.shape === sheetShape);
+    const to = { ArrowRight: at + 1, ArrowDown: at + 1, ArrowLeft: at - 1, ArrowUp: at - 1, Home: 0, End: all.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const b = all[(to + all.length) % all.length];
+    chooseShape(b.dataset.shape);
+    b.focus();
   });
   $("sheetcopy").onclick = async () => {
     if (!sheetPng) return;
