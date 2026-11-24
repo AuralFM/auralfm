@@ -173,6 +173,28 @@ import { ROOT, R, fail, pass, skip, EXPLORE_FILES, readSrc, pkg } from "./lib.mj
   gaps.length ? fail(name, gaps.join("; ")) : pass(`the ticker and the logo wear the theme; ${list.length} palettes read at 4.5:1 or better, dark and light`);
 }
 
+// ── the wave is the brand's Dots ────────────────────────────────────────────
+// 24 Nov 2026. "Audio read" in Figma (Favorites · share) drew six ways to show
+// the sound and recommended Dots for strips: the town dot stacked into a meter.
+// The app, the desktop's splash and the share card still drew bars. Five to a
+// column, dim at rest, lit from the bottom a whole dot at a time.
+{
+  const name = "the wave is the brand's Dots";
+  console.log(`\n${name}`);
+  const gaps = [];
+  for (const f of ["src/renderer/explore.html", "src/renderer/splash.html"]) {
+    const src = readSrc(f);
+    const i = (src.match(/\.wave i\{[^}]*\}/) || [""])[0], after = (src.match(/\.wave i::after\{[^}]*\}/) || [""])[0];
+    if (!/radial-gradient\(circle closest-side/.test(i) || !/20% repeat-y/.test(i)) gaps.push(`${f}: the wave's columns are not dots`);
+    if (!/steps\(5, jump-none\)/.test(after)) gaps.push(`${f}: the lit dots do not rise a whole dot at a time`);
+    if (/\.wave i\{[^}]*transform:scaleY/.test(src)) gaps.push(`${f}: the wave is still bars`);
+    if (!/prefers-reduced-motion[\s\S]{0,200}\.wave i::after\{animation:none\}/.test(src)) gaps.push(`${f}: the wave moves for someone who asked for less motion`);
+  }
+  const card = readSrc("src/renderer/card.js");
+  if (!/const ROWS = 5/.test(card) || !/ctx\.arc\(x, y \+ WAVE_H - pitch \* \(k \+ 0\.5\), r, 0, Math\.PI \* 2\)/.test(card) || /fillRect\(M \+ i \* \(bw \+ gap\)/.test(card)) gaps.push("the share card still draws its levels as bars");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("the app, the desktop splash and the share card draw the sound as columns of five dots");
+}
+
 // ── the ticker measures its room against the bar, not itself ────────────────
 // The crypto strip was invisible on every fresh open, on the web and in the
 // app, until you dragged the window wider — then it appeared and stayed.

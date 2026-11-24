@@ -126,7 +126,11 @@ window.AuralChat = function create({ getPrefs, emit }) {
       `Sender key: ${key || "(unknown)"}`,
       `Place cell: ${String(p.geohash || "(unknown)")}`,
       `Seen at:    ${new Date(Number(p.at) || Date.now()).toISOString()}`, "",
-      p.show ? "Show:" : "Message:", String(p.text || "").slice(0, 1000), "", "--",
+      p.show ? "Show:" : "Message:", String(p.text || "").slice(0, 1000), "",
+      // The same words as the desktop's draft (src/main/ipc-chat.js).
+      "If this involves a child: do not attach or forward the material. Report it",
+      "at report.cybertip.org (NCMEC), then send this. AuralFM is registered with",
+      "the CyberTipline and reports what it learns there.", "", "--",
       "Composed in the browser and sent by hand. AuralFM has no server and cannot",
       "delete this message from the relays that carry it; the sender is now muted",
       "in this browser.",

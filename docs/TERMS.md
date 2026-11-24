@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 17 October 2026**
+**Last updated: 24 November 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -76,10 +76,11 @@ happens when it turns up.
 
 ## Child safety
 
-Nothing that sexualises a child is tolerated anywhere on AuralFM. When we learn
-of it, we report it to the National Center for Missing & Exploited Children
-(NCMEC) and cooperate with law enforcement, and a station carrying it is removed
-from the catalogue. If you find it, do not copy or forward it: report it at
+Nothing that sexualises a child is tolerated anywhere on AuralFM. AuralFM is
+registered with the CyberTipline of the National Center for Missing & Exploited
+Children (NCMEC) as an electronic service provider. When we learn of such
+material, we report it to the CyberTipline and cooperate with law enforcement,
+and a station carrying it is removed from the catalogue. If you find it, do not copy or forward it: report it at
 [report.cybertip.org](https://report.cybertip.org), or to the police where you
 are, and then tell us.
 
