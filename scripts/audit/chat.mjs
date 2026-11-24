@@ -918,7 +918,7 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   const gaps = [];
   for (const f of ["src/main/ipc-chat.js", "web/messaging.js"]) {
     const src = readSrc(f);
-    if (!/do not attach or forward the material/.test(src) || !/report\.cybertip\.org/.test(src)) gaps.push(`${f}'s report draft does not send a child's case to the CyberTipline`);
+    if (!/do not attach or forward the material/.test(src) || !src.includes("at report.cybertip.org (NCMEC)")) gaps.push(`${f}'s report draft does not send a child's case to the CyberTipline`);
   }
   for (const [f, words] of [["docs/TERMS.md", /registered with the CyberTipline/], ["docs/CODE-OF-CONDUCT.md", /CyberTipline, with which AuralFM is\s+registered/], ["docs/PRIVACY.md", /passed to NCMEC's\s+CyberTipline/]]) {
     if (!words.test(readSrc(f))) gaps.push(`${f} does not say AuralFM is registered with the CyberTipline`);
