@@ -187,46 +187,19 @@ const CSP = [
 ].join("; ");
 
 /**
- * The logo for the toolbar: the globe mark and the AURAL.FM wordmark, from
- * web/assets/auralfm-logo.svg (bone; -onyx.svg is the same drawing in onyx).
- * Its fill becomes currentColor, so the theme picks bone on dark and onyx on
- * light (web/web.css, .brand) from one drawing.
+ * The logo for the toolbar: the brand's primary lockup (Brand Guidelines,
+ * Logo · Primary). The globe the website draws (auralfm.xyz's #ring, kept in
+ * web/assets/auralfm-mark.svg), and AURAL.FM in Space Mono Bold as type, not
+ * a drawing: the mark three times the height of the capitals, half the mark
+ * between them (web/web.css, .brand). The mark takes the theme's colour and
+ * the name the theme's ink; the old drawing was one colour, and its letters a
+ * picture of a typeface the app now ships.
  */
 function toolbarLogo() {
-  const svg = fs.readFileSync(R("web", "assets", "auralfm-logo.svg"), "utf8");
+  const svg = fs.readFileSync(R("web", "assets", "auralfm-mark.svg"), "utf8");
   const paths = svg.match(/<path [^>]*\/>/g) || [];
-  if (paths.length !== 2) throw new Error(`web: expected 2 paths in the logo (wordmark, globe mark), found ${paths.length}`);
-  const view = svg.match(/viewBox="([^"]+)"/)?.[1];
-  if (!view) throw new Error("web: the logo has no viewBox");
-  // currentColor, so web.css picks bone or onyx by theme from one drawing.
-  const ink = (p) => p.replace(/fill="#[0-9A-Fa-f]{3,8}"/, 'fill="currentColor"');
-  // Spaced like the website's lockup. As drawn, the globe touched the A and the
-  // letters were set tight, so at 18px high AURAL.FM read as one smudge. The
-  // wordmark is split into its letters (each subpath grouped by where it sits
-  // across the line, so a counter stays with its letter) and set out again with
-  // tracking, and the mark gets a gap. Every path is absolute, so a translate
-  // per letter is all it takes.
-  const GAP = 44, TRACK = 26;
-  const d = paths[0].match(/ d="([^"]+)"/)[1];
-  const subs = d.split(/(?=M)/).map((sp) => {
-    const xs = [];
-    for (const [, c, nums] of sp.matchAll(/([MLHVCZ])([^MLHVCZ]*)/g)) {
-      const n = (nums.match(/-?\d*\.?\d+/g) || []).map(Number);
-      if (c === "H") xs.push(...n);
-      else if (c !== "V") for (let i = 0; i < n.length; i += 2) xs.push(n[i]);
-    }
-    return { sp, lo: Math.min(...xs), hi: Math.max(...xs) };
-  }).sort((a, b) => a.lo - b.lo);
-  const letters = [];
-  for (const s of subs) {
-    const last = letters.at(-1);
-    if (last && s.lo < last.hi) { last.d += s.sp; last.hi = Math.max(last.hi, s.hi); }
-    else letters.push({ d: s.sp, hi: s.hi });
-  }
-  const word = letters.map((l, k) => `<path fill="currentColor" transform="translate(${GAP + k * TRACK} 0)" d="${l.d}"/>`).join("");
-  const [x, y, w, h] = view.split(/\s+/).map(Number);
-  const wide = `${x} ${y} ${w + GAP + TRACK * (letters.length - 1)} ${h}`;
-  return `<svg viewBox="${wide}" aria-hidden="true" focusable="false">${ink(paths[1])}${word}</svg>`;
+  if (paths.length !== 1 || !/fill="currentColor"/.test(paths[0])) throw new Error("web: expected one currentColor path in the mark");
+  return `<svg class="brand-mark" viewBox="0 0 225 225" aria-hidden="true" focusable="false">${paths[0]}</svg><span class="brand-word" aria-hidden="true">AURAL.FM</span>`;
 }
 
 /**

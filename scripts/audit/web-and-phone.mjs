@@ -131,6 +131,48 @@ import { ROOT, R, fail, pass, skip, EXPLORE_FILES, readSrc, pkg } from "./lib.mj
            "nothing in web.css gives .globeside #lock a resting background, so the desktop id rule wins and the lock has no tile");
 }
 
+// ── the ticker wears the theme, and the brand ───────────────────────────────
+// 24 Nov 2026. The ticker was the website's aqua whatever the theme, in the
+// app's typeface, and held back every link to the sites because they were once
+// behind a password. The toolbar's logo was a one-colour drawing of a globe and
+// a wordmark the brand no longer uses. Now: the theme's colour, Space Mono, the
+// name first, and an ink that reads on every palette in both appearances, with
+// the colour deepened where neither onyx nor bone reaches 4.5:1.
+{
+  const name = "the ticker wears the theme, and the brand";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const js = readSrc("web/ticker.js"), css = readSrc("web/web.css"), build = readSrc("scripts/build-web.mjs");
+  const block = (sel) => (css.match(new RegExp(`\\n${sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{[^}]*\\}`)) || [""])[0];
+  if (!/background: var\(--ticker-bg, var\(--accent\)\)/.test(block(".ticker"))) gaps.push("the ticker is not painted in the theme's colour");
+  if (/#02E8CD/i.test(block(".ticker") + block(".ticker-x"))) gaps.push("the ticker still has the website's aqua written in");
+  if (!/"Space Mono"/.test(block(".ticker"))) gaps.push("the ticker is not set in Space Mono");
+  if (/SITE_PUBLIC|site: true/.test(js)) gaps.push("the ticker still holds back the sites' links");
+  if (!/n\.textContent = "AURAL\.FM"/.test(js)) gaps.push("the ticker does not lead with the name");
+  if (!/new MutationObserver\(\(\) => ink\(bar\)\)/.test(js)) gaps.push("the ticker's ink does not follow a change of theme");
+  // Every palette, both appearances, through the ticker's own arithmetic.
+  const helpers = js.slice(js.indexOf("const lum = "), js.indexOf("  const KEY = "));
+  const req = (await import("node:module")).createRequire(import.meta.url);
+  const pals = req(R("src/palettes.js"));
+  const list = pals.PALETTES || pals.list?.() || pals.default || [];
+  if (!list.length) gaps.push("no palettes found: this check is blind");
+  for (const p of list) for (const [look, hex] of [["dark", p.accent], ["light", p.accentLight]]) {
+    const set = {};
+    const bar = { style: { setProperty: (k, v) => { set[k] = v; }, removeProperty: (k) => { delete set[k]; } } };
+    const run = new Function("getComputedStyle", "document", `${helpers}; return { ink, lum, ratio };`)(
+      () => ({ getPropertyValue: () => hex }), { documentElement: {} });
+    run.ink(bar);
+    const bg = set["--ticker-bg"] ? set["--ticker-bg"].match(/[\d.]+/g).map(Number) : [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16));
+    const fg = set["--ticker-ink"] === "#0C0B0B" ? [12, 11, 11] : [247, 244, 238];
+    const r = run.ratio(run.lum(bg), run.lum(fg));
+    if (!(r >= 4.5)) gaps.push(`${p.id} in ${look}: ${r.toFixed(2)}:1`);
+  }
+  // The logo: the website's globe in the theme's colour, the name as type.
+  if (!/readFileSync\(R\("web", "assets", "auralfm-mark\.svg"\)/.test(build) || !/class="brand-word"[^`]*>AURAL\.FM</.test(build)) gaps.push("the toolbar's logo is not the brand's lockup");
+  if (!/\.brand-mark \{[^}]*color: var\(--accent\)/.test(css) || !/\.brand-word \{[^}]*"Space Mono"/.test(css)) gaps.push("the logo does not take the theme's colour, or its name is not in Space Mono");
+  gaps.length ? fail(name, gaps.join("; ")) : pass(`the ticker and the logo wear the theme; ${list.length} palettes read at 4.5:1 or better, dark and light`);
+}
+
 // ── the ticker measures its room against the bar, not itself ────────────────
 // The crypto strip was invisible on every fresh open, on the web and in the
 // app, until you dragged the window wider — then it appeared and stayed.
