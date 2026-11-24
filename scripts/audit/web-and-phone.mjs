@@ -195,6 +195,35 @@ import { ROOT, R, fail, pass, skip, EXPLORE_FILES, readSrc, pkg } from "./lib.mj
   gaps.length ? fail(name, gaps.join("; ")) : pass("the app, the desktop splash and the share card draw the sound as columns of five dots");
 }
 
+// ── the share card is up in a second, and done inside three ────────────────
+// 24 Nov 2026. "That card should not take more than 5 to 8 seconds … on the
+// desktop app, not more than 2 to 3." It listened first and drew after: up to
+// four seconds for a copy of the stream to start, 3.2 seconds of listening, an
+// eight-second limit behind that, and then the Earth painted pixel by pixel —
+// a third of it off the card's edge — with ten trigonometric calls a pixel.
+// Timed on this Mac: 8.7 s to draw a post card, before any listening.
+{
+  const name = "the share card is up in a second, and done inside three";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const play = readSrc("src/renderer/explore-playback.js"), card = readSrc("src/renderer/card.js");
+  const lv = readSrc("src/renderer/levels.js"), ipc = readSrc("src/main/ipc-card.js");
+  const num = (src, re) => Number((src.match(re) || [])[1]);
+  const listenMax = num(play, /const LISTEN_MAX = (\d+);/);
+  if (!(listenMax <= 3000)) gaps.push(`the card waits ${listenMax || "?"} ms for the station's sound (at most 3000)`);
+  const ms = num(lv, /async function sample\(url, \{ ms = (\d+)/), start = num(lv, /setTimeout\(no, (\d+)\)/);
+  if (!(ms + start <= 3200)) gaps.push(`levels.js may take ${ms + start || "?"} ms (start ${start}, listen ${ms})`);
+  const ipcMs = num(ipc, /entry\.timer = setTimeout\(\(\) => entry\.done\(null\), (\d+)\)/);
+  if (!(ipcMs <= 3500)) gaps.push(`the desktop waits ${ipcMs || "?"} ms for levels`);
+  if (!/draft\?\.\(first\)/.test(play) || !/listening: !!playing/.test(play)) gaps.push("the card is not shown until the station has been listened to");
+  if (!/addEventListener\(ev, warmCard\)/.test(play)) gaps.push("listening does not start when the pointer reaches the share button");
+  if (!/const x0 = Math\.max\(0, Math\.floor\(r - cx\)\)/.test(card)) gaps.push("the Earth is painted where the card does not show it");
+  if (/Math\.asin\(ρ\)/.test(card)) gaps.push("the Earth still works out the angle c for every pixel");
+  if (!/BG\.get\(bgKey\)/.test(card)) gaps.push("the Earth is painted again for the finished card");
+  gaps.length ? fail(name, gaps.join("; "))
+    : pass(`drawn at once with the dots unlit, the sound in ${listenMax} ms at most, the Earth painted once and only where it shows`);
+}
+
 // ── the ticker measures its room against the bar, not itself ────────────────
 // The crypto strip was invisible on every fresh open, on the web and in the
 // app, until you dragged the window wider — then it appeared and stayed.

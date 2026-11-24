@@ -137,6 +137,8 @@
    * the card shows the Earth as it actually was when somebody was listening.
    */
   const TEX = { day: null, night: null };
+  // The last few backgrounds drawn (draw, bgKey): one per shape tried.
+  const BG = new Map();
 
   function loadTexture(src) {
     return new Promise((resolve) => {
@@ -163,51 +165,72 @@
    */
   function drawGlobe(ctx, cx, cy, r, centreLat, centreLon, sun) {
     if (!TEX.day) return false;
-    const img = ctx.createImageData(r * 2, r * 2);
+    /**
+     * Only the part of the disc the canvas shows.
+     *
+     * The card's Earth is larger than the card and runs off its edge, so a
+     * quarter to a third of the disc was worked out pixel by pixel and then
+     * thrown away. That, and the trigonometry below, was most of the seconds
+     * a card took.
+     */
+    const cw = ctx.canvas?.width ?? r * 2, ch = ctx.canvas?.height ?? r * 2;
+    const x0 = Math.max(0, Math.floor(r - cx)), x1 = Math.min(r * 2, Math.ceil(cw - cx + r));
+    const y0 = Math.max(0, Math.floor(r - cy)), y1 = Math.min(r * 2, Math.ceil(ch - cy + r));
+    if (x1 <= x0 || y1 <= y0) return true;
+    const vw = x1 - x0, vh = y1 - y0;
+    const img = ctx.createImageData(vw, vh);
     const out = img.data;
     const rad = Math.PI / 180;
     const φ0 = centreLat * rad, λ0 = centreLon * rad;
     const sinφ0 = Math.sin(φ0), cosφ0 = Math.cos(φ0);
     const sφ = Math.sin(sun.lat * rad), cφ = Math.cos(sun.lat * rad), sλ = sun.lng * rad;
+    const day = TEX.day, night = TEX.night;
+    const TW = day.w, TH = day.h, NW = night?.w, NH = night?.h;
 
-    for (let py = 0; py < r * 2; py++) {
-      for (let px = 0; px < r * 2; px++) {
-        const x = (px - r) / r, y = (r - py) / r;
-        const ρ2 = x * x + y * y;
-        const i = (py * r * 2 + px) * 4;
+    for (let py = y0; py < y1; py++) {
+      const y = (r - py) / r, y2 = y * y;
+      const ySin = y * sinφ0, yCos = y * cosφ0;
+      for (let px = x0; px < x1; px++) {
+        const x = (px - r) / r;
+        const ρ2 = x * x + y2;
+        const i = ((py - y0) * vw + (px - x0)) * 4;
         if (ρ2 > 1) { out[i + 3] = 0; continue; }        // outside the disc
 
-        const ρ = Math.sqrt(ρ2);
-        const c = Math.asin(ρ);
-        const sinc = Math.sin(c), cosc = Math.cos(c);
-        const φ = Math.asin(cosc * sinφ0 + (ρ ? y * sinc * cosφ0 / ρ : 0));
-        const λ = λ0 + Math.atan2(x * sinc, ρ * cosφ0 * cosc - y * sinφ0 * sinc);
+        /**
+         * The inverse orthographic projection, without the angle c.
+         *
+         * c = asin(ρ), so sin c is ρ itself and cos c is √(1 − ρ²): the two
+         * divisions by ρ cancel, and four trigonometric calls a pixel go.
+         */
+        const cosc = Math.sqrt(1 - ρ2);
+        const sinφ = cosc * sinφ0 + yCos;
+        const λ = λ0 + Math.atan2(x, cosφ0 * cosc - ySin);
+        const cosφ = Math.sqrt(Math.max(0, 1 - sinφ * sinφ));
 
         // Equirectangular lookup.
         let u = ((λ / Math.PI + 1) / 2) % 1; if (u < 0) u += 1;
-        const v = 0.5 - φ / Math.PI;
-        const tx = Math.min(TEX.day.w - 1, (u * TEX.day.w) | 0);
-        const ty = Math.min(TEX.day.h - 1, (v * TEX.day.h) | 0);
-        const t = (ty * TEX.day.w + tx) * 4;
+        const v = 0.5 - Math.asin(Math.max(-1, Math.min(1, sinφ))) / Math.PI;
+        const tx = Math.min(TW - 1, (u * TW) | 0);
+        const ty = Math.min(TH - 1, (v * TH) | 0);
+        const t = (ty * TW + tx) * 4;
 
         // Is this point in sunlight? Same cosine the terminator uses.
-        const lit = Math.sin(φ) * sφ + Math.cos(φ) * cφ * Math.cos(λ - sλ);
+        const lit = sinφ * sφ + cosφ * cφ * Math.cos(λ - sλ);
         // A soft band rather than a hard edge — dusk is about ten degrees wide,
         // and a knife edge across a photograph of Earth looks like a bug.
         const k = Math.max(0, Math.min(1, (lit + 0.12) / 0.24));
 
-        let R = TEX.day.data[t], G = TEX.day.data[t + 1], B = TEX.day.data[t + 2];
+        let R = day.data[t], G = day.data[t + 1], B = day.data[t + 2];
         if (k < 1) {
           let nR = 6, nG = 8, nB = 14;
-          if (TEX.night) {
-            const nt = (Math.min(TEX.night.h - 1, (v * TEX.night.h) | 0) * TEX.night.w
-                      + Math.min(TEX.night.w - 1, (u * TEX.night.w) | 0)) * 4;
-            nR = TEX.night.data[nt]; nG = TEX.night.data[nt + 1]; nB = TEX.night.data[nt + 2];
+          if (night) {
+            const nt = (Math.min(NH - 1, (v * NH) | 0) * NW + Math.min(NW - 1, (u * NW) | 0)) * 4;
+            nR = night.data[nt]; nG = night.data[nt + 1]; nB = night.data[nt + 2];
           }
           R = nR + (R - nR) * k; G = nG + (G - nG) * k; B = nB + (B - nB) * k;
         }
         // Limb darkening, so the sphere reads as a sphere rather than a sticker.
-        const edge = 0.55 + 0.45 * Math.sqrt(1 - ρ2);
+        const edge = 0.55 + 0.45 * cosc;
         out[i] = R * edge; out[i + 1] = G * edge; out[i + 2] = B * edge; out[i + 3] = 255;
       }
     }
@@ -220,9 +243,9 @@
      * transparency behaves like transparency.
      */
     const off = document.createElement("canvas");
-    off.width = r * 2; off.height = r * 2;
+    off.width = vw; off.height = vh;
     off.getContext("2d").putImageData(img, 0, 0);
-    ctx.drawImage(off, cx - r, cy - r);
+    ctx.drawImage(off, cx - r + x0, cy - r + y0);
     return true;
   }
 
@@ -286,6 +309,19 @@
     const mono = (weight, px) => { ctx.font = `${weight} ${Math.round(px * K)}px ${MONO}`; ctx.letterSpacing = `${(px * K * 0.06).toFixed(1)}px`; };
     const sans = (weight, px) => { ctx.font = `${weight} ${px}px ${SANS}`; ctx.letterSpacing = `${(-px * 0.03).toFixed(1)}px`; };
 
+    /**
+     * The sky, the Earth and its towns, kept for the next drawing.
+     *
+     * A card is drawn twice — once while the station is being listened to, and
+     * again when its sound has been heard — and once more for each shape tried.
+     * The picture behind the words is the same each time, and it is the
+     * expensive part, so it is painted once per shape.
+     */
+    const bgKey = [shape, now.title, now.lat, now.lon, now.sun?.lat?.toFixed(1), now.sun?.lng?.toFixed(1),
+      now.towns?.length || 0, JSON.stringify(C), !!TEX.day].join("|");
+    const kept = BG.get(bgKey);
+    if (kept) ctx.drawImage(kept, 0, 0);
+    else {
     ctx.fillStyle = INK;
     ctx.fillRect(0, 0, W, H);
 
@@ -337,6 +373,12 @@
       ctx.fillStyle = BONE;
       ctx.beginPath(); ctx.arc(CX, CY, 10 * K, 0, Math.PI * 2); ctx.fill();
     }
+    const keep = document.createElement("canvas");
+    keep.width = W; keep.height = H;
+    keep.getContext("2d").drawImage(cv, 0, 0);
+    if (BG.size >= 4) BG.delete(BG.keys().next().value);
+    BG.set(bgKey, keep);
+    }
 
     // ── the words, measured before they are drawn ───────────────────────────
     const stamp = now.when.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -349,7 +391,10 @@
     const city = /^(Across |Somewhere in |Online, no country$|Online only$)/.test(now.place || "") ? "" : now.place || "";
     const where = [city, now.country].filter(Boolean).join(", ");
     const title = String(now.title || "");
-    const hasWave = Array.isArray(now.levels) && now.levels.length > 0;
+    // Still listening: the wave keeps its place, every dot dim, so the words do
+    // not jump when the sound arrives and the dots light.
+    const listening = !!now.listening;
+    const hasWave = listening || (Array.isArray(now.levels) && now.levels.length > 0);
 
     const NAME_W = wide ? 600 : inner, NAME_MAX = wide ? 84 : story ? 170 : square ? 120 : 150;
     // The name stops a full margin short of the words' right edge, so it never
@@ -425,13 +470,13 @@
       // the town dot stacked into a meter. Five to a column, the column's dots
       // dim at rest and lit from the bottom by its level; the columns spaced as
       // drawn (1.4 times the row pitch), each the loudest of the levels it covers.
-      const levels = now.levels, loudest = Math.max(0.15, ...levels), width = wide ? NAME_W - 150 : inner;
+      const levels = listening ? [0] : now.levels, loudest = Math.max(0.15, ...levels), width = wide ? NAME_W - 150 : inner;
       const ROWS = 5, pitch = WAVE_H / ROWS, r = pitch * 0.27, step = pitch * 1.4;
       const cols = Math.max(1, Math.floor((width - 2 * r) / step) + 1);
       for (let c = 0; c < cols; c++) {
         const a = Math.floor(c * levels.length / cols), b = Math.max(a + 1, Math.floor((c + 1) * levels.length / cols));
         const v = Math.min(1, Math.max(...levels.slice(a, b)) / loudest);
-        const lit = Math.max(1, Math.round(v * ROWS));
+        const lit = listening ? 0 : Math.max(1, Math.round(v * ROWS));
         const x = M + r + c * step;
         for (let k = 0; k < ROWS; k++) {
           ctx.globalAlpha = k < lit ? 1 : 0.28;
@@ -502,8 +547,9 @@
       return drawGlobe(ctx, cx, cy, r, lat, lon, sun || { lat: 0, lng: 0 });
     },
 
-    /** Load the textures without drawing anything. */
+    /** Load the textures and the type without drawing anything. */
     async ready() {
+      try { await loadFonts(); } catch { /* drawn in whatever we have */ }
       if (!TEX.day) {
         [TEX.day, TEX.night] = await Promise.all([
           loadTexture(`vendor/${window.AuralLite ? "lite/" : ""}earth-blue-marble.jpg`),

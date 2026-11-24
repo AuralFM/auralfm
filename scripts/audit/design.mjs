@@ -699,3 +699,15 @@ import { ROOT, R, rel, fail, pass, skip, renderers, preload, main, EXPLORE_FILES
   } catch (e) { gaps.push(`card.js did not run: ${e.message}`); }
   gaps.length ? fail(name, [...new Set(gaps)].slice(0, 8).join("; ")) : pass("every name ends at least 128 px from the edge, and no word or band is left alone on a second line");
 }
+
+// ── the filter chips are a target a finger or a shaky hand can hit ──────────
+// 24 Nov 2026. Rams measured 17 targets under 24px on the player: the chips
+// were 23px tall with a mouse (34 on touch). WCAG 2.2, 2.5.8: at least 24.
+{
+  const name = "the filter chips are at least 24px tall";
+  console.log(`\n${name}`);
+  const src = readSrc("src/renderer/explore.html");
+  const row = (src.match(/\.chips\{[^}]*\}/) || [""])[0], btn = (src.match(/\.chips button\{\s*border:0[^}]*\}/) || [""])[0];
+  const h = Number((row.match(/height:(\d+)px/) || [])[1]), mh = Number((btn.match(/min-height:(\d+)px/) || [])[1]);
+  h >= 24 && mh >= 24 ? pass(`the row is ${h}px and each chip at least ${mh}px`) : fail(name, `the row is ${h || "?"}px and a chip ${mh || "unset"}`);
+}
