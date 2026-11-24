@@ -421,13 +421,27 @@
     ctx.fillText(sound, M, y);
     if (hasWave) {
       y += 26 * K + SUB * 0.3;
-      const bars = now.levels, loudest = Math.max(0.15, ...bars), gap = 4 * K, width = wide ? NAME_W - 150 : inner;
-      const bw = (width + gap) / bars.length - gap;
-      ctx.fillStyle = C.accent;
-      for (let i = 0; i < bars.length; i++) {
-        const h = Math.max(3, Math.max(0.04, Math.min(1, bars[i] / loudest)) * WAVE_H);
-        ctx.fillRect(M + i * (bw + gap), y + (WAVE_H - h) / 2, Math.max(1.5, bw), h);
+      // Dots (Figma, Favorites · share, "Audio read", recommended for strips):
+      // the town dot stacked into a meter. Five to a column, the column's dots
+      // dim at rest and lit from the bottom by its level; the columns spaced as
+      // drawn (1.4 times the row pitch), each the loudest of the levels it covers.
+      const levels = now.levels, loudest = Math.max(0.15, ...levels), width = wide ? NAME_W - 150 : inner;
+      const ROWS = 5, pitch = WAVE_H / ROWS, r = pitch * 0.27, step = pitch * 1.4;
+      const cols = Math.max(1, Math.floor((width - 2 * r) / step) + 1);
+      for (let c = 0; c < cols; c++) {
+        const a = Math.floor(c * levels.length / cols), b = Math.max(a + 1, Math.floor((c + 1) * levels.length / cols));
+        const v = Math.min(1, Math.max(...levels.slice(a, b)) / loudest);
+        const lit = Math.max(1, Math.round(v * ROWS));
+        const x = M + r + c * step;
+        for (let k = 0; k < ROWS; k++) {
+          ctx.globalAlpha = k < lit ? 1 : 0.28;
+          ctx.fillStyle = C.accent;
+          ctx.beginPath();
+          ctx.arc(x, y + WAVE_H - pitch * (k + 0.5), r, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
+      ctx.globalAlpha = 1;
     }
 
     // ── the foot: what to do, when it was heard, and the code ───────────────

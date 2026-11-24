@@ -1,6 +1,6 @@
 # AuralFM — Code of Conduct
 
-**Last updated: 26 September 2026**
+**Last updated: 24 November 2026**
 
 AuralFM is a way to hear each other's radio, from every corner of the world, with
 nobody ranking who gets heard. That only works if the people in it can be there
@@ -54,7 +54,9 @@ scam dressed as a station; or because the station asks us to.
 The chat runs over public Nostr relays run by other people. **Nobody at AuralFM
 can delete a message from them**, and we will not pretend otherwise. What we can
 do today: ask the relay operators to remove it, report it to the authorities
-where the law requires, and take a station off the catalogue.
+where the law requires, and take a station off the catalogue. Anything that
+sexualises a child is reported to NCMEC's CyberTipline, with which AuralFM is
+registered.
 
 Next on the roadmap is a shared block list the app applies for everyone, so one
 report protects every listener rather than only the one who muted.

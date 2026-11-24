@@ -906,6 +906,27 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   }
 }
 
+// ── a report about a child goes where the law says ──────────────────────────
+// 24 Nov 2026. AuralFM is registered with NCMEC's CyberTipline. The report
+// drafts (desktop and web) tell the person not to attach the material and to
+// report it there; the terms, the code of conduct and the privacy policy say
+// that AuralFM is registered and reports what it learns. A draft that asked
+// for a screenshot of everything would ask for a copy of the worst of it.
+{
+  const name = "a report about a child goes where the law says";
+  console.log(`\n${name}`);
+  const gaps = [];
+  for (const f of ["src/main/ipc-chat.js", "web/messaging.js"]) {
+    const src = readSrc(f);
+    if (!/do not attach or forward the material/.test(src) || !src.includes("at report.cybertip.org (NCMEC)")) gaps.push(`${f}'s report draft does not send a child's case to the CyberTipline`);
+  }
+  for (const [f, words] of [["docs/TERMS.md", /registered with the CyberTipline/], ["docs/CODE-OF-CONDUCT.md", /CyberTipline, with which AuralFM is\s+registered/], ["docs/PRIVACY.md", /passed to NCMEC's\s+CyberTipline/]]) {
+    if (!words.test(readSrc(f))) gaps.push(`${f} does not say AuralFM is registered with the CyberTipline`);
+  }
+  if (/CYBERTIP\d|cybertip.*(password|passwd|user(name)?)\s*[:=]/i.test(["src/main/ipc-chat.js", "web/messaging.js", "docs/TERMS.md", "docs/PRIVACY.md", "docs/CODE-OF-CONDUCT.md"].map(readSrc).join("\n"))) gaps.push("a CyberTipline credential is written in the repository");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("both report drafts point a child's case to the CyberTipline, and the three policies say AuralFM is registered");
+}
+
 // ── chat leaves a refused relay alone ───────────────────────────────────────
 // 22 Nov 2026. A home network that blocks a relay resets it every time it is
 // dialled, and AT&T's warns the account holder. Changing station dials afresh

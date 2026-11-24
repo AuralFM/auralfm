@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 22 November 2026**
+**Last updated: 24 November 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -318,6 +318,9 @@ between, and keeps nothing about who listened.
   then fetched from them.
 - **Reporting a show** hides its host on your device and opens an email draft
   to hello@auralfm.xyz. Nothing is sent unless you send it.
+- **A report of material that sexualises a child** is passed to NCMEC's
+  CyberTipline, with which AuralFM is registered: what the report says, the
+  sender's key, the place and the time. US law requires it.
 - **Nothing is recorded** by AuralFM. A host may record their own show.
 
 Anyone can listen to a show in any of AuralFM's apps, with "Show other listeners"
