@@ -239,8 +239,31 @@ function toolbarLogo() {
  */
 const SITE = "https://listen.auralfm.xyz/";
 const TAGLINE = "Radio chosen by people. Found by place.";
+/**
+ * What a search engine reads about the player.
+ *
+ * The page was titled "AuralFM", with no heading and about a hundred words a
+ * crawler could see: in a month, search sent it one visitor (24 Nov 2026). The
+ * title and description say what it is, in the words someone searches with;
+ * the counts come from the catalogue being shipped, rounded down, so they are
+ * never more than is there. The heading is for screen readers as much as for
+ * search: the page had none. The structured data names it a free web app.
+ */
+const CATALOGUE = JSON.parse(fs.readFileSync(R("data", "stations.min.json"), "utf8"));
+const roughly = (n) => (Math.floor(n / 1000) * 1000).toLocaleString("en-US");
+const FIND_TITLE = "AuralFM · Live radio from towns around the world";
+const FIND_SAY = `Turn the globe and listen to ${roughly(CATALOGUE.c.length)} live radio stations from ${roughly(CATALOGUE.p.length)} towns. Free, in your browser, with no account.`;
+const FIND_DATA = JSON.stringify({
+  "@context": "https://schema.org", "@type": "WebApplication", name: "AuralFM", url: SITE,
+  description: FIND_SAY, applicationCategory: "MultimediaApplication", operatingSystem: "Any",
+  browserRequirements: "Requires JavaScript and WebGL", isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+}).replace(/</g, "\\u003c");
+
 const SHARE_TAGS = `
-<meta name="description" content="${TAGLINE}">
+<meta name="description" content="${FIND_SAY}">
+<link rel="canonical" href="${SITE}">
+<script type="application/ld+json">${FIND_DATA}</script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AuralFM">
 <meta property="og:title" content="AuralFM">
@@ -308,7 +331,7 @@ function launchScreen() {
   return { style, markup };
 }
 
-function page(srcName, outName, { title, before, beforeScript, after = {}, logo = false, share = false, launch = false }) {
+function page(srcName, outName, { title, heading = "", hidden = false, before, beforeScript, after = {}, logo = false, share = false, launch = false }) {
   let html = fs.readFileSync(R("src", "renderer", srcName), "utf8");
   const csp = /<meta http-equiv="Content-Security-Policy"[\s\S]*?>/;
   if (!csp.test(html)) throw new Error(`web: no CSP meta in ${srcName}`);
@@ -332,7 +355,7 @@ function page(srcName, outName, { title, before, beforeScript, after = {}, logo 
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
 <link rel="icon" href="favicon.ico" sizes="48x48">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">${share ? SHARE_TAGS : ""}`);
+<link rel="icon" href="favicon.svg" type="image/svg+xml">${share ? SHARE_TAGS : ""}${hidden ? '\n<meta name="robots" content="noindex">' : ""}`);
   // After the page's own stylesheet, so an override wins where the two are
   // equally specific rather than losing to source order.
   if (!html.includes("</head>")) throw new Error(`web: ${srcName} has no </head>`);
@@ -364,6 +387,10 @@ ${["earth-blue-marble.jpg crossorigin", "night-sky.png crossorigin", "earth-nigh
     html = html.replace('<link rel="preload" href="web/web.css"', `${style}\n<link rel="preload" href="web/web.css"`);
     if (!/<body>\n/.test(html)) throw new Error(`web: ${srcName} has no <body> for the launch screen`);
     html = html.replace("<body>\n", `<body>\n${markup}\n`);
+  }
+  if (heading) {
+    if (!/<body>\n/.test(html) || /<h1\b/.test(html)) throw new Error(`web: ${srcName} has no <body>, or a heading of its own`);
+    html = html.replace("<body>\n", `<body>\n<h1 class="sronly">${heading}</h1>\n`);
   }
   const anchor = `<script src="${beforeScript}"></script>`;
   if (!html.includes(anchor)) throw new Error(`web: ${srcName} has no ${anchor}`);
@@ -403,7 +430,8 @@ ${["earth-blue-marble.jpg crossorigin", "night-sky.png crossorigin", "earth-nigh
 const DESKTOP_ONLY = ["kiwi.js", "explore-shortwave.js", "popover.js", "splash.js", "explore-studio.js", "studio-deck.js"];
 
 page("explore.html", "index.html", {
-  title: "AuralFM",
+  title: FIND_TITLE,
+  heading: "AuralFM: live radio from towns around the world",
   beforeScript: "errors.js",
   // levels.js before the bridge: the card's waveform is measured from a private
   // copy of the stream, exactly as the desktop's popover does it.
@@ -415,6 +443,7 @@ page("explore.html", "index.html", {
 });
 page("settings.html", "settings.html", {
   title: "AuralFM Settings",
+  hidden: true,             // a page of switches, not something to find
   beforeScript: "errors.js",
   before: ["web/modules.js", "web/messaging.js", "web/bridge.js", "web/settings-web.js"],
 });
