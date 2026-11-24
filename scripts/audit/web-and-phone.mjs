@@ -586,8 +586,27 @@ import { ROOT, R, fail, pass, skip, EXPLORE_FILES, readSrc, pkg } from "./lib.mj
   if (!/User-agent: GPTBot[\s\S]*?Disallow: \/\s*\n/.test(rules)) gaps.push("web/robots.txt no longer turns the training crawlers away");
   if (!/copyFileSync\(R\("web", "sitemap\.xml"\)/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the player's sitemap is not in its build");
   if (!/google-site-verification/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the player lost its Search Console tag, and the property goes unverified");
+  // What a crawler reads (24 Nov 2026): the page was titled "AuralFM" with no
+  // heading, and search sent it one visitor in a month.
+  const build = readSrc("scripts/build-web.mjs");
+  const share = (build.match(/const SHARE_TAGS = `([\s\S]*?)`;/) || ["", ""])[1];
+  if (!/<link rel="canonical" href="\$\{SITE\}">/.test(share)) gaps.push("the player does not name its own address");
+  if (!/<meta name="description" content="\$\{FIND_SAY\}">/.test(share) || !/FIND_SAY = `[^`]*\$\{roughly\(CATALOGUE\.c\.length\)\}/.test(build)) gaps.push("the description is not built from the catalogue being shipped");
+  if (!/"@type": "WebApplication"/.test(build) || !/application\/ld\+json/.test(share)) gaps.push("the player is not described as a web app");
+  const main = build.slice(build.indexOf('page("explore.html"'), build.indexOf('page("settings.html"'));
+  if (!/title: FIND_TITLE/.test(main) || !/heading: "[^"]{12,}"/.test(main)) gaps.push("the player's page has a bare title or no heading");
+  if (!/hidden: true/.test(build.slice(build.indexOf('page("settings.html"')))) gaps.push("the settings page is offered to search");
+  if (!/Math\.floor\(n \/ 1000\) \* 1000/.test(build)) gaps.push("the counts are not rounded down, so the page could claim more than there is");
+  // The page as built, when it is here.
+  if (fs.existsSync(R("dist-web/index.html"))) {
+    const page = fs.readFileSync(R("dist-web/index.html"), "utf8");
+    if ((page.match(/<h1\b/g) || []).length !== 1) gaps.push(`dist-web/index.html has ${(page.match(/<h1\b/g) || []).length} headings`);
+    if ((page.match(/<link rel="canonical"/g) || []).length !== 1) gaps.push("dist-web/index.html names its address more than once, or not at all");
+    try { if (JSON.parse((page.match(/<script type="application\/ld\+json">([^<]*)<\/script>/) || [])[1])["@type"] !== "WebApplication") throw 0; }
+    catch { gaps.push("dist-web/index.html's structured data does not read"); }
+  }
   gaps.length ? fail("the player can be found", gaps.join("; "))
-    : pass("the player lets search engines in, keeps training crawlers out, and says where its sitemap is");
+    : pass("the player lets search engines in, keeps training crawlers out, says where its sitemap is, and says what it is");
 }
 
 // ── the FM and AM chips are a dial ──────────────────────────────────────────
