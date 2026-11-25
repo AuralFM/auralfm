@@ -1179,7 +1179,7 @@
     const go = $s("roomwaitgo");
     go.hidden = !off;
     go.textContent = tt("studio.roomOn", "Show other listeners");
-    go.onclick = () => window.auralfm.setPrefs({ presence: true });
+    go.onclick = () => window.turnOnChat?.();
   }
   // The Go live button follows the name without repainting the field being typed in.
   // The checklist follows the name without repainting the field being typed in.

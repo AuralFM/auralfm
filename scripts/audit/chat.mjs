@@ -1168,3 +1168,30 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
     globalThis.WebSocket = realWs; globalThis.setInterval = realSet; Date.now = realNow;
   }
 }
+
+// ── chat asks for 13 or older before it opens ───────────────────────────────
+// 25 Nov 2026. The Terms said AuralFM is for people 13 and over, and the app
+// never asked: the chat card's button, Settings, the studio and On air each
+// turned chat on with one press, and the web turned it on by default. Going
+// live already asked for 18 every time (explore-studio.js, show.adult).
+{
+  const name = "chat asks for 13 or older before it opens";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const prefs = (await import(pathToFileURL(R("src/prefs.js")).href));
+  if (prefs.normalize({ presence: true }).presence !== false) gaps.push("chat on without the 13+ tick still reads as on");
+  if (prefs.normalize({ presence: true, ageChat: true }).presence !== true) gaps.push("chat with the tick reads as off");
+  if (!("ageChat" in prefs.pick({ ageChat: true }))) gaps.push("the tick cannot be saved");
+  const html = readSrc("src/renderer/explore.html");
+  const chatJs = readSrc("src/renderer/explore-chat.js");
+  if (!/id="chatoffage"/.test(html) || !/if \(!\$\("chatoffage"\)\.checked\)/.test(chatJs)) gaps.push("the chat card has no 13+ tick, or Turn on chat does not wait for it");
+  for (const f of ["src/renderer", "web"]) {
+    for (const file of fs.readdirSync(R(f)).filter((n) => n.endsWith(".js"))) {
+      const src = fs.readFileSync(R(`${f}/${file}`), "utf8");
+      if (/setPrefs\??\.?\(\{\s*presence:\s*true\s*\}\)/.test(src)) gaps.push(`${f}/${file} turns chat on without asking`);
+    }
+  }
+  if (!/presence = p\.ageChat === true/.test(readSrc("web/bridge.js"))) gaps.push("the web turns chat on by default without the tick");
+  if (!/chat and private messages are for people aged 13/i.test(fs.readFileSync(R("docs/TERMS.md"), "utf8"))) gaps.push("the Terms do not say chat is for 13 and over");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("off until the listener says they are 13 or older, at every switch, on the desktop and the web");
+}

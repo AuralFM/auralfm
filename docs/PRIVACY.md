@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 24 November 2026**
+**Last updated: 25 November 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -202,7 +202,9 @@ someone's antenna, and it is the same bargain the receiver's own web page offers
 
 ## Optional features that are off by default
 
-**Listener presence** is off until you turn it on in Settings. It, favorites
+**Listener presence** is off until you turn it on in Settings. Turning it on
+asks you to confirm you are 13 or older; the app keeps that tick on your device,
+not your age, and sends it nowhere. It, favorites
 sync and error reports (further down) are the only things in the app that send
 anything, which is why all three are off and why this section is the longest one
 here.
@@ -330,8 +332,10 @@ on. Going live is in testing, in the Mac app.
 
 AuralFM is not directed at children, and it is for people aged 13 and over (18
 and over to go live, or to claim a station). The app collects no information from
-anyone. The waitlists are the one place anyone gives us a name or an email, and
-each asks you to confirm you are 13 or older before it sends; if we learn that
+anyone. The chat asks you to confirm you are 13 or older before it turns on, and going
+live asks you to confirm you are 18 or older every time. The waitlists are the
+one place anyone gives us a name or an email, and each asks you to confirm you
+are 13 or older before it sends; if we learn that
 someone under 13 has joined one anyway, we delete what they gave us.
 
 ## Changes

@@ -622,7 +622,13 @@ function paintAppIcons() {
   }
 }
 
-$("#presence").addEventListener("click", () => set({ presence: !P.presence }));
+// Chat and messages are for people 13 and older (docs/TERMS.md): turning it on
+// asks once, and the tick is kept (src/prefs.js, ageChat).
+$("#presence").addEventListener("click", () => {
+  if (P.presence) return set({ presence: false });
+  if (P.ageChat !== true && !confirm(T["chatoff.ageAsk"] || "Chat is for people 13 and older. Are you 13 or older?")) return;
+  set({ presence: true, ageChat: true });
+});
 
 /**
  * Say what is actually happening, not just that the switch is on. "Announcing to

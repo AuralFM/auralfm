@@ -186,6 +186,13 @@ const DEFAULTS = {
    */
   presence: false,
   /**
+   * The listener said they are 13 or older, the age the Terms set for chat and
+   * private messages. Kept as the tick, never an age or a birthday. Asked where
+   * chat is turned on (the chat card, Settings); without it `presence` reads as
+   * off everywhere (normalize), so no path can open a room around it.
+   */
+  ageChat: false,
+  /**
    * Nostr relays the listener added themselves, tried ahead of ours.
    *
    * Here rather than buried in state because it is a *choice about who this app
@@ -211,6 +218,9 @@ function normalize(saved = {}) {
   for (const k of Object.keys(DEFAULTS)) {
     if (typeof saved[k] === typeof DEFAULTS[k]) out[k] = saved[k];
   }
+  // Chat is for people 13 and older (docs/TERMS.md). Presence on without the
+  // tick is presence off: one rule here rather than a check at every reader.
+  if (out.ageChat !== true) out.presence = false;
   return out;
 }
 

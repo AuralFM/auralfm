@@ -688,7 +688,7 @@ function setPrefs(incoming) {
   if ("theme" in patch) applyThemeSource(st.prefs.theme);
   if ("appIcon" in patch) applyAppIcon(st.prefs.appIcon);
   broadcast("prefs:changed", st.prefs);
-  if ("presence" in patch) syncNostrPresence();
+  if ("presence" in patch || "ageChat" in patch) syncNostrPresence();
   // Applied before presence so a relay added in the same breath as switching
   // presence on is dialled on the first connection rather than the second.
   if ("relays" in patch) nostr.setExtraRelays(st.prefs.relays);
