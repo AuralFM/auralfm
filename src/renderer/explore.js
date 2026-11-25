@@ -11,6 +11,7 @@ wireView();
 wirePrefs();
 wireDial();
 wireLayers();
+if (typeof wireRoom === "function") wireRoom();
 wireChat();
 wireCommands();
 wireTrackers();

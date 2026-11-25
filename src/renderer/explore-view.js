@@ -604,7 +604,9 @@ let layers = { clouds: true, dayNight: true, stations: true, shortwave: true,
                // Off: the globe opens still, looking at the listener's own city
                // (homeView). A turning planet is one you have to chase before
                // you can aim at a dot, and aiming is the whole interaction.
-               drift: false, listeners: true, statusBar: false, onAir: true };
+               drift: false, listeners: true, statusBar: false, onAir: true,
+               // Crypto prices in the player bar: off unless asked for (markets.js).
+               markets: false };
 
 /**
  * Show and hide the dots without rebuilding them.
@@ -673,6 +675,9 @@ function applyLayers(next) {
 
   const bar = $("globehint");
   if (bar) bar.hidden = !layers.statusBar;
+  // Crypto prices: shown only with their layer on, and fetched only then.
+  const mk = $("markets");
+  if (mk) { mk.hidden = !layers.markets; if (layers.markets && !prev.markets) renderMarkets(); }
   paintLayers();          // the inspector reflects whatever main just confirmed
   if (!globe) return;
   wakeGlobe();

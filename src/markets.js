@@ -119,12 +119,14 @@ async function get() {
  * tenths depending on which one answered.
  */
 let ws = null, wsAlive = false, wsRetry = null;
+// Only while the Crypto Prices layer is on: off, nothing connects to the exchange.
+let wanted = false;
 const live = new Map();          // symbol -> { price, changePct, at }
 
 const wsCool = cooldown({ min: 60_000, max: 30 * 60_000, label: "markets/ws" });
 
 function connectLive() {
-  if (ws || wsCool.blocked) return;
+  if (!wanted || ws || wsCool.blocked) return;
   let sock;
   try { sock = new WebSocket(CB_WS); } catch (err) { return wsCool.fail(err); }
   ws = sock;
@@ -158,7 +160,7 @@ function connectLive() {
     // A feed that was working and dropped is worth one patient retry; the
     // cooldown handles the case where it keeps failing.
     clearTimeout(wsRetry);
-    wsRetry = setTimeout(connectLive, wasAlive ? 5000 : 60_000);
+    if (wanted) wsRetry = setTimeout(connectLive, wasAlive ? 5000 : 60_000);
   };
   sock.onclose = down;
   sock.onerror = () => { /* onclose always follows */ };
@@ -176,6 +178,13 @@ function liveItems() {
   return out.length === CB_PRODUCTS.length ? out : [];
 }
 
-function start() { connectLive(); }
+function start() { wanted = true; connectLive(); }
+/** The layer was switched off: close the feed and stop retrying. */
+function stop() {
+  wanted = false;
+  clearTimeout(wsRetry);
+  if (ws) { try { ws.close(); } catch { /* already closing */ } }
+  live.clear();
+}
 
-module.exports = { get, start, liveItems };
+module.exports = { get, start, stop, liveItems };

@@ -128,6 +128,8 @@ let lastPrices = new Map();
 async function renderMarkets() {
   const el = $("markets");
   if (!el) return;
+  // Off (the default): nothing shown and nothing asked for, so no request leaves for prices.
+  if (typeof layers !== "undefined" && !layers.markets) { el.hidden = true; return; }
   const { items, hasStocks } = (await window.auralfm.markets()) || { items: [] };
   if (!items?.length) { el.textContent = ""; return; }
 

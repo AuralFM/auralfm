@@ -385,3 +385,72 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   gaps.length ? fail(name, gaps.join("; ")) : pass("every clipboard write in the main process is the promise form, and waited for");
 }
 
+
+// ── the listening room shows what plays, on the room's screen ───────────────
+// The room (src/main/ipc-room.js, renderer/room.html) is a ceiling for people
+// lying down. Three ways it can go wrong without anything erroring: a second
+// <audio> in the room playing over the popover's, the room missing the player's
+// state so the ceiling shows one town while another plays, and the window
+// opening on the laptop when a projector is plugged in.
+{
+  const name = "the listening room shows what plays, on the room's screen";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const roomJs = readSrc("src/renderer/room.js"), roomHtml = readSrc("src/renderer/room.html");
+  const roomMain = readSrc("src/main/ipc-room.js"), mainJs = readSrc("src/main.js");
+  if (/<audio/.test(roomHtml) || /new Audio\(|createElement\(["']audio|createMediaElementSource|\.play\(\)/.test(roomJs)) gaps.push("the room plays sound itself");
+  if (!/api\.tune\(ch\)/.test(roomJs)) gaps.push("the room does not ask the player to tune");
+  if (!/ctx\.roomWin\?\.webContents\.send\("player:state", state\)/.test(mainJs)) gaps.push("the player's state never reaches the room");
+  if (!/api\.onPlayerState\(onPlayer\)/.test(roomJs) || !/api\.playerNow\(\)/.test(roomJs)) gaps.push("the room does not read the player");
+  if (!/getAllDisplays\(\)\.find\(\(d\) => d\.id !== primary\.id\)/.test(roomMain) || !/fullscreen: true/.test(roomMain)) gaps.push("the room does not open full screen on the second display");
+  if (!/backgroundThrottling: false/.test(roomMain)) gaps.push("the room's timers can be throttled while the host works on the laptop");
+  for (const k of ['"f"', '"d"', '"k"', '"escape"']) if (!roomJs.includes(`k === ${k}`)) gaps.push(`no ${k} key`);
+  if (!/prefers-reduced-motion/.test(roomJs) || !/prefers-reduced-motion/.test(roomHtml)) gaps.push("the room moves for someone who asked for less motion");
+  if (!/"room\.js"\]/.test(readSrc("scripts/build-web.mjs"))) gaps.push("the room reaches the web build, which has no player to drive");
+  // Second pass: the globe's own picture (it was the night texture alone and too
+  // dark to project), the globe's day-and-night switch, and a host panel in
+  // Explore, because keys on a projected window were hard to find and to use.
+  if (!/earth-blue-marble\.jpg/.test(roomJs) || !/layers\.dayNight === false \? 0 : 1/.test(roomJs)) gaps.push("the room does not draw the globe's map and follow its day-and-night switch");
+  // Third pass: the app's own spinning globe rather than a flat map (the flat
+  // map read as harsh on a projector), favourites to keep a vibe going, what is
+  // up next, and a station with no town named by its country without "the".
+  if (!/Globe\(\)\(\$\("globe"\)\)/.test(roomJs) || !/autoRotate/.test(roomJs)) gaps.push("the room is not the app's turning globe");
+  if (!/favs: "Favorites"/.test(roomJs) || !/upNext/.test(roomJs)) gaps.push("the room cannot play the favourites or say what is next");
+  if (!/replace\(\/\^the\\s\+\/i, ""\)/.test(roomJs)) gaps.push("a station with no town is named \"the United States\"");
+  if (!/api\.nextStation\(ch, hereTried\.ids\)/.test(roomJs)) gaps.push("the room has no next station in the same town");
+  const roomPanel = readSrc("src/renderer/explore-room.js");
+  if (!/api\.roomCommand\("next"\)/.test(roomPanel) || !/api\.roomCommand\("prev"\)/.test(roomPanel) || !/id="roomBtn" class="roomgo"/.test(readSrc("src/renderer/explore.html"))) gaps.push("Explore has no way into the room in the globe's corner, or no host panel");
+  if (!/ipcMain\.on\("room:command"/.test(roomMain)) gaps.push("the host panel's commands never reach the room");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("it tunes through the player, follows its state, opens full screen on the second display and keeps out of the web build");
+}
+
+// ── crypto prices are a layer, off; the toolbar holds four things ─────────────
+// Prices in the player bar read as a finance app, so they became a globe layer,
+// off at every launch, with no connection to the exchange while off. The
+// toolbar was cut to Layers, Favorites, Search and Settings: headlines moved to
+// the town's name and the shuffle beside play. Two ways back: a layer that
+// starts on, or a button that drifts back into the toolbar.
+{
+  const name = "crypto prices are an off layer, and the toolbar holds four things";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const mainJs = readSrc("src/main.js"), bridge = readSrc("web/bridge.js"), marketsJs = readSrc("src/markets.js");
+  const html = readSrc("src/renderer/explore.html");
+  if (!/\{ id: "markets",\s+key: "layer\.markets",\s+default: false \}/.test(mainJs) || !/\["markets", false\]/.test(bridge)) gaps.push("the prices layer is missing or on by default");
+  for (const [where, src] of [["desktop", mainJs], ["web", bridge]]) {
+    const launch = src.match(/ON_AT_LAUNCH = new Set\(\[([^\]]*)\]\)/);
+    if (!launch || /markets/.test(launch[1])) gaps.push(`the ${where} turns prices on at launch`);
+  }
+  if (!/if \(!wanted \|\| ws/.test(marketsJs) || !/if \(wanted\) wsRetry/.test(marketsJs) || !/module\.exports = \{[^}]*\bstop\b/.test(marketsJs)) gaps.push("the exchange is connected while the prices are off");
+  if (!/if \(id === "markets"\) on \? markets\.start\(\) : markets\.stop\(\)/.test(mainJs)) gaps.push("the desktop does not start and stop the feed with the layer");
+  if (!/id="markets" hidden/.test(html) || !/!layers\.markets\) \{ el\.hidden = true; return; \}/.test(readSrc("src/renderer/explore-panels.js"))) gaps.push("the prices show before the layer is on");
+  const bar = html.match(/<div class="toolbar">([\s\S]*?)\n<\/div>/);
+  const ids = bar ? [...bar[1].matchAll(/<(?:button|input)[^>]*\bid="([^"]+)"/g)].map((m) => m[1]) : [];
+  if (ids.join(",") !== "studioBtn,layersBtn,favBtn,q,setBtn") gaps.push(`the toolbar holds ${ids.join(", ") || "nothing found"}`);
+  if (!/<div class="headrow"><h2><\/h2>[\s\S]{0,400}?id="newsBtn"/.test(html)) gaps.push("headlines are not beside the town's name");
+  if (!/id="play"[^>]*><\/button>[\s\S]{0,300}?id="tripBtn"/.test(html)) gaps.push("the shuffle is not beside play");
+  // The web's bridge answers any unknown name with a function, so the room's
+  // tag showed on the web until roomOpen was named there as nothing.
+  if (!/api\.roomOpen = null;/.test(bridge)) gaps.push("the web shows the listening room's tag");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("off at launch on desktop and web, no exchange while off; Layers, Favorites, Search, Settings");
+}

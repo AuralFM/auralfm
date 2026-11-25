@@ -186,7 +186,8 @@
     const step = STEPS[i];
     if (step.welcome) return centre();
     const target = $(step.anchor);
-    if (target) beside(target);
+    if (target && target.getClientRects().length) beside(target);
+    else if (target) centre();
   }
 
   function render() {
