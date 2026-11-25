@@ -1,11 +1,13 @@
 # AuralFM — Code of Conduct
 
-**Last updated: 24 November 2026**
+**Last updated: 25 November 2026**
 
 AuralFM is a way to hear each other's radio, from every corner of the world, with
 nobody ranking who gets heard. That only works if the people in it can be there
 without being hounded out. These rules apply wherever people speak on AuralFM:
-the chat today, and station profiles, tips and shows as they arrive.
+the chat today, and station profiles, tips and shows as they arrive. The chat
+and messages are for people aged 13 and over, and hosting a show for people
+aged 18 and over.
 
 ## Not here
 

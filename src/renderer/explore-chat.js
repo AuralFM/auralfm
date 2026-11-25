@@ -447,9 +447,33 @@ function paintComposer() {
   describeMode();
 }
 
+/**
+ * Turn chat on, from any button that offers it.
+ *
+ * Chat and private messages are for people 13 and older (docs/TERMS.md), so the
+ * first time asks, and the answer is kept as a tick (src/prefs.js, ageChat).
+ * Without it, presence reads as off everywhere, so this is the only way in
+ * besides the chat card's own tick and Settings.
+ */
+async function turnOnChat() {
+  const p = typeof prefs !== "undefined" ? prefs : null;
+  if (p?.ageChat !== true && !confirm(t("chatoff.ageAsk", "Chat is for people 13 and older. Are you 13 or older?"))) return false;
+  await window.auralfm.setPrefs({ presence: true, ageChat: true });
+  return true;
+}
+window.turnOnChat = turnOnChat;
+
 function wireChat() {
+  $("chatoffage").onchange = () => { $("chatoffwhy").textContent = ""; };
   $("chatoffgo").onclick = async () => {
-    await window.auralfm.setPrefs({ presence: true });
+    // Not disabled: a disabled button cannot say why, and a screen reader
+    // cannot reach it to ask. Pressed unticked, it says why and goes to the tick.
+    if (!$("chatoffage").checked) {
+      $("chatoffwhy").textContent = t("chatoff.ageFirst", "Tick the box to confirm you are 13 or older.");
+      $("chatoffage").focus();
+      return;
+    }
+    await window.auralfm.setPrefs({ presence: true, ageChat: true });
     $("chatinput")?.focus({ preventScroll: true });   // the card that was pressed has gone
   };
   $("chatoffno").onclick = () => {

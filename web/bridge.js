@@ -200,7 +200,8 @@
   const getPrefs = () => {
     const saved = read("prefs", {});
     const p = { ...M.prefs.normalize(saved), durableIdentity: false };
-    if (!("presence" in saved)) p.presence = true;
+    // On by default only once the listener has said they are 13 or older.
+    if (!("presence" in saved)) p.presence = p.ageChat === true;
     return p;
   };
   function setPrefs(patch) {
@@ -215,7 +216,7 @@
   function afterPrefs(changed) {
     if ("audioOutput" in changed) applyOutput();
     if ("hideExplicit" in changed) M.catalog.setHideExplicit(getPrefs().hideExplicit);
-    if (["presence", "relays", "powFloor"].some((k) => k in changed)) chat?.sync(lastPlayer);
+    if (["presence", "ageChat", "relays", "powFloor"].some((k) => k in changed)) chat?.sync(lastPlayer);
     if (["filterChat", "onlyKept", "powFloor"].some((k) => k in changed)) chat?.refresh();
   }
 

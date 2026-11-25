@@ -1,6 +1,6 @@
 # AuralFM — Terms of Service
 
-**Last updated: 24 November 2026**
+**Last updated: 25 November 2026**
 
 By using AuralFM you agree to these terms. They are deliberately short.
 
@@ -57,7 +57,8 @@ indirect or consequential loss.
 
 AuralFM has an optional chat tied to the area you are listening to. It is off
 until you turn it on, there is no account, and nothing you send is stored by us —
-we run no server. Messages travel over public relays operated by other people,
+we run no server. **The chat and private messages are for people aged 13 and
+over**, and the app asks you to confirm you are before it turns them on. Messages travel over public relays operated by other people,
 and **once sent, a message is out of our hands and cannot be recalled or
 deleted by us.**
 

@@ -323,7 +323,7 @@
       const on = document.createElement("button");
       on.type = "button"; on.className = "linkbtn livelisten";
       on.textContent = tl("shows.showListeners", "Show other listeners");
-      on.onclick = () => window.auralfm.setPrefs?.({ presence: true });
+      on.onclick = () => window.turnOnChat?.();
       list.append(on);
       return;
     }

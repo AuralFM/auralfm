@@ -1696,6 +1696,13 @@
   .chatoff b{font-size:13px;font-weight:590;color:var(--label)}
   .chatoff p{margin:0;font-size:13px;line-height:1.45;color:var(--label2);text-wrap:pretty}
   .chatoff .btns{display:flex;gap:8px;margin-top:2px}
+  /* The whole row is the target (the label is for the box): 24px or more. */
+  .chatage{display:flex;align-items:center;gap:8px;min-height:28px;font-size:13px;color:var(--label);cursor:default}
+  .chatage input{width:24px;height:24px;margin:0;accent-color:var(--accent)}
+  .chatage input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .chatwhy{min-height:0;font-size:12px;color:var(--label2)}
+  .chatwhy:empty{display:none}
+  @media (pointer:coarse){.chatage{min-height:44px;font-size:14px}}
   .chatoff .sheetbtn{min-height:30px}
   .chatoff .sheetbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   @media (pointer:coarse){.chatoff .sheetbtn{min-height:44px;padding:0 18px;font-size:14px}}
@@ -2158,10 +2165,14 @@
     <section class="chatoff" id="chatoff" aria-labelledby="chatoffhead" hidden>
       <b id="chatoffhead" data-i18n="chatoff.head">Chat is off</b>
       <p data-i18n="chatoff.say">Talk with people tuned in here. It is public. They see that someone is listening, never who or where you&nbsp;are.</p>
+      <!-- Chat and messages are for people 13 and older (docs/TERMS.md). The
+           tick is kept, never an age; Turn on chat waits for it, and says so. -->
+      <label class="chatage" for="chatoffage"><input type="checkbox" id="chatoffage"> <span data-i18n="chatoff.age">I am 13 or older</span></label>
       <div class="btns">
-        <button type="button" class="sheetbtn primary" id="chatoffgo" data-i18n="chatoff.go">Turn on chat</button>
+        <button type="button" class="sheetbtn primary" id="chatoffgo" data-i18n="chatoff.go" aria-describedby="chatoffwhy">Turn on chat</button>
         <button type="button" class="sheetbtn" id="chatoffno" data-i18n="chatoff.no">Not now</button>
       </div>
+      <p class="chatwhy" id="chatoffwhy" role="status" aria-live="polite"></p>
     </section>
 
     <!-- Only ever visible when presence is on and something is playing. -->
