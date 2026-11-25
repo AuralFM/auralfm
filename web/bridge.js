@@ -258,6 +258,8 @@
     ["listeners", true], ["statusBar", false],
     // Shows on air, as on the desktop: their own layer, on at every launch.
     ["onAir", true],
+    // Crypto prices in the player bar: off, and off at every launch (src/markets.js).
+    ["markets", false],
   ];
   
   const ON_AT_LAUNCH = new Set(["stations", "shortwave", "onAir"]);
@@ -278,6 +280,7 @@
     for (const [id, v] of Object.entries(patch || {})) if (allowed.has(id)) saved[id] = !!v;
     write("layers", saved);
     emit("layers", layerState());
+    if ("markets" in (patch || {})) layerState().markets ? M.markets.start() : M.markets.stop();
   }
 
   // ── playback ────────────────────────────────────────────────────────────────
@@ -1095,6 +1098,10 @@
   // not have. Answer it with nothing, once, and say so in the console, rather
   // than throw into a page that was written for the desktop.
   const warned = new Set();
+  // The listening room needs a second window, which the web has not got. Named
+  // here as nothing, or the Proxy below would answer it with a function and
+  // Explore would show the room's tag.
+  api.roomOpen = null;
   window.auralfm = new Proxy(api, {
     get(target, key) {
       if (key in target) return target[key];
@@ -1106,7 +1113,7 @@
     },
   });
 
-  M.markets.start();
+  if (layerState().markets) M.markets.start();
   applyOutput();
   // After the page's own scripts have subscribed, or they would miss it.
   addEventListener("DOMContentLoaded", () => {

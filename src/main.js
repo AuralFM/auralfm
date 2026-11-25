@@ -530,6 +530,9 @@ const LAYERS = [
   // listeners' rings, and on at every launch: a show is something to listen to.
   { id: "onAir",          key: "layer.onAir",          default: true },
   { id: "statusBar",      key: "layer.statusBar",      default: true },
+  // Crypto prices in the player bar. Off, and off at every launch: nothing to do
+  // with radio, and off means no connection to the exchange at all (markets.js).
+  { id: "markets",        key: "layer.markets",        default: false },
 ];
 
 /**
@@ -562,6 +565,10 @@ function setLayer(id, on) {
   st.layers = { ...(st.layers || {}), [id]: on };
   save(st);
   explore?.webContents.send("globe:layers", layerState());
+  // The listening room draws the same globe, so it follows the same switches.
+  ctx.roomWin?.webContents.send("globe:layers", layerState());
+  // Crypto prices: the feed opens only while they are shown (markets.js).
+  if (id === "markets") on ? markets.start() : markets.stop();
   /**
    * The menu's checkmarks come from this state, so they have to be rebuilt when
    * it changes elsewhere — otherwise toggling a layer in the inspector leaves
@@ -651,6 +658,7 @@ function buildMenu() {
       label: t["menu.view"],
       submenu: [
         { label: t["menu.openGlobe"], accelerator: "Command+G", click: openExplore },
+        { label: t["menu.room"], accelerator: "Command+Shift+L", click: () => ctx.openRoom?.() },
         { type: "separator" },
         // The reason this menu exists at all: a hidden-title-bar window gives
         // people no obvious way back out of full screen.
@@ -906,6 +914,7 @@ function createTray() {
       { label: "AuralFM", enabled: false },
       { type: "separator" },
       { label: t["menu.openGlobe"], icon: menuGlobeIcon(), click: openExplore },
+      { label: t["menu.room"], click: () => ctx.openRoom?.() },
       { label: t["menu.settings"], click: openSettings },
       { label: t["menu.about"], click: showAbout },
       { type: "separator" },
@@ -952,9 +961,10 @@ function hydrateMine(s) {
  */
 const ctx = {
   get win() { return win; },
-  POPOVER, broadcast, getPrefs, getStrings, hide, hydrateMine, layerState, load, maxPopoverHeight, openExplore, openOutside, openSettings, refreshChat, save, setLayer, setPrefs, visible,
+  get explore() { return explore && !explore.isDestroyed() ? explore : null; },
+  POPOVER, broadcast, getPrefs, getStrings, hide, hydrateMine, layerState, load, lockDown, maxPopoverHeight, openExplore, openOutside, openSettings, refreshChat, save, setLayer, setPrefs, visible,
 };
-for (const mod of ["errors","app","catalog","player","chat","globe","card","cleared"]) require(`./main/ipc-${mod}`)(ctx);
+for (const mod of ["errors","app","catalog","player","chat","globe","card","cleared","room"]) require(`./main/ipc-${mod}`)(ctx);
 
 
 /** Repaint every chat channel from main's copy, after a rule changed. */
@@ -973,6 +983,8 @@ ipcMain.on("player:state", (_e, state) => {
   const t = state.playing && state.channel?.title ? state.channel.title : "";
   tray?.setTitle(t ? ` ${t.slice(0, 22)}` : "");
   if (explore && !explore.isDestroyed()) explore.webContents.send("player:state", state);
+  // The listening room shows what is playing; it never plays anything itself.
+  ctx.roomWin?.webContents.send("player:state", state);
   // Settings shows the sleep timer, which belongs to the player.
   if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send("player:state", state);
 });
@@ -996,6 +1008,8 @@ async function handleDeepLink(raw) {
   const q = u.searchParams;
 
   if (action === "open") return show();
+  // auralfm://room: the listening room, full screen on the second display.
+  if (action === "room") return ctx.openRoom?.();
   if (action === "pause" || action === "stop") return win?.webContents.send("player:mediakey", "playpause");
   if (action === "next") return win?.webContents.send("player:mediakey", "next");
   if (action !== "play") return;
@@ -1095,7 +1109,7 @@ if (!app.requestSingleInstanceLock()) {
     mine.init(app.getPath("userData"));
     sdr.init(app.getPath("userData"));
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
-    markets.start();        // live crypto feed; falls back to polling on its own
+    if (layerState().markets) markets.start();   // only with the Crypto Prices layer on
     nostr.setSpread(24);    // the busiest relays, read only (src/presence-nostr.js)
     nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
     // Filtered here, not in the renderer. A muted message never crosses the
@@ -1152,6 +1166,9 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     createTray();
     openExplore();                 // the globe is the app
+    // `--room`: start straight into the listening room, for a machine that runs
+    // a session and nothing else. The player loads first, so the room can tune.
+    if (process.argv.includes("--room")) setTimeout(() => ctx.openRoom?.(), 1500);
 
     // Clicking the Dock icon with no window open reopens the globe, which is
     // what every native macOS app does.

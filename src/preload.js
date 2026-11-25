@@ -200,6 +200,16 @@ contextBridge.exposeInMainWorld("auralfm", {
 
   // playback — Explore requests, the popover performs, everyone observes
   tune: (channel) => ipcRenderer.send("player:tune", channel),
+  /** The listening room (src/main/ipc-room.js): open it, leave it, and its space bar. */
+  roomOpen: () => ipcRenderer.send("room:open"),
+  roomClose: () => ipcRenderer.send("room:close"),
+  roomPlayPause: () => ipcRenderer.send("room:playpause"),
+  // The room and Explore's room panel, through main: commands one way, status the other.
+  roomCommand: (cmd, arg) => ipcRenderer.send("room:command", cmd, arg),
+  onRoomCommand: (fn) => ipcRenderer.on("room:command", (_e, c) => fn(c)),
+  roomStatus: (s) => ipcRenderer.send("room:status", s),
+  onRoomStatus: (fn) => ipcRenderer.on("room:status", (_e, s) => fn(s)),
+  roomIsOpen: () => ipcRenderer.invoke("room:isOpen"),
   reportFailed: (id) => ipcRenderer.send("player:failed", id),
   mediaKeys: (on) => ipcRenderer.send("player:mediakeys", on),
   onMediaKey: (fn) => ipcRenderer.on("player:mediakey", (_e, a) => fn(a)),

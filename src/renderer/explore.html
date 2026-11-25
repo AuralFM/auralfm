@@ -312,10 +312,15 @@
    * Pressed is `--accent`, so it is the palette's own colour in all nine rather
    * than a hard-coded green that would be wrong in eight of them.
    */
+  /* In the player bar, beside play, the same quiet tile as the lock. */
+  #tripBtn{flex:none;background:none;border:0;font-size:15px;line-height:1;cursor:default;
+           padding:3px 5px;border-radius:var(--r-sm);color:var(--label2)}
+  @media (hover:hover){#tripBtn:hover{background:var(--fill);color:var(--label)}}
+  #tripBtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   #tripBtn{transition:background var(--dur-hover) var(--ease-out),
                       color var(--dur-hover) var(--ease-out),
                       transform var(--dur-press) var(--ease-out)}
-  #tripBtn:active{color:var(--accent);background:var(--fill-hi);transform:scale(.92)}
+  #tripBtn:active{color:var(--accent);background:var(--fill-hi);transform:scale(.96)}
   #tripBtn.busy{color:var(--accent);background:var(--fill)}
   /* A slow breath, not a spin: rotating the shuffle mark would read as loading
      rather than as travelling. Stopped
@@ -496,6 +501,56 @@
    * Over the globe instead, because that is what they change. Closed by default,
    * because most people set these once.
    */
+  /* The listening room's host panel: the layers panel's glass, on the left. */
+  .roompanel{
+    position:absolute;top:12px;left:12px;z-index:5;width:288px;display:flex;flex-direction:column;gap:10px;
+    padding:12px;border-radius:var(--r-xl);
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter:blur(14px) saturate(1.35);
+            backdrop-filter:blur(14px) saturate(1.35);
+    box-shadow:inset 0 1px 0 var(--edge-hi), 0 0 0 .5px var(--edge-lo), 0 14px 36px rgba(0,0,0,.42);
+  }
+  .roomtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--label2)}
+  .roomtop b{font-weight:590}
+  .roomwhere{font-size:12px;color:var(--label3);text-transform:none;letter-spacing:0}
+  .roommode button{flex:1;min-height:28px;font-size:12px;padding-inline:4px}
+  /* The way in: a tag in the globe's top-left corner whose dot breathes in the
+     theme's colour, so it is found without adding to the toolbar. */
+  .roomgo{position:absolute;top:12px;left:12px;z-index:5;display:flex;align-items:center;gap:8px;min-height:28px;
+          padding:4px 12px 4px 10px;border:0;border-radius:var(--r-pill);font:inherit;font-size:12px;color:var(--label2);cursor:default;
+          background:color-mix(in srgb, var(--bg) 70%, transparent);
+          -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+          box-shadow:0 0 0 .5px var(--edge-lo);
+          transition:color var(--dur-hover) var(--ease-out),background var(--dur-hover) var(--ease-out)}
+  @media (hover:hover){.roomgo:hover{color:var(--label);background:color-mix(in srgb, var(--bg) 88%, transparent)}}
+  .roomgo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .roompulse{position:relative;width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+  .roompulse::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 0 var(--accent);animation:roombreathe 2.8s var(--ease-out) infinite}
+  @keyframes roombreathe{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent)}70%,100%{box-shadow:0 0 0 9px color-mix(in srgb, var(--accent) 0%, transparent)}}
+  @media (prefers-reduced-motion: reduce){.roompulse::after{animation:none}}
+  .roomnextline{margin:0;font-size:12px;color:var(--label2)}
+  .roomnextline b{font-weight:590;color:var(--label)}
+  .roomfavs summary{font-size:12px;color:var(--label2);min-height:24px;display:flex;align-items:center;gap:6px;cursor:default;list-style:none}
+  .roomfavs summary::-webkit-details-marker{display:none}
+  .roomfavs summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-control) var(--ease-out)}
+  .roomfavs[open] summary::after{transform:rotate(45deg)}
+  .roomfavs summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .roomfavlist{list-style:none;margin:6px 0 0;padding:0;max-height:180px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+  .roomfavlist button{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:36px;padding:4px 8px;border:0;border-radius:var(--r-md);
+                      background:none;font:inherit;text-align:left;color:var(--label);cursor:default}
+  @media (hover:hover){.roomfavlist button:hover{background:var(--fill)}}
+  .roomfavlist button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .roomfavlist small{font-size:12px;color:var(--label3)}
+  .roomsay{margin:0;min-height:16px;font-size:12px;line-height:1.4;color:var(--label2)}
+  .roomrow{display:flex;gap:8px;align-items:center}
+  .roomrow .sheetbtn{flex:1;min-height:30px;white-space:nowrap}
+  .roomwide{min-height:30px}
+  .roomrow label{font-size:12px;color:var(--label2);flex:1}
+  .roomrow select{font:inherit;font-size:12px;min-height:28px}
+  .roompanel .linkbtn{align-self:flex-start;min-height:24px;padding:0;border:0;background:none;font:inherit;font-size:12px;color:var(--label2);text-decoration:underline;text-underline-offset:3px;cursor:default}
+  @media (hover:hover){.roompanel .linkbtn:hover{color:var(--label)}}
+  .roompanel button:focus-visible,.roompanel select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (pointer:coarse){.roompanel .sheetbtn,.roommode button,.roomfavs summary,.roomfavlist button,.roomgo{min-height:44px}}
   #layers{
     position:absolute;top:12px;right:calc(var(--rail) + 24px);z-index:5;width:206px;
     padding:9px 8px 10px;border-radius:var(--r-xl);
@@ -738,6 +793,16 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .placehead p{margin:2px 0 0;font-size:12px;color:var(--label2)}
+  /* The town's name and its headlines, on one line: the name gives way first. */
+  .headrow{display:flex;align-items:center;gap:8px;min-width:0}
+  .headrow h2{flex:1;min-width:0}
+  .headbtn{flex:none;width:26px;height:26px;display:grid;place-items:center;padding:0;border:0;border-radius:var(--r-sm);
+           background:var(--fill);color:var(--label2);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;line-height:1;cursor:default;
+           transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out)}
+  @media (hover:hover){.headbtn:hover{background:var(--fill-hi);color:var(--label)}}
+  .headbtn[aria-pressed="true"]{color:var(--accent)}
+  .headbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (pointer:coarse){.headbtn{width:44px;height:44px}}
   /* The hop reads as a measurement, so it gets the figures a measurement wants. */
   .hop{
     margin:5px 0 0;font-size:12px;color:var(--label3);
@@ -1159,7 +1224,7 @@
   @media (pointer:coarse){ .livereport{padding:10px 0 10px 8px} }
   /* A show in the player row (explore-shows.js): the station's own controls
      step back, keeping their places so the row does not jump. */
-  body.onshow .now :is(#lock,#nowStar,#nowShare,#nowInfo,#nowGrab,.outwrap){visibility:hidden}
+  body.onshow .now :is(#lock,#tripBtn,#nowStar,#nowShare,#nowInfo,#nowGrab,.outwrap){visibility:hidden}
   body.onshow .now .dot{display:inline-block;background:var(--err)}
   @media (pointer:coarse){ .liverow{min-height:52px} .livename{font-size:15px;min-height:44px} .livenow .linkbtn{min-height:44px;padding:0 18px;font-size:14px} }
   .onair-at{position:relative;width:0;height:0;pointer-events:none;transition:opacity .2s var(--ease-out)}
@@ -1643,7 +1708,10 @@
     transition:background var(--dur-hover) var(--ease-out),color var(--dur-hover) var(--ease-out),transform var(--dur-press) var(--ease-out);
   }
   @media (hover:hover){#lock:hover{background:var(--fill);color:var(--label)}}
-  #lock:active{transform:scale(.9)}
+  #lock:active{transform:scale(.96)}
+  /* The player bar's small tiles: a 15px glyph with its padding came to 21px
+     high, under the 24px a target needs. The box grows; the glyph does not. */
+  #tripBtn,#lock,#nowStar{min-width:24px;min-height:24px;display:inline-grid;place-items:center}
   #lock[aria-pressed="true"]{color:var(--label);background:color-mix(in srgb,var(--accent) 24%,transparent)}
   .now b{font-weight:590}
   .now span{color:var(--label2)}
@@ -2042,13 +2110,9 @@
   <!-- Your show (explore-studio.js). A prototype: shown only in a development
        build or on a local web preview until it is ready to be seen. -->
   <button id="studioBtn" title="Your show" data-i18n-title="studio.open" aria-pressed="false" hidden></button>
-  <button id="newsBtn" title="Local headlines" data-i18n-title="ctl.localHeadlines"></button>
   <button id="layersBtn" title="Layers" data-i18n-title="ctl.layers" aria-pressed="false"></button>
   <button id="favBtn" title="Favorites" data-i18n-title="app.favorites"></button>
-  <!-- Somewhere else. A shuffle, because that is what this does: it puts you
-       down in a place you did not choose. -->
-  <button id="tripBtn" title="Take me somewhere" data-i18n-title="ctl.somewhere"></button>
-  <input id="q" type="search" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
+  <input id="q" type="search" aria-label="Search a city, country, or station" placeholder="Search a city, country, or station" data-i18n-ph="app.searchPlaceholder"
          data-i18n-title="app.searchPlaceholder" title="Search a city, country, or station"
          autocomplete="off" spellcheck="false">
   <!-- Last, and on its own: settings are not a way to browse the world, they are
@@ -2067,6 +2131,36 @@
       <div class="globebar" id="globehint" hidden><span id="globestatus" data-i18n="app.loadingGlobe">Loading globe…</span></div>
       <!-- Layers. One button, closed by default, over the globe it controls —
            rather than ten items in a menu nobody opens. -->
+      <!-- The listening room's way in (explore-room.js): a small tag in the
+           globe's corner, breathing in the theme's colour, not another toolbar
+           button. Desktop only; the web never shows it. -->
+      <button type="button" id="roomBtn" class="roomgo" hidden><span class="roompulse" aria-hidden="true"></span><span data-i18n="room.open">Listening room</span></button>
+      <!-- The host's panel while the listening room is open (explore-room.js). -->
+      <section id="roompanel" class="roompanel" hidden aria-labelledby="roomhead">
+        <div class="roomtop"><b id="roomhead" data-i18n="room.open">Listening room</b><span id="roomwhere" class="roomwhere"></span></div>
+        <div id="roommode" class="seg roommode" role="group" aria-label="How the room moves">
+          <button type="button" data-mode="follow" aria-pressed="true" data-i18n="room.follow">Follow</button>
+          <button type="button" data-mode="favs" aria-pressed="false" data-i18n="room.favs">Favorites</button>
+          <button type="button" data-mode="drift" aria-pressed="false" data-i18n="room.drift">Drift</button>
+          <button type="button" data-mode="dial" aria-pressed="false" data-i18n="room.dial">Dial</button>
+        </div>
+        <p id="roomsay" class="roomsay" aria-live="polite"></p>
+        <p id="roomnextline" class="roomnextline" hidden><span data-i18n="room.upNext">Up next</span> <b id="roomnextname"></b></p>
+        <div class="roomrow">
+          <button type="button" id="roomprev" class="sheetbtn" data-i18n="room.prev">← Town before</button>
+          <button type="button" id="roomnext" class="sheetbtn primary" data-i18n="room.next">Next town →</button>
+        </div>
+        <button type="button" id="roomhere" class="sheetbtn roomwide" data-i18n="room.here">Next station in this town</button>
+        <div class="roomrow" id="roomdriftrow" hidden>
+          <label for="roomdrift" data-i18n="room.every">A new town every</label>
+          <select id="roomdrift"><option value="2">2 min</option><option value="4" selected>4 min</option><option value="8">8 min</option><option value="15">15 min</option></select>
+        </div>
+        <details id="roomfavs" class="roomfavs">
+          <summary data-i18n="room.yourFavs">Your favorites</summary>
+          <ul id="roomfavlist" class="roomfavlist"></ul>
+        </details>
+        <button type="button" id="roomleave" class="linkbtn" data-i18n="room.leave">Leave the room</button>
+      </section>
       <div id="layers" hidden>
         <div class="layhead" data-i18n="ctl.layers">Layers</div>
         <div id="laylist"></div>
@@ -2103,7 +2197,10 @@
        the same material floating on the globe. -->
   <div class="railcol">
   <div class="stations">
-    <div class="placehead" id="head" hidden><h2></h2><p></p><div class="hop" id="hop" hidden></div><div class="wx" id="wx"></div>
+    <div class="placehead" id="head" hidden><div class="headrow"><h2></h2>
+      <!-- Headlines belong to a place: what is reported where this town is,
+           one press from its name (explore-panels.js; the world's are inside). -->
+      <button type="button" id="newsBtn" class="headbtn" title="Headlines" aria-label="Headlines" data-i18n-title="ctl.localHeadlines" aria-pressed="false"></button></div><p></p><div class="hop" id="hop" hidden></div><div class="wx" id="wx"></div>
       <div class="chips" id="chips"></div>
     </div>
     <!-- The dial. Only while a receiver is playing; a stream has nothing to tune.
@@ -2235,6 +2332,9 @@
   <button id="nowGrab" class="nowgrab" type="button" aria-expanded="false" aria-controls="nowdrawer"
           data-i18n-title="profile.about" title="About this station" hidden></button>
   <button type="button" id="play" data-i18n-title="ctl.play" title="Play" aria-label="Play"></button>
+  <!-- Somewhere else, beside play: a shuffle puts you down in a place you did
+       not choose, which is something done to the sound, not a place to go. -->
+  <button type="button" id="tripBtn" title="Take me somewhere" aria-label="Take me somewhere" data-i18n-title="ctl.somewhere"></button>
   <!-- Each control has its name in the markup as well as from the strings
        (applyStrings sets aria-label from data-i18n-title), so it is named even
        before they load or if they fail to.
@@ -2289,7 +2389,7 @@
     <button id="outbtn" aria-haspopup="listbox" aria-expanded="false"
             data-i18n-title="ctl.output" title="Where the sound comes out"></button>
   </span>
-  <span class="markets" id="markets"></span>
+  <span class="markets" id="markets" hidden></span>
 </div>
 
 
@@ -2361,6 +2461,7 @@
 <script src="explore-prefs.js"></script>
 <script src="explore-dial.js"></script>
 <script src="explore-layers.js"></script>
+<script src="explore-room.js"></script>
 <script src="explore-sky.js"></script>
 <script src="explore-chat.js"></script>
 <script src="explore-rooms.js"></script>

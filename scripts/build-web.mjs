@@ -400,7 +400,7 @@ ${["earth-blue-marble.jpg crossorigin", "night-sky.png crossorigin", "earth-nigh
  * Dropped from the copy and from the pages that referenced them.
  */
 // The studio is the paid desktop app's (Your show), so the web does not carry it at all.
-const DESKTOP_ONLY = ["kiwi.js", "explore-shortwave.js", "popover.js", "splash.js", "explore-studio.js", "studio-deck.js"];
+const DESKTOP_ONLY = ["kiwi.js", "explore-shortwave.js", "popover.js", "splash.js", "explore-studio.js", "studio-deck.js", "room.js"];
 
 page("explore.html", "index.html", {
   title: FIND_TITLE,

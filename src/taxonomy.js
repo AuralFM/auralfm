@@ -171,6 +171,8 @@ const FORMATS = [
     "information", "informacion", "nachrichten", "actualites"] }] },
   { id: "talk", name: "Talk", any: [{ tags: ["talk", "talk radio", "radio hablada", "talk show radio", "talk speech",
     "local talk", "spoken word", "podcast"] }] },
+  { id: "comedy", name: "Comedy", any: [{ tags: ["comedy", "humor", "humour", "standup", "stand up", "sitcom",
+    "parody", "blagues", "musica humoristica"] }] },
   { id: "sports", name: "Sports", any: [{ tags: ["sports", "sport", "deportes", "esportes", "football", "soccer",
     "futbol", "cricket", "baseball"] }] },
   { id: "community", name: "Community", any: [{ tags: ["community radio", "community", "radio comunitaria",

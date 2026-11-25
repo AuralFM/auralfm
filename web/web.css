@@ -733,7 +733,7 @@ button, [role="button"], [role="radio"], .tab { -webkit-user-select: none; user-
 
 /* 44 points is the smallest target a finger hits reliably. */
 @media (pointer: coarse) {
-  .toolbar button, #play, #lock, #mute, #nowStar, #outbtn, .star, .newshead button {
+  .toolbar button, #play, #lock, #tripBtn, #mute, #nowStar, #outbtn, .star, .newshead button, .headbtn {
     min-width: 44px; min-height: 44px;
   }
   /* The filter chips are a scrolling row of pills; 44pt pills would crowd out
