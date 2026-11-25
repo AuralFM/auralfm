@@ -41,6 +41,19 @@ let nowhere = new Uint8Array(0); // 1 for "Across …" and "Online, no country":
 const NOWHERE = /^(Across |Somewhere in |Online, no country$|Online only$)/;
 
 /**
+ * A place's name for reading, beside its title. A station that is the whole
+ * country's lives at "Across the United States", and every list and test keys
+ * off that title, so it stays; but read aloud as a place it is the country,
+ * said the way people say it: "United States", not "the United States"
+ * (25 Nov 2026). Only the country itself: "Across Texas" and "Online, no
+ * country" keep their titles. Older bundles ("Somewhere in …") read the same.
+ */
+const plainName = (title, country) => {
+  const m = /^(?:Across|Somewhere in) (?:the )?(.+)$/.exec(String(title || ""));
+  return m && country && m[1] === country ? country : title;
+};
+
+/**
  * Broadcast band, inferred from the station name — the only signal there is.
  * Case-sensitive on AM/FM so "Amsterdam" and "Firma" don't match. Roughly 46% of
  * channels come back null, which is the truthful answer: they are internet-only
@@ -174,6 +187,7 @@ function hydrate(i) {
     explicit: c[7] === 1,
     ...(heldBack(i) ? { held: true } : {}),
     place: p[0],
+    placeName: plainName(p[0], p[1]),
     country: p[1],
     lon: p[2],
     lat: p[3],
@@ -301,6 +315,7 @@ function search(query, limit = 60, filter = {}) {
 const hydratePlace = (i) => ({
   i,
   title: places[i][0],
+  name: plainName(places[i][0], places[i][1]),
   country: places[i][1],
   lon: places[i][2],
   lat: places[i][3],
@@ -377,6 +392,14 @@ const VIBES = [
     "classical baroque", "modern classical", "contemporary classical", "classical guitar"] },
   { id: "faith", name: "Faith", tags: ["christian", "gospel", "catholic", "religious", "islamic", "quran"] },
   { id: "talk", name: "Talk", tags: ["talk"] },
+  // Comedy, its own lane rather than a corner of Talk (25 Nov 2026). The tags
+  // are the stations' own spellings, counted in the catalogue: 134 stations in
+  // 71 places. Tags that only mention humour among other things ("news humor
+  // pop funk soul", "noticias y buen humor") stay out.
+  { id: "comedy", name: "Comedy", tags: ["comedy", "comedy radio", "comedy scene", "comedy music", "comedy sketch standup",
+    "comedy old time radio", "american comedy", "british comedy", "u.k. comedy", "vintage comedy", "standup",
+    "stand-up", "stand up", "stand-up comedy", "sitcom", "humor", "humour", "humor fm", "humor fm minsk",
+    "humor i zabava", "música humorística", "blagues", "parody", "canada’s best comedy and talk"] },
   { id: "otr", name: "Old-time radio", tags: ["old time radio", "old-time radio", "otr", "drama", "detective"] },
   { id: "community", name: "Community", tags: ["community radio", "community", "college"] },
 ];
