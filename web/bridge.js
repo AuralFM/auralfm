@@ -628,11 +628,13 @@
    * The song on the station, when its server says (src/songtitle.js).
    *
    * Asked of the station's own server and nothing else, every thirty seconds
-   * while it plays: a short read of the stream with the header that asks for
-   * its titles. A browser sends that header only to a server that agrees to it
-   * (Icecast 2.4 and later), over https, so on the web about one station in
-   * seven answers where the desktop has one in three. Where there is no
-   * answer, the place stays.
+   * while it plays. An AzuraCast station is asked for the now-playing file it
+   * publishes for pages to read, which nearly all of them answer. Any other is
+   * given a short read of the stream with the header that asks for its titles;
+   * a browser sends that header only to a server that agrees to it (Icecast
+   * 2.4 and later), over https, so about one in seven of those answers on the
+   * web where the desktop has one in three. Where there is no answer, the
+   * place stays.
    */
   const songs = M.songtitle.createAsker({ fetch: (...a) => fetch(...a), secureOnly: true });
   let song = null, songTimer = null;
@@ -663,8 +665,11 @@
       album: song ? current.title : "AuralFM",
       artist: song ? (song.artist || current.title) : [current.place, current.country].filter(Boolean).join(" · "),
       // The lock screen draws this at the size of an album cover; without it
-      // iOS shows a grey rectangle beside the station's name.
+      // iOS shows a grey rectangle beside the station's name. The track's own
+      // cover comes first when the station has one: songtitle.js passes only a
+      // picture on the station's own host, never one from a third party.
       artwork: [
+        ...(song?.art ? [{ src: song.art }] : []),
         { src: "assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
         { src: "assets/icons/icon-512.png", sizes: "512x512", type: "image/png" },
       ],
