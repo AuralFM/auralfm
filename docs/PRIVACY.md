@@ -1,6 +1,6 @@
 # AuralFM — Privacy Policy
 
-**Last updated: 25 November 2026**
+**Last updated: 26 November 2026**
 
 AuralFM plays internet radio. It comes as a Mac application and as a web version
 you can open in a browser or add to a phone's home screen. This policy covers
@@ -63,7 +63,7 @@ differently" below. The rest of this table applies to both.
 
 | Service | Purpose | What it necessarily sees |
 |---|---|---|
-| The radio station's own server | Playing audio | Your IP address, as with any stream |
+| The radio station's own server | Playing audio, and asking it what song is on (every 30 seconds while it plays) | Your IP address, as with any stream |
 | The station's own website | Its logo, when you open a station's profile | Your IP address |
 | radio-browser.info | Looking up a station's current stream when you press play; play counts | Your IP address, the station played |
 | NASA GIBS | Satellite cloud imagery | Your IP address |
@@ -318,6 +318,9 @@ between, and keeps nothing about who listened.
   Archive with the words the host types, only when they search. Those services
   see the host's IP address and the search words; a track the host adds is
   then fetched from them.
+- **When a show ends by handing over** to another show on air, you are
+  offered that show with a Listen button. Nothing connects to the next host
+  until you press it, since that host would see your network address too.
 - **Reporting a show** hides its host on your device and opens an email draft
   to hello@auralfm.xyz. Nothing is sent unless you send it.
 - **A report of material that sexualises a child** is passed to NCMEC's

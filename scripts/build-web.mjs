@@ -51,9 +51,9 @@ const liteName = (file) => LITE.find(([f]) => f === file)?.[2] || file;
 // requires must be in this list or be one of the shims below.
 const MODULES = ["backoff", "useragent", "geo", "prefs", "palettes", "i18n", "safehost",
                  "region", "catalog", "weather", "markets", "iss", "space", "clouds", "wspr", "news-feeds", "news",
-                 "docs"];
+                 "docs", "songtitle"];
 const EXPOSE = ["geo", "prefs", "palettes", "i18n", "catalog", "weather", "markets", "iss", "space",
-                "clouds", "wspr", "news", "docs"];
+                "clouds", "wspr", "news", "docs", "songtitle"];
 
 /**
  * The documents src/docs.js is allowed to show, carried into the bundle.

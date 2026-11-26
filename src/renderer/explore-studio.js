@@ -58,6 +58,7 @@
     try { localStorage.setItem(KEY, JSON.stringify({ title, about, vibe, explicit, deviceId, lineId, micVol, musicVol, duck, xfade, repeat })); } catch {}
   };
   let phase = "off", startedAt = 0, clock = 0;
+  let handTo = "";               // the show on air listeners are offered when this one ends (closeListeners)
 
   // ── the sound ────────────────────────────────────────────────────────────
   // mic → micGain ─┬→ mix → mixAn → mixStream (what a transport will send)
@@ -788,6 +789,7 @@
       air.append(bar, ends);
     } else air.append(bar);
     if (live && heardNote) air.append(el("p", { class: "fine", role: "status", text: heardNote }));
+    if (live) paintHandTo(air);
     if (phase !== "off") air.append(el("p", { class: "airnote", id: "stWhy", text:
       live ? tt("studio.liveNote", "You are live. Up to 12 listeners connect direct to this computer.")
       : phase === "planned" ? tt("studio.plannedPrototype", "Your town shows as coming up. Nobody is told yet.")
@@ -1227,8 +1229,34 @@
     try { l.pc.onconnectionstatechange = null; l.pc.close(); } catch {}
     paintHeard();
   }
+  /**
+   * Who comes next.
+   *
+   * A radio's listeners stay on when its DJ hands over: on R/a/dio the next
+   * DJ's source is already connected, and goes live the moment the last one
+   * leaves. Here every show is its own host's computer and there is nothing in
+   * between to keep anybody, so the handover is a name: the host picks a show
+   * on air, and the goodbye each listener gets says which. The listener is
+   * offered it with a Listen button (explore-shows.js) and is not moved, since
+   * the next host would see their network address and they chose this one.
+   * Only a show this device lists can be named, and one that has gone off air
+   * by the end is dropped from the goodbye.
+   */
+  const othersOnAir = () => (window.AuralShows?.onAir?.() || []).filter((o) => o && typeof o.pubkey === "string");
+  function paintHandTo(air) {
+    const others = othersOnAir();
+    if (handTo && !others.some((o) => o.pubkey === handTo)) handTo = "";
+    if (!others.length) return;
+    const sel = el("select", { id: "stNext", "aria-describedby": "stNextNote", onchange: (e) => { handTo = e.target.value; } });
+    sel.append(el("option", { value: "" }, tt("studio.handNobody", "Nobody")));
+    for (const o of others) sel.append(el("option", { value: o.pubkey, selected: handTo === o.pubkey }, o.label || tt("shows.aShow", "A show")));
+    air.append(el("label", { class: "field", for: "stNext" }, el("span", { text: tt("studio.handTo", "After this show") }), sel),
+      el("p", { class: "fine", id: "stNextNote", text: tt("studio.handNote", "Listeners are offered the show you choose when yours ends. Nobody is moved without pressing Listen.") }));
+  }
   function closeListeners() {
-    for (const [sid, l] of [...heard]) { window.AuralRtc?.send(l.from, { t: "bye", sid }); dropListener(sid); }
+    const next = handTo && othersOnAir().some((o) => o.pubkey === handTo) ? handTo : "";
+    handTo = "";
+    for (const [sid, l] of [...heard]) { window.AuralRtc?.send(l.from, next ? { t: "bye", sid, next } : { t: "bye", sid }); dropListener(sid); }
   }
   window.AuralRtc?.onSignal(async (from, msg) => {
     if (msg.t === "bye") { if (heard.get(msg.sid)?.from === from) dropListener(msg.sid); return; }
