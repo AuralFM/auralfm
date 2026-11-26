@@ -249,7 +249,9 @@ function start(list) {
  * reconnected, so the coins already showing keep ticking.
  */
 async function setCoins(list) {
-  coins = list.slice();
+  // Checked here as well as in prefs.coinList: these symbols go into a URL and
+  // onto the exchange's socket, so only plain symbols, at most eight, ever do.
+  coins = (Array.isArray(list) ? list : []).map(String).filter((x) => /^[A-Z0-9]{1,12}$/.test(x)).slice(0, 8);
   for (const k of [...live.keys()]) if (!coins.includes(k)) live.delete(k);
   if (!ws) { if (wanted) connectLive(); return; }
   if (ws.readyState !== 1) return;     // still opening: onopen reads the new list
