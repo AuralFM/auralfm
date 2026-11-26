@@ -465,6 +465,7 @@ qEl.addEventListener("input", () => {
 /** Always resolves and plays `ch`. Toggle logic lives at the call sites. */
 async function tune(ch, { chained = false } = {}) {
   if (!chained) tried = [];
+  drops = []; heldFor = -1; clearTimeout(stall); songStop();
   // A station and a receiver are never both playing. This was missing, so
   // picking a station left the shortwave audio running underneath it — and
   // publish() reads sdrRx first, so Now Playing went on naming the receiver.
@@ -580,7 +581,7 @@ function sdrEnded(message, cls = "") {
 }
 
 function stop(said = "Stopped"){
-  clearTimeout(watchdog); gen++; live = false;
+  clearTimeout(watchdog); clearTimeout(stall); gen++; live = false; heldFor = -1; songStop();
   clearMediaSession();
   window.auralfm.mediaKeys(false);
   sdrStop();
@@ -591,7 +592,7 @@ function stop(said = "Stopped"){
 }
 
 function fail(msg){
-  clearTimeout(watchdog); live = false;
+  clearTimeout(watchdog); live = false; songStop();
   document.body.classList.remove("playing");
   setToggle("play");
   setStatus(msg, "err");
@@ -620,7 +621,7 @@ async function autoSkip(reason) {
 }
 
 audio.addEventListener("playing", () => {
-  clearTimeout(watchdog);
+  clearTimeout(watchdog); clearTimeout(stall);
   live = true;
   /**
    * The analyser does NOT go here, and must not.
@@ -648,12 +649,90 @@ audio.addEventListener("playing", () => {
   window.auralfm.mediaKeys(true);
   setToggle("pause");
   document.body.classList.add("playing");
-  setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live", "live");
+  setStatus(song ? song.text : placeLine(), "live");
+  if (!songTimer) songWatch(gen);
 });
-audio.addEventListener("waiting", () => { if (!audio.paused) setStatus("Buffering…"); });
+audio.addEventListener("waiting", () => {
+  if (!audio.paused) setStatus("Buffering…");
+  if (live) { clearTimeout(stall); stall = setTimeout(() => rescue(), STALL_MS); }
+});
 audio.addEventListener("error", () => {
   if (!current || !audio.error || audio.error.code === 1) return;
+  // A stream that was playing and broke is a drop, not a dead station: it gets
+  // its own address back before anything is skipped or marked against it.
+  if (live) return rescue();
   fail("Stream unavailable");
+});
+audio.addEventListener("ended", () => rescue());
+
+/**
+ * The song on the station, when its server says.
+ *
+ * Main asks the station's own server (src/songtitle.js) and nothing else; this
+ * window only asks main, every thirty seconds while the stream is live, and
+ * shows the answer where the place was. The place comes back when there is no
+ * song. A repeat of the same song is not news, so the status line (a polite
+ * live region) is not rewritten and read out again for it.
+ */
+let song = null, songTimer = null;
+const placeLine = () => [current?.place, current?.country].filter(Boolean).join(" · ") || "Live";
+function songStop() { clearTimeout(songTimer); songTimer = null; song = null; }
+function songWatch(my) {
+  clearTimeout(songTimer);
+  const ask = async () => {
+    songTimer = null;
+    if (my !== gen || !live || !playingUrl) return;
+    const said = await window.auralfm.songTitle?.(playingUrl, current?.title || "").catch(() => undefined);
+    if (my !== gen || !live) return;
+    if (said !== undefined) {
+      const text = said?.text || null;
+      if (text !== (song?.text || null)) {
+        song = said || null;
+        setStatus(song ? song.text : placeLine(), "live");
+        updateMediaSession();
+      }
+    }
+    songTimer = setTimeout(ask, 30000);
+  };
+  songTimer = setTimeout(ask, 0);
+}
+
+/**
+ * A live stream that stopped arriving.
+ *
+ * An Icecast server that restarts, a source that drops for a second, a laptop
+ * that changes network: the response ends, the element fires `ended`, and
+ * nothing here listened. The player went on saying "Live" over silence until
+ * someone pressed play again. The web build already took the address back
+ * (web/bridge.js rescue); this is the desktop's.
+ *
+ * The same address, after a wait that grows: 1, 4 and 10 seconds (the
+ * connection backoff an Icecast relay uses towards its master). A fourth drop
+ * inside two minutes means the station is the trouble, and it goes the way of
+ * any failed stream: marked, and the next in town. With no network there is
+ * nothing to try, so the station is held and comes back on `online`.
+ */
+const STALL_MS = 10000, RETRY_MS = [1000, 4000, 10000], DROP_WINDOW_MS = 120000;
+let stall = null, drops = [], heldFor = -1;
+function rescue() {
+  clearTimeout(stall);
+  if (!live || !current || !playingUrl) return;
+  live = false;
+  const my = gen;
+  document.body.classList.remove("playing");
+  if (!navigator.onLine) { heldFor = my; setStatus(t("st.waitingNetwork", "Waiting for the network…")); return; }
+  const now = Date.now();
+  drops = drops.filter((at) => now - at < DROP_WINDOW_MS);
+  if (drops.length >= RETRY_MS.length) { drops = []; return fail("Stream stopped"); }
+  const wait = RETRY_MS[drops.length];
+  drops.push(now);
+  setStatus(t("st.reconnecting", "Reconnecting…"));
+  setTimeout(() => { if (my === gen && !live) start(playingUrl, my); }, wait);
+}
+addEventListener("online", () => {
+  if (heldFor !== gen || !current) return;
+  heldFor = -1;
+  start(playingUrl, gen);
 });
 
 toggle.onclick = () => {
@@ -722,10 +801,12 @@ function updateMediaSession() {
   if (!("mediaSession" in navigator)) return;
   if (!current || !live) return clearMediaSession();
 
+  // With a song, the lock screen and Now Playing read as a radio's do: the
+  // song, its artist, and the station it is on.
   navigator.mediaSession.metadata = new MediaMetadata({
-    title: current.title,
-    artist: [current.place, current.country].filter(Boolean).join(" · "),
-    album: "AuralFM",
+    title: song ? song.title : current.title,
+    artist: song ? (song.artist || current.title) : [current.place, current.country].filter(Boolean).join(" · "),
+    album: song ? current.title : "AuralFM",
     artwork: [
       { src: "../../assets/generated/favicon.png", sizes: "64x64", type: "image/png" },
       { src: "../../assets/generated/app-512.png", sizes: "512x512", type: "image/png" },

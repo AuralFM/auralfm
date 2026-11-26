@@ -88,6 +88,13 @@
   const gone = new Set();          // hosts reported or muted: their shows are not listed here again
   let said = "";                   // one line under the list, for a few seconds
   /**
+   * A show that ended by handing over to another one on air: { from, to }.
+   * Offered, not followed. Listening to the next show connects this device to
+   * a second host, who would see its network address, and the listener chose
+   * the first one only. So it is one press away, for two minutes.
+   */
+  let handed = null;
+  /**
    * Hosts AuralFM no longer lists (src/unlisted.js): off the globe, out of On
    * air, and not tuned to from here. Asked for only when there is a show to
    * list, and held until the first answer, so a hidden show never flashes up.
@@ -125,7 +132,9 @@
    * after that, and never once AuralFM no longer lists it.
    */
   const told = (s) => s?.state === "failed" && Date.now() < s.until;
-  const held = () => !!show && listed(show.peer) && (show.state === "connecting" || show.state === "on" || told(show));
+  /** Being heard, or about to be: connecting, playing, or finding its way back after a drop. */
+  const active = (s) => !!s && (s.state === "connecting" || s.state === "on" || s.state === "reconnecting");
+  const held = () => !!show && listed(show.peer) && (active(show) || told(show));
   Promise.resolve(window.auralfm.muteList?.()).then((list) => { for (const k of list || []) gone.add(typeof k === "string" ? k : k?.pubkey); paint(); }).catch(() => {});
   const audio = new Audio();
   audio.autoplay = true;
@@ -159,7 +168,7 @@
   function end(why) {
     const s = show;
     if (!s) return;
-    clearTimeout(s.timer);
+    clearTimeout(s.timer); clearTimeout(s.flicker);
     try { if (s.pc) { s.pc.ontrack = s.pc.onconnectionstatechange = null; s.pc.close(); } } catch {}
     audio.pause(); audio.srcObject = null;
     // A failure stays on the beacon for a few seconds: on a phone the list is
@@ -172,6 +181,34 @@
   async function stop() {
     if (show?.pc && show.sid) window.AuralRtc.send(show.peer.pubkey, { t: "bye", sid: show.sid });
     end();
+  }
+  /**
+   * A show that dropped while it was being heard.
+   *
+   * A phone between networks, a host's Wi-Fi hiccuping: the connection fails,
+   * and it used to be the end ("Connection lost") with the host still on air.
+   * A radio's listeners stay through a source's short drop (R/a/dio's proxy
+   * holds them while its DJ reconnects); here there is no server to hold
+   * anybody, so the listener's device asks again: the same sealed handshake,
+   * after 2, 5 and 10 seconds, while the host's presence still says the show
+   * is on. The host is told the old connection is gone, so it frees the place
+   * rather than waiting to notice. A connection that then stays up for a
+   * minute earns the three tries back; one that keeps falling ends as lost.
+   */
+  const RETRY_MS = [2000, 5000, 10000];
+  function lost(s) {
+    if (show !== s) return;
+    const tries = s.state === "on" && Date.now() - (s.since || 0) > 60_000 ? 0 : (s.tries || 0);
+    const onAir = announced.some((p) => p.pubkey === s.peer.pubkey) && listed(s.peer) && !gone.has(s.peer.pubkey);
+    if (!onAir || tries >= RETRY_MS.length) return end("lost");
+    clearTimeout(s.timer);
+    try { if (s.pc) { s.pc.ontrack = s.pc.onconnectionstatechange = null; s.pc.close(); } } catch {}
+    if (s.sid) window.AuralRtc.send(s.peer.pubkey, { t: "bye", sid: s.sid });
+    const peer = s.peer;
+    show = { peer, sid: null, pc: null, state: "reconnecting", tries: tries + 1 };
+    const again = show;
+    show.timer = setTimeout(() => { if (show === again) listen(peer, { tries: tries + 1 }); }, RETRY_MS[tries]);
+    paint();
   }
   /**
    * Report a show. As in the chat (src/main/ipc-chat.js): the host is muted on
@@ -188,12 +225,15 @@
     paint();
     try { await window.auralfm.chatReport?.({ show: true, pubkey: peer.pubkey, geohash: peer.geohash || "", at: Date.now(), text: peer.label || "" }); } catch { /* muted all the same */ }
   }
-  async function listen(peer) {
+  async function listen(peer, { tries = 0 } = {}) {
     if (window.AuralStudio?.live) return;             // on air yourself: one sound at a time
     if (!listed(peer)) return;                        // not from here (src/unlisted.js)
-    if (show) await stop();
+    // A try again after a drop takes the show's place without leaving its town.
+    if (show && !(tries && show.state === "reconnecting")) await stop();
+    else if (show) clearTimeout(show.timer);
+    handed = null;
     const sid = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
-    show = { peer, sid, pc: null, state: "connecting" };
+    show = { peer, sid, pc: null, state: "connecting", tries };
     paint();
     // One sound at a time: the station playing stops, as it does for a host.
     if (document.body.classList.contains("playing")) window.auralfm.transport?.({ action: "toggle" });
@@ -211,11 +251,22 @@
     pc.ontrack = (e) => { audio.srcObject = e.streams[0] || new MediaStream([e.track]); audio.play().catch(() => {}); };
     pc.onconnectionstatechange = () => {
       if (show?.pc !== pc) return;
-      if (pc.connectionState === "connected") { show.state = "on"; clearTimeout(show.timer); paint(); }
+      clearTimeout(show.flicker);
+      if (pc.connectionState === "connected") { show.state = "on"; show.since = Date.now(); clearTimeout(show.timer); paint(); }
       // Three different failures, and a host with a tester needs to know which:
       // it was playing and dropped; the host replied but the two devices could
-      // not reach each other; or nothing came back at all.
-      else if (pc.connectionState === "failed" || pc.connectionState === "closed") end(show.state === "on" ? "lost" : show.answered ? "blocked" : "noanswer");
+      // not reach each other; or nothing came back at all. A drop, and a try
+      // again that has not got through yet, go back to the host (lost, above).
+      else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        if (show.state === "on" || show.tries) lost(show);
+        else end(show.answered ? "blocked" : "noanswer");
+      }
+      // "disconnected" can mend itself, and is given five seconds to; "failed"
+      // comes only after about thirty, of silence.
+      else if (pc.connectionState === "disconnected" && show.state === "on") {
+        const s = show;
+        s.flicker = setTimeout(() => { if (show === s && pc.connectionState === "disconnected") lost(s); }, 5000);
+      }
     };
     try {
       await pc.setLocalDescription(await pc.createOffer());
@@ -224,8 +275,11 @@
     if (show?.sid !== sid) return;
     const sent = await window.AuralRtc.send(peer.pubkey, { t: "offer", sid, sdp: music(pc.localDescription.sdp) });
     if (show?.sid !== sid) return;
-    if (!sent) return end("unsent");
-    show.timer = setTimeout(() => { if (show?.sid === sid && show.state === "connecting") end(show.answered ? "blocked" : "noanswer"); }, 30000);
+    if (!sent) return show.tries ? lost(show) : end("unsent");
+    show.timer = setTimeout(() => {
+      if (show?.sid !== sid || show.state !== "connecting") return;
+      if (show.tries) lost(show); else end(show.answered ? "blocked" : "noanswer");
+    }, 30000);
   }
   // The host's reply. Matched by the id only the two of us know: it travelled
   // sealed, and a host with a lasting identity answers from a different key
@@ -236,7 +290,17 @@
       show.answered = true;
       try { await show.pc.setRemoteDescription({ type: "answer", sdp: msg.sdp }); } catch { end("blocked"); }
     } else if (msg.t === "full") end("full");
-    else if (msg.t === "bye") end("ended");
+    else if (msg.t === "bye") {
+      // The host may name the show on air that comes next (explore-studio.js):
+      // one this device lists, and not the same host again.
+      const from = show.peer;
+      const to = typeof msg.next === "string" ? live.find((p) => p.pubkey === msg.next && p.pubkey !== from.pubkey && !gone.has(p.pubkey)) : null;
+      if (!to) return end("ended");
+      end();
+      handed = { from, to };
+      setTimeout(() => { if (handed?.to === to) { handed = null; paint(); } }, 120_000);
+      paint();
+    }
   });
   // Pressing play on a station is choosing it over the show.
   new MutationObserver(() => { if (show?.state === "on" && document.body.classList.contains("playing")) stop(); })
@@ -254,14 +318,14 @@
   function now() {
     const bar = $l("now"), name = $l("nowName"), status = $l("nowStatus");
     if (!bar || !name || !status) return;
-    const mine = show && (show.state === "connecting" || show.state === "on");
+    const mine = active(show);
     document.body.classList.toggle("onshow", !!mine);
     if (mine) {
       if (!rowWas) rowWas = { hidden: bar.hidden };
       bar.hidden = false;
       name.textContent = show.peer.label || tl("shows.aShow", "A show");
       // What the show says it is playing (its tracklist), beside On air.
-      status.textContent = show.state === "on" ? [tl("shows.onAir", "On air"), show.peer.np].filter(Boolean).join(" · ") : tl("shows.connecting", "Connecting…");
+      status.textContent = show.state === "on" ? [tl("shows.onAir", "On air"), show.peer.np].filter(Boolean).join(" · ") : WORDS()[show.state];
       status.classList.remove("err");
       const spoken = `${name.textContent}, ${status.textContent}`;
       if ($l("nowSpoken") && $l("nowSpoken").textContent !== spoken) $l("nowSpoken").textContent = spoken;
@@ -293,6 +357,7 @@
   const shown = () => on() && (typeof layers === "undefined" || layers.onAir !== false);
   const WORDS = () => ({
     connecting: tl("shows.connecting", "Connecting…"),
+    reconnecting: tl("shows.reconnecting", "Reconnecting…"),
     on: tl("shows.on", "Listening."),
   });
   // Looking for shows with nothing playing (src/presence-nostr.js, watch): only
@@ -315,7 +380,9 @@
     // with "Show other listeners" off sees none, and had no way to know why:
     // a tester sent the private link saw an empty globe.
     const unseen = shown() && ears && typeof prefs !== "undefined" && prefs?.presence !== true;
-    card.hidden = !(shown() && (rows.length || said || unseen));
+    // The handed-over show, while it is still on air here.
+    const next = handed && !active(show) ? live.find((p) => p.pubkey === handed.to.pubkey && !gone.has(p.pubkey)) : null;
+    card.hidden = !(shown() && (rows.length || said || unseen || next));
     list.textContent = "";
     if (card.hidden) return;
     if (unseen) {
@@ -329,7 +396,7 @@
     }
     for (const p of rows) {
       const mine = show?.peer.pubkey === p.pubkey ? show : null;
-      const busy = !!mine && (mine.state === "connecting" || mine.state === "on");
+      const busy = active(mine);
       const title = p.label || tl("shows.aShow", "A show");
       const row = document.createElement("div");
       row.className = `liverow${busy ? " on" : ""}`;
@@ -363,6 +430,18 @@
         list.append(say);
       }
     }
+    if (next) {
+      const say = el2("p", "livesay", tl("shows.handedOver", "{from} ended and handed over to {to}.")
+        .replace("{from}", handed.from.label || tl("shows.aShow", "A show")).replace("{to}", next.label || tl("shows.aShow", "A show")));
+      say.setAttribute("role", "status");
+      const go = document.createElement("button");
+      go.type = "button"; go.className = "linkbtn livelisten";
+      go.textContent = tl("shows.listen", "Listen");
+      go.setAttribute("aria-label", `${go.textContent}: ${next.label || tl("shows.aShow", "A show")}`);
+      go.onclick = () => { prime(); listen(next); };
+      say.append(" ", go);
+      list.append(say);
+    }
     if (said) { const p = document.createElement("p"); p.className = "livesay"; p.setAttribute("role", "status"); p.textContent = said; list.append(p); }
     const note = document.createElement("p");
     note.className = "livesay fine";
@@ -391,7 +470,7 @@
         b.onclick = (e) => {
           e.stopPropagation();
           const now = live.find((x) => x.pubkey === p.pubkey) || p;
-          if (show?.peer.pubkey === p.pubkey && (show.state === "connecting" || show.state === "on")) return stop();
+          if (show?.peer.pubkey === p.pubkey && active(show)) return stop();
           prime(); listen(now);
         };
         // The globe centres whatever it is given on the town. A holder of no
@@ -405,10 +484,10 @@
       }
       const title = p.label || tl("shows.aShow", "A show");
       const own = show?.peer.pubkey === p.pubkey ? show : null;
-      const mine = !!own && (own.state === "connecting" || own.state === "on");
+      const mine = active(own);
       // The beacon says what is happening to it: connecting, playing (its dot
       // becomes a stop square), or, for a few seconds, why it did not connect.
-      b.lastChild.textContent = own?.state === "connecting" ? WORDS().connecting : told(own) ? (WHY()[own.why] || WHY().noanswer) : title;
+      b.lastChild.textContent = own?.state === "connecting" || own?.state === "reconnecting" ? WORDS()[own.state] : told(own) ? (WHY()[own.why] || WHY().noanswer) : title;
       b.classList.toggle("on", mine);
       b.classList.toggle("playing", own?.state === "on");
       b.classList.toggle("say", told(own));
@@ -429,6 +508,8 @@
       relist();
     },
     listen, stop, report,
+    /** The shows on air this device lists, for a host choosing who comes next (explore-studio.js). */
+    onAir: () => live.filter((p) => !gone.has(p.pubkey)).map((p) => ({ pubkey: p.pubkey, label: p.label || "" })),
     /** Shows on air whose name, or what they are playing, matches a search (explore-search.js). */
     find(q) {
       const w = String(q || "").toLowerCase().trim();

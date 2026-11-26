@@ -198,6 +198,8 @@ contextBridge.exposeInMainWorld("auralfm", {
   openLink: (url) => ipcRenderer.send("open:external", url),
   stats: () => ipcRenderer.invoke("catalog:stats"),
   resolve: (channel) => ipcRenderer.invoke("stream:resolve", channel),
+  /** The song the station's own server says is playing (src/songtitle.js). */
+  songTitle: (url, station) => ipcRenderer.invoke("stream:song", url, station),
 
   // playback — Explore requests, the popover performs, everyone observes
   tune: (channel) => ipcRenderer.send("player:tune", channel),

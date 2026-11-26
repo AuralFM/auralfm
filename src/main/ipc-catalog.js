@@ -12,9 +12,12 @@ const failures = require("../failures");
 const mine = require("../mystations");
 const resolver = require("../resolver");
 const profiles = require("../profiles");
+const songtitle = require("../songtitle");
+const { UA } = require("../useragent");
 
 module.exports = function register(ctx) {
   const { broadcast, hydrateMine } = ctx;
+  const given = new Set();      // stream addresses handed to the popover to play
 
   ipcMain.handle("catalog:search", (_e, q, limit, filter) => {
     // Push known-bad streams down rather than hiding them — a station that failed
@@ -35,12 +38,21 @@ module.exports = function register(ctx) {
     // resolver would ask radio-browser about a station it has never heard of.
     if (mine.isMine(ch?.id)) {
       const s = mine.get(ch.id);
+      if (s?.url) given.add(s.url);
       return s ? { url: s.url } : null;
     }
     // Held back where the listener is (src/region.js): asked for, never looked up.
     if (catalog.held(ch)) return { held: true };
-    return resolver.resolve(ch);
+    return resolver.resolve(ch).then((r) => { if (r?.url) given.add(r.url); return r; });
   });
+  /**
+   * What song the station is playing (src/songtitle.js), from its own server.
+   * Only for an address this process gave out to be played: the popover cannot
+   * send main to fetch anything else.
+   */
+  const songs = songtitle.createAsker({ fetch, headers: { "User-Agent": UA } });
+  ipcMain.handle("stream:song", (_e, url, station) =>
+    typeof url === "string" && given.has(url) ? songs.ask(url, String(station || "")) : undefined);
   ipcMain.handle("mine:list", () => mine.all().map(hydrateMine));
 
   ipcMain.handle("mine:add", (_e, input) => {

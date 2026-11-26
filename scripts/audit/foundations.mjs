@@ -155,7 +155,7 @@ missing.length
 console.log("\nevery polled service has a failure cooldown");
 // A TTL that only advances on success turns the poll interval into the retry
 // interval. This is how Celestrak rate-limited us.
-const POLLED = ["iss.js", "satellites.js", "weather.js", "news.js", "markets.js"];
+const POLLED = ["iss.js", "satellites.js", "weather.js", "news.js", "markets.js", "songtitle.js"];
 for (const name of POLLED) {
   const src = fs.readFileSync(R(`src/${name}`), "utf8");
   const guarded = /cool\.blocked|nextTry|backoff/.test(src);

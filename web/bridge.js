@@ -435,6 +435,7 @@
   async function tune(ch, { chained = false } = {}) {
     if (!ch) return;
     if (!chained) tried = [];
+    songStop();
     const my = ++gen;
     // The station before, for "previous" on the lock screen and the headphones.
     // An auto-skip is not a choice, so it does not become somewhere to go back to.
@@ -599,7 +600,7 @@
   });
 
   function stop(said = "Stopped", notice = false) {
-    gen++; clearTimeout(watchdog); live = false;
+    gen++; clearTimeout(watchdog); live = false; songStop();
     held = null;
     playingUrl = null;
     dropHls();
@@ -623,23 +624,59 @@
     tune(next, { chained: true });
   }
 
+  /**
+   * The song on the station, when its server says (src/songtitle.js).
+   *
+   * Asked of the station's own server and nothing else, every thirty seconds
+   * while it plays: a short read of the stream with the header that asks for
+   * its titles. A browser sends that header only to a server that agrees to it
+   * (Icecast 2.4 and later), over https, so on the web about one station in
+   * seven answers where the desktop has one in three. Where there is no
+   * answer, the place stays.
+   */
+  const songs = M.songtitle.createAsker({ fetch: (...a) => fetch(...a), secureOnly: true });
+  let song = null, songTimer = null;
+  const placeLine = () => [current?.place, current?.country].filter(Boolean).join(" · ") || "Live";
+  function songStop() { clearTimeout(songTimer); songTimer = null; song = null; }
+  function songWatch(my) {
+    clearTimeout(songTimer);
+    const ask = async () => {
+      songTimer = null;
+      if (my !== gen || !live || !playingUrl) return;
+      const said = await songs.ask(playingUrl, current?.title || "").catch(() => undefined);
+      if (my !== gen || !live) return;
+      if (said !== undefined && (said?.text || null) !== (song?.text || null)) {
+        song = said || null;
+        setStatus(song ? song.text : placeLine());
+        showSession();
+      }
+      songTimer = setTimeout(ask, M.songtitle.EVERY_MS);
+    };
+    songTimer = setTimeout(ask, 0);
+  }
+  // With a song, the lock screen reads as a radio's does: the song, its artist,
+  // and the station it is on.
+  function showSession() {
+    if (!("mediaSession" in navigator) || !current) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: song ? song.title : current.title,
+      album: song ? current.title : "AuralFM",
+      artist: song ? (song.artist || current.title) : [current.place, current.country].filter(Boolean).join(" · "),
+      // The lock screen draws this at the size of an album cover; without it
+      // iOS shows a grey rectangle beside the station's name.
+      artwork: [
+        { src: "assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "assets/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+    });
+  }
   audio.addEventListener("playing", () => {
     clearTimeout(watchdog); clearTimeout(stall);
     live = true;
-    setStatus([current?.place, current?.country].filter(Boolean).join(" · ") || "Live");
-    if ("mediaSession" in navigator && current) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: current.title, album: "AuralFM",
-        artist: [current.place, current.country].filter(Boolean).join(" · "),
-        // The lock screen draws this at the size of an album cover; without it
-        // iOS shows a grey rectangle beside the station's name.
-        artwork: [
-          { src: "assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "assets/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-        ],
-      });
-      navigator.mediaSession.playbackState = "playing";
-    }
+    setStatus(song ? song.text : placeLine());
+    showSession();
+    if ("mediaSession" in navigator && current) navigator.mediaSession.playbackState = "playing";
+    if (!songTimer) songWatch(gen);
   });
   audio.addEventListener("waiting", () => {
     if (!live) return;

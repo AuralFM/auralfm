@@ -233,6 +233,241 @@ import { R, fail, pass, HAS_CAT, C, main, EXPLORE, exploreSrc, readSrc } from ".
     : pass("a stream that fails with no network holds the station and resumes when it returns");
 }
 
+// ── popover.js in a sandbox ─────────────────────────────────────────────────
+// The desktop player run, not read: a fake <audio>, a fake clock, a switchable
+// network and a fake bridge to main. The page's own start-up is left waiting
+// (it draws lists, and a list drawn into the fake page never finishes emptying);
+// the checks drive it through tune() and the element's events.
+const absorb = () => { const store = {}; return new Proxy(function () {}, {
+  get: (_t, k) => k in store ? store[k] : k === Symbol.toPrimitive ? () => "" : k === "then" ? undefined : (store[k] = absorb()),
+  set: (_t, k, v) => (store[k] = v, true), apply: () => absorb(), construct: () => absorb() }); };
+async function runPopover(script, { songTitle } = {}) {
+  const src = fs.readFileSync(R("src/renderer/popover.js"), "utf8");
+  const els = {}; const el = (id) => (els[id] ||= absorb());
+  let timers = [], now = 1e6, audio = null;
+  const later = (fn, ms = 0) => { timers.push({ id: timers.length + 1, at: now + ms, fn }); return timers.length; };
+  const cancel = (id) => { const t = timers[id - 1]; if (t) t.fn = null; };
+  const advance = async (ms) => {
+    const end = now + ms;
+    for (;;) {
+      const due = timers.filter((t) => t.fn && t.at <= end).sort((a, b) => a.at - b.at)[0];
+      if (!due) break;
+      now = due.at; const f = due.fn; due.fn = null; f();
+      await new Promise((r) => setImmediate(r));
+    }
+    now = end;
+  };
+  class FakeAudio extends EventTarget {
+    constructor() { super(); Object.assign(this, { paused: true, src: "", currentTime: 0, volume: 1, error: null, readyState: 0 }); }
+    play() { this.paused = false; return Promise.resolve(); } pause() { this.paused = true; }
+    load() {} removeAttribute() { this.src = ""; } setSinkId() { return Promise.resolve(); }
+  }
+  const win = new EventTarget(), calls = [];
+  const auralfm = new Proxy({}, { get: (_t, k) =>
+    k === "resolve" ? async () => ({ url: "https://radio.example/live" })
+    : k === "nextStation" ? async () => { calls.push(["nextStation"]); return null; }
+    : k === "songTitle" ? async (...a) => { calls.push(["songTitle", ...a]); return songTitle ? songTitle(...a) : undefined; }
+    // The page's own start-up waits on these forever: it draws lists, and a
+    // list drawn into the fake page would never finish emptying.
+    : k === "stats" || k === "getState" ? () => new Promise(() => {})
+    : (...a) => { calls.push([k, ...a]); } });
+  const navigator = { onLine: true, mediaDevices: absorb(),
+    mediaSession: { metadata: null, playbackState: "", setActionHandler() {} } };
+  const ctx = { console: { log() {}, warn() {}, error() {} }, Promise, Event, EventTarget,
+    Date: { now: () => now }, setTimeout: later, clearTimeout: cancel, setInterval: () => 0, clearInterval() {},
+    Audio: function () { return (audio = new FakeAudio()); }, navigator, matchMedia: () => absorb(),
+    MediaMetadata: function (o) { Object.assign(this, o); }, Icons: absorb(), requestAnimationFrame: () => 0, localStorage: absorb(),
+    getComputedStyle: () => absorb(), addEventListener: (n, f) => win.addEventListener(n, f),
+    document: new Proxy({}, { get: (_t, k) => k === "getElementById" ? el : k === "addEventListener" ? () => {} : absorb() }) };
+  ctx.window = new Proxy(ctx, { get: (t, k) => k === "auralfm" ? auralfm : t[k], set: (t, k, v) => (t[k] = v, true) });
+  vm.createContext(ctx);
+  vm.runInContext(src + "\n;globalThis.__tune = tune;", ctx, { filename: "popover.js" });
+  await ctx.__tune({ id: "s1", title: "Test FM" }); await advance(0);
+  const status = () => String(el("status").textContent);
+  const asked = () => audio.src.startsWith("https://radio.example/live");
+  return script({ audio: () => audio, status, asked, advance, navigator, win, calls, ctx, el,
+    playing: () => audio.dispatchEvent(new Event("playing")),
+    drop: () => { audio.src = ""; audio.dispatchEvent(new Event("ended")); } });
+}
+
+// ── the desktop takes a dropped stream back ──────────────────────────────────
+// An Icecast stream that closes mid-song ends the response, and the element
+// fires `ended`. The desktop popover listened for `error` only, so it went on
+// saying "Live" over silence until somebody pressed play; and an `error` while
+// live was treated as a dead station, marked against it and skipped to the next
+// in town. The web build already took the address back (web/bridge.js rescue).
+//
+// Run, not read: popover.js in a sandbox with a fake <audio>, a fake clock and
+// a switchable network. The stream drops; it must be asked for again at the
+// same address after a wait, a fourth drop inside the window must give up and
+// go to the next station, and a drop with no network must wait for `online`.
+{
+  console.log("\nthe desktop takes a dropped stream back");
+  const gaps = [];
+  try {
+    await runPopover(async (p) => {
+      p.playing(); p.drop();
+      if (!/Reconnecting/.test(p.status())) gaps.push(`a stream that ended says "${p.status()}", not that it is reconnecting`);
+      await p.advance(500);
+      if (p.asked()) gaps.push("the address is asked for again with no wait");
+      await p.advance(1000);
+      if (!p.asked()) gaps.push("a stream that ended is not asked for again at its own address");
+      for (let i = 0; i < 3; i++) { p.playing(); p.drop(); await p.advance(11000); }
+      if (!p.calls.some(([k]) => k === "reportFailed")) gaps.push("a fourth drop inside two minutes keeps retrying instead of moving on");
+    });
+    await runPopover(async (p) => {
+      p.playing(); p.audio().error = { code: 2 }; p.audio().dispatchEvent(new Event("error")); await p.advance(0);
+      if (p.calls.some(([k]) => k === "reportFailed")) gaps.push("an error while live marks the station failed before trying it again");
+    });
+    await runPopover(async (p) => {
+      p.playing(); p.navigator.onLine = false; p.drop(); await p.advance(20000);
+      if (p.asked()) gaps.push("with no network the stream is retried anyway");
+      p.navigator.onLine = true; p.win.dispatchEvent(new Event("online")); await p.advance(0);
+      if (!p.asked()) gaps.push("a station held for the network does not come back on 'online'");
+    });
+  } catch (e) { gaps.push(`the sandbox could not run popover.js: ${e.message}`); }
+  gaps.length ? fail("the desktop takes a dropped stream back", gaps.join("; "))
+    : pass("a dropped stream is asked for again after 1, 4 and 10 s, moves on after the fourth drop, and waits out a lost network");
+}
+
+// ── a station's song reads as it was written ─────────────────────────────────
+// ICY text declares no encoding. Taken as UTF-8 it turns a Latin-1 "Ärzte" into
+// a replacement character; taken as Shift-JIS whenever that decodes cleanly (the
+// rule R/a/dio's proxy uses, for a Japanese station) the same bytes come out as
+// half-width katakana. A song that is the station's own name, a placeholder or
+// a web address is not a song, and the same song in other spacing is not news.
+{
+  console.log("\na station's song reads as it was written");
+  const { createRequire } = await import("node:module");
+  const st = createRequire(import.meta.url)(R("src/songtitle.js"));
+  const gaps = [];
+  const latin1 = [0xc4, 0x72, 0x7a, 0x74, 0x65, 0x20, 0x2d, 0x20, 0x4d, 0xe4, 0x6e, 0x6e, 0x65, 0x72];
+  const sjis = [0x93, 0xfa, 0x96, 0x7b, 0x8c, 0xea, 0x20, 0x2d, 0x20, 0x83, 0x65, 0x83, 0x58, 0x83, 0x67];
+  const cases = [
+    [st.decode(latin1), "Ärzte - Männer", "Latin-1"],
+    [st.decode(sjis), "日本語 - テスト", "Shift-JIS"],
+    [st.decode(new TextEncoder().encode("Beyoncé - Halo")), "Beyoncé - Halo", "UTF-8"],
+    [st.decode(new TextEncoder().encode("BeyoncÃ© - Halo")), "Beyoncé - Halo", "UTF-8 sent through Latin-1"],
+    [st.fromIcy("StreamTitle='Can - Vitamin C';StreamUrl='';\0\0"), "Can - Vitamin C", "an ICY block"],
+    [st.fromIcy("StreamTitle='It's - Here';\0"), "It's - Here", "an ICY title with an apostrophe"],
+    [st.clean("  Daft   Punk -\u0007 One More Time "), "Daft Punk - One More Time", "spacing and control characters"],
+  ];
+  for (const [got, want, what] of cases) if (got !== want) gaps.push(`${what} came out as ${JSON.stringify(got)}`);
+  for (const [raw, station] of [["Radio X", "radio  x"], ["-"], ["Unknown"], ["https://radio.example"], ["   "], ["StreamTitle"]])
+    if (raw !== "StreamTitle" && st.clean(raw, station) !== null) gaps.push(`${JSON.stringify(raw)} was taken for a song`);
+  const sp = st.split("Daft Punk - One More Time");
+  if (sp.artist !== "Daft Punk" || sp.title !== "One More Time") gaps.push(`"Artist - Title" split as ${JSON.stringify(sp)}`);
+  if (st.split("Talk hour").artist !== "") gaps.push("a line with no artist was given one");
+  if (!st.same("Daft Punk - One More Time", "daft punk -  one more time")) gaps.push("the same song in other spacing counts as new");
+  gaps.length ? fail("a station's song reads as it was written", gaps.join("; "))
+    : pass("Latin-1, Shift-JIS and UTF-8 titles decode as written; names, placeholders and addresses are not songs");
+}
+
+// ── a station's server is asked gently, and only by the stream ──────────────
+// The song is asked of the server the stream comes from, and of nothing else.
+// Asked on a timer, so the rules every polled service here keeps: not more
+// often than every thirty seconds, a cooldown behind a failure, a server with
+// no ICY left alone, a read that stops at its block and never at the stream's
+// end (a live stream has none), https only on the web. Run against a fake
+// server that counts what it is asked and how much of it is read.
+{
+  console.log("\na station's server is asked gently, and only by the stream");
+  const { createRequire } = await import("node:module");
+  const st = createRequire(import.meta.url)(R("src/songtitle.js"));
+  const gaps = [];
+  const realNow = Date.now;
+  let now = 1e9; Date.now = () => now;
+  try {
+    const log = [];
+    let mode = "icy", chunksRead = 0;
+    const meta = (text) => { const b = new TextEncoder().encode(`StreamTitle='${text}';`); const n = Math.ceil(b.length / 16); const out = new Uint8Array(1 + n * 16); out[0] = n; out.set(b, 1); return out; };
+    const fakeFetch = async (url, opts = {}) => {
+      log.push({ url, headers: opts.headers || {} });
+      if (mode === "down") throw new TypeError("network");
+      const every = mode === "noicy" ? null : 16;
+      let i = 0; chunksRead = 0;
+      return { ok: true, headers: { get: (h) => (h.toLowerCase() === "icy-metaint" ? every && String(every) : null) },
+        body: { cancel: async () => {}, getReader: () => ({
+          cancel: async () => { i = Infinity; },
+          read: async () => {
+            if (i === Infinity) return { done: true };
+            chunksRead++;
+            if (chunksRead > 5000) return { done: true };          // the fake's own limit
+            const chunk = i === 0 ? new Uint8Array([...new Uint8Array(16), ...meta("Can - Vitamin C")]) : new Uint8Array(4096);
+            i++; return { value: chunk, done: false };
+          } }) } };
+    };
+    const asker = st.createAsker({ fetch: fakeFetch, headers: { "User-Agent": "test" } });
+    const first = await asker.ask("https://radio.example/live", "Test FM");
+    if (first?.text !== "Can - Vitamin C") gaps.push(`the song was read as ${JSON.stringify(first)}`);
+    if (log[0]?.headers["Icy-MetaData"] !== "1") gaps.push("the stream is not asked for its titles (Icy-MetaData: 1)");
+    if (log[0] && new URL(log[0].url).host !== "radio.example") gaps.push(`something other than the station's server was asked: ${log[0].url}`);
+    if (chunksRead > 3) gaps.push(`the read went on for ${chunksRead} chunks after the block`);
+    now += 5000; await asker.ask("https://radio.example/live", "Test FM");
+    if (log.length !== 1) gaps.push("asked again five seconds later");
+    now += 30000; await asker.ask("https://radio.example/live", "Test FM");
+    if (log.length !== 2) gaps.push("not asked again after thirty seconds");
+
+    mode = "down"; log.length = 0;
+    const down = st.createAsker({ fetch: fakeFetch });
+    const r1 = await down.ask("https://down.example/a");
+    now += 31000; await down.ask("https://down.example/a");
+    if (r1 !== undefined) gaps.push("a failed read is reported as 'no song' and would clear what is shown");
+    if (log.length !== 1) gaps.push("a server that failed is asked again before its cooldown");
+
+    mode = "noicy"; log.length = 0;
+    const plain = st.createAsker({ fetch: fakeFetch });
+    await plain.ask("https://plain.example/a"); now += 31000; await plain.ask("https://plain.example/a");
+    if (log.length !== 1) gaps.push("a server with no ICY is asked again");
+
+    mode = "icy"; log.length = 0;
+    const web = st.createAsker({ fetch: fakeFetch, secureOnly: true });
+    await web.ask("http://radio.example/live"); await web.ask("https://radio.example/list.m3u8");
+    if (log.length) gaps.push(`the web asked ${log.map((l) => l.url).join(", ")} (an http server or a playlist)`);
+  } catch (e) { gaps.push(`the fake server could not be run: ${e.message}`); }
+  finally { Date.now = realNow; }
+
+  // Main reads only what it handed out to be played: the popover cannot send it
+  // to fetch an address of its choosing.
+  const ipc = fs.readFileSync(R("src/main/ipc-catalog.js"), "utf8");
+  const h = ipc.match(/ipcMain\.handle\("stream:song",[\s\S]*?\);/);
+  if (!h) gaps.push("there is no stream:song handler to check");
+  else if (!/given\.has\(url\)/.test(h[0])) gaps.push("stream:song fetches any address it is given, not only the ones main resolved");
+
+  gaps.length ? fail("a station's server is asked gently, and only by the stream", gaps.join("; "))
+    : pass("one read per thirty seconds of the stream's own server, stopped at its block; cooldowns, no-ICY and http are left alone");
+}
+
+// ── the desktop shows the song, and says it once ─────────────────────────────
+// The status line is a polite live region: rewriting it with the same song every
+// thirty seconds would read the song out every thirty seconds. And the lock
+// screen and Now Playing should name the song and the station it is on.
+{
+  console.log("\nthe desktop shows the song, and says it once");
+  const gaps = [];
+  let answer = { text: "Can - Vitamin C", artist: "Can", title: "Vitamin C" };
+  try {
+    await runPopover(async (p) => {
+      p.playing(); await p.advance(0);
+      if (p.status() !== "Can - Vitamin C") gaps.push(`the status says "${p.status()}" with a song on`);
+      const md = p.navigator.mediaSession.metadata;
+      if (md?.title !== "Vitamin C" || md?.artist !== "Can" || md?.album !== "Test FM")
+        gaps.push(`Now Playing reads ${JSON.stringify(md && { title: md.title, artist: md.artist, album: md.album })}`);
+      p.el("status").textContent = "unchanged";
+      await p.advance(30000);
+      if (p.status() !== "unchanged") gaps.push("the same song rewrote the status line, so it is read out again");
+      answer = null; await p.advance(30000);
+      if (p.status() === "unchanged" || /Vitamin/.test(p.status())) gaps.push(`a station that stopped naming a song still shows "${p.status()}"`);
+      answer = undefined; p.el("status").textContent = "kept"; await p.advance(30000);
+      if (p.status() !== "kept") gaps.push("an unanswered ask changed the status line");
+      if (!p.calls.some(([k, url]) => k === "songTitle" && url.startsWith("https://radio.example/live")))
+        gaps.push("the song is not asked for by the address that is playing");
+    }, { songTitle: () => answer });
+  } catch (e) { gaps.push(`the sandbox could not run popover.js: ${e.message}`); }
+  gaps.length ? fail("the desktop shows the song, and says it once", gaps.join("; "))
+    : pass("the song replaces the place, Now Playing names song, artist and station, and a repeat is not announced");
+}
+
 // ── the worker does not seize a page that is playing ────────────────────────
 // install called skipWaiting() and activate called clients.claim(), so the
 // moment a new build was deployed its worker took over pages already open —
@@ -394,7 +629,7 @@ import { R, fail, pass, HAS_CAT, C, main, EXPLORE, exploreSrc, readSrc } from ".
   // Listening is on where the studio is, or where the private ?ears link has
   // been opened; and that link must never be a way into the studio itself
   // (the check after this one holds the studio's own door).
-  if (!shows.includes("const on = () => true;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && (rows.length || said || unseen));") || !shows.includes("const unseen = shown() && ")) gaps.push("listening to shows is not on everywhere, or the prompt to see them is not gated by shown()");
+  if (!shows.includes("const on = () => true;") || !shows.includes("const shown = () => on() && ") || !shows.includes("card.hidden = !(shown() && (rows.length || said || unseen || next));") || !shows.includes("const unseen = shown() && ")) gaps.push("listening to shows is not on everywhere, or the prompt to see them is not gated by shown()");
   if (/shows\.ears|has\("ears"\)/.test(studio)) gaps.push("the private listening link reaches into the studio");
   if (!/"shows\.note"/.test(shows) || !/network address/.test(shows)) gaps.push("a listener is not told the host can see their address");
   // Looking for shows with nothing playing reads and never announces, and only
@@ -405,10 +640,148 @@ import { R, fail, pass, HAS_CAT, C, main, EXPLORE, exploreSrc, readSrc } from ".
     if (!/if \((on|p\.presence === true) && watching\) nostr\.watch\(\);/.test(readSrc(f))) gaps.push(`${f}: shows are looked for with presence switched off`);
   }
   // A report hides the host first (the part that takes effect) and then drafts the email.
-  const rep = shows.slice(shows.indexOf("async function report(peer)"), shows.indexOf("async function listen(peer)"));
+  const rep = shows.slice(shows.indexOf("async function report(peer)"), shows.indexOf("async function listen(peer"));
   if (!(rep.indexOf("gone.add(peer.pubkey)") >= 0 && rep.indexOf("gone.add(peer.pubkey)") < rep.indexOf("chatReport"))) gaps.push("reporting a show does not hide its host before anything else");
   gaps.length ? fail("a show is heard directly, and found honestly", gaps.join("; "))
     : pass("the handshake is sealed and fresh, the host answers only live and to a dozen, and a listener is told what a direct connection shows");
+}
+
+// ── a show that drops is asked for again; one that ends can name the next ───
+// A listener's connection failing ended the show ("Connection lost") with the
+// host still on air: a phone changing networks lost the show for good. And a
+// show that ended left its listeners in silence even when its host had a show
+// to send them to.
+//
+// Run, not read: explore-shows.js with a fake WebRTC connection, a fake relay
+// path for the sealed handshake, a fake clock and a fake page. The connection
+// drops: the listener must say so, tell the host the old one is gone, and ask
+// again after a wait, while the host is on air, and not once it has left. The
+// host ends naming the next show: it must be offered, and nothing connected to
+// it until Listen is pressed.
+{
+  console.log("\na show that drops is asked for again; one that ends can name the next");
+  const src = readSrc("src/renderer/explore-shows.js");
+  class FakeEl {
+    constructor(tag = "div") { Object.assign(this, { tag, children: [], textContent: "", hidden: false, className: "", attrs: {}, dataset: {}, style: {} });
+      this.classList = { toggle() {}, add() {}, remove() {}, contains: () => false }; }
+    append(...k) { this.children.push(...k.filter((x) => typeof x === "object")); }
+    setAttribute(k, v) { this.attrs[k] = String(v); } getAttribute(k) { return this.attrs[k]; }
+    set textContent(v) { this._t = v; if (v === "") this.children = []; } get textContent() { return this._t; }
+  }
+  async function runShows(script) {
+    let now = 1e9, timers = [];
+    const later = (fn, ms = 0) => { timers.push({ at: now + ms, fn }); return timers.length; };
+    const cancel = (id) => { if (timers[id - 1]) timers[id - 1].fn = null; };
+    const advance = async (ms) => {
+      const end = now + ms;
+      for (;;) {
+        await new Promise((r) => setImmediate(r));
+        const due = timers.filter((t) => t.fn && t.at <= end).sort((a, b) => a.at - b.at)[0];
+        if (!due) break;
+        now = due.at; const f = due.fn; due.fn = null; f();
+      }
+      now = end; await new Promise((r) => setImmediate(r));
+    };
+    const els = {}, $ = (id) => (els[id] ||= new FakeEl());
+    const sent = [], pcs = [];
+    let signal = null;
+    class FakePC {
+      constructor() { Object.assign(this, { connectionState: "new", signalingState: "stable", iceGatheringState: "complete", localDescription: null }); pcs.push(this); }
+      addTransceiver() {} addEventListener() {} close() { this.closed = true; }
+      async createOffer() { return { type: "offer", sdp: "v=0" }; }
+      async setLocalDescription(d) { this.localDescription = d; this.signalingState = "have-local-offer"; }
+      async setRemoteDescription() { this.signalingState = "stable"; }
+      to(state) { this.connectionState = state; this.onconnectionstatechange?.(); }
+    }
+    const auralfm = {
+      onRtcSignal: (fn) => { signal = fn; },
+      rtcSignal: async (to, payload) => { sent.push({ to, ...payload }); return true; },
+      presenceStats: async () => ({ cell: "u4pr", connected: 1 }),
+      hiddenShows: async () => [], muteList: async () => [],
+      studioHost() {}, transport() {}, showsWatch() {}, chatReport: async () => {},
+    };
+    const body = new FakeEl("body");
+    const ctx = { console: { log() {}, warn() {}, error() {} }, Promise, Uint8Array, Map, Set, Array, JSON,
+      Date: { now: () => now }, setTimeout: later, clearTimeout: cancel,
+      crypto: { getRandomValues: (a) => { for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256); return a; } },
+      URLSearchParams, location: { search: "" }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+      Audio: function () { return { play: () => Promise.resolve(), pause() {}, setAttribute() {}, srcObject: null }; },
+      MediaStream: function () {}, RTCPeerConnection: FakePC, MutationObserver: function () { return { observe() {} }; },
+      document: { getElementById: $, createElement: (t) => new FakeEl(t), body, addEventListener() {}, activeElement: null } };
+    ctx.window = ctx; ctx.window.auralfm = auralfm;
+    vm.createContext(ctx);
+    vm.runInContext(src, ctx, { filename: "explore-shows.js" });
+    const S = ctx.AuralShows;
+    const peer = (k, label) => ({ pubkey: k, live: true, label, lat: 1, lon: 2, geohash: "u4pr" });
+    const answer = (sid) => signal("H", { t: "answer", sid, sdp: "v=0" }, now);
+    const offers = () => sent.filter((m) => m.t === "offer");
+    // Tuned in and playing: the host's presence says the show is on.
+    async function tuneIn(list = [peer("H", "Show A")]) {
+      S.peers(list); await advance(0);
+      S.listen(list[0]); await advance(1000);
+      const o = offers().at(-1); answer(o.sid); await advance(0);
+      pcs.at(-1).to("connected"); await advance(0);
+      return o;
+    }
+    return script({ S, $, sent, pcs, offers, advance, signal: (from, m) => signal(from, m, now), tuneIn, peer, answer });
+  }
+  const gaps = [];
+  const visit = (n, f) => { f(n); for (const c of n.children || []) visit(c, f); };
+  try {
+    await runShows(async (p) => {
+      const first = await p.tuneIn();
+      if (p.S.state?.state !== "on") gaps.push(`the fake show did not start (${JSON.stringify(p.S.state)})`);
+      p.pcs.at(-1).to("failed"); await p.advance(0);
+      if (p.S.state?.state !== "reconnecting") gaps.push(`a dropped show is "${p.S.state?.state}${p.S.state?.why ? ` (${p.S.state.why})` : ""}", not reconnecting`);
+      if (!p.sent.some((m) => m.t === "bye" && m.sid === first.sid)) gaps.push("the host is not told the dropped connection is gone");
+      await p.advance(1000);
+      if (p.offers().length !== 1) gaps.push("asked again with no wait");
+      await p.advance(2000);
+      const again = p.offers().at(-1);
+      if (p.offers().length !== 2 || again.sid === first.sid) gaps.push("a dropped show is not asked for again");
+      // The retry gets through: playing again.
+      p.answer(again.sid); await p.advance(0); p.pcs.at(-1).to("connected"); await p.advance(0);
+      if (p.S.state?.state !== "on") gaps.push("the show did not come back after asking again");
+      // Falling again and again ends it as lost, not a loop.
+      for (let i = 0; i < 6 && p.S.state?.state !== "failed"; i++) { p.pcs.at(-1).to("failed"); await p.advance(11000); }
+      if (p.S.state?.why !== "lost") gaps.push(`a show that keeps falling ends as "${p.S.state?.why || p.S.state?.state}", not lost`);
+    });
+    await runShows(async (p) => {
+      await p.tuneIn();
+      p.S.peers([]); await p.advance(0);                 // the host's presence has stopped saying the show is on
+      p.pcs.at(-1).to("failed"); await p.advance(15000);
+      if (p.S.state?.state !== "failed" || p.offers().length !== 1) gaps.push("a show whose host has left the air is asked for again");
+    });
+    await runShows(async (p) => {
+      const first = await p.tuneIn([p.peer("H", "Show A"), p.peer("B", "Show B")]);
+      p.signal("H", { t: "bye", sid: first.sid, next: "B" }); await p.advance(0);
+      if (p.S.state) gaps.push(`a show that handed over is still "${p.S.state.state}"`);
+      if (p.offers().some((o) => o.to === "B")) gaps.push("the listener was connected to the next host without pressing Listen");
+      let go = null, line = "";
+      // The Listen that goes with the line, not the next show's own row.
+      visit(p.$("livelist"), (n) => { if (/handed over/.test(n.textContent || "")) { line = n.textContent; go = n.children.find((c) => c.tag === "button") || null; } });
+      if (!/Show A/.test(line) || !/Show B/.test(line)) gaps.push(`the next show is not named (${JSON.stringify(line)})`);
+      if (!go) gaps.push("the handover line has no Listen of its own");
+      else { go.onclick(); await p.advance(1000); if (!p.offers().some((o) => o.to === "B")) gaps.push("Listen on the handed-over show does not tune to it"); }
+    });
+    await runShows(async (p) => {
+      const first = await p.tuneIn([p.peer("H", "Show A")]);
+      p.signal("H", { t: "bye", sid: first.sid, next: "Z" }); await p.advance(0);   // a show this device does not list
+      let named = false;
+      visit(p.$("livelist"), (n) => { if (/handed over/.test(n.textContent || "")) named = true; });
+      if (named || p.S.state?.why !== "ended") gaps.push("a goodbye naming a show this device does not list is offered anyway");
+    });
+  } catch (e) { gaps.push(`the sandbox could not run explore-shows.js: ${e.message}`); }
+
+  // The host's side: the goodbye names the chosen show only if it is still on air.
+  const studio = readSrc("src/renderer/explore-studio.js");
+  const cl = studio.match(/function closeListeners\(\) \{([\s\S]*?)\n  \}/);
+  if (!cl) gaps.push("closeListeners is gone, so the host's goodbye cannot be checked");
+  else if (!/othersOnAir\(\)\.some/.test(cl[1]) || !/next \? \{ t: "bye", sid, next \}/.test(cl[1]))
+    gaps.push("the host's goodbye does not name the next show, or names one without checking it is still on air");
+
+  gaps.length ? fail("a show that drops is asked for again; one that ends can name the next", gaps.join("; "))
+    : pass("a drop is asked for again after 2, 5 and 10 s while the host is on air; a handover is offered, never followed");
 }
 
 // ── the queue hands over on its own clock ───────────────────────────────────
