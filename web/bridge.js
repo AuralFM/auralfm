@@ -638,7 +638,8 @@
    */
   const songs = M.songtitle.createAsker({ fetch: (...a) => fetch(...a), secureOnly: true });
   let song = null, songTimer = null;
-  const placeLine = () => [current?.place, current?.country].filter(Boolean).join(" · ") || "Live";
+  // The page's own rule (src/renderer/places.js): "United States", not "Across the United States · United States".
+  const placeLine = () => window.placeLine(current?.place, current?.country) || "Live";
   function songStop() { clearTimeout(songTimer); songTimer = null; song = null; }
   function songWatch(my) {
     clearTimeout(songTimer);
@@ -663,7 +664,7 @@
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song ? song.title : current.title,
       album: song ? current.title : "AuralFM",
-      artist: song ? (song.artist || current.title) : [current.place, current.country].filter(Boolean).join(" · "),
+      artist: song ? (song.artist || current.title) : window.placeLine(current.place, current.country),
       // The lock screen draws this at the size of an album cover; without it
       // iOS shows a grey rectangle beside the station's name. The track's own
       // cover comes first when the station has one: songtitle.js passes only a

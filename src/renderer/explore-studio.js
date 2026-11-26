@@ -1101,7 +1101,7 @@
     // Where it goes out from: a town, never a position.
     const where = el("div", { class: "field" }, el("span", { class: "fieldlabel", text: tt("studio.where", "Where") }));
     where.append(el("div", { class: "where" },
-      el("span", { text: show.place ? `${show.place.title}, ${show.place.country}` : tt("studio.noPlace", "No town yet") }),
+      el("span", { text: show.place ? placeLine(show.place.title, show.place.country, ", ") : tt("studio.noPlace", "No town yet") }),
       // Not mid-show: a station does not move while it is on the air.
       live ? null : el("button", { class: "linkbtn", type: "button", id: "stPlace", onclick: usePlace }, selection?.place && !selection.place.nowhere ? `${tt("studio.use", "Use")} ${selection.place.title}` : tt("studio.pickPlace", "Pick a town on the globe"))));
     where.append(el("p", { class: "fine", text: tt("studio.whereNote", "Listeners see your town. Not your location.") }));

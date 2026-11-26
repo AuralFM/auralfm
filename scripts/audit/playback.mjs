@@ -281,6 +281,8 @@ async function runPopover(script, { songTitle } = {}) {
     document: new Proxy({}, { get: (_t, k) => k === "getElementById" ? el : k === "addEventListener" ? () => {} : absorb() }) };
   ctx.window = new Proxy(ctx, { get: (t, k) => k === "auralfm" ? auralfm : t[k], set: (t, k, v) => (t[k] = v, true) });
   vm.createContext(ctx);
+  // As the page loads it: places.js before popover.js (src/renderer/popover.html).
+  vm.runInContext(fs.readFileSync(R("src/renderer/places.js"), "utf8"), ctx, { filename: "places.js" });
   vm.runInContext(src + "\n;globalThis.__tune = tune;", ctx, { filename: "popover.js" });
   await ctx.__tune({ id: "s1", title: "Test FM" }); await advance(0);
   const status = () => String(el("status").textContent);

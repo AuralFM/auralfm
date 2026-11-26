@@ -70,8 +70,9 @@ function placeRow(p) {
   el.setAttribute("aria-selected", p.i === selection.placeIndex);
   el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>
                   <span class="cnt"></span>`;
-  el.querySelector(".pn").textContent = p.title;
-  el.querySelector(".pc").textContent = p.country;
+  const name = plainPlace(p.title, p.country);
+  el.querySelector(".pn").textContent = name;
+  el.querySelector(".pc").textContent = name === p.country ? "" : p.country;
   el.querySelector(".cnt").textContent = p.count;
   return activatable(el, () => goToPlace(p.i));
 }
@@ -96,7 +97,7 @@ function stationResultRow(ch) {
   el.innerHTML = `<span class="pmeta"><div class="pn"></div><div class="pc"></div></span>`;
   el.querySelector(".pn").textContent = ch.title;
   el.querySelector(".pc").textContent =
-    [...(ch.held ? [t("st.held", "Not available where you are yet")] : []), ch.place, ch.country].filter(Boolean).join(" · ");
+    [...(ch.held ? [t("st.held", "Not available where you are yet")] : []), placeLine(ch.place, ch.country)].filter(Boolean).join(" · ");
   activatable(el, async () => {
     // Leaving the favourites view is part of picking from it. `showingFavorites`
     // gates globe-follow and the chat panel, so a click that tuned a station but

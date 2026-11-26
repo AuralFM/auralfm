@@ -43,7 +43,7 @@ function pushJourney(i, place) {
   if (travelling) return;
   if (journey.stack[journey.at]?.i === i) return;      // same place twice is not a journey
   journey.stack.length = journey.at + 1;               // a new turn drops the forward path
-  journey.stack.push({ i, title: place.title, lat: place.lat, lon: place.lon });
+  journey.stack.push({ i, title: place.title, country: place.country, lat: place.lat, lon: place.lon });
   if (journey.stack.length > 50) journey.stack.shift();
   journey.at = journey.stack.length - 1;
 }
@@ -106,7 +106,7 @@ async function paintDistance() {
   const at = journey.at;
   const d = await window.auralfm.distance(prev.lat, prev.lon, here.lat, here.lon, prefs.units);
   if (journey.at !== at) return;
-  el.textContent = `${d} from ${prev.title}`;
+  el.textContent = `${d} from ${plainPlace(prev.title, prev.country)}`;
   el.hidden = false;
 }
 /**

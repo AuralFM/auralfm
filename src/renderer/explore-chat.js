@@ -56,7 +56,7 @@ function paintChatHead() {
   // Name the room actually on screen. While browsing that is the place under the
   // globe, not the station playing in your ears, and labelling it wrong is worse
   // than showing nothing — it would attribute strangers to a city they are not in.
-  const browsedPlace = viewingCell && selection.place ? selection.place.title : null;
+  const browsedPlace = viewingCell && selection.place ? plainPlace(selection.place.title, selection.place.country) : null;
   where.textContent = browsedPlace
     ? `${t("chat.near", "Near")} ${browsedPlace}`
     : window.AuralStudio?.hosting?.title
@@ -64,7 +64,7 @@ function paintChatHead() {
     : window.AuralShow
       ? `${t("shows.room", "The show's town")}`
     : playing?.place
-      ? `${t("chat.near", "Near")} ${playing.place}`
+      ? `${t("chat.near", "Near")} ${plainPlace(playing.place, playing.country)}`
       : t("chat.here", "Around here");
   /**
    * "3 here", not "3 listening".

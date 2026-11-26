@@ -185,10 +185,12 @@ function renderStations() {
   // sixty seconds after you moved.
   updateSun();
   headEl.hidden = false;
-  headEl.querySelector("h2").textContent = place.title;
+  const name = plainPlace(place.title, place.country);
+  headEl.querySelector("h2").textContent = name;
   const shown = channels.length, total = selection.total ?? shown;
+  // The country once: under "United States" it would only say it again.
   headEl.querySelector("p").textContent =
-    `${place.country} · ` + (shown === total
+    (name === place.country ? "" : `${place.country} · `) + (shown === total
       ? `${total} station${total === 1 ? "" : "s"}`
       : `${shown} of ${total} stations`);
 
@@ -336,7 +338,7 @@ function placeSuggestion(p, subtitle) {
   const row = document.createElement("div");
   row.className = "st";
   row.innerHTML = `<span class="smeta"><div class="sn"></div><div class="stags"></div></span>`;
-  row.querySelector(".sn").textContent = p.title;
+  row.querySelector(".sn").textContent = plainPlace(p.title, p.country);
   row.querySelector(".stags").textContent = subtitle;
   return activatable(row, () => goToPlace(p.i, { play: false }));
 }
@@ -420,7 +422,7 @@ function openAddForm(row) {
   const $$ = (n) => f.querySelector(n);
   $$('[name="title"]').placeholder = t("mine.name", "Station name");
   $$('[name="url"]').placeholder = t("mine.url", "Stream URL (http:// or https://)");
-  $$("button[type=submit]").textContent = `${t("mine.save", "Add to")} ${place.title}`;
+  $$("button[type=submit]").textContent = `${t("mine.save", "Add to")} ${plainPlace(place.title, place.country)}`;
   $$(".cancel").textContent = t("mine.cancel", "Cancel");
   $$(".cancel").onclick = () => { row.replaceWith(addStationRow()); };
 
