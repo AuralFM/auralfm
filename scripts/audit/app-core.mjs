@@ -469,6 +469,26 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     if (off.items.length || after.items.length || bad.ok) gaps.push("prices come back while off");
     if (before !== asked || asked > 1) gaps.push(`an exchange is asked while prices are off (${asked} requests)`);
   }
+  // A CoinGecko price that has not been refreshed for over half an hour is not shown.
+  {
+    const was = { fetch: globalThis.fetch, now: Date.now };
+    const m = req(R("src/markets.js"));
+    let up = true;
+    globalThis.fetch = async (u) => {
+      if (!up) throw new Error("offline");
+      if (/coinbase/.test(u)) return new Response("[]", { status: 200 });
+      return new Response(JSON.stringify({ xmr: { usd: 500, usd_24h_change: 1 } }), { status: 200 });
+    };
+    try {
+      m.start(["XMR"]);
+      const fresh = await m.get();
+      up = false;
+      const t0 = Date.now(); Date.now = () => t0 + 31 * 60_000;
+      const stale = await m.get();
+      if (fresh.items[0]?.price !== 500) gaps.push("a CoinGecko price is not shown: this check is blind");
+      if (stale.items.length) gaps.push("a price CoinGecko has not refreshed for half an hour is still shown");
+    } finally { m.stop(); globalThis.fetch = was.fetch; Date.now = was.now; }
+  }
   if (!/if \("prices" in patch \|\| "priceCoins" in patch\) applyPrices\(\)/.test(mainJs) || !/^\s*applyPrices\(\);/m.test(mainJs)) gaps.push("the desktop does not start and stop the feed with the setting");
   if (!/if \("prices" in changed \|\| "priceCoins" in changed\) applyPrices\(\)/.test(bridge) || !/^\s*applyPrices\(\);/m.test(bridge)) gaps.push("the web does not start and stop the feed with the setting");
   if (!/id="markets" hidden/.test(html) || !/if \(!prefs\.prices\) \{ el\.hidden = true;/.test(readSrc("src/renderer/explore-panels.js"))) gaps.push("the prices show before the setting is on");
@@ -483,4 +503,45 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   // tag showed on the web until roomOpen was named there as nothing.
   if (!/api\.roomOpen = null;/.test(bridge)) gaps.push("the web shows the listening room's tag");
   gaps.length ? fail(name, gaps.join("; ")) : pass("a setting, off, any coin checked before it is kept, no exchange while off; Layers, Favorites, Search, Settings");
+}
+
+// ── a file that cannot be read is set aside, not written over ────────────────
+// Every saved file was read as empty when it could not be parsed, and the next
+// save wrote over it: favourites or added stations gone with no copy. Real
+// files in a temporary folder.
+{
+  const name = "a file that cannot be read is set aside, not written over";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const os = await import("node:os");
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "auralfm-unreadable-"));
+  const err = console.error, log = console.log;
+  try {
+    const torn = '[{"id":"my:abc","title":"Radio Fav","url":"https://radio.test/s","placeIndex":4},{"id":"my:';
+    fs.writeFileSync(path.join(dir, "stations.user.json"), torn);
+    const mine = req(R("src/mystations.js"));
+    console.error = () => {}; console.log = () => {};
+    mine.init(dir);
+    mine.add({ title: "New", url: "https://new.test/s", placeIndex: 1 });
+    console.error = err; console.log = log;
+    const aside = fs.readdirSync(dir).filter((f) => f.startsWith("stations.user.json.unreadable-"));
+    if (aside.length !== 1 || fs.readFileSync(path.join(dir, aside[0]), "utf8") !== torn) gaps.push("an unreadable stations file was written over with no copy kept");
+    if (!/"New"/.test(fs.readFileSync(path.join(dir, "stations.user.json"), "utf8"))) gaps.push("the next save did not start a new file");
+    if (!/readJson\(STORE, \{\}\)/.test(readSrc("src/main/store.js"))) gaps.push("the state file is still read without setting an unreadable one aside");
+  } catch (e) { gaps.push(`threw: ${e.message}`); }
+  finally { console.error = err; console.log = log; fs.rmSync(dir, { recursive: true, force: true }); }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("an unreadable stations file is kept beside the new one, and the state file is read the same way");
+}
+
+// ── the article reader keeps the last few, not every one ────────────────────
+// Expired articles were never removed from the reader's cache, so every story
+// read stayed in memory for as long as the app ran (a menu-bar app runs for weeks).
+{
+  const name = "the article reader keeps the last few, not every one";
+  console.log(`\n${name}`);
+  /while \(readCache\.size > READ_KEEP\) readCache\.delete/.test(readSrc("src/news.js"))
+    ? pass("the newest 40 are kept; older ones are let go")
+    : fail(name, "every article read stays in memory");
 }

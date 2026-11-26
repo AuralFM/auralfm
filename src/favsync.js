@@ -81,11 +81,19 @@ function read() {
 }
 function write(j) {
   if (!FILE) return;
+  // Beside the file, then renamed over it (as src/atomic.js does for the state):
+  // writing over the file itself empties it first, and a crash in between left
+  // a file read() cannot parse, which is sync silently off and the code gone.
+  const tmp = `${FILE}.${process.pid}.tmp`;
   try {
     // 0600 before anything is in it: the secret is the whole of the access.
-    const fd = fs.openSync(FILE, "w", 0o600);
+    const fd = fs.openSync(tmp, "w", 0o600);
     try { fs.writeFileSync(fd, JSON.stringify(j)); } finally { fs.closeSync(fd); }
-  } catch (err) { console.error("favsync: could not save —", err.message); }
+    fs.renameSync(tmp, FILE);
+  } catch (err) {
+    try { fs.rmSync(tmp, { force: true }); } catch { /* nothing to tidy */ }
+    console.error("favsync: could not save —", err.message);
+  }
 }
 
 function keys(secretHex) {

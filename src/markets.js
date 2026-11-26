@@ -105,6 +105,7 @@ async function stocks() {
 // A failing provider is asked again after a growing pause, not every 90 seconds.
 const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "markets" });
 const geckoSeen = new Map();      // symbol -> { price, changePct, at }
+const GECKO_SHOWN_MS = 30 * 60_000;
 
 /** Asks CoinGecko for the coins the socket is not giving, at most every 90 seconds. */
 async function fillFromGecko(missing) {
@@ -125,8 +126,11 @@ async function get() {
   if (!wanted) return { items: [], hasStocks: !!STOCK_KEY };
   const fresh = (v) => v && Date.now() - v.at < 30_000;
   await fillFromGecko(coins.filter((x) => !fresh(live.get(x))));
+  // A CoinGecko price is shown for half an hour at most: with the source down,
+  // a price that stopped moving hours ago would still read as today's.
+  const recent = (v) => v && Date.now() - v.at < GECKO_SHOWN_MS;
   const items = coins.map((x) => {
-    const v = fresh(live.get(x)) ? live.get(x) : geckoSeen.get(x);
+    const v = fresh(live.get(x)) ? live.get(x) : recent(geckoSeen.get(x)) ? geckoSeen.get(x) : null;
     return v && { symbol: x, price: v.price, changePct: v.changePct };
   }).filter(Boolean);
   const s = STOCK_KEY ? await stocks().catch(() => []) : [];

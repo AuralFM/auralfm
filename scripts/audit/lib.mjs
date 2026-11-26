@@ -70,3 +70,24 @@ export const { strings, LANGUAGES } = await import(pathToFileURL(R("src/i18n.js"
 export const en = strings("en", "en");
 
 export const pkg = JSON.parse(fs.readFileSync(R("package.json"), "utf8"));
+
+/**
+ * A Nostr event signed the way a relay delivers one (NIP-01), for checks that
+ * feed the chat module: it drops any event whose id or signature does not hold.
+ * `seed` picks a fixed key, so a check can say "the same stranger" twice.
+ */
+import { createRequire as _cr } from "node:module";
+import _crypto from "node:crypto";
+const { schnorr: _schnorr } = _cr(import.meta.url)("@noble/curves/secp256k1.js");
+const _hex = (b) => Buffer.from(b).toString("hex");
+export function nostrKey(seed) {
+  return Uint8Array.from(_crypto.createHash("sha256").update(`auralfm-audit:${seed}`).digest());
+}
+export function signNostr(e, seed = "stranger") {
+  const sk = nostrKey(seed);
+  const pubkey = _hex(_schnorr.getPublicKey(sk));
+  const ev = { created_at: Math.floor(Date.now() / 1000), tags: [], content: "", ...e, pubkey };
+  const id = _crypto.createHash("sha256")
+    .update(JSON.stringify([0, pubkey, ev.created_at, ev.kind, ev.tags, ev.content])).digest();
+  return { ...ev, id: _hex(id), sig: _hex(_schnorr.sign(Uint8Array.from(id), sk)) };
+}
