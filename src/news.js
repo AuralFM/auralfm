@@ -348,6 +348,7 @@ module.exports = { get, setBase, setFeedBase, WORLD_FEEDS, COUNTRY_FEEDS };
  */
 const READ_TTL_MS = 30 * 60_000;
 const readCache = new Map();
+const READ_KEEP = 40;
 
 /**
  * The reader on the web.
@@ -429,6 +430,9 @@ async function read(url) {
   if (!paras.length) return null;
   const doc = { url, title, paragraphs: paras.slice(0, 40), words: paras.join(" ").split(/\s+/).length };
   readCache.set(url, { at: Date.now(), doc });
+  // Expired entries were never removed, so every article read stayed in memory
+  // for as long as the app ran. The newest few are what a reader goes back to.
+  while (readCache.size > READ_KEEP) readCache.delete(readCache.keys().next().value);
   return doc;
 }
 

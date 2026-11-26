@@ -24,4 +24,24 @@ function writeAtomic(file, data) {
   }
 }
 
-module.exports = { writeAtomic };
+/**
+ * Read a JSON file, and set it aside if it cannot be read.
+ *
+ * Every caller answers an unreadable file with an empty value, and its next
+ * save writes over the file: favourites, the history or the stations someone
+ * added, gone with no copy. A file restored half-copied from a backup, or
+ * edited by hand, is the usual way in. Renamed aside first, the next save
+ * starts a new file and the old bytes are still there to recover.
+ */
+function readJson(file, fallback) {
+  let text;
+  try { text = fs.readFileSync(file, "utf8"); } catch { return fallback; }   // missing: a first run
+  try { return JSON.parse(text); } catch (err) {
+    const aside = `${file}.unreadable-${Date.now()}`;
+    try { fs.renameSync(file, aside); console.error(`${file} could not be read (${err.message}); kept as ${aside}`); }
+    catch { /* left where it is */ }
+    return fallback;
+  }
+}
+
+module.exports = { writeAtomic, readJson };

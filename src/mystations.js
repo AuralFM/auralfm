@@ -22,8 +22,7 @@
  * radio-browser is a separate, explicit, off-by-default act — see #22.
  */
 
-const fs = require("node:fs");
-const { writeAtomic } = require("./atomic");
+const { writeAtomic, readJson } = require("./atomic");
 const path = require("node:path");
 
 let file = null;
@@ -33,10 +32,8 @@ const PREFIX = "my:";
 
 function init(userDataPath) {
   file = path.join(userDataPath, "stations.user.json");
-  try {
-    const saved = JSON.parse(fs.readFileSync(file, "utf8"));
-    mine = Array.isArray(saved) ? saved.filter(valid) : [];
-  } catch { mine = []; }
+  const saved = readJson(file, []);
+  mine = Array.isArray(saved) ? saved.filter(valid) : [];
   if (mine.length) console.log(`mine: ${mine.length} station${mine.length === 1 ? "" : "s"} you added`);
 }
 

@@ -8,7 +8,7 @@
 const { app } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
-const { writeAtomic } = require("../atomic");
+const { writeAtomic, readJson } = require("../atomic");
 const { migrate, stamp } = require("../state-schema");
 
 const STORE = path.join(app.getPath("userData"), "state.json");
@@ -16,10 +16,8 @@ const STORE = path.join(app.getPath("userData"), "state.json");
 // ── tiny JSON store ───────────────────────────────────────────────────────────
 // Read, and brought up to today's shape (src/state-schema.js).
 function load() {
-  try {
-    const s = JSON.parse(fs.readFileSync(STORE, "utf8"));
-    return s && typeof s === "object" && !Array.isArray(s) ? migrate(s) : {};
-  } catch { return {}; }
+  const s = readJson(STORE, {});
+  try { return s && typeof s === "object" && !Array.isArray(s) ? migrate(s) : {}; } catch { return {}; }
 }
 /**
  * Write the state file, with a ceiling.

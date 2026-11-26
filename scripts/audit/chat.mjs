@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, strings, LANGUAGES, en } from "./lib.mjs";
+import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, strings, LANGUAGES, en, signNostr } from "./lib.mjs";
 
 // ── the favorite handshake can actually be sent ───────────────────────────────
 // wrap() refused an empty body, which is right for a chat message and wrong for
@@ -424,15 +424,9 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
     const nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href)
       .then((m) => m.default ?? m);
     nostr.onNotes((list) => { seen = list; });
-    NOTE = {
-      id: "a".repeat(64),
-      // A stranger's key, or it is discarded as our own echoed back.
-      pubkey: "b".repeat(64),
-      kind: 1,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [["g", nostr.geohash(LAT, LON)], ["n", "yuls"]],
-      content: "hola",
-    };
+    // A stranger's key, or it is discarded as our own echoed back; signed, or
+    // it is discarded as forged.
+    NOTE = signNostr({ kind: 1, tags: [["g", nostr.geohash(LAT, LON)], ["n", "yuls"]], content: "hola" }, "note");
     nostr.join(LAT, LON, "test");
     await settle(() => seen.length >= 1);
     const afterJoin = seen.length;
@@ -609,7 +603,25 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   if (await sync.open(sealed, other.key)) gaps.push("a sealed list opens with another secret");
   if (/Radio|Town/.test(sealed) || /Radio|Town/.test(Buffer.from(sealed, "base64").toString("latin1"))) gaps.push("station names are readable in what goes to the relay");
   if (/require\("\.\/(identity|presence-nostr|nostr-private)/.test(src)) gaps.push("the sync reaches for the chat's keys");
-  if (!/openSync\(FILE, "w", 0o600\)/.test(src)) gaps.push("the secret's file is not private before it is written");
+  if (!/openSync\(tmp, "w", 0o600\)/.test(src)) gaps.push("the secret's file is not private before it is written");
+  // Written beside and renamed: a save cut short leaves the old code, not an
+  // empty file. No relays, so no round reaches the network.
+  {
+    const os = await import("node:os");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "favsync-"));
+    const realWrite = fs.writeFileSync;
+    try {
+      sync.init(dir, { get: () => [] }, { relays: [] });
+      await sync.start();
+      const code = sync.code();
+      // The disk fills halfway through the next save of the secret's file.
+      fs.writeFileSync = (f, ...a) => { if (typeof f === "number") throw new Error("disk full"); return realWrite(f, ...a); };
+      await sync.join(sync.TAG + "B".repeat(43)).catch(() => {});
+      fs.writeFileSync = realWrite;
+      if (!code || sync.code() !== code) gaps.push("a save cut short loses the sync code");
+      if ((fs.statSync(path.join(dir, "favsync.json")).mode & 0o777) !== 0o600) gaps.push("the secret's file is readable by others");
+    } finally { fs.writeFileSync = realWrite; sync.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+  }
   if (/secret|code/.test((src.match(/const status = \(\) => \{[\s\S]*?\n\};/) || [""])[0].replace(/j\?\.|read\(\)/g, ""))) gaps.push("the status hands out the secret");
   if (!/if \(!Array\.isArray\(local\)\) return status\(\);/.test(src)) gaps.push("a round goes ahead with no list");
   if (!/favsync\.init\([\s\S]{0,700}?existsSync\([\s\S]{0,80}?"state\.json"\)\) \? \[\] : null/.test(mainSrc)) gaps.push("the desktop takes an unreadable state file for an empty list");
@@ -681,7 +693,7 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
     nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
     nostr.leave(); nostr.join(38.72, -9.14, "test"); await tick();
     const cell = nostr.stats().cell, now = Math.floor(Date.now() / 1000);
-    const said = (n, at) => live[0].onmessage({ data: JSON.stringify(["EVENT", "auralfm", { id: n.repeat(64), pubkey: n.repeat(64), kind: 20000, created_at: at, tags: [["g", cell]], content: "hello" }]) });
+    const said = (n, at) => live[0].onmessage({ data: JSON.stringify(["EVENT", "auralfm", signNostr({ kind: 20000, created_at: at, tags: [["g", cell]], content: "hello" }, n)]) });
     said("a", now);
     if (nostr.stats().peers !== 1) gaps.push("somebody who has just spoken here is not counted as here");
     said("b", now - 3600);
@@ -698,6 +710,55 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   if (!tab || (tab.match(/String\(/g) || []).filter(Boolean).length !== 2 || /stleft/.test(studio)) gaps.push("a step of Your show carries a second number (“3 Go live 3”)");
   gaps.length ? fail(name, gaps.join("; "))
     : pass("off by default with a way in on the page, asked once; names with spaces work; a speaker is counted; one number a step");
+}
+
+// ── a relay cannot speak for somebody else ──────────────────────────────────
+// Public chat, notes, presence and profiles were taken from relays without
+// checking the id or the signature; only private messages were checked. Any
+// relay could post under a kept contact's key (past "only people you keep") or
+// name an id of zeros (past the work floor). Real signatures, a fake relay.
+{
+  const name = "a relay cannot speak for somebody else";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const realWs = globalThis.WebSocket;
+  const live = [];
+  globalThis.WebSocket = class {
+    constructor(url) { this.url = url; this.readyState = 0; live.push(this); setTimeout(() => { this.readyState = 1; this.onopen?.(); }, 0); }
+    send() {}
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  };
+  let nostr = null;
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    nostr.leave(); nostr.join(38.72, -9.14, "test");
+    await new Promise((r) => setTimeout(r, 30));
+    const cell = nostr.stats().cell;
+    const real = signNostr({ kind: 20000, tags: [["g", cell]], content: "hello" }, "kept");
+    const other = signNostr({ kind: 20000, tags: [["g", cell]], content: "x" }, "someone");
+    const forged = {
+      "changed words": { ...real, content: "send me your code" },
+      "another key's name": { ...real, pubkey: other.pubkey },
+      "an id of zeros": { ...real, id: "0".repeat(64) },
+      "no signature": { ...real, sig: undefined },
+    };
+    for (const [what, e] of Object.entries(forged)) if (nostr.authentic(e)) gaps.push(`an event with ${what} reads as genuine`);
+    if (!nostr.authentic(real)) gaps.push("a genuine event reads as forged");
+    const hear = (e) => live[0].onmessage({ data: JSON.stringify(["EVENT", "s", e]) });
+    const before = nostr.stats().messages;
+    for (const e of Object.values(forged)) hear(e);
+    if (nostr.stats().messages !== before) gaps.push(`${nostr.stats().messages - before} forged message(s) reached the room`);
+    hear(real);
+    if (nostr.stats().messages !== before + 1) gaps.push("the genuine message did not reach the room: this check is blind");
+    // A heartbeat in this room under somebody else's key adds nobody.
+    const peersBefore = nostr.stats().peers;
+    const beat = signNostr({ kind: 20001, tags: [["g", cell]], content: "" }, "liar");
+    hear({ ...beat, pubkey: signNostr({ kind: 1 }, "kept-elsewhere").pubkey });
+    if (nostr.stats().peers !== peersBefore) gaps.push("a forged heartbeat added a listener to the room");
+    hear(beat);
+    if (nostr.stats().peers !== peersBefore + 1) gaps.push("a genuine heartbeat added nobody: this check is blind");
+  } catch (e) { gaps.push(`the module threw: ${e.message}`); } finally { try { nostr?.leave(); } catch {} globalThis.WebSocket = realWs; }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("changed words, another key, a made-up id and no signature are all dropped; a genuine message arrives");
 }
 
 // ── a relay a network blocks is left alone ──────────────────────────────────
@@ -1134,8 +1195,7 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
     nostr.onPeers((list) => { calls++; last = list; });
     nostr.join(38.72, -9.14, "test");
     await settle();
-    const pubkey = "ab".repeat(32);
-    const hear = (e, relays = made) => { for (const w of relays) w.onmessage?.({ data: JSON.stringify(["EVENT", "s", { pubkey, ...e }]) }); };
+    const hear = (e, relays = made) => { const ev = signNostr(e, "listener"); for (const w of relays) w.onmessage?.({ data: JSON.stringify(["EVENT", "s", ev]) }); };
     const beat = { kind: 20001, tags: [["g", "eyckr"]], content: "" };
     if (!made.length) gaps.push("joining dialled no relay, so this check is blind");
     hear(beat);

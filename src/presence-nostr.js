@@ -539,6 +539,37 @@ function powBits(idHex) {
 const serialize = (p, evt, tags) =>
   JSON.stringify([0, p, evt.created_at, evt.kind, tags, evt.content]);
 
+/**
+ * Whether a relay's event is what it says it is: its id is the hash of its
+ * contents and its signature is the key's. NIP-01 asks every client to check.
+ *
+ * Without this a relay (any of the dozens dialled, or one a listener added)
+ * could hand over a message under anybody's key: past "only people you keep",
+ * which matches on keys, and past the work floor, which reads the id. A check
+ * costs about 10ms, so each id is checked once, however many relays repeat it,
+ * and only after the cheap filters have had their say.
+ */
+const authenticIds = new Set();
+const HEX64 = /^[0-9a-f]{64}$/;
+const bytesOf = (h) => Uint8Array.from(h.match(/../g), (x) => parseInt(x, 16));
+function authentic(e) {
+  if (!e || !HEX64.test(e.id) || !HEX64.test(e.pubkey) || !/^[0-9a-f]{128}$/.test(e.sig)
+      || !Array.isArray(e.tags) || typeof e.content !== "string"
+      || !Number.isInteger(e.created_at) || !Number.isInteger(e.kind)) return false;
+  // The hash every time (it is cheap, and it is what ties these words to this
+  // id); the signature once per id, since the same id means the same event.
+  const id = crypto.createHash("sha256").update(serialize(e.pubkey, e, e.tags)).digest("hex");
+  if (id !== e.id) return false;
+  if (authenticIds.has(id)) return true;
+  let ok = false;
+  try { ok = schnorr.verify(bytesOf(e.sig), bytesOf(id), bytesOf(e.pubkey)); } catch { /* not a signature */ }
+  if (ok) {
+    authenticIds.add(e.id);
+    if (authenticIds.size > 4000) authenticIds.delete(authenticIds.values().next().value);
+  }
+  return ok;
+}
+
 function sign(evt, { pow = POW_TARGET } = {}) {
   // A hub message has no `g` tag — it belongs to a room, not a place — so its
   // identity is scoped to the hub instead. Same rule either way: the key that
@@ -1271,7 +1302,7 @@ function dial(url) {
     if (e.kind === WRAP_KIND) { takeDm(e); return; }
 
     // A profile we asked for. No geohash, and none expected.
-    if (e.kind === 0) { takeProfile(e); return; }
+    if (e.kind === 0) { if (authentic(e)) takeProfile(e); return; }
 
     /**
      * A hub message, which has no geohash and never should — it belongs to a
@@ -1280,7 +1311,7 @@ function dial(url) {
      */
     const h = (e.tags || []).find((t) => t[0] === "h")?.[1];
     if (h) {
-      if (hub && h === hub.tag && !mineKeys().has(e.pubkey)) takeHub(e);
+      if (hub && h === hub.tag && !mineKeys().has(e.pubkey) && !seenHub.has(e.id) && authentic(e)) takeHub(e);
       return;
     }
 
@@ -1301,7 +1332,7 @@ function dial(url) {
       // note pinned to a street inside our cell still counts as here.
       if (!here || !sameCell(g, here.geohash)) return;
       if (!e.content || String(e.content).length > MAX_NOTE) return;
-      recordNote(e);
+      if (!seenNotes.has(e.id) && authentic(e)) recordNote(e);
       return;
     }
 
@@ -1312,13 +1343,14 @@ function dial(url) {
       const seen = viewing && sameCell(g, viewing);
       if (!mine && !seen) return;
       if (!e.content || String(e.content).length > MAX_MESSAGE) return;
+      if (seenChat.has(e.id) || !authentic(e)) return;
       record(e);
       // Speaking here is being here. The heartbeat that says so can be a minute
       // away, and until it came the room read "nobody else yet" over a message.
       // Only what was said lately: the six hours asked for on arrival are history.
       const said = Number(e.created_at) * 1000;
       if (Math.abs(Date.now() - said) < STALE_MS && !peers.has(e.pubkey)) {
-        peers.set(e.pubkey, { geohash: g, label: "", live: false, np: "", at: said });
+        peers.set(e.pubkey, { geohash: g, label: "", live: false, np: "", at: said, checked: true });
         emit();
       }
       return;
@@ -1342,11 +1374,26 @@ function dial(url) {
       np: String(np ?? prev?.np ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 120),
       at: Date.now(),
     };
+    /**
+     * Checked where a forgery would matter: anyone in the room being listened
+     * to or looked at (the list "only people you keep" filters), and any show
+     * label, which names a host anywhere. A plain heartbeat elsewhere is a dot
+     * on the globe; there is one a minute from everybody, and at 10ms or more
+     * a check, checking them all on joining would cost a phone seconds. A heartbeat that
+     * only says a checked listener is still here claims nothing new.
+     */
+    const changes = !prev || prev.geohash !== next.geohash || prev.label !== next.label
+      || prev.live !== next.live || prev.np !== next.np;
+    const local = (here && sameCell(g, here.geohash)) || (viewing && sameCell(g, viewing));
+    next.checked = !!prev?.checked && !changes;
+    if ((local || e.kind === LABEL_KIND) && !next.checked) {
+      if (!authentic(e)) return;
+      next.checked = true;
+    }
     peers.set(e.pubkey, next);
     // The same heartbeat arrives once per relay. A copy keeps the peer alive
     // (`at`, read by prune) and tells the renderer nothing.
-    if (!prev || prev.geohash !== next.geohash || prev.label !== next.label
-        || prev.live !== next.live || prev.np !== next.np) emit();
+    if (changes) emit();
 
     } catch (err) {
       // One bad event is not worth a reconnect, let alone a crash.
@@ -1706,7 +1753,7 @@ function forgetDms() {
   emitNow("dms");
 }
 
-module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setSpread, setNowPlaying, setPowFloor, powBits, geohash, ungeohash, sameCell,
+module.exports = { join, leave, watch, view, say, signal, stats, setExtraRelays, setSpread, setNowPlaying, setPowFloor, powBits, authentic, geohash, ungeohash, sameCell,
                    onSignal: (fn) => { onSignal = fn; },
                    drop, dm, thread, markRead, forgetDms,
                    joinHub, leaveHub, sayHub, lookupProfile, knownProfiles,
