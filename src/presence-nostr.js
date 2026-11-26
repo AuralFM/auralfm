@@ -1271,6 +1271,7 @@ function dial(url) {
   sockets.push(w);
   w.onopen = () => {
     w.opened = true;
+    w.heard = Date.now();
     answered.add(w.batch);
     healing.delete(url);
     refusals.delete(url);
@@ -1287,9 +1288,13 @@ function dial(url) {
    * a dialog box with a stack trace in it.
    */
   w.onmessage = (m) => {
+    // Anything at all from the relay says the socket is alive (probe(), below).
+    w.heard = Date.now();
+    if (w.probe) { clearTimeout(w.probe); w.probe = null; }
     try {
     let d;
     try { d = JSON.parse(m.data); } catch { return; }
+    if (d[0] === "EOSE" && d[1] === PROBE_SUB) { send(["CLOSE", PROBE_SUB], w); return; }
     if (d[0] !== "EVENT" || !d[2]) return;
     const e = d[2];
 
@@ -1420,9 +1425,47 @@ function dial(url) {
  */
 const HEAL_MIN = 20_000, HEAL_MAX = 10 * 60_000;
 const healing = new Map();  // url → { wait, at }: when to try a dropped relay next
-function heal() {
-  const have = new Set(sockets.map((s) => s.dialledAs));
+
+/**
+ * A socket that is open and dead.
+ *
+ * heal() dials what has closed, and a socket the network lost without a word
+ * has not closed: it still reads as open until TCP gives up, minutes later. A
+ * phone that slept, or moved from Wi-Fi to the cell network, came back to a
+ * room that read as connected and heard nothing.
+ *
+ * So a relay that has said nothing for a while is asked something with a
+ * known, cheap answer: a REQ for one event id nobody can have, closed again on
+ * its EOSE. Any message counts as the answer. One that says nothing in ten
+ * seconds is dropped and dialled again at once.
+ *
+ * Not the live subscription sent again: a relay answers a REQ under an open
+ * subscription's id with everything it holds since `since`, so asking that way
+ * every minute would replay six hours of a cell from every relay. And one
+ * probe at a time per socket, so an answer is never read as the silence of the
+ * probe before it.
+ */
+const PROBE_SUB = "auralfm-alive";
+const PROBE_IDLE_MS = 50_000, PROBE_WAIT_MS = 10_000;
+function probe(w, now, force) {
+  if (w.readyState !== 1 || w.probe || (!force && now - (w.heard || 0) < PROBE_IDLE_MS)) return;
+  w.probe = setTimeout(() => {
+    w.probe = null;
+    if (!sockets.includes(w)) return;           // hung up meanwhile
+    sockets = sockets.filter((s) => s !== w);
+    w.ours = true;                              // it opened: silence is not a refusal
+    try { w.close(); } catch {}
+    healing.delete(w.dialledAs);
+    heal();
+  }, PROBE_WAIT_MS);
+  w.probe.unref?.();
+  send(["REQ", PROBE_SUB, { ids: [hex(crypto.randomBytes(32))], limit: 1 }], w);
+}
+
+function heal(force = false) {
   const now = Date.now();
+  for (const w of alive()) probe(w, now, force);
+  const have = new Set(sockets.map((s) => s.dialledAs));
   batch++;                // its own: what opened before the network went says nothing about now
   for (const url of [...dialled, ...covering]) {
     if (have.has(url) || refused(url, now)) continue;
@@ -1434,7 +1477,9 @@ function heal() {
 }
 // In a browser (the web build), coming back is the moment to look, not the next beat.
 if (typeof document !== "undefined" && typeof addEventListener === "function") {
-  const back = () => { if (!document.hidden && (here || beat)) { healing.clear(); heal(); } };
+  // Every open socket is asked at once: a network change a moment ago leaves a
+  // socket that spoke recently and is dead all the same.
+  const back = () => { if (!document.hidden && (here || beat)) { healing.clear(); heal(true); } };
   document.addEventListener("visibilitychange", back);
   addEventListener("online", back);
 }
