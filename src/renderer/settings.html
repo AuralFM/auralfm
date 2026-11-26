@@ -271,11 +271,14 @@
      every section except About, which happens to have no hint. */
   .card.spaced{margin-top:10px}
   .link.danger{color:var(--err)}
-  #nickname,#filterterm{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
-  #filterterm{text-align:left;width:180px}
+  #nickname,#filterterm,#priceterm{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:4px 9px;border-radius:var(--r-md);outline:none;width:150px;text-align:right}
+  #filterterm,#priceterm{text-align:left;width:180px}
+  #priceterm{text-transform:uppercase}
+  #priceterm::placeholder{text-transform:none}
   #movecode,#synccode{appearance:none;border:0;background:var(--fill);color:var(--label);font:inherit;font-size:12.5px;padding:6px 9px;border-radius:var(--r-md);outline:none;flex:1;min-width:0}
   #movecode:focus-visible,#synccode:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  #filterterm:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  #filterterm:focus-visible,#priceterm:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  #priceterm[aria-invalid="true"]{box-shadow:inset 0 0 0 1.5px var(--err)}
   /* The browser's own placeholder grey is 4.3:1 on the dark theme, and for
      the code fields the placeholder is the only words in sight. */
   ::placeholder{color:var(--label2);opacity:1}
@@ -450,6 +453,31 @@
          The second is filled by settings.js and is not a translated string. -->
     <p class="hint"><span id="sleep-hint" data-i18n="set.sleepHint">Fades out, then stops what is playing.</span> <span id="sleep-left"></span></p>
     <p class="hint" id="notify-hint" data-i18n="set.notifyHint">Only while AuralFM is running and not in front. No server is told about this device.</p>
+  </section>
+
+  <!-- Crypto prices: a setting, not a globe layer. Hidden on a phone's layout,
+       whose player bar has no room for them (web/web.css). -->
+  <section id="pricesec">
+    <h2 data-i18n="set.prices">Crypto prices</h2>
+    <div class="card">
+      <div class="row">
+        <span class="name" id="prices-lbl" data-i18n="set.pricesShow">Show prices in the player bar</span>
+        <button class="sw" id="prices" role="switch" aria-checked="false"
+                aria-labelledby="prices-lbl" aria-describedby="prices-hint"></button>
+      </div>
+      <div class="row">
+        <span class="name sub" id="price-head" data-i18n="set.pricesCoins">Coins</span>
+        <button class="link" id="pricereset" data-i18n="set.pricesReset">Reset</button>
+      </div>
+      <div class="row">
+        <input id="priceterm" type="text" maxlength="12" spellcheck="false" autocomplete="off" autocapitalize="characters"
+               aria-label="Add a coin by its symbol, like DOGE" aria-describedby="pricesaid">
+        <button class="link" id="priceadd" data-i18n="set.pricesAddDo">Add</button>
+      </div>
+      <div class="row" id="pricesaidrow" hidden><span class="name sub" id="pricesaid" role="status" aria-live="polite"></span></div>
+      <div id="pricelist" role="group" aria-labelledby="price-head"></div>
+    </div>
+    <p class="hint" id="prices-hint" data-i18n="set.pricesHint">In US dollars: live from Coinbase, or from CoinGecko for a coin Coinbase does not list. While this is off, neither is contacted.</p>
   </section>
 
   <section id="minesec" hidden>

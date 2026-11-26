@@ -212,10 +212,17 @@
     afterPrefs(picked);
     return next;
   }
+  // Crypto prices: nothing connects unless they are on in Settings (src/markets.js).
+  function applyPrices() {
+    const p = getPrefs();
+    if (p.prices && p.priceCoins.length) M.markets.start(p.priceCoins);
+    else M.markets.stop();
+  }
   // What a change means beyond the page repainting — the desktop's setPrefs.
   function afterPrefs(changed) {
     if ("audioOutput" in changed) applyOutput();
     if ("hideExplicit" in changed) M.catalog.setHideExplicit(getPrefs().hideExplicit);
+    if ("prices" in changed || "priceCoins" in changed) applyPrices();
     if (["presence", "ageChat", "relays", "powFloor"].some((k) => k in changed)) chat?.sync(lastPlayer);
     if (["filterChat", "onlyKept", "powFloor"].some((k) => k in changed)) chat?.refresh();
   }
@@ -258,8 +265,7 @@
     ["listeners", true], ["statusBar", false],
     // Shows on air, as on the desktop: their own layer, on at every launch.
     ["onAir", true],
-    // Crypto prices in the player bar: off, and off at every launch (src/markets.js).
-    ["markets", false],
+    // Crypto prices are a setting here too (prefs.prices), not a layer.
   ];
   
   const ON_AT_LAUNCH = new Set(["stations", "shortwave", "onAir"]);
@@ -280,7 +286,6 @@
     for (const [id, v] of Object.entries(patch || {})) if (allowed.has(id)) saved[id] = !!v;
     write("layers", saved);
     emit("layers", layerState());
-    if ("markets" in (patch || {})) layerState().markets ? M.markets.start() : M.markets.stop();
   }
 
   // ── playback ────────────────────────────────────────────────────────────────
@@ -909,6 +914,7 @@
     // the globe's live facts, through the desktop's own modules
     weather: (i, lat, lon) => M.weather.get(i, lat, lon),
     markets: async () => M.markets.get(),
+    marketLookup: (symbol) => M.markets.lookup(String(symbol || "").slice(0, 16)),
     iss: () => M.iss.get(),
     space: () => M.space.get(),
     sky: async () => {
@@ -1113,7 +1119,7 @@
     },
   });
 
-  if (layerState().markets) M.markets.start();
+  applyPrices();
   applyOutput();
   // After the page's own scripts have subscribed, or they would miss it.
   addEventListener("DOMContentLoaded", () => {

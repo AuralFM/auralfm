@@ -48,7 +48,7 @@ let layersOpen = false;
 
 const LAYER_ORDER = [
   "stations", "shortwave", "dayNight", "clouds",
-  "constellations", "iss", "wspr", "listeners", "onAir", "drift", "statusBar", "markets",
+  "constellations", "iss", "wspr", "listeners", "onAir", "drift", "statusBar",
 ];
 
 function paintLayers() {

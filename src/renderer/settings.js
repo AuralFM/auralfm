@@ -41,6 +41,8 @@ function paint() {
   $("#powFloor").value = String(P.powFloor ?? 0);
   $("#onlyKept").setAttribute("aria-checked", String(P.onlyKept === true));
   $("#hideExplicit").setAttribute("aria-checked", String(P.hideExplicit === true));
+  $("#prices").setAttribute("aria-checked", String(P.prices === true));
+  paintPrices();
   if (document.activeElement !== $("#nickname")) $("#nickname").value = P.nickname || "";
   paintPresence();
   paintFingerprint();
@@ -59,6 +61,9 @@ function translate() {
   fillSleep();
   paintSleep();
   paintNotify();
+  const ph = T["set.pricesAdd"] || "Add a coin, like DOGE";
+  $("#priceterm").placeholder = ph;
+  $("#priceterm").setAttribute("aria-label", ph);
 }
 
 async function set(patch) {
@@ -350,6 +355,95 @@ async function paintFingerprint() {
 }
 
 
+
+// ── crypto prices ────────────────────────────────────────────────────────────
+/**
+ * The coins in the player bar, in the order shown. Any symbol: Add asks
+ * whether it has a price anywhere (src/markets.js lookup) before it is kept, so
+ * a typo is answered here rather than as a coin that never appears.
+ */
+const PRICE_DEFAULTS = ["BTC", "ETH", "SOL"];
+const PRICE_MAX = 8;
+const fill = (key, fallback, sym) => (T[key] || fallback).replace("{sym}", sym);
+
+function priceSaid(text) {
+  $("#pricesaid").textContent = text || "";
+  $("#pricesaidrow").hidden = !text;
+}
+
+function paintPrices() {
+  const coins = Array.isArray(P.priceCoins) ? P.priceCoins : PRICE_DEFAULTS;
+  const remove = T["set.pricesRemove"] || "Remove";
+  // Settings repaints when the saved answer comes back, which rebuilds the list
+  // under a focused Remove; the same button gets the focus back.
+  const focused = document.activeElement?.closest?.("#pricelist") ? document.activeElement.getAttribute("aria-label") : null;
+  paintCard("#pricelist", "#price-head", T["set.pricesCoins"] || "Coins", coins,
+    T["set.pricesEmpty"] || "No coins. Add one, or Reset for BTC, ETH and SOL.",
+    (sym) => {
+      const b = mkLink(remove, () => {
+        priceSaid("");
+        const at = coins.indexOf(sym);
+        set({ priceCoins: coins.filter((c) => c !== sym) });
+        // The list was rebuilt under the focus: hand it to the coin that took
+        // this one's place, or to the field when none is left.
+        const left = document.querySelectorAll("#pricelist .link");
+        (left[at] || left[at - 1] || $("#priceterm")).focus();
+      });
+      b.setAttribute("aria-label", `${remove} ${sym}`);
+      return mkRow(mkLabel(sym), b);
+    });
+  $("#pricereset").disabled = String(coins) === String(PRICE_DEFAULTS);
+  if (focused) [...document.querySelectorAll("#pricelist .link")].find((x) => x.getAttribute("aria-label") === focused)?.focus();
+}
+
+let pricesAsking = false;          // one lookup at a time: a held Enter repeats
+
+async function addCoin() {
+  if (pricesAsking) return;
+  const el = $("#priceterm"), btn = $("#priceadd");
+  const raw = el.value.trim().replace(/^\$/, "").toUpperCase();
+  if (!raw) return;
+  const coins = Array.isArray(P.priceCoins) ? P.priceCoins : PRICE_DEFAULTS;
+  // A symbol that cannot be a coin, or has no price, marks the field itself as
+  // wrong as well as saying why; typing again clears it.
+  const wrong = (text) => { el.setAttribute("aria-invalid", "true"); priceSaid(text); };
+  if (!/^[A-Z0-9]{1,12}$/.test(raw)) return wrong(T["set.pricesInvalid"] || "Letters and numbers only, like DOGE.");
+  if (coins.includes(raw)) return priceSaid(fill("set.pricesHave", "{sym} is already on the list.", raw));
+  if (coins.length >= PRICE_MAX) return priceSaid(T["set.pricesFull"] || "Up to 8 coins. Remove one to add another.");
+  btn.disabled = true; pricesAsking = true;
+  priceSaid(fill("set.pricesLooking", "Looking up {sym}…", raw));
+  const r = await guard("marketLookup", () => window.auralfm.marketLookup(raw), { ok: false, error: "offline" });
+  btn.disabled = false; pricesAsking = false;
+  if (!r?.ok) {
+    return (r?.error === "unknown" ? wrong : priceSaid)(r?.error === "unknown"
+      ? fill("set.pricesUnknown", "No price found for {sym}. Check the symbol.", raw)
+      : fill("set.pricesOffline", "Could not check {sym}. Try again when online.", raw));
+  }
+  el.value = "";
+  priceSaid(r.live ? fill("set.pricesAddedLive", "{sym} added, live from Coinbase.", r.symbol)
+                   : fill("set.pricesAddedSlow", "{sym} added, from CoinGecko once every 90 seconds.", r.symbol));
+  set({ priceCoins: [...coins, r.symbol] });
+}
+
+$("#prices").addEventListener("click", () => set({ prices: P.prices !== true }));
+$("#priceadd").addEventListener("click", addCoin);
+$("#priceterm").addEventListener("input", (e) => e.target.removeAttribute("aria-invalid"));
+$("#priceterm").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) addCoin(); }
+});
+$("#pricereset").addEventListener("click", () => { priceSaid(""); set({ priceCoins: [...PRICE_DEFAULTS] }); });
+
+/**
+ * A phone's player bar has no room for prices (web/web.css hides them), so the
+ * setting would change nothing there. Settings is an iframe in the web build,
+ * so the page around it is asked, not this frame's own width.
+ */
+try {
+  if (window.parent !== window &&
+      window.parent.matchMedia("(max-width: 700px), (pointer: coarse) and (max-height: 500px)").matches) {
+    $("#pricesec").hidden = true;
+  }
+} catch { /* not the same origin: show it */ }
 
 async function addTerm() {
   const el = $("#filterterm");

@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld("auralfm", {
   news: (country) => ipcRenderer.invoke("news:get", country),
   readArticle: (url) => ipcRenderer.invoke("news:read", url),
   markets: () => ipcRenderer.invoke("markets:get"),
+  marketLookup: (symbol) => ipcRenderer.invoke("markets:lookup", symbol),
 
   // preferences
   getPrefs: () => ipcRenderer.invoke("prefs:get"),

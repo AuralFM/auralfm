@@ -490,7 +490,7 @@ function showAbout() {
       "Sky: Yale Bright Star Catalog via d3-celestial\n" +
       "Weather: Open-Meteo · ISS: wheretheiss.at\n" +
       "Orbits: Celestrak (TLEs) · Headlines: Google News\n" +
-      "Markets: CoinGecko\n\n" +
+      "Prices: Coinbase · CoinGecko\n\n" +
       "The globe, and every mark in the app, drawn by Melton Bell III.\n\n" +
       "Full licence texts for everything this app ships, vendors or downloads\n" +
       "are in THIRD-PARTY-NOTICES.md, beside the application.",
@@ -530,9 +530,8 @@ const LAYERS = [
   // listeners' rings, and on at every launch: a show is something to listen to.
   { id: "onAir",          key: "layer.onAir",          default: true },
   { id: "statusBar",      key: "layer.statusBar",      default: true },
-  // Crypto prices in the player bar. Off, and off at every launch: nothing to do
-  // with radio, and off means no connection to the exchange at all (markets.js).
-  { id: "markets",        key: "layer.markets",        default: false },
+  // Crypto prices are not a layer: they are a setting (prefs.prices), off by
+  // default, because they are not part of the globe.
 ];
 
 /**
@@ -567,8 +566,6 @@ function setLayer(id, on) {
   explore?.webContents.send("globe:layers", layerState());
   // The listening room draws the same globe, so it follows the same switches.
   ctx.roomWin?.webContents.send("globe:layers", layerState());
-  // Crypto prices: the feed opens only while they are shown (markets.js).
-  if (id === "markets") on ? markets.start() : markets.stop();
   /**
    * The menu's checkmarks come from this state, so they have to be rebuilt when
    * it changes elsewhere — otherwise toggling a layer in the inspector leaves
@@ -685,6 +682,12 @@ function buildMenu() {
 // ── preferences ───────────────────────────────────────────────────────────────
 const getPrefs = () => prefs.normalize(load().prefs);
 
+function applyPrices() {
+  const p = getPrefs();
+  if (p.prices && p.priceCoins.length) markets.start(p.priceCoins);
+  else markets.stop();
+}
+
 function setPrefs(incoming) {
   // Known keys of the right kind only; see prefs.pick. Everything below branches
   // on which keys are present, so the filtering has to come first.
@@ -705,6 +708,8 @@ function setPrefs(incoming) {
   // message — switching the filter on and watching nothing happen reads as a
   // dead setting.
   if ("hideExplicit" in patch) catalog.setHideExplicit(st.prefs.hideExplicit);
+  // Crypto prices: the feed opens only while they are on (markets.js).
+  if ("prices" in patch || "priceCoins" in patch) applyPrices();
   if ("filterChat" in patch || "onlyKept" in patch) refreshChat();
   if ("powFloor" in patch) { nostr.setPowFloor(getPrefs().powFloor || 0); refreshChat(); }
   /**
@@ -1109,7 +1114,7 @@ if (!app.requestSingleInstanceLock()) {
     mine.init(app.getPath("userData"));
     sdr.init(app.getPath("userData"));
     sdr.refresh();          // never awaited: a stale receiver list is a fine list
-    if (layerState().markets) markets.start();   // only with the Crypto Prices layer on
+    applyPrices();          // nothing connects unless prices are on in Settings
     nostr.setSpread(24);    // the busiest relays, read only (src/presence-nostr.js)
     nostr.onPeers((list) => explore?.webContents.send("presence:peers", list));
     // Filtered here, not in the renderer. A muted message never crosses the
