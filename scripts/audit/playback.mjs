@@ -438,6 +438,107 @@ async function runPopover(script, { songTitle } = {}) {
     : pass("one read per thirty seconds of the stream's own server, stopped at its block; cooldowns, no-ICY and http are left alone");
 }
 
+// ── an AzuraCast station is asked for its own now-playing file ──────────────
+// A stream at /listen/<code>/<mount> is AzuraCast's, and the station publishes
+// /api/nowplaying_static/<code>.json beside it for pages to read. That file is
+// asked first, carrying nothing of this device's (no header, which would make a
+// browser ask leave the static file cannot give; no cookie; no referrer). Its
+// cover is used only when it is the station's own picture on the same host,
+// never a last.fm or MusicBrainz address that would tell a third party what is
+// playing. Off air, or the station's own name, is no song. A host whose file
+// is missing is read the ICY way, at once and from then on. Run against a fake
+// server that answers both ways and records every request.
+{
+  console.log("\nan AzuraCast station is asked for its own now-playing file");
+  const { createRequire } = await import("node:module");
+  const st = createRequire(import.meta.url)(R("src/songtitle.js"));
+  const gaps = [];
+  const realNow = Date.now;
+  let now = 2e9; Date.now = () => now;
+  try {
+    const log = [];
+    let file = null;                     // what the fake host's now-playing file holds; null: there is none
+    const meta = (text) => { const b = new TextEncoder().encode(`StreamTitle='${text}';`); const n = Math.ceil(b.length / 16); const out = new Uint8Array(1 + n * 16); out[0] = n; out.set(b, 1); return out; };
+    const fakeFetch = async (url, opts = {}) => {
+      log.push({ url, opts });
+      if (/\/api\/nowplaying_static\//.test(url)) {
+        if (file === "down") throw new TypeError("network");
+        return { ok: file !== null, status: file === null ? 404 : 200, headers: { get: () => null }, json: async () => file, body: null };
+      }
+      let i = 0;
+      return { ok: true, headers: { get: (h) => (h.toLowerCase() === "icy-metaint" ? "16" : null) },
+        body: { cancel: async () => {}, getReader: () => ({ cancel: async () => { i = Infinity; },
+          read: async () => (i === Infinity ? { done: true } : (i++ === 0 ? { value: new Uint8Array([...new Uint8Array(16), ...meta("Icy - Song")]), done: false } : { value: new Uint8Array(4096), done: false })) }) } };
+    };
+    const STREAM = "https://az.example/listen/test_fm/radio.mp3";
+    const np = (song, extra = {}) => ({ station: { name: "Test FM" }, is_online: true, now_playing: { song }, ...extra });
+
+    file = np({ text: "Can - Vitamin C", artist: "Can", title: "Vitamin C", art: "https://az.example/api/station/test_fm/art/abc-1.jpg" });
+    const asker = st.createAsker({ fetch: fakeFetch, headers: { "User-Agent": "test" } });
+    const first = await asker.ask(STREAM, "Test FM");
+    const req = log[0];
+    if (!req || req.url !== "https://az.example/api/nowplaying_static/test_fm.json") gaps.push(`the first request was ${req?.url}, not the station's file`);
+    if (req && (req.opts.headers && Object.keys(req.opts.headers).length)) gaps.push(`the file is asked with headers (${Object.keys(req.opts.headers).join(", ")}), which a browser must clear with the server first`);
+    if (req && (req.opts.credentials !== "omit" || req.opts.referrerPolicy !== "no-referrer")) gaps.push("the file is asked with cookies or a referrer allowed");
+    if (log.length !== 1) gaps.push(`the stream was read as well as the file (${log.length} requests)`);
+    if (first?.text !== "Can - Vitamin C" || first?.artist !== "Can" || first?.title !== "Vitamin C") gaps.push(`the file's song came out as ${JSON.stringify(first)}`);
+    if (first?.art !== "https://az.example/api/station/test_fm/art/abc-1.jpg") gaps.push("the station's own cover was not passed on");
+    now += 5000; await asker.ask(STREAM, "Test FM");
+    if (log.length !== 1) gaps.push("the file was asked again five seconds later");
+
+    // Covers that are not the station's own picture of the track.
+    const az = st.azuraOf(STREAM);
+    for (const [art, what] of [["https://coverartarchive.org/release/x/front.jpg", "a MusicBrainz cover"], ["https://lastfm.freetls.fastly.net/i/u/300x300/x.png", "a last.fm cover"],
+      ["https://az.example/static/img/generic_song.jpg", "AzuraCast's stand-in picture"], ["http://az.example/api/station/test_fm/art/abc.jpg", "a cover over http"],
+      ["https://az.example/api/station/other/art/abc.jpg", "another station's cover"]])
+      if (st.fromAzura(np({ artist: "A", title: "B", art }), az)?.art) gaps.push(`${what} is passed to the lock screen`);
+    // The same path on another host, and a cover over http from a station that streams over http.
+    if (st.fromAzura(np({ artist: "A", title: "B", art: "https://elsewhere.example/api/station/test_fm/art/abc.jpg" }), az)?.art) gaps.push("a cover on another host is passed to the lock screen");
+    if (st.fromAzura(np({ artist: "A", title: "B", art: "http://az.example/api/station/test_fm/art/abc.jpg" }), st.azuraOf("http://az.example/listen/test_fm/radio.mp3"))?.art) gaps.push("a cover over http is passed to the lock screen");
+    // No song: off air, the station's own name, a placeholder; and an empty half.
+    if (st.fromAzura(np({ artist: "A", title: "B" }, { is_online: false }), az) !== null) gaps.push("a station that says it is off air names a song");
+    if (st.fromAzura(np({ artist: "", title: "Test FM", text: "Test FM" }), az) !== null) gaps.push("the station's own name is taken for a song");
+    if (st.fromAzura({ name: "KracRadio", stations: "/api/stations" }, az) !== undefined) gaps.push("a file that is not AzuraCast's now-playing is read as one");
+    const half = st.fromAzura(np({ artist: "", title: "", text: " - som rcv" }), az);
+    if (half?.title !== "som rcv" || half?.artist !== "") gaps.push(`an empty artist left ${JSON.stringify(half)}`);
+    const twice = st.fromAzura(np({ artist: "Karina Salim - Sesuka Hati", title: "Karina Salim - Sesuka Hati" }), az);
+    if (twice?.artist) gaps.push("the same line in both fields is shown twice");
+    file = np({ artist: "", title: "Station Offline", text: "Station Offline" });
+    now += 31000; log.length = 0;
+    if ((await asker.ask(STREAM, "Test FM")) !== null) gaps.push("AzuraCast's 'Station Offline' is taken for a song");
+
+    // A host with no file: the stream is read in the same turn, and the file is not asked for again.
+    file = null; log.length = 0;
+    const missing = st.createAsker({ fetch: fakeFetch });
+    const icy = await missing.ask("https://plainaz.example/listen/x/radio.mp3", "X");
+    if (icy?.text !== "Icy - Song") gaps.push(`a host with no file did not fall back to the stream (${JSON.stringify(icy)})`);
+    now += 31000; await missing.ask("https://plainaz.example/listen/x/radio.mp3", "X");
+    if (log.filter((l) => /nowplaying_static/.test(l.url)).length !== 1) gaps.push("a missing file is asked for again");
+
+    // A host that is down: cooled, and not read the ICY way in the same turn.
+    file = "down"; log.length = 0;
+    const down = st.createAsker({ fetch: fakeFetch });
+    const r = await down.ask("https://downaz.example/listen/x/radio.mp3", "X");
+    if (r !== undefined) gaps.push("a host that is down clears the song shown");
+    if (log.length !== 1) gaps.push(`a host that is down was asked ${log.length} times in one turn`);
+
+    // Not an AzuraCast address: no file is guessed at.
+    file = np({ artist: "A", title: "B" }); log.length = 0;
+    const notAz = st.createAsker({ fetch: fakeFetch });
+    for (const u of ["https://ice.example/stream/live.mp3", "https://ice.example/radio/8000/radio.mp3", "https://ice.example/listen/a/b/c.mp3"]) await notAz.ask(u, "Y");
+    if (log.some((l) => /nowplaying_static/.test(l.url))) gaps.push("a file is asked of a stream that is not AzuraCast's");
+  } catch (e) { gaps.push(`the fake server could not be run: ${e.message}`); }
+  finally { Date.now = realNow; }
+
+  // The web's lock screen shows the cover songtitle.js passed, ahead of the app's own.
+  const bridge = fs.readFileSync(R("web/bridge.js"), "utf8");
+  const sess = bridge.match(/function showSession\(\)[\s\S]*?\n  }\n/);
+  if (!sess || !/artwork:\s*\[\s*\.\.\.\(song\?\.art \? \[\{ src: song\.art \}\] : \[\]\)/.test(sess[0])) gaps.push("the web's lock screen does not show the song's cover first");
+
+  gaps.length ? fail("an AzuraCast station is asked for its own now-playing file", gaps.join("; "))
+    : pass("its /api/nowplaying_static file first, bare; only its own covers; off air and its own name are no song; a missing file falls back to ICY");
+}
+
 // ── the desktop shows the song, and says it once ─────────────────────────────
 // The status line is a polite live region: rewriting it with the same song every
 // thirty seconds would read the song out every thirty seconds. And the lock

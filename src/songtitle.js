@@ -21,6 +21,31 @@
  * page (status-json.xsl), the other place a song is listed, named one for none
  * of them, so it is not asked.
  *
+ * ## AzuraCast stations: the file the station publishes
+ *
+ * A stream at `/listen/<code>/<mount>` is the address an AzuraCast server gives
+ * (about 2,100 of the catalogue's streams, on some 1,200 hosts). Every such
+ * station whose public API is on (AzuraCast's default) also writes its
+ * now-playing to `/api/nowplaying_static/<code>.json` on the same host: a
+ * static file, refreshed on each song, served with `Access-Control-Allow-Origin:
+ * *`. That is asked first, on the desktop and on the web alike: it names artist
+ * and title apart, it reaches a browser where ICY does not, and it costs the
+ * server one small cached file instead of a stream connection. 21 of 24 such
+ * stations sampled across hosts answered it (26 Nov 2026). A host where it
+ * answers nothing usable is not asked for it again this session, and its
+ * stream goes to the ICY read instead.
+ *
+ * The request carries no header of its own (one would make a browser ask the
+ * server's permission first, which a static file does not give), no cookie and
+ * no referrer. Its cover art is taken only when it is the station's own picture
+ * of the track, on the same host (`/api/station/<code>/art/…`): AzuraCast can
+ * fill the field from last.fm or MusicBrainz, and a lock screen fetching that
+ * would tell a third party what this device is playing. A station that says it
+ * is off air names no song.
+ *
+ * The file's format is AzuraCast's public API (AzuraCast is AGPL-3.0; nothing
+ * of its code is here, only the published field names).
+ *
  * At most once every thirty seconds per station while it plays, a cooldown per
  * host behind every failure (src/backoff.js), a server that sends no ICY at
  * all is not asked again this session, and nor is a stream that named no song
@@ -79,7 +104,7 @@ function decode(bytes) {
 }
 
 // ── clean, drop, split ───────────────────────────────────────────────────────
-const PLACEHOLDER = /^(unknown|untitled|n\/?a|none|null|undefined|no ?name|-+|live|on ?air|stream|advert(isement)?|commercial( break)?|unknown artist - unknown title)$/i;
+const PLACEHOLDER = /^(unknown|untitled|n\/?a|none|null|undefined|no ?name|-+|live|on ?air|online|(station )?off ?(air|line)|stream|advert(isement)?|commercial( break)?|unknown artist - unknown title)$/i;
 const key = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 
 /**
@@ -117,6 +142,42 @@ function fromIcy(block) {
 }
 
 const isHls = (url) => /\.m3u8(\?|#|$)/i.test(url);
+
+/** An AzuraCast stream's now-playing file, or null when the address is not one of AzuraCast's. */
+function azuraOf(url) {
+  let u; try { u = new URL(url); } catch { return null; }
+  const m = /^\/listen\/([a-z0-9_-]{1,64})\/[^/]+$/i.exec(u.pathname);
+  if (!m || !/^https?:$/.test(u.protocol)) return null;
+  return { file: `${u.origin}/api/nowplaying_static/${encodeURIComponent(m[1])}.json`, origin: u.origin, code: m[1] };
+}
+
+/**
+ * The song out of an AzuraCast now-playing file. `undefined` when the file is
+ * not one (the address is then treated as having none); null when the station
+ * names no song (off air, or a placeholder); otherwise the parts as written.
+ */
+function fromAzura(d, az) {
+  if (!d || typeof d !== "object" || Array.isArray(d) || !("now_playing" in d)) return undefined;
+  if (d.is_online === false) return null;
+  const s = d.now_playing?.song;
+  if (!s || typeof s !== "object") return null;
+  const str = (v) => (typeof v === "string" ? v : "");
+  let artist = str(s.artist).trim(), title = str(s.title).trim();
+  if (!title) ({ artist, title } = split(str(s.text)));
+  // Trimmed of the dashes an empty half leaves behind (" - som rcv").
+  title = title.replace(/^[\s-]+|[\s-]+$/g, ""); artist = artist.replace(/^[\s-]+|[\s-]+$/g, "");
+  // The same line in both fields is one line, not an artist and a title.
+  if (artist && same(artist, title)) artist = "";
+  // Between songs a station names itself, as artist and title or as either.
+  const own = str(d.station?.name).trim();
+  if (own && [title, `${artist} - ${title}`, `${artist} ${title}`].some((t) => same(t, own))) return null;
+  let art = "";
+  try {
+    const a = new URL(str(s.art));
+    if (a.origin === az.origin && a.protocol === "https:" && a.pathname.startsWith(`/api/station/${az.code}/art/`)) art = a.href;
+  } catch {}
+  return { artist, title, art };
+}
 
 /** Read a stream as far as its first ICY block that names something, then let go. */
 async function readIcy(fetchFn, url, headers, signal) {
@@ -162,6 +223,7 @@ function createAsker({ fetch: fetchFn, secureOnly = false, headers = {} }) {
   const quiet = new Map();      // stream -> answers with no song in them, until one has one
   const said = new Set();       // streams that have named a song
   const last = new Map();       // stream -> when it was last asked
+  const noAzura = new Set();    // AzuraCast-shaped streams whose file answered nothing usable
 
   const hostOf = (url) => { try { return new URL(url).host; } catch { return null; } };
 
@@ -180,7 +242,38 @@ function createAsker({ fetch: fetchFn, secureOnly = false, headers = {} }) {
     if (Date.now() - (last.get(url) || 0) < EVERY_MS - 1000) return undefined;
     let h = hosts.get(host);
     if (!h) hosts.set(host, (h = { cool: cooldown({ min: 60_000, max: 30 * 60_000 }), noIcy: false }));
-    if (h.noIcy || h.cool.blocked) return undefined;
+    if (h.cool.blocked) return undefined;
+    const az = noAzura.has(url) ? null : azuraOf(url);
+    if (az) {
+      last.set(url, Date.now());
+      let got;
+      try {
+        // Nothing of this device's own in the request: no header (a browser
+        // would ask the server's leave first, and a static file gives none), no
+        // cookie, no referrer.
+        const res = await fetchFn(az.file, { signal: AbortSignal.timeout(8000), credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" });
+        got = res.ok ? fromAzura(await res.json().catch(() => null), az) : undefined;
+      } catch (err) {
+        // A host that is down, or (on the web) one that keeps its file from
+        // pages: the two look the same here. The host cools down, and when it
+        // is asked again it is the stream that is read, not this file again.
+        noAzura.add(url);
+        h.cool.fail(err);
+        return undefined;
+      }
+      if (got === undefined) noAzura.add(url);
+      else {
+        h.cool.ok();
+        if (got === null) return null;
+        const text = clean(got.artist && got.title ? `${got.artist} - ${got.title}` : got.title || got.artist, station);
+        if (!text) return null;
+        said.add(url);
+        // The halves as the station wrote them; the text is the one ICY would give.
+        const parts = got.artist && got.title ? { artist: clean(got.artist) || "", title: clean(got.title) || text } : split(text);
+        return got.art ? { text, ...parts, art: got.art } : { text, ...parts };
+      }
+    }
+    if (h.noIcy) return undefined;
     last.set(url, Date.now());
     let raw;
     try {
@@ -203,4 +296,4 @@ function createAsker({ fetch: fetchFn, secureOnly = false, headers = {} }) {
   return { ask };
 }
 
-module.exports = { EVERY_MS, decode, clean, split, same, fromIcy, createAsker };
+module.exports = { EVERY_MS, decode, clean, split, same, fromIcy, azuraOf, fromAzura, createAsker };

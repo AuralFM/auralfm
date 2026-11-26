@@ -63,7 +63,7 @@ differently" below. The rest of this table applies to both.
 
 | Service | Purpose | What it necessarily sees |
 |---|---|---|
-| The radio station's own server | Playing audio, and asking it what song is on (every 30 seconds while it plays) | Your IP address, as with any stream |
+| The radio station's own server | Playing audio, and asking it what song is on (every 30 seconds while it plays); in the web version, the song's cover for the lock screen, when that server has one | Your IP address, as with any stream |
 | The station's own website | Its logo, when you open a station's profile | Your IP address |
 | radio-browser.info | Looking up a station's current stream when you press play; play counts | Your IP address, the station played |
 | NASA GIBS | Satellite cloud imagery | Your IP address |
