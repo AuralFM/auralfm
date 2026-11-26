@@ -117,6 +117,8 @@ module.exports = function register(ctx) {
     return doc ? { ...doc, url: real } : null;
   });
   ipcMain.handle("markets:get", () => markets.get());
+  // Settings asks before it adds a coin; only when the listener presses Add.
+  ipcMain.handle("markets:lookup", (_e, symbol) => markets.lookup(String(symbol || "").slice(0, 16)));
 
   // ── shortwave ────────────────────────────────────────────────────────────────
   // Only the aggregate list is served from here. An individual receiver is

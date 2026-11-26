@@ -95,6 +95,9 @@ function applyPrefs(next) {
   // Appearance changes swap the accent between its light and dark variants.
   if (prefs.palette !== prev.palette || prefs.theme !== prev.theme ||
       prefs.contrast !== prev.contrast) applyPalette();
+  // Crypto prices, a setting: shown, hidden or a new list of coins, at once
+  // rather than at the next second's tick.
+  if (prefs.prices !== prev.prices || String(prefs.priceCoins) !== String(prev.priceCoins)) renderMarkets();
 }
 
 // ── interface language ───────────────────────────────────────────────────────

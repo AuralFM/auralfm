@@ -125,12 +125,26 @@ let marketTimer = null;
  */
 let lastPrices = new Map();
 
+/**
+ * A price as a ticker writes it. Under a dollar it keeps three significant
+ * figures, not four decimals: any coin can be chosen now, and PEPE at
+ * $0.00000348 read "0.0000".
+ */
+function priceText(p) {
+  if (p >= 1000) return Math.round(p).toLocaleString();
+  if (p >= 1) return p.toFixed(2);
+  return p.toLocaleString(undefined, { maximumSignificantDigits: 3, maximumFractionDigits: 12 });
+}
+
 async function renderMarkets() {
   const el = $("markets");
   if (!el) return;
-  // Off (the default): nothing shown and nothing asked for, so no request leaves for prices.
-  if (typeof layers !== "undefined" && !layers.markets) { el.hidden = true; return; }
+  // Off (the default, in Settings): nothing shown and nothing asked for, so no
+  // request leaves for prices.
+  if (!prefs.prices) { el.hidden = true; el.textContent = ""; return; }
   const { items, hasStocks } = (await window.auralfm.markets()) || { items: [] };
+  if (!prefs.prices) return;        // switched off while the answer was on its way
+  el.hidden = false;
   if (!items?.length) { el.textContent = ""; return; }
 
   // Same symbols in the same order: update the numbers and leave the DOM alone.
@@ -142,9 +156,7 @@ async function renderMarkets() {
       const wrap = existing[i];
       const up = (it.changePct ?? 0) >= 0;
       const px = wrap.querySelector(".px");
-      const text = it.price >= 1000 ? Math.round(it.price).toLocaleString()
-                 : it.price >= 1   ? it.price.toFixed(2)
-                 : it.price.toFixed(4);
+      const text = priceText(it.price);
       if (px.textContent !== text) {
         const prev = lastPrices.get(it.symbol);
         px.textContent = text;
@@ -178,10 +190,7 @@ async function renderMarkets() {
     wrap.dataset.sym = it.symbol;
     wrap.innerHTML = `<span class="sym"></span><span class="px"></span><span class="ch"></span>`;
     wrap.querySelector(".sym").textContent = it.symbol;
-    wrap.querySelector(".px").textContent =
-      it.price >= 1000 ? Math.round(it.price).toLocaleString()
-      : it.price >= 1   ? it.price.toFixed(2)
-      : it.price.toFixed(4);
+    wrap.querySelector(".px").textContent = priceText(it.price);
     const ch = wrap.querySelector(".ch");
     ch.className = `ch ${up ? "up" : "dn"}`;
     ch.textContent = it.changePct == null ? "" : `${up ? "▲" : "▼"}${Math.abs(it.changePct).toFixed(1)}%`;

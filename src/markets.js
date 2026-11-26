@@ -4,8 +4,8 @@
  * Crypto is genuinely live: Coinbase's exchange feed is a keyless WebSocket that
  * needs no account and no key, and it ticks several times a second. Measured on
  * a quiet Sunday: 42 ticks in 8 seconds across BTC, ETH and SOL. CoinGecko's
- * REST endpoint stays as the fallback for when the socket cannot connect, so a
- * fresh clone still shows prices either way.
+ * REST endpoint fills in for coins Coinbase does not list and for when the
+ * socket cannot connect. Nothing here runs until Settings turns prices on.
  *
  * Stocks do NOT have a keyless source worth relying on. Probed while building
  * this: Yahoo's public chart endpoint returns 429 on both query1 and query2,
@@ -18,11 +18,17 @@
  */
 
 const CG = "https://api.coingecko.com/api/v3/simple/price";
-const COINS = ["bitcoin", "ethereum", "solana"];
-const SYMBOL = { bitcoin: "BTC", ethereum: "ETH", solana: "SOL" };
-
 const CB_WS = "wss://ws-feed.exchange.coinbase.com";
-const CB_PRODUCTS = ["BTC-USD", "ETH-USD", "SOL-USD"];
+const CB_PRODUCTS_URL = "https://api.exchange.coinbase.com/products";
+
+/**
+ * Which coins, set from the listener's choice in Settings (prefs.priceCoins).
+ * Any symbol: those Coinbase trades against the dollar come live over its
+ * socket, and the rest from CoinGecko, which can be asked by symbol and answers
+ * for the largest coin of that name. Measured: 399 of Coinbase's 847 products
+ * are online against USD; CoinGecko answers for Monero, which Coinbase lacks.
+ */
+let coins = ["BTC", "ETH", "SOL"];
 
 // Alpha Vantage: free tier, 25 calls/day — fine for a ticker refreshed hourly.
 const STOCK_KEY = process.env.AURALFM_STOCK_KEY || null;
@@ -32,12 +38,12 @@ const { cooldown } = require("./backoff");
 
 const TTL_MS = 90 * 1000;
 const STOCK_TTL_MS = 15 * 60 * 1000;
-let cache = { at: 0, items: [] };
 let stockCache = { at: 0, items: [] };
 
-async function crypto() {
+/** CoinGecko by symbol. Its keys come back in whatever case it likes ("Uni"). */
+async function gecko(symbols) {
   const q = new URLSearchParams({
-    ids: COINS.join(","),
+    symbols: symbols.map((x) => x.toLowerCase()).join(","),
     vs_currencies: "usd",
     include_24hr_change: "true",
   });
@@ -47,11 +53,32 @@ async function crypto() {
   });
   if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
   const j = await res.json();
-  return COINS.filter((c) => j[c]).map((c) => ({
-    symbol: SYMBOL[c] || c.toUpperCase(),
-    price: j[c].usd,
-    changePct: j[c].usd_24h_change ?? null,
+  const by = new Map(Object.entries(j).map(([k, v]) => [k.toUpperCase(), v]));
+  return symbols.filter((x) => by.get(x)?.usd != null).map((x) => ({
+    symbol: x,
+    price: by.get(x).usd,
+    changePct: by.get(x).usd_24h_change ?? null,
   }));
+}
+
+/**
+ * The symbols Coinbase trades against the dollar, asked once a day. Null until
+ * known, and then every coin goes to CoinGecko, which is slower but answers.
+ */
+let products = { at: 0, set: null };
+async function coinbaseListed() {
+  if (products.set && Date.now() - products.at < 24 * 3600_000) return products.set;
+  try {
+    const res = await fetch(CB_PRODUCTS_URL, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`Coinbase HTTP ${res.status}`);
+    const list = await res.json();
+    products = {
+      at: Date.now(),
+      set: new Set(list.filter((x) => x.quote_currency === "USD" && x.status === "online" && !x.trading_disabled)
+        .map((x) => String(x.base_currency).toUpperCase())),
+    };
+  } catch { /* keep what was known */ }
+  return products.set;
 }
 
 async function stocks() {
@@ -75,35 +102,55 @@ async function stocks() {
   return out;
 }
 
+// A failing provider is asked again after a growing pause, not every 90 seconds.
+const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "markets" });
+const geckoSeen = new Map();      // symbol -> { price, changePct, at }
+
+/** Asks CoinGecko for the coins the socket is not giving, at most every 90 seconds. */
+async function fillFromGecko(missing) {
+  const stale = missing.filter((x) => !(Date.now() - (geckoSeen.get(x)?.at || 0) < TTL_MS));
+  if (!stale.length || cool.blocked) return;
+  try {
+    const got = await gecko(stale);
+    for (const it of got) geckoSeen.set(it.symbol, { ...it, at: Date.now() });
+    if (got.length) cool.ok(); else cool.fail("no quotes returned");
+  } catch (err) { cool.fail(err); }
+}
+
 /**
  * @returns {Promise<{items: Array<{symbol,price,changePct}>, hasStocks: boolean}>}
+ * The coins in the listener's order; one that neither source knows is left out.
  */
-// cache.at only advanced when items came back, so a failing provider was
-// re-asked every 90 seconds indefinitely.
-const cool = cooldown({ min: 2 * 60_000, max: 30 * 60_000, label: "markets" });
-
 async function get() {
-  // The live socket wins whenever it is healthy — no cache, no TTL, just the
-  // price as of a moment ago.
-  const now = liveItems();
-  if (now.length) {
-    const s = STOCK_KEY ? await stocks().catch(() => []) : [];
-    return { items: [...s, ...now], hasStocks: !!STOCK_KEY, live: true };
-  }
-  if (Date.now() - cache.at < TTL_MS && cache.items.length) {
-    return { items: cache.items, hasStocks: !!STOCK_KEY };
-  }
-  if (cool.blocked) return { items: cache.items, hasStocks: !!STOCK_KEY };
+  if (!wanted) return { items: [], hasStocks: !!STOCK_KEY };
+  const fresh = (v) => v && Date.now() - v.at < 30_000;
+  await fillFromGecko(coins.filter((x) => !fresh(live.get(x))));
+  const items = coins.map((x) => {
+    const v = fresh(live.get(x)) ? live.get(x) : geckoSeen.get(x);
+    return v && { symbol: x, price: v.price, changePct: v.changePct };
+  }).filter(Boolean);
+  const s = STOCK_KEY ? await stocks().catch(() => []) : [];
+  return { items: [...s, ...items], hasStocks: !!STOCK_KEY, live: items.some((it) => fresh(live.get(it.symbol))) };
+}
+
+/**
+ * Whether a symbol has a price anywhere, for Settings before it adds a coin.
+ * Asked only when the listener presses Add, never in the background.
+ * @returns {Promise<{ok: boolean, symbol?: string, live?: boolean, error?: string}>}
+ */
+async function lookup(raw) {
+  const symbol = String(raw || "").trim().toUpperCase().replace(/^\$/, "");
+  if (!/^[A-Z0-9]{1,12}$/.test(symbol)) return { ok: false, error: "invalid" };
+  const listed = await coinbaseListed();
+  if (listed?.has(symbol)) return { ok: true, symbol, live: true };
   try {
-    const [c, s] = await Promise.all([crypto(), stocks()]);
-    const items = [...s, ...c];
-    if (items.length) { cache = { at: Date.now(), items }; cool.ok(); }
-    else cool.fail("no quotes returned");
-    return { items, hasStocks: !!STOCK_KEY };
-  } catch (err) {
-    cool.fail(err);
-    return { items: cache.items, hasStocks: !!STOCK_KEY };
-  }
+    const got = await gecko([symbol]);
+    if (got.length) {
+      geckoSeen.set(symbol, { ...got[0], at: Date.now() });
+      return { ok: true, symbol, live: false };
+    }
+    return { ok: false, symbol, error: "unknown" };
+  } catch { return { ok: false, symbol, error: "offline" }; }
 }
 
 // ── live crypto ──────────────────────────────────────────────────────────────
@@ -125,17 +172,32 @@ const live = new Map();          // symbol -> { price, changePct, at }
 
 const wsCool = cooldown({ min: 60_000, max: 30 * 60_000, label: "markets/ws" });
 
-function connectLive() {
+/** The coins to ask the socket for: those Coinbase trades against the dollar. */
+let subscribed = [];
+function productsNow() {
+  // Not known yet: the three that have always been on Coinbase.
+  const on = products.set ? coins.filter((x) => products.set.has(x))
+                          : coins.filter((x) => ["BTC", "ETH", "SOL"].includes(x));
+  return on.map((x) => `${x}-USD`);
+}
+async function liveProducts() { await coinbaseListed(); return productsNow(); }
+
+async function connectLive() {
   if (!wanted || ws || wsCool.blocked) return;
+  const want = await liveProducts();
+  if (!wanted || ws || !want.length) return;
   let sock;
   try { sock = new WebSocket(CB_WS); } catch (err) { return wsCool.fail(err); }
   ws = sock;
 
   const giveUp = setTimeout(() => { if (!wsAlive) { try { sock.close(); } catch {} } }, 15000);
 
-  sock.onopen = () => sock.send(JSON.stringify({
-    type: "subscribe", product_ids: CB_PRODUCTS, channels: ["ticker"],
-  }));
+  // The list as it is when the socket opens, which may have changed since.
+  sock.onopen = () => {
+    subscribed = productsNow();
+    if (!subscribed.length) return sock.close();
+    sock.send(JSON.stringify({ type: "subscribe", product_ids: subscribed, channels: ["ticker"] }));
+  };
 
   sock.onmessage = (m) => {
     let d;
@@ -154,6 +216,7 @@ function connectLive() {
   const down = () => {
     clearTimeout(giveUp);
     ws = null;
+    subscribed = [];
     const wasAlive = wsAlive;
     wsAlive = false;
     if (!wasAlive) wsCool.fail("could not connect");
@@ -166,25 +229,50 @@ function connectLive() {
   sock.onerror = () => { /* onclose always follows */ };
 }
 
-/** Live prices if the socket is healthy and recent, otherwise nothing. */
+/** Live prices for the chosen coins the socket has given in the last 30 seconds. */
 function liveItems() {
   if (!wsAlive) return [];
   const fresh = Date.now() - 30_000;
-  const out = [];
-  for (const sym of ["BTC", "ETH", "SOL"]) {
-    const v = live.get(sym);
-    if (v && v.at > fresh) out.push({ symbol: sym, price: v.price, changePct: v.changePct });
-  }
-  return out.length === CB_PRODUCTS.length ? out : [];
+  return coins.map((x) => [x, live.get(x)]).filter(([, v]) => v && v.at > fresh)
+    .map(([symbol, v]) => ({ symbol, price: v.price, changePct: v.changePct }));
 }
 
-function start() { wanted = true; connectLive(); }
-/** The layer was switched off: close the feed and stop retrying. */
+/** Prices on, for these coins (prefs.priceCoins). Called again when the list changes. */
+function start(list) {
+  if (Array.isArray(list)) setCoins(list);
+  wanted = true;
+  connectLive();
+}
+
+/**
+ * A new list from Settings. An open socket is told what changed rather than
+ * reconnected, so the coins already showing keep ticking.
+ */
+async function setCoins(list) {
+  // Checked here as well as in prefs.coinList: these symbols go into a URL and
+  // onto the exchange's socket, so only plain symbols, at most eight, ever do.
+  coins = (Array.isArray(list) ? list : []).map(String).filter((x) => /^[A-Z0-9]{1,12}$/.test(x)).slice(0, 8);
+  for (const k of [...live.keys()]) if (!coins.includes(k)) live.delete(k);
+  if (!ws) { if (wanted) connectLive(); return; }
+  if (ws.readyState !== 1) return;     // still opening: onopen reads the new list
+  const want = await liveProducts();
+  const add = want.filter((p) => !subscribed.includes(p));
+  const drop = subscribed.filter((p) => !want.includes(p));
+  try {
+    if (drop.length) ws.send(JSON.stringify({ type: "unsubscribe", product_ids: drop, channels: ["ticker"] }));
+    if (add.length) ws.send(JSON.stringify({ type: "subscribe", product_ids: add, channels: ["ticker"] }));
+    subscribed = want;
+    if (!want.length) ws.close();
+  } catch { /* the socket closed; onclose reconnects */ }
+}
+
+/** Prices off: close the feed and stop retrying. */
 function stop() {
   wanted = false;
   clearTimeout(wsRetry);
   if (ws) { try { ws.close(); } catch { /* already closing */ } }
   live.clear();
+  geckoSeen.clear();
 }
 
-module.exports = { get, start, stop, liveItems };
+module.exports = { get, start, stop, setCoins, lookup, liveItems };

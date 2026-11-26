@@ -201,7 +201,36 @@ const DEFAULTS = {
    * geographically near, which is what everyone gets today.
    */
   relays: [],
+  /**
+   * Crypto prices in the player bar. Off, and off means nothing connects to
+   * Coinbase or CoinGecko at all (src/markets.js). A setting rather than a globe
+   * layer: it is not part of the globe, and a choice like this should outlast a
+   * restart, which layers do not.
+   */
+  prices: false,
+  /**
+   * Which coins, in the order they are shown. Symbols as exchanges write them
+   * ("BTC", "DOGE"); cleaned by coinList, so a hand-edited state file cannot put
+   * a URL or a thousand entries into a request.
+   */
+  priceCoins: ["BTC", "ETH", "SOL"],
 };
+
+/** At most this many coins: the bar drops whole coins from the end past its width. */
+const MAX_COINS = 8;
+const COIN = /^[A-Z0-9]{1,12}$/;
+
+/** Upper-cased, plausible symbols only, each once, at most MAX_COINS. */
+function coinList(list) {
+  if (!Array.isArray(list)) return [...DEFAULTS.priceCoins];
+  const out = [];
+  for (const c of list) {
+    const s = typeof c === "string" ? c.trim().toUpperCase() : "";
+    if (COIN.test(s) && !out.includes(s)) out.push(s);
+    if (out.length === MAX_COINS) break;
+  }
+  return out;
+}
 
 /**
  * Take only the keys we know about, and only when the saved value is the same
@@ -221,6 +250,7 @@ function normalize(saved = {}) {
   // Chat is for people 13 and older (docs/TERMS.md). Presence on without the
   // tick is presence off: one rule here rather than a check at every reader.
   if (out.ageChat !== true) out.presence = false;
+  out.priceCoins = coinList(out.priceCoins);
   return out;
 }
 
@@ -244,7 +274,8 @@ function pick(patch) {
   for (const k of Object.keys(DEFAULTS)) {
     if (Object.hasOwn(patch, k) && sameKind(patch[k], DEFAULTS[k])) out[k] = patch[k];
   }
+  if ("priceCoins" in out) out.priceCoins = coinList(out.priceCoins);
   return out;
 }
 
-module.exports = { DEFAULTS, normalize, pick };
+module.exports = { DEFAULTS, normalize, pick, coinList, MAX_COINS };

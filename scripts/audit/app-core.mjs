@@ -431,19 +431,49 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
 // the town's name and the shuffle beside play. Two ways back: a layer that
 // starts on, or a button that drifts back into the toolbar.
 {
-  const name = "crypto prices are an off layer, and the toolbar holds four things";
+  const name = "crypto prices are a setting, off until asked for, for any coin; the toolbar holds four things";
   console.log(`\n${name}`);
   const gaps = [];
-  const mainJs = readSrc("src/main.js"), bridge = readSrc("web/bridge.js"), marketsJs = readSrc("src/markets.js");
+  const mainJs = readSrc("src/main.js"), bridge = readSrc("web/bridge.js");
   const html = readSrc("src/renderer/explore.html");
-  if (!/\{ id: "markets",\s+key: "layer\.markets",\s+default: false \}/.test(mainJs) || !/\["markets", false\]/.test(bridge)) gaps.push("the prices layer is missing or on by default");
-  for (const [where, src] of [["desktop", mainJs], ["web", bridge]]) {
-    const launch = src.match(/ON_AT_LAUNCH = new Set\(\[([^\]]*)\]\)/);
-    if (!launch || /markets/.test(launch[1])) gaps.push(`the ${where} turns prices on at launch`);
+  const setHtml = readSrc("src/renderer/settings.html"), setJs = readSrc("src/renderer/settings.js");
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const prefs = req(R("src/prefs.js"));
+  // Off by default, the three as the default list, and a list cleaned on the way
+  // in: upper case, once each, no URL, at most eight.
+  if (prefs.DEFAULTS.prices !== false) gaps.push("prices are on by default");
+  if (String(prefs.normalize({}).priceCoins) !== "BTC,ETH,SOL") gaps.push("the default coins are not BTC, ETH and SOL");
+  const dirty = ["doge", "DOGE", "https://x.test/", " xmr ", ...Array.from({ length: 20 }, (_, i) => `C${i}`)];
+  const clean = prefs.pick({ priceCoins: dirty }).priceCoins || [];
+  if (clean[0] !== "DOGE" || clean[1] !== "XMR" || clean.length !== 8 || clean.some((c) => !/^[A-Z0-9]+$/.test(c))) gaps.push(`a coin list is kept as given (${clean.join(",")})`);
+  // Not a layer any more, on either side.
+  for (const [where, src] of [["desktop", mainJs], ["web", bridge], ["the Layers panel", readSrc("src/renderer/explore-layers.js")]]) {
+    if (/["\[]\s*"?markets"?\s*[,\]]|id: "markets"/.test(src.replace(/\/\/.*$/gm, ""))) gaps.push(`${where} still lists prices as a layer`);
   }
-  if (!/if \(!wanted \|\| ws/.test(marketsJs) || !/if \(wanted\) wsRetry/.test(marketsJs) || !/module\.exports = \{[^}]*\bstop\b/.test(marketsJs)) gaps.push("the exchange is connected while the prices are off");
-  if (!/if \(id === "markets"\) on \? markets\.start\(\) : markets\.stop\(\)/.test(mainJs)) gaps.push("the desktop does not start and stop the feed with the layer");
-  if (!/id="markets" hidden/.test(html) || !/!layers\.markets\) \{ el\.hidden = true; return; \}/.test(readSrc("src/renderer/explore-panels.js"))) gaps.push("the prices show before the layer is on");
+  // Nothing reaches an exchange while prices are off: get() asks nothing and
+  // a lookup of a malformed symbol asks nothing.
+  {
+    const was = { fetch: globalThis.fetch, WebSocket: globalThis.WebSocket };
+    let asked = 0;
+    globalThis.fetch = async () => { asked++; throw new Error("offline"); };
+    globalThis.WebSocket = class { constructor() { asked++; } send() {} close() {} };
+    const m = req(R("src/markets.js"));
+    const off = await m.get();
+    const bad = await m.lookup("a b/");
+    m.start(["BTC"]); m.stop();
+    await new Promise((r) => setTimeout(r, 20));
+    const before = asked;
+    const after = await m.get();
+    Object.assign(globalThis, was);
+    if (off.items.length || after.items.length || bad.ok) gaps.push("prices come back while off");
+    if (before !== asked || asked > 1) gaps.push(`an exchange is asked while prices are off (${asked} requests)`);
+  }
+  if (!/if \("prices" in patch \|\| "priceCoins" in patch\) applyPrices\(\)/.test(mainJs) || !/^\s*applyPrices\(\);/m.test(mainJs)) gaps.push("the desktop does not start and stop the feed with the setting");
+  if (!/if \("prices" in changed \|\| "priceCoins" in changed\) applyPrices\(\)/.test(bridge) || !/^\s*applyPrices\(\);/m.test(bridge)) gaps.push("the web does not start and stop the feed with the setting");
+  if (!/id="markets" hidden/.test(html) || !/if \(!prefs\.prices\) \{ el\.hidden = true;/.test(readSrc("src/renderer/explore-panels.js"))) gaps.push("the prices show before the setting is on");
+  if (!/id="prices" role="switch"/.test(setHtml) || !/id="priceterm"/.test(setHtml)) gaps.push("Settings has no prices switch or coin field");
+  if (!/marketLookup\(raw\)[\s\S]{0,900}?set\(\{ priceCoins: \[\.\.\.coins, r\.symbol\] \}\)/.test(setJs)) gaps.push("Settings keeps a coin without asking whether it has a price");
   const bar = html.match(/<div class="toolbar">([\s\S]*?)\n<\/div>/);
   const ids = bar ? [...bar[1].matchAll(/<(?:button|input)[^>]*\bid="([^"]+)"/g)].map((m) => m[1]) : [];
   if (ids.join(",") !== "studioBtn,layersBtn,favBtn,q,setBtn") gaps.push(`the toolbar holds ${ids.join(", ") || "nothing found"}`);
@@ -452,5 +482,5 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
   // The web's bridge answers any unknown name with a function, so the room's
   // tag showed on the web until roomOpen was named there as nothing.
   if (!/api\.roomOpen = null;/.test(bridge)) gaps.push("the web shows the listening room's tag");
-  gaps.length ? fail(name, gaps.join("; ")) : pass("off at launch on desktop and web, no exchange while off; Layers, Favorites, Search, Settings");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("a setting, off, any coin checked before it is kept, no exchange while off; Layers, Favorites, Search, Settings");
 }
