@@ -43,7 +43,7 @@ function paintRoomPanel(s = {}) {
     : t("room.sayFollow", "Play anything here and the room turns there.");
   if ("upNext" in s) {
     $("roomnextline").hidden = !s.upNext;
-    $("roomnextname").textContent = s.upNext ? [s.upNext.place, s.upNext.title].filter(Boolean).join(" · ") : "";
+    $("roomnextname").textContent = s.upNext ? [plainPlace(s.upNext.place, s.upNext.country), s.upNext.title].filter(Boolean).join(" · ") : "";
   }
   if (Array.isArray(s.favourites)) paintRoomFavs(s.favourites);
   if ("external" in s) $("roomwhere").textContent = t("room.on", "On {screen}").replace("{screen}",
@@ -70,9 +70,9 @@ function paintRoomFavs(list) {
     b.type = "button";
     b.dataset.id = f.id;
     const name = document.createElement("span");
-    name.textContent = f.title || f.place;
+    name.textContent = f.title || plainPlace(f.place, f.country);
     const where = document.createElement("small");
-    where.textContent = f.place || "";
+    where.textContent = plainPlace(f.place, f.country);
     b.append(name, where);
     li.append(b);
     ul.append(li);

@@ -39,7 +39,7 @@ function paintGlobeReadout(sunLat, sunLng, m, phase, glyph) {
     const lit = h >= 6 && h < 18;
     // Escaped: for a receiver this is the operator's own name for it, crawled
     // from a public list, and it is going into innerHTML.
-    const title = String(here.title ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    const title = plainPlace(here.title, here.country).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
     bits.push(`<b>${title}</b> ${hh}:${mm} ${lit ? t("readout.day", "day") : t("readout.night", "night")}`);
   }
 

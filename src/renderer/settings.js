@@ -632,7 +632,7 @@ async function paintMine() {
                      <button class="rm"></button>`;
     row.querySelector("b").textContent = st.title;
     row.querySelector(".sub").textContent = st.place
-      ? `${st.place}${st.country ? " · " + st.country : ""}`
+      ? placeLine(st.place, st.country)
       : (T["set.mineNoPlace"] || "no place");
     const rm = row.querySelector(".rm");
     rm.textContent = T["set.remove"] || "Remove";

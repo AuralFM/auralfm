@@ -77,7 +77,7 @@ async function tripHop({ announce = true } = {}) {
     if (Number.isFinite(pick.lat) && Number.isFinite(pick.lon)) flyTo(pick.lat, pick.lon);
     if (announce) {
       systemLine(t("ctl.somewhereWent", "Somewhere else: {place}")
-        .replace("{place}", [pick.place, pick.country].filter(Boolean).join(", ") || pick.title));
+        .replace("{place}", placeLine(pick.place, pick.country, ", ") || pick.title));
     }
     return true;
   } finally { b.classList.remove("busy"); }

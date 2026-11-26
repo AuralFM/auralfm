@@ -39,7 +39,7 @@ let dmWith = null;                     // { pubkey, nick } while in a private th
  * you are about to *send*, and sending only ever reaches the cell you are
  * listening to. Naming the browsed city here would promise the wrong room.
  */
-const myPlaceName = () => playing?.place || null;
+const myPlaceName = () => (playing?.place ? plainPlace(playing.place, playing.country) : null);
 
 /** Everyone here we could name. Speakers carry a nickname; the silent do not. */
 function roster() {

@@ -376,7 +376,7 @@ function render(items, {numbered=false, empty="", showTags=false}={}) {
     el.querySelector(".nm").textContent = ch.title;
     const tags = showTags && ch.tags?.length ? ch.tags.slice(0, 2).join(", ") : null;
     el.querySelector(".sub").textContent =
-      [...(ch.held ? [t("st.held", "Not available where you are yet")] : []), ch.place, tags || ch.country].filter(Boolean).join(" · ");
+      [...(ch.held ? [t("st.held", "Not available where you are yet")] : []), tags ? plainPlace(ch.place, ch.country) : placeLine(ch.place, ch.country), tags].filter(Boolean).join(" · ");
     // Reachable by Tab as well as by 1-9: the digits stop at nine and search
     // only ever played the first result. The name area takes focus because the
     // row holds the star button; see activatable.js.
@@ -649,7 +649,7 @@ audio.addEventListener("playing", () => {
   window.auralfm.mediaKeys(true);
   setToggle("pause");
   document.body.classList.add("playing");
-  setStatus(song ? song.text : placeLine(), "live");
+  setStatus(song ? song.text : nowWhere(), "live");
   if (!songTimer) songWatch(gen);
 });
 audio.addEventListener("waiting", () => {
@@ -675,7 +675,7 @@ audio.addEventListener("ended", () => rescue());
  * live region) is not rewritten and read out again for it.
  */
 let song = null, songTimer = null;
-const placeLine = () => [current?.place, current?.country].filter(Boolean).join(" · ") || "Live";
+const nowWhere = () => window.placeLine(current?.place, current?.country) || "Live";
 function songStop() { clearTimeout(songTimer); songTimer = null; song = null; }
 function songWatch(my) {
   clearTimeout(songTimer);
@@ -688,7 +688,7 @@ function songWatch(my) {
       const text = said?.text || null;
       if (text !== (song?.text || null)) {
         song = said || null;
-        setStatus(song ? song.text : placeLine(), "live");
+        setStatus(song ? song.text : nowWhere(), "live");
         updateMediaSession();
       }
     }
@@ -805,7 +805,7 @@ function updateMediaSession() {
   // song, its artist, and the station it is on.
   navigator.mediaSession.metadata = new MediaMetadata({
     title: song ? song.title : current.title,
-    artist: song ? (song.artist || current.title) : [current.place, current.country].filter(Boolean).join(" · "),
+    artist: song ? (song.artist || current.title) : window.placeLine(current.place, current.country),
     album: song ? current.title : "AuralFM",
     artwork: [
       { src: "../../assets/generated/favicon.png", sizes: "64x64", type: "image/png" },

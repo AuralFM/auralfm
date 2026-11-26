@@ -545,3 +545,70 @@ const KEYWORDS = new Set(["if","for","while","switch","catch","return","typeof",
     ? pass("the newest 40 are kept; older ones are let go")
     : fail(name, "every article read stays in memory");
 }
+
+// ── a country-wide place is shown by its country's name ─────────────────────
+// Stations that gave only their country live at "Across the United States".
+// The title stays (lists and tests key off it); what is shown is the country,
+// "United States", and a line naming the place and the country says it once.
+// The pages' rule (src/renderer/places.js) is held to the catalogue's own
+// (plainName in src/catalog.js) over every place in the list.
+{
+  const name = "a country-wide place is shown by its country's name";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const vm = await import("node:vm");
+  const box = { window: {} };
+  vm.runInNewContext(readSrc("src/renderer/places.js"), box);
+  const { plainPlace, placeLine } = box.window;
+  if (typeof plainPlace !== "function" || typeof placeLine !== "function") gaps.push("places.js defines no plainPlace or placeLine");
+  else {
+    const want = [
+      ["Across the United States", "United States", "United States", "United States"],
+      ["Across Germany", "Germany", "Germany", "Germany"],
+      ["Somewhere in France", "France", "France", "France"],
+      ["Across Texas", "United States", "Across Texas", "Across Texas · United States"],
+      ["Online, no country", "", "Online, no country", "Online, no country"],
+      ["Lisbon", "Portugal", "Lisbon", "Lisbon · Portugal"],
+    ];
+    for (const [title, country, plain, line] of want) {
+      if (plainPlace(title, country) !== plain) gaps.push(`"${title}" shows as "${plainPlace(title, country)}"`);
+      if (placeLine(title, country) !== line) gaps.push(`"${title}" with its country reads "${placeLine(title, country)}"`);
+    }
+    if (!fs.existsSync(R("data/stations.min.json"))) skip(`${name}: against the catalogue`, "no built catalogue here (npm run catalogue)");
+    else {
+      const { createRequire } = await import("node:module");
+      const req = createRequire(import.meta.url);
+      const file = req.resolve(R("src/catalog.js"));
+      delete req.cache[file];
+      const log = console.log; console.log = () => {};
+      const cat = req(file); cat.load();
+      console.log = log;
+      let differ = 0, plainOnes = 0, first = "";
+      for (let i = 0; cat.placeById(i); i++) {
+        const p = cat.placeById(i);
+        if (p.name !== p.title) plainOnes++;
+        if (plainPlace(p.title, p.country) !== p.name) { differ++; first ||= `${p.title} → ${plainPlace(p.title, p.country)}, catalogue says ${p.name}`; }
+      }
+      delete req.cache[file];
+      if (differ) gaps.push(`${differ} place(s) named differently from the catalogue (${first})`);
+      if (!plainOnes) gaps.push("no place in the catalogue has a plain name: this check is blind");
+    }
+  }
+  for (const page of ["explore", "popover", "room", "settings"]) {
+    if (!/<script src="errors\.js"><\/script>\s*<script src="places\.js"><\/script>/.test(readSrc(`src/renderer/${page}.html`))) gaps.push(`${page}.html does not load places.js after errors.js`);
+  }
+  const shown = ["src/renderer/explore-stations.js", "src/renderer/explore-search.js", "src/renderer/explore-chat.js", "src/renderer/explore-rooms.js",
+    "src/renderer/explore-panels.js", "src/renderer/explore-room.js", "src/renderer/explore-studio.js", "src/renderer/popover.js",
+    "src/renderer/settings.js", "src/renderer/explore-view.js", "src/renderer/explore-core.js", "web/bridge.js"];
+  const raw = [
+    [/\.place, \w+\??\.country\]\.filter\(Boolean\)/, "a station's place and country joined from the title"],
+    [/querySelector\("h2"\)\.textContent = place\.title/, "the place heading shows the title"],
+    [/\.pn"\)\.textContent = p\.title/, "a place row shows the title"],
+    [/\$\{playing\.place\}/, "the chat names the playing place by its title"],
+    [/myPlaceName = \(\) => playing\?\.place \|\|/, "the commands name the playing place by its title"],
+    [/from \$\{prev\.title\}/, "the trip line names the last place by its title"],
+    [/String\(here\.title \?\? ""\)/, "the globe read-out names the place by its title"],
+  ];
+  for (const f of shown) for (const [re, what] of raw) if (re.test(readSrc(f))) gaps.push(`${what} (${f})`);
+  gaps.length ? fail(name, gaps.join("; ")) : pass("the pages' rule agrees with the catalogue on every place; every page loads it; no screen shows the raw title");
+}
