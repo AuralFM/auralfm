@@ -60,6 +60,29 @@
     const timer = setTimeout(done, ms);
     pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(timer); done(); } });
   });
+  /**
+   * A connection that went quiet and stayed that way, for the host's side.
+   *
+   * `disconnected` may mend on its own, which is why it is not treated as an
+   * end. But nothing obliges a browser to move on to `failed`, and some never
+   * do: a listener whose Wi-Fi went away held one of the host's twelve places
+   * for as long as the show ran. Their `bye` cannot help, since it needs the
+   * network they lost. Fifteen seconds, then, read again when the time is up so
+   * a recovery that has not been reported yet is not cut off. Longer than
+   * Chrome's own path to `failed`, so where Chrome gets there this changes
+   * nothing. A closed connection fires no event, and reads `closed`, not
+   * `disconnected`, when the time is up. (The listener's own side asks again
+   * after five seconds of `disconnected`: lost(), below.)
+   */
+  const DISCONNECTED_MS = 15_000;
+  function stall(pc, dead, ms = DISCONNECTED_MS) {
+    let timer = null;
+    pc.addEventListener("connectionstatechange", () => {
+      clearTimeout(timer);
+      timer = null;
+      if (pc.connectionState === "disconnected") timer = setTimeout(() => { if (pc.connectionState === "disconnected") dead(); }, ms);
+    });
+  }
   const handlers = new Set();
   window.auralfm.onRtcSignal?.((from, payload, at) => {
     if (!payload || typeof payload !== "object" || typeof payload.sid !== "string") return;
@@ -67,7 +90,7 @@
     for (const h of handlers) { try { h(from, payload); } catch { /* one bad handshake is not the others' problem */ } }
   });
   window.AuralRtc = {
-    ICE, music, gathered,
+    ICE, music, gathered, stall,
     onSignal: (h) => handlers.add(h),
     send: async (to, payload) => { try { return !!(await window.auralfm.rtcSignal?.(to, payload)); } catch { return false; } },
   };

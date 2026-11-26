@@ -1273,6 +1273,12 @@
         else if (pc.connectionState === "closed") dropListener(msg.sid);
         else { if (pc.connectionState === "connected") { l0.met = true; if (heardNote) { heardNote = ""; paint(); } } paintHeard(); }
       };
+      // A listener gone quiet for good gives the place back (explore-shows.js, stall).
+      window.AuralRtc.stall(pc, () => {
+        if (heard.get(msg.sid)?.pc !== pc) return;
+        window.AuralRtc.send(from, { t: "bye", sid: msg.sid });
+        dropListener(msg.sid);
+      });
       await pc.setRemoteDescription({ type: "offer", sdp: msg.sdp });
       await pc.setLocalDescription(await pc.createAnswer());
       await window.AuralRtc.gathered(pc);

@@ -967,6 +967,189 @@ import { R, fail, pass, skip, HAS_CAT, C, NO_CAT, main, exploreSrc, readSrc, str
   }
 }
 
+// ── a relay that goes quiet is dialled again ────────────────────────────────
+// heal() dialled what had closed, and a socket the network lost without a word
+// has not closed: it reads as open until TCP gives up, minutes later. A phone
+// back from sleep, or moved off its Wi-Fi, sat in a room that read as connected
+// and heard nothing. A relay silent past the idle time is now asked for an
+// event nobody can have; no answer in ten seconds drops it and dials again.
+// The probe is never the live subscription sent again, which a relay answers
+// with six hours of the cell. Fake relays, the beat fired by hand, the clock
+// moved, and the probe's own deadline run by hand.
+{
+  const name = "a relay that goes quiet is dialled again";
+  console.log(`\n${name}`);
+  let made = 0, answers = true;
+  const live = [], frames = [];
+  class FakeRelay {
+    constructor(url) {
+      made++; this.url = url; this.readyState = 0; live.push(this);
+      setTimeout(() => { this.readyState = 1; this.onopen?.(); }, 0);
+    }
+    send(text) {
+      const f = JSON.parse(text);
+      frames.push({ w: this, f });
+      if (answers && f[0] === "REQ" && f[2]?.ids) setTimeout(() => this.onmessage?.({ data: JSON.stringify(["EOSE", f[1]]) }), 0);
+    }
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  }
+  const realWs = globalThis.WebSocket, realSet = globalThis.setInterval, realNow = Date.now, realTimer = globalThis.setTimeout, realClear = globalThis.clearTimeout;
+  const beats = [];
+  let deadlines = [];
+  let skew = 0;
+  globalThis.WebSocket = FakeRelay;
+  globalThis.setInterval = (fn) => { beats.push(fn); return realSet(() => {}, 2 ** 30); };
+  Date.now = () => realNow() + skew;
+  // The probe's ten seconds are kept to be run by hand; every other timer runs.
+  // An answered probe cancels its deadline, so a kept one must be cancellable.
+  globalThis.setTimeout = (fn, ms, ...a) => {
+    if (ms !== 10_000) return realTimer(fn, ms, ...a);
+    const d = { fn, unref() {} };
+    deadlines.push(d);
+    return d;
+  };
+  globalThis.clearTimeout = (t) => { deadlines = deadlines.filter((d) => d !== t); if (!deadlines.includes(t)) realClear(t); };
+  const runDeadlines = () => { const due = deadlines; deadlines = []; for (const d of due) d.fn(); };
+  const tick = () => new Promise((r) => realTimer(r, 30));
+  const probes = () => frames.filter(({ f }) => f[0] === "REQ" && f[2]?.ids);
+  let nostr = null;
+  const gaps = [];
+  try {
+    nostr = await import(pathToFileURL(R("src/presence-nostr.js")).href).then((m) => m.default ?? m);
+    nostr.leave();
+    nostr.join(38.72, -9.14, "test");
+    await tick();
+    const first = made, beat = beats.at(-1);
+    if (!first || !beat) gaps.push("joining dialled no relay, or set no beat — this check is blind");
+    else {
+      frames.length = 0;
+      beat(); await tick();
+      if (probes().length) gaps.push(`${probes().length} relays that spoke a moment ago were probed`);
+      // A minute of silence, and relays that answer.
+      skew += 60_000; frames.length = 0;
+      beat(); await tick();
+      const asked = probes().length;
+      if (asked < first) gaps.push(`after a minute of silence ${asked} of ${first} relays were probed`);
+      if (frames.some(({ f }) => f[0] === "REQ" && f[1] === "auralfm")) gaps.push("the beat sent the live subscription again, which replays the cell's history");
+      if (!frames.some(({ f }) => f[0] === "CLOSE")) gaps.push("an answered probe is left open on the relay");
+      runDeadlines();
+      await tick();
+      if (made !== first) gaps.push(`relays that answered their probe were dropped (${made - first} dialled again)`);
+      // A minute more, and relays that say nothing.
+      answers = false; skew += 60_000; frames.length = 0;
+      beat(); await tick();
+      beat(); await tick();
+      const once = probes().length;
+      if (once > first) gaps.push(`a probe still waiting was sent again (${once} probes to ${first} relays)`);
+      const quiet = new Set(probes().map(({ w }) => w));
+      runDeadlines();
+      await tick();
+      if (made - first < quiet.size) gaps.push(`of ${quiet.size} relays that never answered, ${made - first} were dialled again`);
+      if ([...quiet].some((w) => w.readyState !== 3)) gaps.push("a relay that never answered is left open");
+    }
+    gaps.length ? fail(name, gaps.join("; ")) : pass(`all ${first} relays are probed after a minute of silence with an id nobody has; the answered stay, the silent are dialled again in ten seconds`);
+  } catch (e) {
+    fail(name, `the module threw: ${e.message}`);
+  } finally {
+    try { nostr?.leave(); } catch {}
+    globalThis.WebSocket = realWs; globalThis.setInterval = realSet; Date.now = realNow; globalThis.setTimeout = realTimer; globalThis.clearTimeout = realClear;
+  }
+}
+
+// ── favorites take the newest note, not the first one back ──────────────────
+// A round reads the note from every relay and keeps the newest copy any of them
+// holds. Ending on the first relay to answer would let the fastest one decide,
+// and an empty or out-of-date relay answers fastest, having least to send. Two
+// fake relays: the quick one holds last week's list, the slow one today's.
+{
+  const name = "favorites take the newest note, not the first one back";
+  console.log(`\n${name}`);
+  const { createRequire } = await import("node:module");
+  const os = await import("node:os");
+  const sync = createRequire(import.meta.url)(R("src/favsync.js"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "auralfm-newest-"));
+  const notes = new Map();          // relay → [delay ms, event]
+  class FakeRelay {
+    constructor(url) { this.url = url; this.readyState = 0; setTimeout(() => { this.readyState = 1; this.onopen?.(); }, 0); }
+    send(text) {
+      const m = JSON.parse(text);
+      if (m[0] !== "REQ") return void setTimeout(() => this.onmessage?.({ data: JSON.stringify(["OK", m[1].id, true, ""]) }), 0);
+      const [delay, evt] = notes.get(this.url) || [0, null];
+      setTimeout(() => {
+        if (evt) this.onmessage?.({ data: JSON.stringify(["EVENT", m[1], evt]) });
+        this.onmessage?.({ data: JSON.stringify(["EOSE", m[1]]) });
+      }, delay);
+    }
+    close() { if (this.readyState === 3) return; this.readyState = 3; this.onclose?.(); }
+  }
+  const realWs = globalThis.WebSocket;
+  globalThis.WebSocket = FakeRelay;
+  let got = null;
+  const gaps = [];
+  try {
+    sync.init(dir, { get: () => [], set: (list) => { got = list; }, changed: () => {} }, { relays: ["wss://quick.test", "wss://slow.test"] });
+    await sync.start();
+    const { secret } = JSON.parse(fs.readFileSync(path.join(dir, "favsync.json"), "utf8"));
+    const k = sync.keys(secret);
+    const st = (t, title) => [t, title, "", "", null, null, 1];
+    const now = Math.floor(Date.now() / 1000);
+    const note = async (at, items) => ({ kind: 30078, pubkey: k.pk, created_at: at, id: createHash("sha256").update(String(at)).digest("hex"), tags: [["d", "auralfm:favorites"]], content: await sync.seal({ v: 1, items }, k.key) });
+    notes.set("wss://quick.test", [0, await note(now - 7 * 86400, { a: st(1, "Old") })]);
+    notes.set("wss://slow.test", [300, await note(now, { a: st(1, "Old"), b: st(2, "New") })]);
+    got = null;
+    await sync.sync();
+    const ids = (got || []).map((f) => f.id).sort().join(",");
+    if (ids !== "a,b") gaps.push(`the round kept ${ids || "nothing"}, the quick relay's old list, not the slow relay's newer one`);
+  } catch (e) {
+    gaps.push(`the module threw: ${e.message}`);
+  } finally {
+    try { sync.stop(); } catch {}
+    globalThis.WebSocket = realWs;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  gaps.length ? fail(name, gaps.join("; ")) : pass("a round waits for every relay and keeps the newest note, however late it arrives");
+}
+
+// ── a listener gone quiet gives the place back ──────────────────────────────
+// The host ended a listener's connection on `failed` or `closed` and nothing
+// else. A browser need never move on from `disconnected`, so a listener whose
+// network went away (and so could not say bye) held one of the twelve places
+// for the rest of the show. stall() (explore-shows.js) ends one that stays
+// `disconnected` for fifteen seconds; run here on a fake connection with the
+// wait shortened, then checked to be wired into the studio. The listener's own
+// side asks again after five seconds (lost(), explore-shows.js).
+{
+  const name = "a listener gone quiet gives the place back";
+  console.log(`\n${name}`);
+  const gaps = [];
+  const shows = readSrc("src/renderer/explore-shows.js"), studio = readSrc("src/renderer/explore-studio.js");
+  const src = (shows.match(/function stall\(pc, dead, ms = DISCONNECTED_MS\) \{[\s\S]*?\n  \}/) || [])[0];
+  if (!src) gaps.push("stall() is not in explore-shows.js");
+  else {
+    const stall = new Function("DISCONNECTED_MS", `${src}; return stall;`)(15_000);
+    const fake = () => {
+      const pc = new EventTarget();
+      pc.connectionState = "new";
+      pc.go = (s) => { pc.connectionState = s; pc.dispatchEvent(new Event("connectionstatechange")); };
+      return pc;
+    };
+    const run = async (steps) => {
+      const pc = fake();
+      let ended = 0;
+      stall(pc, () => ended++, 40);
+      for (const s of steps) { if (s === "wait") await new Promise((r) => setTimeout(r, 30)); else if (s === "close") pc.connectionState = "closed"; else pc.go(s); }
+      await new Promise((r) => setTimeout(r, 80));
+      return ended;
+    };
+    if (await run(["connected", "disconnected"]) !== 1) gaps.push("a connection that stays disconnected is never ended");
+    if (await run(["connected", "disconnected", "wait", "connected"]) !== 0) gaps.push("a connection that mended is ended anyway");
+    if (await run(["connected", "disconnected", "close"]) !== 0) gaps.push("a connection closed while quiet is ended a second time");
+    if (await run(["connected", "disconnected", "wait", "disconnected"]) > 1) gaps.push("one quiet connection is ended twice");
+  }
+  if (!/window\.AuralRtc\.stall\(pc, \(\) => \{\s*if \(heard\.get\(msg\.sid\)\?\.pc !== pc\) return;\s*window\.AuralRtc\.send\(from, \{ t: "bye"[\s\S]{0,80}dropListener\(msg\.sid\)/.test(studio)) gaps.push("the host keeps a place for a listener gone quiet");
+  gaps.length ? fail(name, gaps.join("; ")) : pass("a listener quiet for fifteen seconds is told bye and its place given back; one that mends or closes is left alone");
+}
+
 // ── a report about a child goes where the law says ──────────────────────────
 // 24 Nov 2026. AuralFM is registered with NCMEC's CyberTipline. The report
 // drafts (desktop and web) tell the person not to attach the material and to
